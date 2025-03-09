@@ -17,22 +17,21 @@ def test_linkedin_search(request) -> None:
         )
         page = context.new_page()
 
-        ## Example 01 - LinkedIn検索処理
-        page.goto("https://jp.linkedin.com/in/nobukins")
-        page.get_by_role("link", name="LinkedIn").click()
-        page.get_by_label("プライマリ").get_by_role("link", name="求人").click()
-        page.get_by_role("button", name="閉じる").click()
-        page.get_by_role("combobox", name="役職または会社を検索").click()
-        page.get_by_role("combobox", name="役職または会社を検索").fill("AI")
-        page.get_by_role("option", name="人工知能 (AI)").click()
 
-        ## Example 02 - Beatport検索とTop10の連続再生
-        # page.goto("https://www.beatport.com/")
+        ## Example 01 - 人材検索検索処理
+        # page.goto("https://socialnetworksite")
+        # page.get_by_role("link", name="SiteName").click()
+        # page.get_by_role("combobox", name="検索").click()
+        # page.get_by_role("combobox", name="検索").fill("AI")
+        # page.get_by_role("option", name="人工知能 (AI)").click()
+
+        ## Example 02 - musicportalsite検索とTop10の連続再生
+        # page.goto("https:/musicportalsite/")
         # page.get_by_role("button", name="I Accept").click()
         # page.get_by_test_id("header-search-input").click()
         # page.get_by_test_id("header-search-input").fill(query)
-        # page.goto("https://www.beatport.com/genre/minimal-deep-tech/14")
-        # page.locator(".CollectionControls-style__Controls-sc-3a6a5b4a-0 > .Play-style__Control-sc-bdba3bac-0").first.click()
+        # page.goto("https://musicportalsite/genre/xxx")
+        # page.locator(".Xxxxx-xxxx > .XXXX").first.click()
 
         # Listen for music 10sec!
         page.wait_for_timeout(10000)
