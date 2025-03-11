@@ -3,4 +3,72 @@ actions:
     script: search_script.py
     params: query
     command: pytest ./tmp/myscript/search_script.py --query query
-    slowmo: 1000  # スローモーションで1秒（1000ms）の遅延
+    slowmo: 2500
+
+  - name: search-beatport
+    script: search_script_music.py
+    params: query
+    command: pytest ./tmp/myscript/search_script_music.py --query query
+    slowmo: 2500
+    context:
+      description: "Beatport music search automation"
+      expected_elements:
+        - selector: "button[type='submit']"
+          purpose: "search submit button"
+          actions: ["click"]
+        - selector: "input#search"
+          purpose: "music search input"
+          actions: ["fill"]
+        - selector: ".search-submit"
+          purpose: "search submit button"
+          actions: ["click"]
+      expected_flow:
+        - "Navigate to Beatport"
+        - "Enter search query"
+        - "Trigger search"
+        - "Process results"
+
+  - name: search-music
+    script: search_script_music.py
+    params: query
+    slowmo: 2500
+    context:
+      description: "Beatport music search automation"
+      expected_elements:
+        - selector: "button[type='submit']"
+          purpose: "search submit button"
+          actions: ["click"]
+        - selector: "input#search"
+          purpose: "music search input"
+          actions: ["fill"]
+        - selector: ".search-submit"
+          purpose: "search submit button"
+          actions: ["click"]
+      expected_flow:
+        - "Navigate to Beatport"
+        - "Enter search query"
+        - "Trigger search"
+        - "Process results"
+
+  - name: google-search
+    type: browser-control
+    params:
+      - name: query
+        required: true
+        type: string
+        description: "Search query to execute"
+    slowmo: 1000
+    flow:
+      - action: navigate
+        url: "https://www.google.com"
+        wait_for: "textarea[name='q']"
+        
+      - action: fill
+        selector: "textarea[name='q']"
+        value: "{query}"
+        
+      - action: click
+        selector: "input[name='btnK']"
+        
+      - action: wait_for_selector
+        selector: "#search"

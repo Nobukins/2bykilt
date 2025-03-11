@@ -31,6 +31,20 @@ class CustomController(Controller):
         super().__init__(exclude_actions=exclude_actions, output_model=output_model)
         self._register_custom_actions()
 
+    async def execute_flow(self, flow: list, params: dict) -> ActionResult:
+        """Execute a series of browser actions defined in flow"""
+        try:
+            for step in flow:
+                action = step['action']
+                if hasattr(self, f"_execute_{action}"):
+                    await getattr(self, f"_execute_{action}")(step, params)
+                else:
+                    raise ValueError(f"Unsupported action: {action}")
+                    
+            return ActionResult(success=True, message="Flow executed successfully")
+        except Exception as e:
+            return ActionResult(success=False, error=str(e))
+
     def _register_custom_actions(self):
         """Register all custom browser actions"""
 

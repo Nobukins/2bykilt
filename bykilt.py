@@ -55,13 +55,12 @@ def parse_llms_txt(content):
 
 def pre_evaluate_prompt(prompt):
     try:
-        content = fetch_llms_txt(prompt)  # llms.txtの内容を取得
-        actions = parse_llms_txt(content)  # YAMLをパース
+        content = fetch_llms_txt(prompt)
+        actions = parse_llms_txt(content)
         for action in actions:
-            if 'name' in action and action['name'] in prompt:  # 'name'キーの存在を確認
+            if isinstance(action, dict) and 'name' in action and action['name'] in prompt:
+                print(f"Found matching action: {action['name']}")
                 return action
-            else:
-                print(f"アクションに 'name' キーが見つかりません: {action}")
         return None
     except Exception as e:
         print(f"pre_evaluate_prompt でエラー: {str(e)}")
@@ -71,15 +70,35 @@ def extract_params(prompt, param_names):
     params = {}
     if not param_names:
         return params
-    for param in param_names.split(','):
-        param = param.strip()
+    
+    # Convert param_names to list if it's a string
+    if isinstance(param_names, str):
+        param_list = [p.strip() for p in param_names.split(',')]
+    elif isinstance(param_names, list):
+        param_list = [p['name'] for p in param_names if isinstance(p, dict) and 'name' in p]
+    else:
+        return params
+
+    for param in param_list:
         match = re.search(rf'{param}=(\S+)', prompt)
         if match:
             params[param] = match.group(1)
     return params
 
 async def run_script(script_info, params, headless=False, save_recording_path=None):
-    script_path = os.path.join('tmp', 'myscript', script_info['script'])
+    if script_info.get('type') == 'browser-control':
+        # For browser-control type, we'll create a temporary script
+        script_content = generate_browser_script(script_info, params)
+        script_path = os.path.join('tmp', 'myscript', 'browser_control.py')
+        os.makedirs(os.path.dirname(script_path), exist_ok=True)
+        with open(script_path, 'w') as f:
+            f.write(script_content)
+    elif 'script' in script_info:
+        script_path = os.path.join('tmp', 'myscript', script_info['script'])
+    else:
+        logger.error("Invalid script_info: missing both 'type' and 'script' fields")
+        raise ValueError("Invalid script configuration")
+
     if not os.path.exists(script_path):
         logger.error(f"Script not found: {script_path}")
         raise FileNotFoundError(f"Script not found: {script_path}")
@@ -128,6 +147,30 @@ async def run_script(script_info, params, headless=False, save_recording_path=No
         success_msg = f"Script executed successfully: {stdout.decode()}"
         logger.info(success_msg)
         return success_msg, script_path
+
+def generate_browser_script(script_info, params):
+    flow = script_info.get('flow', [])
+    script_content = '''
+import pytest
+from playwright.sync_api import expect
+
+def test_browser_control(page):
+'''
+    for step in flow:
+        action = step['action']
+        if action == 'navigate':
+            script_content += f'    page.goto("{step["url"]}")\n'
+            if 'wait_for' in step:
+                script_content += f'    page.wait_for_selector("{step["wait_for"]}")\n'
+        elif action == 'fill':
+            value = step['value'].format(**params)
+            script_content += f'    page.fill("{step["selector"]}", "{value}")\n'
+        elif action == 'click':
+            script_content += f'    page.click("{step["selector"]}")\n'
+        elif action == 'wait_for_selector':
+            script_content += f'    page.wait_for_selector("{step["selector"]}")\n'
+    
+    return script_content
 
 def resolve_sensitive_env_variables(text):
     if not text:
@@ -496,10 +539,10 @@ theme_map = {
 
 async def close_global_browser():
     global _global_browser, _global_browser_context
-    if _global_browser_context:
+    if (_global_browser_context):
         await _global_browser_context.close()
         _global_browser_context = None
-    if _global_browser:
+    if (_global_browser):
         await _global_browser.close()
         _global_browser = None
 
@@ -526,9 +569,9 @@ def create_ui(config, theme_name="Ocean"):
     .theme-section { margin-bottom: 20px; padding: 15px; border-radius: 10px; }
     """
 
-    with gr.Blocks(title="Bykilt", theme=theme_map[theme_name], css=css) as demo:
+    with gr.Blocks(title="2Bykilt", theme=theme_map[theme_name], css=css) as demo:
         with gr.Row():
-            gr.Markdown("# 🪄🌐 Bykilt\n### Enhanced Browser Control with AI and human, because for you", elem_classes=["header-text"])
+            gr.Markdown("# 🪄🌐 2Bykilt\n### Enhanced Browser Control with AI and human, because for you", elem_classes=["header-text"])
 
         with gr.Tabs() as tabs:
             with gr.TabItem("⚙️ Agent Settings", id=1):
@@ -677,7 +720,7 @@ def create_ui(config, theme_name="Ocean"):
     return demo
 
 def main():
-    parser = argparse.ArgumentParser(description="Gradio UI for Bykilt Agent")
+    parser = argparse.ArgumentParser(description="Gradio UI for 2Bykilt Agent")
     parser.add_argument("--ip", type=str, default="127.0.0.1", help="IP address to bind to")
     parser.add_argument("--port", type=int, default=7788, help="Port to listen on")
     parser.add_argument("--theme", type=str, default="Ocean", choices=theme_map.keys(), help="Theme to use for the UI")

@@ -41,6 +41,9 @@ from src.utils.agent_state import AgentState
 from .custom_message_manager import CustomMessageManager
 from .custom_views import CustomAgentOutput, CustomAgentStepInfo
 
+import ast
+import inspect
+
 logger = logging.getLogger(__name__)
 
 
@@ -253,59 +256,200 @@ class CustomAgent(Agent):
 
         return parsed
 
-    async def _run_planner(self) -> Optional[str]:
-        """Run the planner to analyze state and suggest next steps"""
-        # Skip planning if no planner_llm is set
+    def _extract_playwright_commands(self, script_path: str) -> List[str]:
+        """Extract Playwright commands from a pytest script"""
+        try:
+            with open(script_path, 'r') as file:
+                tree = ast.parse(file.read())
+            
+            commands = []
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Await):
+                    if isinstance(node.value, ast.Call):
+                        command = ast.unparse(node).strip()
+                        if 'page.' in command:
+                            commands.append(command.replace('await ', ''))
+            return commands
+        except Exception as e:
+            logger.error(f"Error extracting Playwright commands: {e}")
+            return []
+
+    async def _run_planner(self, playwright_commands: Optional[List[str]] = None) -> Optional[str]:
+        """Run the planner with optional Playwright commands"""
         if not self.planner_llm:
             return None
 
-        # Create planner message history using full message history
         planner_messages = [
             PlannerPrompt(self.action_descriptions).get_system_message(),
-            *self.message_manager.get_messages()[1:],  # Use full message history except the first
+            *self.message_manager.get_messages()[1:]
         ]
 
-        if not self.use_vision_for_planner and self.use_vision:
-            last_state_message = planner_messages[-1]
-            # remove image from last state message
-            new_msg = ''
-            if isinstance(last_state_message.content, list):
-                for msg in last_state_message.content:
-                    if msg['type'] == 'text':
-                        new_msg += msg['text']
-                    elif msg['type'] == 'image_url':
-                        continue
-            else:
-                new_msg = last_state_message.content
+        # Handle Playwright commands if provided
+        if playwright_commands:
+            commands_json = []
+            for cmd in playwright_commands:
+                # Parse command type and parameters
+                action_data = self._parse_browser_command(cmd)
+                commands_json.append(action_data)
+                
+            plan = {
+                "action": commands_json,
+                "execution_context": {
+                    "slowmo": self._get_action_slowmo(commands_json[0]["type"]) if commands_json else 1000
+                }
+            }
+            
+            plan_str = json.dumps(plan, indent=2)
+            last_message = planner_messages[-1]
+            
+            # Update message content with plan and test results
+            self._update_planner_message(last_message, plan_str)
+            
+            return plan_str
 
-            planner_messages[-1] = HumanMessage(content=new_msg)
+        # ...existing code...
 
-        # Get planner output
-        response = await self.planner_llm.ainvoke(planner_messages)
-        plan = response.content
-        last_state_message = planner_messages[-1]
-        # remove image from last state message
-        if isinstance(last_state_message.content, list):
-            for msg in last_state_message.content:
-                if msg['type'] == 'text':
-                    msg['text'] += f"\nPlanning Agent outputs plans:\n {plan}\n"
-        else:
-            last_state_message.content += f"\nPlanning Agent outputs plans:\n {plan}\n "
+    def _parse_browser_command(self, command: str) -> Dict[str, Any]:
+        """Parse browser commands into structured action data"""
+        if "click" in command:
+            return {
+                "type": "browser-control",
+                "params": {
+                    "selector": self._extract_selector(command),
+                    "action": "click",
+                    "value": None
+                }
+            }
+        elif "fill" in command:
+            return {
+                "type": "browser-control", 
+                "params": {
+                    "selector": self._extract_selector(command),
+                    "action": "type",
+                    "value": self._extract_value(command)
+                }
+            }
+        elif "goto" in command:
+            return {
+                "type": "browser-control",
+                "params": {
+                    "selector": None,
+                    "action": "goto",
+                    "value": self._extract_url(command)
+                }
+            }
+        return {
+            "type": "browser-control",
+            "params": {
+                "command": command
+            }
+        }
 
+    def _get_action_slowmo(self, action_type: str) -> int:
+        """Get slowmo value for action type from llms.txt"""
         try:
-            plan_json = json.loads(plan.replace("```json", "").replace("```", ""))
-            logger.info(f'📋 Plans:\n{json.dumps(plan_json, indent=4)}')
-
-            if hasattr(response, "reasoning_content"):
-                logger.info("🤯 Start Planning Deep Thinking: ")
-                logger.info(response.reasoning_content)
-                logger.info("🤯 End Planning Deep Thinking")
-
-        except json.JSONDecodeError:
-            logger.info(f'📋 Plans:\n{plan}')
+            with open('llms.txt', 'r') as f:
+                config = yaml.safe_load(f)
+                for action in config.get('actions', []):
+                    if action.get('name') == action_type:
+                        return action.get('slowmo', 1000)
         except Exception as e:
-            logger.debug(f'Error parsing planning analysis: {e}')
-            logger.info(f'📋 Plans: {plan}')
+            logger.error(f"Error reading slowmo from llms.txt: {e}")
+        return 1000
+
+    def _update_planner_message(self, message: BaseMessage, plan_str: str) -> None:
+        """Update planner message with execution results"""
+        if isinstance(message.content, list):
+            for msg in message.content:
+                if msg['type'] == 'text':
+                    msg['text'] += f"\nExecuting browser control plan:\n```json\n{plan_str}\n```"
+        else:
+            message.content += f"\nExecuting browser control plan:\n```json\n{plan_str}\n```"
+
+    def _extract_selector(self, command: str) -> str:
+        """Extract selector from Playwright command"""
+        try:
+            if "click" in command:
+                return command.split("click('")[1].split("')")[0]
+            elif "fill" in command:
+                return command.split("fill('")[1].split("',")[0]
+            elif "locator" in command:
+                return command.split("locator('")[1].split("')")[0]
+        except IndexError:
+            logger.warning(f"Could not extract selector from command: {command}")
+            return ""
+        return ""
+
+    def _extract_value(self, command: str) -> str:
+        """Extract value from Playwright command"""
+        try:
+            if "fill" in command:
+                return command.split("', '")[1].split("')")[0]
+            elif "type" in command:
+                return command.split("type('")[1].split("')")[0]
+        except IndexError:
+            logger.warning(f"Could not extract value from command: {command}")
+            return ""
+        return ""
+
+    def _extract_url(self, command: str) -> str:
+        """Extract URL from goto command"""
+        if "goto" in command:
+            return command.split("goto('")[1].split("')")[0]
+        return ""
+
+    def _create_browser_state_from_script(self, commands: List[str]) -> dict:
+        """Create browser state information from script commands"""
+        state_info = {
+            "planned_actions": [],
+            "elements": [],
+            "script_context": self._load_script_context()
+        }
+        
+        for cmd in commands:
+            action = self._parse_browser_command(cmd)
+            state_info["planned_actions"].append(action)
+            
+            if action["params"].get("selector"):
+                state_info["elements"].append({
+                    "selector": action["params"]["selector"],
+                    "action_type": action["params"]["action"],
+                    "value": action["params"].get("value")
+                })
+                
+        return state_info
+
+    def _load_script_context(self) -> dict:
+        """Load script context from llms.txt"""
+        try:
+            with open('llms.txt', 'r') as f:
+                config = yaml.safe_load(f)
+                script_name = self.task.split("pytest")[-1].strip().split()[0].split('/')[-1]
+                for action in config.get('actions', []):
+                    if action.get('script') == script_name:
+                        return action.get('context', {})
+        except Exception as e:
+            logger.error(f"Error loading script context: {e}")
+        return {}
+
+    async def _update_llm_with_script_info(self, script_path: str) -> None:
+        """Update LLM with information from script execution"""
+        commands = self._extract_playwright_commands(script_path)
+        if not commands:
+            return
+
+        browser_state = self._create_browser_state_from_script(commands)
+        
+        # Create a message that describes the script's planned actions
+        script_info_message = HumanMessage(content=f"""
+Script Analysis Results:
+- Total Commands: {len(commands)}
+- Planned Actions: {json.dumps(browser_state['planned_actions'], indent=2)}
+- Target Elements: {json.dumps(browser_state['elements'], indent=2)}
+""")
+        
+        self.message_manager._add_message_with_tokens(script_info_message)
+        logger.info("Updated LLM with script execution plan")
 
     @time_execution_async("--step")
     async def step(self, step_info: Optional[CustomAgentStepInfo] = None) -> None:
@@ -399,6 +543,17 @@ class CustomAgent(Agent):
         """Execute the task with maximum number of steps"""
         try:
             self._log_agent_run()
+
+            # Check if task contains a pytest script reference
+            if "pytest" in self.task.lower():
+                script_path = self.task.split("pytest")[-1].strip().split()[0]
+                if os.path.exists(script_path):
+                    # First update LLM with script information
+                    await self._update_llm_with_script_info(script_path)
+                    # Then extract and plan commands
+                    playwright_commands = self._extract_playwright_commands(script_path)
+                    if playwright_commands:
+                        await self._run_planner(playwright_commands=playwright_commands)
 
             # Execute initial actions if provided
             if self.initial_actions:
@@ -525,7 +680,7 @@ class CustomAgent(Agent):
 
         # Load logo if requested
         logo = None
-        if show_logo:
+        if (show_logo):
             try:
                 logo = Image.open('./static/browser-use.png')
                 # Resize logo to be small (e.g., 40px height)
