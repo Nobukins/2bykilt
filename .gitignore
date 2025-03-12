@@ -190,3 +190,8 @@ data/
 
 # .prompt
 *.prompt
+
+error.png 
+
+# original files as backup or comparison
+original/*.*
