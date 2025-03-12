@@ -87,10 +87,24 @@ def extract_params(prompt, param_names):
 
 async def run_script(script_info, params, headless=False, save_recording_path=None):
     if script_info.get('type') == 'browser-control':
-        # For browser-control type, we'll create a temporary script
+        script_dir = os.path.join('tmp', 'myscript')
+        os.makedirs(script_dir, exist_ok=True)
+        
+        # Generate and save the script
         script_content = generate_browser_script(script_info, params)
-        script_path = os.path.join('tmp', 'myscript', 'browser_control.py')
-        os.makedirs(os.path.dirname(script_path), exist_ok=True)
+        script_path = os.path.join(script_dir, 'browser_control.py')
+        
+        # Create pytest.ini
+        pytest_ini_path = os.path.join(script_dir, 'pytest.ini')
+        if not os.path.exists(pytest_ini_path):
+            with open(pytest_ini_path, 'w') as f:
+                f.write('''[pytest]
+asyncio_mode = auto
+addopts = --verbose --capture=no
+markers =
+    browser_control: mark tests as browser control automation
+''')
+        
         with open(script_path, 'w') as f:
             f.write(script_content)
     elif 'script' in script_info:
@@ -148,28 +162,66 @@ async def run_script(script_info, params, headless=False, save_recording_path=No
         logger.info(success_msg)
         return success_msg, script_path
 
+PLAYWRIGHT_COMMANDS = {
+    'navigate': 'goto',
+    'click': 'click',
+    'fill': 'fill',
+    'type': 'type',
+    'press': 'press',
+    'wait_for_selector': 'wait_for_selector',
+    'wait_for_load_state': 'wait_for_load_state',
+    'screenshot': 'screenshot',
+    'evaluate': 'evaluate',
+    'select_option': 'select_option'
+}
+
 def generate_browser_script(script_info, params):
     flow = script_info.get('flow', [])
     script_content = '''
 import pytest
-from playwright.sync_api import expect
+from playwright.sync_api import expect, Page
+import pytest_asyncio
 
-def test_browser_control(page):
+@pytest.fixture(scope="module")
+def browser_context_args(browser_context_args):
+    return {
+        **browser_context_args,
+        "viewport": {"width": 1280, "height": 720}
+    }
+
+@pytest.mark.browser_control
+def test_browser_control(page: Page):
+    try:
 '''
     for step in flow:
         action = step['action']
         if action == 'navigate':
-            script_content += f'    page.goto("{step["url"]}")\n'
+            script_content += f'        page.goto("{step["url"]}")\n'
             if 'wait_for' in step:
-                script_content += f'    page.wait_for_selector("{step["wait_for"]}")\n'
+                script_content += f'        expect(page.locator("{step["wait_for"]}")).to_be_visible()\n'
+        
         elif action == 'fill':
             value = step['value'].format(**params)
-            script_content += f'    page.fill("{step["selector"]}", "{value}")\n'
+            script_content += f'''        locator = page.locator("{step["selector"]}")
+        expect(locator).to_be_visible()
+        locator.fill("{value}")
+        page.keyboard.press("Enter")\n'''
+        
         elif action == 'click':
-            script_content += f'    page.click("{step["selector"]}")\n'
+            script_content += f'''        locator = page.locator("{step["selector"]}")
+        expect(locator).to_be_visible()
+        locator.click()
+'''
+            if step.get('wait_for_navigation', False):
+                script_content += '        page.wait_for_load_state("networkidle")\n'
+        
         elif action == 'wait_for_selector':
-            script_content += f'    page.wait_for_selector("{step["selector"]}")\n'
+            script_content += f'''        expect(page.locator("{step["selector"]}")).to_be_visible(timeout=10000)\n'''
     
+    script_content += '''    except Exception as e:
+        page.screenshot(path="error.png")
+        raise e
+'''
     return script_content
 
 def resolve_sensitive_env_variables(text):

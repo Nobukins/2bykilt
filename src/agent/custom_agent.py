@@ -40,6 +40,7 @@ from src.utils.agent_state import AgentState
 
 from .custom_message_manager import CustomMessageManager
 from .custom_views import CustomAgentOutput, CustomAgentStepInfo
+from ..utils.flow_logger import FlowLogger
 
 import ast
 import inspect
@@ -153,12 +154,16 @@ class CustomAgent(Agent):
         # custom new info
         self.add_infos = add_infos
 
+        # Initialize system prompt with action descriptions
+        self.system_prompt = system_prompt_class(
+            action_description=self.controller.registry.get_prompt_description()
+        )
         self.agent_prompt_class = agent_prompt_class
         self.message_manager = CustomMessageManager(
             llm=self.llm,
             task=self.task,
             action_descriptions=self.controller.registry.get_prompt_description(),
-            system_prompt_class=self.system_prompt_class,
+            system_prompt_class=system_prompt_class,
             agent_prompt_class=agent_prompt_class,
             max_input_tokens=self.max_input_tokens,
             include_attributes=self.include_attributes,
@@ -167,6 +172,7 @@ class CustomAgent(Agent):
             message_context=self.message_context,
             sensitive_data=self.sensitive_data
         )
+        self.flow_logger = FlowLogger()
 
     def _setup_action_models(self) -> None:
         """Setup dynamic action models from controller's registry"""
@@ -540,8 +546,24 @@ Script Analysis Results:
                 self._make_history_item(model_output, state, result)
 
     async def run(self, max_steps: int = 100) -> AgentHistoryList:
-        """Execute the task with maximum number of steps"""
         try:
+            # プロンプト解析のログ
+            analysis = {
+                "objective": self.task.split()[0] if self.task else "",
+                "target_info": self.task,
+                "description": self.add_infos if self.add_infos else ""
+            }
+            self.flow_logger.log_prompt_analysis(self.task, analysis)
+            
+            # LLM入力のログ
+            llm_input = {
+                "system_prompt_class": self.system_prompt.__class__.__name__,
+                "task": self.task,
+                "add_infos": self.add_infos,
+                "max_steps": max_steps
+            }
+            self.flow_logger.log_llm_input(llm_input)
+            
             self._log_agent_run()
 
             # Check if task contains a pytest script reference
@@ -601,7 +623,10 @@ Script Analysis Results:
                     self.history.history[-1].result[-1].extracted_content = self.extracted_content
 
             return self.history
-
+            
+        except Exception as e:
+            self.flow_logger.logger.error(f"Error in agent execution: {e}")
+            raise
         finally:
             self.telemetry.capture(
                 AgentEndTelemetryEvent(
@@ -738,3 +763,4 @@ Script Analysis Results:
             logger.info(f'Created GIF at {output_path}')
         else:
             logger.warning('No images found in history to create GIF')
+            return
