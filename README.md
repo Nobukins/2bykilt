@@ -155,7 +155,7 @@ For users who want to use Ollama as their LLM provider, follow these specific co
    - Enable **Dev Mode** by toggling it on
    - set LM Studio hosting LLM API endpoint url as `http://127.0.0.1:1234/v1`
 
-> **Note:** LLMを利用するAgent開発においてはLLMとの通信を理解する必要があります。このため、LM Studioを利用したローカルでのLLMホストを開発環境では推奨します。
+> **Note:** LLMを利用するAgent開発においてはLLMとの通信を理解する必要があります。このため、LM Studioを利用したローカルでのLLMホストを開発環境では推奨します。この環境構築により実際にLLMからの自然言語での返信を確認する事が出来るので効率的なプロンプトエンジニアリングを実現されます。逆に言うと、ここまでやらないと何が起きているのか全くわからないブラックボックスになってしまいます。
 
 ## Changelog
 - [x] **2025/03/06:** Thanks @Nobukins, you made magic comes true, Bykilt!
