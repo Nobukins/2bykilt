@@ -33,27 +33,19 @@ Read the [quickstart guide](https://docs.browser-use.com/quickstart#prepare-the-
 
 #### Step 1: Clone the Repository
 ```bash
-git clone https://github.com/Nobukins/bykilt.git
+git clone https://github.com/Nobukins/2bykilt.git
 cd bykilt
 ```
 
 #### Step 2: Set Up Python Environment
 We recommend using [uv](https://docs.astral.sh/uv/) for managing the Python environment.
 
-Using uv (recommended):
+Using venv:
 ```bash
-uv venv --python 3.11
+python3.12 -m venv venv
 ```
 
 Activate the virtual environment:
-- Windows (Command Prompt):
-```cmd
-.venv\Scripts\activate
-```
-- Windows (PowerShell):
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
 - macOS/Linux:
 ```bash
 source .venv/bin/activate
@@ -62,8 +54,8 @@ source .venv/bin/activate
 #### Step 3: Install Dependencies
 Install Python packages:
 ```bash
-uv pip install -r requirements.txt
-uv pip install requests pyyaml pytest pytest-playwright 
+pip install -r requirements.txt
+pip install requests pyyaml pytest pytest-playwright 
 ```
 
 Install Playwright:
