@@ -500,7 +500,7 @@ async def run_with_stream(
     agent_type, llm_provider, llm_model_name, llm_num_ctx, llm_temperature, llm_base_url, llm_api_key,
     use_own_browser, keep_browser_open, headless, disable_security, window_w, window_h,
     save_recording_path, save_agent_history_path, save_trace_path, enable_recording, task, add_infos,
-    max_steps, use_vision, max_actions_per_step, tool_calling_method
+    max_steps, use_vision, max_actions_per_step, tool_calling_method, dev_mode
 ):
     global _global_agent_state
     stream_vw = 80
@@ -647,6 +647,13 @@ def create_ui(config, theme_name="Ocean"):
                         llm_api_key = gr.Textbox(label="API Key", type="password", value=config['llm_api_key'], info="Your API key (leave blank to use .env)")
 
                     llm_provider.change(fn=lambda provider: gr.update(visible=provider == "ollama"), inputs=llm_provider, outputs=llm_num_ctx)
+                    
+                    with gr.Row():
+                        dev_mode = gr.Checkbox(
+                            label="Dev Mode",
+                            value=config['dev_mode'],
+                            info="Use LM Studio compatible endpoints"
+                        )
 
             with gr.TabItem("🌐 Browser Settings", id=3):
                 with gr.Group():
@@ -707,7 +714,7 @@ def create_ui(config, theme_name="Ocean"):
                             agent_type, llm_provider, llm_model_name, llm_num_ctx, llm_temperature, llm_base_url, llm_api_key,
                             use_own_browser, keep_browser_open, headless, disable_security, window_w, window_h,
                             save_recording_path, save_agent_history_path, save_trace_path, enable_recording, task, add_infos,
-                            max_steps, use_vision, max_actions_per_step, tool_calling_method
+                            max_steps, use_vision, max_actions_per_step, tool_calling_method, dev_mode
                         ],
                         outputs=[
                             browser_view, final_result_output, errors_output, model_actions_output, model_thoughts_output,

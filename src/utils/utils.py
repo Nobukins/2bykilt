@@ -105,26 +105,24 @@ def get_llm_model(provider: str, **kwargs):
             google_api_key=api_key,
         )
     elif provider == "ollama":
-        if not kwargs.get("base_url", ""):
-            base_url = os.getenv("OLLAMA_ENDPOINT", "http://localhost:11434")
-        else:
-            base_url = kwargs.get("base_url")
-
-        if "deepseek-r1" in kwargs.get("model_name", "qwen2.5:7b"):
-            return DeepSeekR1ChatOllama(
-                model=kwargs.get("model_name", "deepseek-r1:14b"),
+        base_url = kwargs.get("base_url") or os.getenv("OLLAMA_ENDPOINT", "http://localhost:1234")
+        model_name = kwargs.get("model_name", "llama-3.2-3b-instruct")  # デフォルトモデルを設定
+        
+        try:
+            # LM Studio APIの健全性チェック
+            response = requests.get(f"{base_url}/v1/models")
+            if response.status_code != 200:
+                raise gr.Error("🔌 Cannot connect to LM Studio server")
+                
+            # OpenAI互換のエンドポイントを使用
+            return ChatOpenAI(
+                model=model_name,
                 temperature=kwargs.get("temperature", 0.0),
-                num_ctx=kwargs.get("num_ctx", 32000),
                 base_url=base_url,
+                api_key="not-needed"  # LM Studioはapi_keyを必要としない
             )
-        else:
-            return ChatOllama(
-                model=kwargs.get("model_name", "qwen2.5:7b"),
-                temperature=kwargs.get("temperature", 0.0),
-                num_ctx=kwargs.get("num_ctx", 32000),
-                num_predict=kwargs.get("num_predict", 1024),
-                base_url=base_url,
-            )
+        except requests.exceptions.ConnectionError:
+            raise gr.Error("💥 LM Studio server not found! Make sure it's running on the specified endpoint")
     elif provider == "azure_openai":
         if not kwargs.get("base_url", ""):
             base_url = os.getenv("AZURE_OPENAI_ENDPOINT", "")
@@ -157,6 +155,14 @@ def get_llm_model(provider: str, **kwargs):
             temperature=kwargs.get("temperature", 0.0),
             base_url=os.getenv("MOONSHOT_ENDPOINT"),
             api_key=os.getenv("MOONSHOT_API_KEY"),
+        )
+    elif provider == "lm_studio":
+        base_url = kwargs.get("base_url") or os.getenv("LM_STUDIO_ENDPOINT", "http://localhost:1234")
+        return ChatOpenAI(
+            model=kwargs.get("model_name", "local-model"),
+            temperature=kwargs.get("temperature", 0.0),
+            base_url=base_url,
+            api_key="not-needed"  # LM Studio doesn't require API key
         )
     else:
         raise ValueError(f"Unsupported provider: {provider}")
