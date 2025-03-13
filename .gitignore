@@ -190,6 +190,8 @@ data/
 
 # .prompt
 *.prompt
+prompts/
+prompts/*.*
 
 error.png 
 
