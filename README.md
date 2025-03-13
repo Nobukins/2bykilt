@@ -136,6 +136,26 @@ cp ./example/* ./tmp/myscript/
 5. **Keep Browser Open(Optional):**
     - Set `CHROME_PERSISTENT_SESSION=true` in the `.env` file.
 
+### Using Ollama with Bykilt
+For users who want to use Ollama as their LLM provider, follow these specific configuration steps:
+
+1. **Start Bykilt:**
+   ```bash
+   python bykilt.py
+   ```
+
+2. **Access the WebUI:**
+   Open your web browser and navigate to `http://127.0.0.1:7788`
+
+3. **Configure Ollama:**
+   - Disable the **Vision** option
+   - Navigate to **LLM Configurations** menu
+   - Set **LLM Provider** to `ollama`
+   - Select **Model Name** `deepseek-r1-distill-llama-8b` (or your preferred Ollama model)
+   - Enable **Dev Mode** by toggling it on
+   - set LM Studio hosting LLM API endpoint url as `http://127.0.0.1:1234/v1`
+
+> **Note:** LLMを利用するAgent開発においてはLLMとの通信を理解する必要があります。このため、LM Studioを利用したローカルでのLLMホストを開発環境では推奨します。
 
 ## Changelog
 - [x] **2025/03/06:** Thanks @Nobukins, you made magic comes true, Bykilt!
