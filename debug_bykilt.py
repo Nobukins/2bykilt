@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# filepath: /Users/nobuaki/Documents/Github/2bykilt/debug_bykilt.py
-
 import asyncio
 import json
 import os
@@ -29,7 +26,7 @@ async def test_llm_response(json_file_path):
             json_blocks = re.findall(r'```(?:json)?\s*(.*?)```', content, re.DOTALL)
             if not json_blocks:
                 print(f"JSONのパースに失敗し、JSONブロックも見つかりませんでした: {e}")
-                returnj
+                return
             
             # 最初のJSONブロックを処理
             try:
@@ -60,6 +57,12 @@ async def test_llm_response(json_file_path):
                     await execute_commands(response_data["commands"])
                 else:
                     print("URLが指定されていません")
+            elif script_name == "form_input":
+                await execute_form_input(params)
+            elif script_name == "extract_content":
+                await execute_extract_content(params)
+            elif script_name == "complex_sequence":
+                await execute_complex_sequence(params)
             else:
                 print(f"未対応のスクリプト名: {script_name}")
                 if "commands" in response_data:
@@ -108,6 +111,41 @@ async def execute_commands(commands):
                         print("ページの読み込みが完了しました")
                     except Exception as e:
                         print(f"ナビゲーション待機中にエラーが発生しました: {e}")
+                
+                elif action == "fill_form" and len(args) >= 2:
+                    # フォームに入力
+                    selector = args[0]
+                    value = args[1]
+                    await page.fill(selector, value)
+                    print(f"フォーム '{selector}' に '{value}' を入力しました")
+                
+                elif action == "click" and args:
+                    # 要素をクリック
+                    selector = args[0]
+                    await page.click(selector)
+                    print(f"要素 '{selector}' をクリックしました")
+                
+                elif action == "keyboard_press" and args:
+                    # キー入力
+                    key = args[0]
+                    await page.keyboard.press(key)
+                    print(f"キー '{key}' を押しました")
+                
+                elif action == "extract_content":
+                    # コンテンツを抽出
+                    selectors = args if args else ["h1", "h2", "h3", "p"]
+                    content = {}
+                    for selector in selectors:
+                        elements = await page.query_selector_all(selector)
+                        texts = []
+                        for element in elements:
+                            text = await element.text_content()
+                            if text.strip():
+                                texts.append(text.strip())
+                        content[selector] = texts
+                    
+                    print("\n抽出されたコンテンツ:")
+                    print(json.dumps(content, indent=2, ensure_ascii=False))
             
             # ユーザーに検査する時間を与える
             print("\n実行完了。ブラウザは30秒後に閉じられます...")
@@ -199,18 +237,197 @@ async def execute_goto_url(url):
     except Exception as e:
         print(f"\n実行エラー: {e}")
 
+async def execute_form_input(params):
+    """フォーム入力を実行"""
+    try:
+        from playwright.async_api import async_playwright
+        
+        url = params.get("url")
+        inputs = params.get("inputs", [])
+        submit_selector = params.get("submit_selector")
+        
+        print(f"\n{url} のフォームに入力します...")
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=False)
+            page = await browser.new_page()
+            
+            await page.goto(url)
+            await page.wait_for_load_state("networkidle")
+            print(f"ページに移動しました: {url}")
+            
+            # 各フィールドに入力
+            for input_data in inputs:
+                selector = input_data.get("selector")
+                value = input_data.get("value")
+                if selector and value:
+                    await page.fill(selector, value)
+                    print(f"フィールド '{selector}' に '{value}' を入力しました")
+            
+            # 送信ボタンをクリック
+            if submit_selector:
+                await page.click(submit_selector)
+                print(f"送信ボタン '{submit_selector}' をクリックしました")
+                await page.wait_for_load_state("networkidle")
+            
+            # ユーザーに検査する時間を与える
+            print("\n実行完了。ブラウザは30秒後に閉じられます...")
+            print("(Ctrl+Cで早く終了できます)")
+            await asyncio.sleep(30)
+    
+    except ImportError:
+        print("\nPlaywrightがインストールされていません。")
+        print("以下のコマンドでインストールできます:")
+        print("pip install playwright")
+        print("playwright install")
+    except Exception as e:
+        print(f"\n実行エラー: {e}")
+
+async def execute_extract_content(params):
+    """コンテンツ抽出を実行"""
+    try:
+        from playwright.async_api import async_playwright
+        
+        url = params.get("url")
+        selectors = params.get("selectors", ["h1", "h2", "h3", "p"])
+        
+        print(f"\n{url} からコンテンツを抽出します...")
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=False)
+            page = await browser.new_page()
+            
+            await page.goto(url)
+            await page.wait_for_load_state("networkidle")
+            print(f"ページに移動しました: {url}")
+            
+            # コンテンツを抽出
+            content = {}
+            for selector in selectors:
+                elements = await page.query_selector_all(selector)
+                texts = []
+                for element in elements:
+                    text = await element.text_content()
+                    if text.strip():
+                        texts.append(text.strip())
+                content[selector] = texts
+            
+            print("\n抽出されたコンテンツ:")
+            print(json.dumps(content, indent=2, ensure_ascii=False))
+            
+            # ユーザーに検査する時間を与える
+            print("\n実行完了。ブラウザは30秒後に閉じられます...")
+            print("(Ctrl+Cで早く終了できます)")
+            await asyncio.sleep(30)
+    
+    except ImportError:
+        print("\nPlaywrightがインストールされていません。")
+        print("以下のコマンドでインストールできます:")
+        print("pip install playwright")
+        print("playwright install")
+    except Exception as e:
+        print(f"\n実行エラー: {e}")
+
+async def execute_complex_sequence(params):
+    """複雑なシーケンスを実行"""
+    try:
+        from playwright.async_api import async_playwright
+        
+        url = params.get("url")
+        search_term = params.get("search_term")
+        click_result_index = params.get("click_result_index", 0)
+        
+        print(f"\n複雑なシーケンスを実行します... URL: {url}, 検索語: {search_term}")
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=False)
+            page = await browser.new_page()
+            
+            # URLに移動
+            await page.goto(url)
+            await page.wait_for_load_state("networkidle")
+            print(f"ページに移動しました: {url}")
+            
+            # 検索フォームに入力
+            await page.fill('input[name="q"]', search_term)
+            print(f"検索語 '{search_term}' を入力しました")
+            
+            # Enterキーを押して検索
+            await page.keyboard.press("Enter")
+            await page.wait_for_load_state("networkidle")
+            print("検索を実行しました")
+            
+            # 検索結果をクリック
+            result_links = await page.query_selector_all('#search a')
+            if result_links and len(result_links) > click_result_index:
+                await result_links[click_result_index].click()
+                await page.wait_for_load_state("networkidle")
+                print(f"検索結果 {click_result_index + 1} 番目をクリックしました")
+                
+                # コンテンツを抽出
+                content = {}
+                for selector in ["h1", "p"]:
+                    elements = await page.query_selector_all(selector)
+                    texts = []
+                    for element in elements:
+                        text = await element.text_content()
+                        if text.strip():
+                            texts.append(text.strip())
+                    content[selector] = texts
+                
+                print("\n抽出されたコンテンツ:")
+                print(json.dumps(content, indent=2, ensure_ascii=False))
+            else:
+                print(f"クリックする検索結果が見つかりませんでした")
+            
+            # ユーザーに検査する時間を与える
+            print("\n実行完了。ブラウザは30秒後に閉じられます...")
+            print("(Ctrl+Cで早く終了できます)")
+            await asyncio.sleep(30)
+    
+    except ImportError:
+        print("\nPlaywrightがインストールされていません。")
+        print("以下のコマンドでインストールできます:")
+        print("pip install playwright")
+        print("playwright install")
+    except Exception as e:
+        print(f"\n実行エラー: {e}")
+
 def show_help():
     print("LLMレスポンスデバッガ")
     print("使用法: python debug_bykilt.py <llm_response_file>")
     print("\nオプション:")
     print("  --help, -h    このヘルプメッセージを表示")
+    print("  --list        利用可能なサンプルを一覧表示")
     print("\n例:")
-    print("  python debug_bykilt.py external/sample_llm_response.json")
+    print("  python debug_bykilt.py external/samples/navigate_url.json")
+
+def list_samples():
+    print("利用可能なサンプルJSONファイル:")
+    samples_dir = Path("external/samples")
+    if samples_dir.exists():
+        for sample_file in samples_dir.glob("*.json"):
+            with open(sample_file, "r") as f:
+                try:
+                    data = json.load(f)
+                    script_name = data.get("script_name", "unknown")
+                    params = data.get("params", {})
+                    print(f"- {sample_file.name} ({script_name}): {params}")
+                except json.JSONDecodeError:
+                    print(f"- {sample_file.name} (解析エラー)")
+    else:
+        print(f"サンプルディレクトリが見つかりません: {samples_dir}")
+        print("ディレクトリを作成するには:")
+        print(f"  mkdir -p {samples_dir}")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2 or sys.argv[1] in ["--help", "-h"]:
+    if len(sys.argv) < 2:
         show_help()
-        sys.exit(0 if sys.argv[1] in ["--help", "-h"] else 1)
+        sys.exit(1)
+    
+    if sys.argv[1] in ["--help", "-h"]:
+        show_help()
+        sys.exit(0)
+    elif sys.argv[1] == "--list":
+        list_samples()
+        sys.exit(0)
     
     json_file_path = sys.argv[1]
     asyncio.run(test_llm_response(json_file_path))
