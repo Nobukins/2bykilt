@@ -149,6 +149,63 @@ For users who want to use Ollama as their LLM provider, follow these specific co
 
 > **Note:** LLMを利用するAgent開発においてはLLMとの通信を理解する必要があります。このため、LM Studioを利用したローカルでのLLMホストを開発環境では推奨します。この環境構築により実際にLLMからの自然言語での返信を確認する事が出来るので効率的なプロンプトエンジニアリングを実現されます。逆に言うと、ここまでやらないと何が起きているのか全くわからないブラックボックスになってしまいます。
 
+## Debug Tool
+
+### Using debug_bykilt.py
+
+The `debug_bykilt.py` tool allows you to test and debug LLM responses containing browser automation commands without running the full Bykilt application.
+
+#### Prerequisites
+- Python 3.11 or higher
+- Playwright for Python
+
+```bash
+pip install playwright
+playwright install
+```
+
+#### Usage
+Run the debug tool by providing a JSON file containing LLM response data:
+
+```bash
+python debug_bykilt.py <llm_response_file>
+```
+
+Example:
+```bash
+python debug_bykilt.py external/sample_llm_response.json
+```
+
+#### Supported Formats
+The tool supports JSON files with the following formats:
+
+1. Script-based format:
+```json
+{
+    "script_name": "search-beatport",
+    "params": {
+      "query": "minimal"
+    }
+}
+```
+
+2. Command-based format:
+```json
+{
+    "commands": [
+      {
+        "action": "command",
+        "args": ["https://www.beatport.com/"]
+      },
+      {
+        "action": "wait_for_navigation"
+      }
+    ]
+}
+```
+
+The debug tool will execute the commands in a browser window, allowing you to see how they would behave when processed by Bykilt.
+
 ## Changelog
 - [x] **2025/03/06:** Thanks @Nobukins, you made magic comes true, Bykilt!
 - [x] **2025/01/26:** Thanks to @vvincent1234. Now browser-use-webui can combine with DeepSeek-r1 to engage in deep thinking!
