@@ -1,0 +1,20 @@
+{
+    "script_name": "extract_content",
+    "params": {
+      "url": "https://en.wikipedia.org/wiki/Artificial_intelligence",
+      "selectors": [".mw-headline", "p"]
+    },
+    "commands": [
+      {
+        "action": "command",
+        "args": ["https://en.wikipedia.org/wiki/Artificial_intelligence"]
+      },
+      {
+        "action": "wait_for_navigation"
+      },
+      {
+        "action": "extract_content",
+        "args": [".mw-headline", "p"]
+      }
+    ]
+  }

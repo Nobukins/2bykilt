@@ -1,0 +1,32 @@
+{
+    "script_name": "form_input",
+    "params": {
+      "url": "https://www.w3schools.com/html/html_forms.asp",
+      "inputs": [
+        {"selector": "#fname", "value": "John"},
+        {"selector": "#lname", "value": "Doe"}
+      ],
+      "submit_selector": "#form1"
+    },
+    "commands": [
+      {
+        "action": "command",
+        "args": ["https://www.w3schools.com/html/html_forms.asp"]
+      },
+      {
+        "action": "wait_for_navigation"
+      },
+      {
+        "action": "fill",
+        "args": ["#fname", "DQ3"]
+      },
+      {
+        "action": "fill",
+        "args": ["#lname", "Bykilt"]
+      },
+      {
+        "action": "click",
+        "args": ["#form1 input[type=submit]"]
+      }
+    ]
+  }

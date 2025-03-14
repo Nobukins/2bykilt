@@ -1,0 +1,31 @@
+{
+    "script_name": "go_to_url",
+    "params": {
+      "url": "https://djichiiyoko.com"
+    },
+    "commands": [
+      {
+        "action": "command",
+        "args": ["https://djichiiyoko.com"]
+      },
+      {
+        "action": "wait_for_navigation",
+        "args": ["https://djichiiyoko.com"]
+      }
+//       {"name":"navigate","url":"https://www.djichiiyoko.com/","signals":[],"pageAlias":"page","framePath":[]}
+// {"name":"click","selector":"internal:role=link[name=\"ホーム\"i]","signals":[],"button":"left","modifiers":0,"clickCount":1,"pageAlias":"page","framePath":[],"locator":{"kind":"role","body":"link","options":{"attrs":[],"exact":false,"name":"ホーム"}}}
+// {"name":"click","selector":"internal:role=link[name=\"About\"i]","signals":[],"button":"left","modifiers":0,"clickCount":1,"pageAlias":"page","framePath":[],"locator":{"kind":"role","body":"link","options":{"attrs":[],"exact":false,"name":"About"}}}
+// {"name":"click","selector":"internal:role=link[name=\"東日本大震災と原発事故\"i]","signals":[],"button":"left","modifiers":0,"clickCount":1,"pageAlias":"page","framePath":[],"locator":{"kind":"role","body":"link","options":{"attrs":[],"exact":false,"name":"東日本大震災と原発事故"}}}
+// {"name":"click","selector":"internal:role=link[name=\"明日への提言\"i]","signals":[],"button":"left","modifiers":0,"clickCount":1,"pageAlias":"page","framePath":[],"locator":{"kind":"role","body":"link","options":{"attrs":[],"exact":false,"name":"明日への提言"}}}
+// {"name":"click","selector":"internal:role=link[name=\"アーカイブを学ぶ -資料集- Dropdown\"i]","signals":[],"button":"left","modifiers":0,"clickCount":1,"pageAlias":"page","framePath":[],"locator":{"kind":"role","body":"link","options":{"attrs":[],"exact":false,"name":"アーカイブを学ぶ -資料集- Dropdown"}}}
+// {"name":"click","selector":"internal:role=link[name=\"DJIのRepository Dropdown\"i]","signals":[],"button":"left","modifiers":0,"clickCount":1,"pageAlias":"page","framePath":[],"locator":{"kind":"role","body":"link","options":{"attrs":[],"exact":false,"name":"DJIのRepository Dropdown"}}}
+// {"name":"click","selector":"internal:role=link[name=\"DJIレポート【総目次】\"i]","signals":[],"button":"left","modifiers":0,"clickCount":1,"pageAlias":"page","framePath":[],"locator":{"kind":"role","body":"link","options":{"attrs":[],"exact":false,"name":"DJIレポート【総目次】"}}}
+// {"name":"click","selector":"internal:role=link[name=\"チヨコのおすすめトピック\"i]","signals":[],"button":"left","modifiers":0,"clickCount":1,"pageAlias":"page","framePath":[],"locator":{"kind":"role","body":"link","options":{"attrs":[],"exact":false,"name":"チヨコのおすすめトピック"}}}
+// {"name":"click","selector":"internal:role=link[name=\"ホーム\"i]","signals":[],"button":"left","modifiers":0,"clickCount":1,"pageAlias":"page","framePath":[],"locator":{"kind":"role","body":"link","options":{"attrs":[],"exact":false,"name":"ホーム"}}}
+// {"name":"click","selector":"internal:role=link[name=\"DJIレポート No.138\"i]","signals":[],"button":"left","modifiers":0,"clickCount":1,"pageAlias":"page","framePath":[],"locator":{"kind":"role","body":"link","options":{"attrs":[],"exact":false,"name":"DJIレポート No.138"}}}
+// {"name":"click","selector":"internal:role=searchbox[name=\"検索\"i]","signals":[],"button":"left","modifiers":0,"clickCount":1,"pageAlias":"page","framePath":[],"locator":{"kind":"role","body":"searchbox","options":{"attrs":[],"exact":false,"name":"検索"}}}
+// {"name":"fill","selector":"internal:role=searchbox[name=\"検索\"i]","signals":[],"text":"AI","pageAlias":"page","framePath":[],"locator":{"kind":"role","body":"searchbox","options":{"attrs":[],"exact":false,"name":"検索"}}}
+// {"name":"press","selector":"internal:role=searchbox[name=\"検索\"i]","signals":[],"key":"Enter","modifiers":0,"pageAlias":"page","framePath":[],"locator":{"kind":"role","body":"searchbox","options":{"attrs":[],"exact":false,"name":"検索"}}}
+// {"name":"click","selector":"internal:role=button[name=\"検索\"i]","signals":[],"button":"left","modifiers":0,"clickCount":1,"pageAlias":"page","framePath":[],"locator":{"kind":"role","body":"button","options":{"attrs":[],"exact":false,"name":"検索"}}}
+    ]
+  }
