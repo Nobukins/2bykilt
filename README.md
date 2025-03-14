@@ -149,32 +149,49 @@ For users who want to use Ollama as their LLM provider, follow these specific co
 
 > **Note:** LLMを利用するAgent開発においてはLLMとの通信を理解する必要があります。このため、LM Studioを利用したローカルでのLLMホストを開発環境では推奨します。この環境構築により実際にLLMからの自然言語での返信を確認する事が出来るので効率的なプロンプトエンジニアリングを実現されます。逆に言うと、ここまでやらないと何が起きているのか全くわからないブラックボックスになってしまいます。
 
-## Debug Tool
+## Debug tool / デバッグツール
 
-### Using debug_bykilt.py
+Bykiltでは、LLM（大規模言語モデル）からのレスポンスをシミュレートし、ブラウザ操作をデバッグするための簡易ツールを提供しています。
 
-The `debug_bykilt.py` tool allows you to test and debug LLM responses containing browser automation commands without running the full Bykilt application.
-
-#### Prerequisites
-- Python 3.11 or higher
-- Playwright for Python
-
-```bash
-pip install playwright
-playwright install
-```
-
-#### Usage
+#### Usage / debug_bykilt.py の使用方法
 Run the debug tool by providing a JSON file containing LLM response data:
+
+このツールを使用すると、JSONファイルを使ってLLMからのレスポンスをシミュレートし、Playwrightを使ってブラウザ操作を直接実行できます。
 
 ```bash
 python debug_bykilt.py <llm_response_file>
 ```
 
-Example:
+Example(稼働確認済み):
 ```bash
 python debug_bykilt.py external/sample_llm_response.json
 ```
+
+2. サンプルJSONファイルをテストします：
+```bash
+python debug_bykilt.py external/samples/navigate_url.json
+```
+
+### サポートされている機能
+
+- URLへの移動とナビゲーション
+- 検索機能（Beatportなど）
+- フォーム入力
+- 要素のクリック
+- テキスト抽出
+- 複雑なシーケンシャルアクション
+
+### サンプルファイル
+
+`external/samples/` ディレクトリには、様々なタイプのアクションをテストするためのサンプルJSONファイルが用意されています：
+
+- `navigate_url.json`: 基本的なURL移動
+- `search_query.json`: 検索クエリの実行
+- `form_input.json`: フォーム入力操作
+- `extract_content.json`: コンテンツ抽出操作
+- `complex_sequence.json`: 複数アクションの連続実行
+
+これらのサンプルを使用して、Bykiltの機能をテストおよびデバッグできます。
 
 #### Supported Formats
 The tool supports JSON files with the following formats:
@@ -192,15 +209,19 @@ The tool supports JSON files with the following formats:
 2. Command-based format:
 ```json
 {
-    "commands": [
-      {
-        "action": "command",
-        "args": ["https://www.beatport.com/"]
-      },
-      {
-        "action": "wait_for_navigation"
-      }
-    ]
+  "script_name": "go_to_url",
+  "params": {
+    "url": "https://www.google.com"
+  },
+  "commands": [
+    {
+      "action": "command",
+      "args": ["https://www.google.com"]
+    },
+    {
+      "action": "wait_for_navigation"
+    }
+  ]
 }
 ```
 
