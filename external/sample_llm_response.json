@@ -1,0 +1,15 @@
+{
+    "script_name": "search-beatport",
+    "params": {
+      "query": "minimal"
+    },
+    "commands": [
+      {
+        "action": "command",
+        "args": ["https://www.beatport.com/"]
+      },
+      {
+        "action": "wait_for_navigation"
+      }
+    ]
+  }
