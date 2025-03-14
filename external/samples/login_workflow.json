@@ -1,0 +1,42 @@
+{
+  "script_name": "website-login",
+  "params": {
+    "username": "user@example.com",
+    "remember_me": true
+  },
+  "commands": [
+    {
+      "action": "command",
+      "args": ["https://example.com/login"]
+    },
+    {
+      "action": "wait_for_selector",
+      "args": ["form.login-form"]
+    },
+    {
+      "action": "input",
+      "args": ["#username", "${params.username}"]
+    },
+    {
+      "action": "input",
+      "args": ["#password", "${params.password}"]
+    },
+    {
+      "action": "if",
+      "condition": "${params.remember_me}",
+      "commands": [
+        {
+          "action": "click",
+          "args": ["#remember-me"]
+        }
+      ]
+    },
+    {
+      "action": "click",
+      "args": ["button[type='submit']"]
+    },
+    {
+      "action": "wait_for_navigation"
+    }
+  ]
+}

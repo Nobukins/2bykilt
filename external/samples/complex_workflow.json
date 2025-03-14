@@ -1,0 +1,61 @@
+{
+  "script_name": "product-comparison",
+  "params": {
+    "product": "smartphone",
+    "sites": ["amazon", "bestbuy", "walmart"],
+    "max_results": 3
+  },
+  "commands": [
+    {
+      "action": "variable",
+      "name": "results",
+      "value": []
+    },
+    {
+      "action": "for_each",
+      "items": "${params.sites}",
+      "var_name": "site",
+      "commands": [
+        {
+          "action": "command",
+          "args": ["https://${site}.com/search?q=${params.product}"]
+        },
+        {
+          "action": "wait_for_navigation"
+        },
+        {
+          "action": "extract",
+          "target": "site_results",
+          "selector": ".product-item",
+          "limit": "${params.max_results}",
+          "attributes": {
+            "name": ".product-title",
+            "price": ".product-price",
+            "availability": ".product-availability"
+          }
+        },
+        {
+          "action": "for_each",
+          "items": "${site_results}",
+          "var_name": "product",
+          "commands": [
+            {
+              "action": "append",
+              "target": "results",
+              "value": {
+                "site": "${site}",
+                "name": "${product.name}",
+                "price": "${product.price}",
+                "available": "${product.availability}"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "action": "save_data",
+      "args": ["${results}", "product_comparison.json"]
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "script_name": "extract-product-data",
+  "params": {
+    "category": "electronics",
+    "max_items": 5
+  },
+  "commands": [
+    {
+      "action": "command",
+      "args": ["https://example-store.com/${params.category}"]
+    },
+    {
+      "action": "wait_for_selector",
+      "args": [".product-grid"]
+    },
+    {
+      "action": "extract",
+      "target": "products",
+      "selector": ".product-item",
+      "limit": "${params.max_items}",
+      "attributes": {
+        "name": ".product-name",
+        "price": ".product-price",
+        "rating": ".product-rating"
+      }
+    },
+    {
+      "action": "save_data",
+      "args": ["${products}"]
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+    "script_name": "go_to_url",
+    "params": {
+      "url": "https://nogtips.wordpress.com"
+    },
+    "commands": [
+      {
+        "action": "command",
+        "args": ["https://nogtips.wordpress.com"]
+      },
+      {
+        "action": "wait_for_navigation"
+      }
+    ]
+  }

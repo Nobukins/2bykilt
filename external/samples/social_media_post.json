@@ -1,0 +1,44 @@
+{
+  "script_name": "post-to-social-media",
+  "params": {
+    "platform": "twitter",
+    "message": "Check out this awesome automation tool!",
+    "include_image": true
+  },
+  "commands": [
+    {
+      "action": "command",
+      "args": ["https://${params.platform}.com/compose"]
+    },
+    {
+      "action": "wait_for_selector",
+      "args": [".compose-form"]
+    },
+    {
+      "action": "input",
+      "args": [".post-input", "${params.message}"]
+    },
+    {
+      "action": "if",
+      "condition": "${params.include_image}",
+      "commands": [
+        {
+          "action": "click",
+          "args": [".upload-button"]
+        },
+        {
+          "action": "upload_file",
+          "args": ["input[type='file']", "${params.image_path}"]
+        },
+        {
+          "action": "wait_for_selector",
+          "args": [".image-preview"]
+        }
+      ]
+    },
+    {
+      "action": "click",
+      "args": ["button.submit-post"]
+    }
+  ]
+}

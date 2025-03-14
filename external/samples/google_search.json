@@ -1,0 +1,27 @@
+{
+  "script_name": "search-google",
+  "params": {
+    "query": "automation tools",
+    "language": "jp"
+  },
+  "commands": [
+    {
+      "action": "command",
+      "args": ["https://www.google.com/"]
+    },
+    {
+      "action": "wait_for_navigation"
+    },
+    {
+      "action": "input",
+      "args": ["input[name='q']", "${params.query}"]
+    },
+    {
+      "action": "click",
+      "args": ["input[name='btnK']"]
+    },
+    {
+      "action": "wait_for_navigation"
+    }
+  ]
+}
