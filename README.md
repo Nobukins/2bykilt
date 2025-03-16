@@ -269,6 +269,17 @@ The tool supports JSON files with the following formats:
 
 The debug tool will execute the commands in a browser window, allowing you to see how they would behave when processed by Bykilt.
 
+## ロードマップ
+
+- [ ] **llms.txtパーサー**: カスタムアクション定義をより良くするためのllms.txtパーサーの実装と改良
+- [ ] **配布パッケージ**: PyinstallerとElectron(Mochas)を使用したクライアントインストール配布用パッケージの作成
+- [ ] **モジュール開発**: 各種モジュールの追加開発:
+  - [ ] **アクションテンプレート**: 共有と再利用のための再利用可能なブラウザ操作パターン
+  - [ ] **ワークフロービルダー**: コーディングなしでブラウザ自動化のビジュアルワークフロー構築
+  - [ ] **人間協調型インターフェース**: AIと人間のコラボレーションを可能にするハイブリッド操作インターフェース
+  - [ ] **実行エンジン**: 最小限のLLM呼び出しで効率的にワークフローを実行
+  - [ ] **コミュニティハブ**: コミュニティ内でテンプレートやワークフローを共有
+
 ## Changelog
 - [x] **2025/03/06:** Thanks @Nobukins, you made magic comes true, Bykilt!
 - [x] **2025/01/26:** Thanks to @vvincent1234. Now browser-use-webui can combine with DeepSeek-r1 to engage in deep thinking!
