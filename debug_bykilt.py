@@ -49,6 +49,8 @@ async def test_llm_response(json_file_path):
             # Playwrightを使用して処理
             if script_name == "search-beatport" and "query" in params:
                 await execute_beatport_search(params["query"])
+            elif script_name == "search-google" and "query" in params:
+                await execute_google_search(params["query"])
             elif script_name == "go_to_url":
                 url = params.get("url", "")
                 if url:
@@ -92,6 +94,9 @@ async def execute_commands(commands):
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=False)
             page = await browser.new_page()
+            
+            # Setup element indexer
+            # setup_element_indexer(page)
             
             for cmd in commands:
                 action = cmd["action"]
@@ -160,6 +165,55 @@ async def execute_commands(commands):
     except Exception as e:
         print(f"\nコマンド実行エラー: {e}")
 
+async def execute_google_search(query):
+    """Googleで検索を実行"""
+    try:
+        from playwright.async_api import async_playwright
+        
+        print(f"\nGoogleで「{query}」を検索します...")
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=False)
+            page = await browser.new_page()
+            
+            # Googleに移動
+            await page.goto("https://www.google.com/")
+            
+            # 検索アイコンをクリック（サイトのレイアウトによる）
+            try:
+                # 検索ボタンを探す（サイトの構造に依存）
+                search_button = page.get_by_role("combobox", name="検索")
+                await search_button.click()
+                print("検索ボタンをクリックしました")
+            except Exception as e:
+                print(f"検索ボタンの検索中にエラー: {e}")
+                print("検索フィールドを直接探します...")
+            
+            # 検索入力フィールドを探して入力
+            try:
+                search_input = page.get_by_role("combobox", name="検索")
+                await search_input.fill(query)
+                await search_input.press("Enter")
+                print(f"検索クエリ「{query}」を入力しEnterを押しました")
+            except Exception as e:
+                print(f"検索フィールドの操作中にエラー: {e}")
+            
+            # 検索結果が表示されるのを待つ
+            await page.wait_for_load_state("networkidle")
+            print("検索結果ページが読み込まれました")
+            
+            # ユーザーに検査する時間を与える
+            print("\n実行完了。ブラウザは30秒後に閉じられます...")
+            print("(Ctrl+Cで早く終了できます)")
+            await asyncio.sleep(30)
+    
+    except ImportError:
+        print("\nPlaywrightがインストールされていません。")
+        print("以下のコマンドでインストールできます:")
+        print("pip install playwright")
+        print("playwright install")
+    except Exception as e:
+        print(f"\n実行エラー: {e}")
+
 async def execute_beatport_search(query):
     """Beatportで検索を実行"""
     try:
@@ -172,12 +226,18 @@ async def execute_beatport_search(query):
             
             # Beatportに移動
             await page.goto("https://www.beatport.com/")
-            await page.wait_for_load_state("networkidle")
+
+            # Cookieの承認をクリック
+            try:
+                await page.get_by_role("button", name="I Accept").click()
+                print("Cookieの承認ボタンをクリックしました")
+            except Exception as e:
+                print(f"Cookieの承認ボタンの検索中にエラー: {e}")
             
             # 検索アイコンをクリック（サイトのレイアウトによる）
             try:
                 # 検索ボタンを探す（サイトの構造に依存）
-                search_button = page.locator('button[data-testid="search-button"], .header-v2__search-button')
+                search_button = page.get_by_test_id("header-search-input")
                 await search_button.click()
                 print("検索ボタンをクリックしました")
             except Exception as e:
@@ -186,7 +246,7 @@ async def execute_beatport_search(query):
             
             # 検索入力フィールドを探して入力
             try:
-                search_input = page.locator('input[type="search"], input[placeholder*="Search"], .header-v2__search-input')
+                search_input = page.get_by_test_id("header-search-input")
                 await search_input.fill(query)
                 await search_input.press("Enter")
                 print(f"検索クエリ「{query}」を入力しEnterを押しました")
@@ -389,6 +449,90 @@ async def execute_complex_sequence(params):
         print("playwright install")
     except Exception as e:
         print(f"\n実行エラー: {e}")
+
+# def setup_element_indexer(page):
+#     # Make element indexer available on the page
+#     page.evaluate("""() => {
+#         window.addElementIndices = () => {
+#             // Clear existing indices
+#             document.querySelectorAll('.element-index-overlay').forEach(el => el.remove());
+            
+#             // Get all visible elements
+#             const elements = Array.from(document.querySelectorAll('*'));
+#             const visibleElements = elements.filter(el => {
+#                 const style = window.getComputedStyle(el);
+#                 const rect = el.getBoundingClientRect();
+#                 return style.display !== 'none' && 
+#                        style.visibility !== 'hidden' && 
+#                        rect.width > 0 && rect.height > 0;
+#             });
+            
+#             // Add indices to elements
+#             visibleElements.forEach((el, i) => {
+#                 // Determine if element is interactive
+#                 const isInteractive = ['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'].includes(el.tagName) || 
+#                                     el.getAttribute('role') === 'button' || 
+#                                     parseInt(el.getAttribute('tabindex') || '-1') >= 0;
+                
+#                 // Create index prefix based on interactivity
+#                 const prefix = isInteractive ? `${i}[:]` : `_[:]`;
+                
+#                 // Create overlay element with index
+#                 const overlay = document.createElement('div');
+#                 overlay.className = 'element-index-overlay';
+#                 overlay.textContent = prefix + el.tagName.toLowerCase();
+#                 overlay.style.cssText = `
+#                     position: absolute;
+#                     background-color: ${isInteractive ? 'rgba(0, 255, 0, 0.7)' : 'rgba(255, 0, 0, 0.7)'};
+#                     color: white;
+#                     padding: 2px 5px;
+#                     border-radius: 3px;
+#                     font-size: 12px;
+#                     z-index: 10000;
+#                     pointer-events: none;
+#                 `;
+                
+#                 // Position the overlay
+#                 const rect = el.getBoundingClientRect();
+#                 overlay.style.top = `${window.scrollY + rect.top}px`;
+#                 overlay.style.left = `${window.scrollX + rect.left}px`;
+                
+#                 // Add to document
+#                 document.body.appendChild(overlay);
+                
+#                 // Store element data with selector for interaction
+#                 if (!window.__elementIndices) window.__elementIndices = [];
+#                 window.__elementIndices[i] = {
+#                     index: i,
+#                     isInteractive: isInteractive,
+#                     tagName: el.tagName.toLowerCase(),
+#                     element: el
+#                 };
+#             });
+            
+#             return window.__elementIndices ? window.__elementIndices.length : 0;
+#         };
+        
+#         // Function to interact with indexed elements
+#         window.interactWithElement = (index, action, value) => {
+#             if (!window.__elementIndices || !window.__elementIndices[index]) return false;
+#             const elementData = window.__elementIndices[index];
+#             if (!elementData.isInteractive) return false;
+            
+#             const el = elementData.element;
+#             if (!el) return false;
+            
+#             if (action === 'click') {
+#                 el.click();
+#             } else if (action === 'fill' && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
+#                 el.value = value;
+#                 el.dispatchEvent(new Event('input', { bubbles: true }));
+#                 el.dispatchEvent(new Event('change', { bubbles: true }));
+#             }
+            
+#             return true;
+#         };
+#     }""")
 
 def show_help():
     print("LLMレスポンスデバッガ")
