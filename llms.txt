@@ -10,47 +10,8 @@ actions:
     params: query
     command: pytest ./tmp/myscript/search_script_music.py --query query
     slowmo: 2500
-    context:
-      description: "Beatport music search automation"
-      expected_elements:
-        - selector: "button[type='submit']"
-          purpose: "search submit button"
-          actions: ["click"]
-        - selector: "input#search"
-          purpose: "music search input"
-          actions: ["fill"]
-        - selector: ".search-submit"
-          purpose: "search submit button"
-          actions: ["click"]
-      expected_flow:
-        - "Navigate to Beatport"
-        - "Enter search query"
-        - "Trigger search"
-        - "Process results"
 
-  - name: search-music
-    script: search_script_music.py
-    params: query
-    slowmo: 2500
-    context:
-      description: "Beatport music search automation"
-      expected_elements:
-        - selector: "button[type='submit']"
-          purpose: "search submit button"
-          actions: ["click"]
-        - selector: "input#search"
-          purpose: "music search input"
-          actions: ["fill"]
-        - selector: ".search-submit"
-          purpose: "search submit button"
-          actions: ["click"]
-      expected_flow:
-        - "Navigate to Beatport"
-        - "Enter search query"
-        - "Trigger search"
-        - "Process results"
-
-  - name: google-search
+  - name: phrase-search
     type: browser-control
     params:
       - name: query
@@ -59,16 +20,37 @@ actions:
         description: "Search query to execute"
     slowmo: 1000
     flow:
-      - action: navigate
+      - action: command
         url: "https://www.google.com"
-        wait_for: "textarea[name='q']"
-        
-      - action: fill
-        selector: "textarea[name='q']"
-        value: "{query}"
-        
+        wait_for: "#APjFqb"
       - action: click
-        selector: "input[name='btnK']"
-        
-      - action: wait_for_selector
-        selector: "#search"
+        selector: "#APjFqb"
+        wait_for_navigation: true
+      - action: fill_form
+        selector: "#APjFqb"
+        value: "${params.query}"
+      - action: keyboard_press
+        selector: "Enter"
+
+  - name: search-nogtips
+    type: browser-control
+    slowmo: 1000
+    params:
+      - name: query
+        required: true
+        type: string
+        description: "Search query to execute"
+    slowmo: 1000
+    flow:
+      - action: command
+        url: "https://nogtips.wordpress.com/"
+        wait_until: "domcontentloaded"
+      - action: click
+        selector: "#eu-cookie-law > form > input"
+      - action: click
+        selector: "#search-2 > form > label > input"
+      - action: fill_form
+        selector: "#search-2 > form > label > input"
+        value: "${params.query}"
+      - action: keyboard_press
+        selector: "Enter"

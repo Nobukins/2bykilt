@@ -85,138 +85,249 @@ def extract_params(prompt, param_names):
             params[param] = match.group(1)
     return params
 
+# Define proper mapping for Playwright commands
+PLAYWRIGHT_COMMANDS = {
+    'navigate': 'goto',
+    'click': 'click',
+    'fill': 'fill',
+    'fill_form': 'fill',
+    'keyboard_press': 'press',
+    'wait_for_selector': 'wait_for_selector',
+    'wait_for_navigation': 'wait_for_load_state',
+    'screenshot': 'screenshot',
+    'extract_content': 'query_selector_all'  # For content extraction
+}
+
 async def run_script(script_info, params, headless=False, save_recording_path=None):
-    if script_info.get('type') == 'browser-control':
-        script_dir = os.path.join('tmp', 'myscript')
-        os.makedirs(script_dir, exist_ok=True)
+    """
+    Run a browser automation script
+    
+    Args:
+        script_info: Dictionary containing the script information
+        params: Dictionary of parameters for the script
+        headless: Boolean indicating if browser should run in headless mode
+        save_recording_path: Path to save browser recordings
         
-        # Generate and save the script
-        script_content = generate_browser_script(script_info, params)
-        script_path = os.path.join(script_dir, 'browser_control.py')
-        
-        # Create pytest.ini
-        pytest_ini_path = os.path.join(script_dir, 'pytest.ini')
-        if not os.path.exists(pytest_ini_path):
-            with open(pytest_ini_path, 'w') as f:
-                f.write('''[pytest]
+    Returns:
+        tuple: (execution message, script path)
+    """
+    try:
+        if script_info.get('type') == 'browser-control':
+            # Ensure directories exist
+            script_dir = os.path.join('tmp', 'myscript')
+            os.makedirs(script_dir, exist_ok=True)
+            
+            # Log the parameters being used
+            logger.info(f"Generating browser control script with params: {params}")
+            
+            # Generate and save the script
+            script_content = generate_browser_script(script_info, params)
+            script_path = os.path.join(script_dir, 'browser_control.py')
+            
+            # Create pytest.ini if needed
+            pytest_ini_path = os.path.join(script_dir, 'pytest.ini')
+            if not os.path.exists(pytest_ini_path):
+                with open(pytest_ini_path, 'w') as f:
+                    f.write('''[pytest]
 asyncio_mode = auto
 addopts = --verbose --capture=no
 markers =
     browser_control: mark tests as browser control automation
 ''')
+            
+            # Save the generated script
+            with open(script_path, 'w') as f:
+                f.write(script_content)
+                
+            logger.info(f"Generated browser control script at {script_path}")
+        elif 'script' in script_info:
+            # Use the existing script file
+            script_path = os.path.join('tmp', 'myscript', script_info['script'])
+        else:
+            error_msg = "Invalid script_info: missing both 'type' and 'script' fields"
+            logger.error(error_msg)
+            return error_msg, None
+
+        # Check if script file exists
+        if not os.path.exists(script_path):
+            error_msg = f"Script not found: {script_path}"
+            logger.error(error_msg)
+            return error_msg, None
         
-        with open(script_path, 'w') as f:
-            f.write(script_content)
-    elif 'script' in script_info:
-        script_path = os.path.join('tmp', 'myscript', script_info['script'])
-    else:
-        logger.error("Invalid script_info: missing both 'type' and 'script' fields")
-        raise ValueError("Invalid script configuration")
+        # Build pytest command with appropriate parameters
+        command = ['pytest', script_path]
+        if not headless:
+            command.append('--headed')
+        
+        # Add all parameters that exist in params dictionary
+        for param_name, param_value in params.items():
+            command.extend([f'--{param_name}', str(param_value)])
+        
+        # Add slowmo parameter if specified
+        slowmo = script_info.get('slowmo')
+        if slowmo is not None:
+            try:
+                slowmo_ms = int(slowmo)
+                command.extend(['--slowmo', str(slowmo_ms)])
+                logger.info(f"Slow motion enabled with {slowmo_ms}ms delay")
+            except ValueError:
+                logger.warning(f"Invalid slowmo value: {slowmo}, ignoring")
 
-    if not os.path.exists(script_path):
-        logger.error(f"Script not found: {script_path}")
-        raise FileNotFoundError(f"Script not found: {script_path}")
+        # Add recording configuration if enabled - use environment variable instead of command line arg
+        env = os.environ.copy()
+        if save_recording_path:
+            os.makedirs(save_recording_path, exist_ok=True)
+            env['RECORDING_PATH'] = save_recording_path
+            logger.info(f"Recording enabled, saving to: {save_recording_path}")
+        
+        # Log command before execution
+        logger.info(f"Executing command: {' '.join(command)}")
+        
+        # Run the command asynchronously with the environment variable
+        process = await asyncio.create_subprocess_exec(
+            *command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            env=env
+        )
+        stdout, stderr = await process.communicate()
+        
+        # Process execution result
+        if process.returncode != 0:
+            error_msg = f"Script execution failed: {stderr.decode()}"
+            logger.error(error_msg)
+            return error_msg, None
+        else:
+            success_msg = f"Script executed successfully: {stdout.decode()}"
+            logger.info(success_msg)
+            return success_msg, script_path
     
-    # Pytestコマンドを構築
-    command = ['pytest', script_path]
-    if not headless:
-        command.append('--headed')
-    
-    # パラメータを追加
-    if 'query' in params:
-        command.extend(['--query', params['query']])
-    
-    # スローモーションを追加（llms.txtから取得）
-    slowmo = script_info.get('slowmo')  # slowmoがなければNone
-    if slowmo is not None:
-        try:
-            slowmo_ms = int(slowmo)  # 整数に変換
-            command.extend(['--slowmo', str(slowmo_ms)])
-            logger.info(f"Slow motion enabled with {slowmo_ms}ms delay")
-        except ValueError:
-            logger.warning(f"Invalid slowmo value: {slowmo}, ignoring")
-
-    # レコーディングが有効なら、録画パスを指定
-    if save_recording_path:
-        os.makedirs(save_recording_path, exist_ok=True)
-        logger.info(f"Recording enabled, saving to: {save_recording_path}")
-
-    # コマンド実行前にログ出力
-    logger.info(f"Executing command: {' '.join(command)}")
-    
-    # 非同期でコマンドを実行
-    process = await asyncio.create_subprocess_exec(
-        *command,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
-    )
-    stdout, stderr = await process.communicate()
-    
-    # 実行結果をログに記録
-    if process.returncode != 0:
-        error_msg = f"Script execution failed: {stderr.decode()}"
+    except Exception as e:
+        import traceback
+        error_msg = f"Error running script: {str(e)}\n{traceback.format_exc()}"
         logger.error(error_msg)
         return error_msg, None
-    else:
-        success_msg = f"Script executed successfully: {stdout.decode()}"
-        logger.info(success_msg)
-        return success_msg, script_path
-
-PLAYWRIGHT_COMMANDS = {
-    'navigate': 'goto',
-    'click': 'click',
-    'fill': 'fill',
-    'type': 'type',
-    'press': 'press',
-    'wait_for_selector': 'wait_for_selector',
-    'wait_for_load_state': 'wait_for_load_state',
-    'screenshot': 'screenshot',
-    'evaluate': 'evaluate',
-    'select_option': 'select_option'
-}
 
 def generate_browser_script(script_info, params):
+    """
+    Generate a pytest script from a browser control flow
+    
+    Args:
+        script_info: Dictionary containing the script information
+        params: Dictionary of parameters to use in the script
+        
+    Returns:
+        str: The generated script content
+    """
     flow = script_info.get('flow', [])
     script_content = '''
 import pytest
 from playwright.sync_api import expect, Page
-import pytest_asyncio
+import json
+import os
 
 @pytest.fixture(scope="module")
 def browser_context_args(browser_context_args):
-    return {
+    context_args = {
         **browser_context_args,
         "viewport": {"width": 1280, "height": 720}
     }
+    
+    # Handle recording from environment variable
+    recording_path = os.environ.get('RECORDING_PATH')
+    if recording_path:
+        context_args["record_video_dir"] = recording_path
+        
+    return context_args
 
 @pytest.mark.browser_control
 def test_browser_control(page: Page):
     try:
 '''
+    
     for step in flow:
-        action = step['action']
-        if action == 'navigate':
-            script_content += f'        page.goto("{step["url"]}")\n'
+        action = step.get('action')
+        
+        # Process dynamic values in parameters using the format ${params.key}
+        for key, value in step.items():
+            if isinstance(value, str) and '${params.' in value:
+                for param_name, param_value in params.items():
+                    placeholder = f"${{params.{param_name}}}"
+                    if placeholder in value:
+                        step[key] = value.replace(placeholder, str(param_value))
+        
+        # Handle URL navigation (command with URL or navigate)
+        if action == 'command' and 'url' in step:
+            url = step['url']
+            
+            if 'wait_until' in step:
+                script_content += f'        page.goto("{url}", wait_until="{step["wait_until"]}", timeout=30000)\n'
+            else:
+                script_content += f'        page.goto("{url}")\n'
+        elif action == 'navigate':
+            url = step['url']
+            
+            if 'wait_until' in step:
+                script_content += f'        page.goto("{url}", wait_until="{step["wait_until"]}", timeout=30000)\n'
+            else:
+                script_content += f'        page.goto("{url}")\n'
+            
             if 'wait_for' in step:
-                script_content += f'        expect(page.locator("{step["wait_for"]}")).to_be_visible()\n'
+                script_content += f'        expect(page.locator("{step["wait_for"]}")).to_be_visible(timeout=10000)\n'
+                script_content += f'        page.goto("{url}")\n'
+            
+            if 'wait_for' in step:
+                script_content += f'        expect(page.locator("{step["wait_for"]}")).to_be_visible(timeout=10000)\n'
         
-        elif action == 'fill':
-            value = step['value'].format(**params)
-            script_content += f'''        locator = page.locator("{step["selector"]}")
-        expect(locator).to_be_visible()
-        locator.fill("{value}")
-        page.keyboard.press("Enter")\n'''
+        # Handle form filling
+        elif action in ['fill', 'fill_form']:
+            selector = step['selector']
+            value = step['value']
+            script_content += f'''        locator = page.locator("{selector}")
+        expect(locator).to_be_visible(timeout=10000)
+        locator.fill("{value}")\n'''
         
+        # Handle element clicking
         elif action == 'click':
-            script_content += f'''        locator = page.locator("{step["selector"]}")
-        expect(locator).to_be_visible()
-        locator.click()
-'''
+            selector = step['selector']
+            script_content += f'''        locator = page.locator("{selector}")
+        expect(locator).to_be_visible(timeout=10000)
+        locator.click()\n'''
+            
             if step.get('wait_for_navigation', False):
                 script_content += '        page.wait_for_load_state("networkidle")\n'
         
+        # Handle keyboard key press
+        elif action == 'keyboard_press':
+            key = step.get('selector', '') or step.get('key', 'Enter')
+            script_content += f'        page.keyboard.press("{key}")\n'
+            
+        # Handle waiting for navigation (page load)
+        elif action == 'wait_for_navigation':
+            script_content += '        page.wait_for_load_state("networkidle")\n'
+        
+        # Handle waiting for a selector to appear
         elif action == 'wait_for_selector':
-            script_content += f'''        expect(page.locator("{step["selector"]}")).to_be_visible(timeout=10000)\n'''
+            selector = step['selector']
+            timeout = step.get('timeout', 10000)
+            script_content += f'        expect(page.locator("{selector}")).to_be_visible(timeout={timeout})\n'
+            
+        # Handle content extraction
+        elif action == 'extract_content':
+            selectors = step.get('selectors', ["h1", "h2", "h3", "p"])
+            script_content += '''        content = {}
+'''
+            for selector in selectors:
+                script_content += f'''        elements = page.query_selector_all("{selector}")
+        texts = []
+        for element in elements:
+            text = element.text_content()
+            if text.strip():
+                texts.append(text.strip())
+        content["{selector}"] = texts
+'''
+            script_content += '''        print("Extracted content:", json.dumps(content, indent=2))
+'''
     
     script_content += '''    except Exception as e:
         page.screenshot(path="error.png")
