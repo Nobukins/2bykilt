@@ -1,0 +1,33 @@
+{
+  "script_name": "element_indexer_test",
+  "params": {},
+  "commands": [
+    {
+      "action": "go_to_url",
+      "args": ["https://www.djichiiyoko.com"]
+    },
+    {
+      "action": "wait_for_navigation"
+    },
+    {
+      "action": "execute_javascript",
+      "args": ["window.addElementIndices()"]
+    },
+    {
+      "action": "delay",
+      "args": [3000]
+    },
+    {
+      "action": "screenshot",
+      "args": ["element_indices_screenshot.png"]
+    },
+    {
+      "action": "click_element",
+      "args": {"index": 0}
+    },
+    {
+      "action": "extract_page_content",
+      "args": {}
+    }
+  ]
+}
