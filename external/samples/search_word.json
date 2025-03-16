@@ -1,0 +1,28 @@
+{
+    "commands": [
+      {
+        "action": "command",
+        "args": ["https://www.google.com/"]
+      },
+      {
+        "action": "wait_for_navigation"
+      },
+      {
+        "action": "click",
+        "args": ["#APjFqb"]
+      },
+      {
+        "action": "fill_form",
+        "args": ["#APjFqb", "Personal AI Assistant(PAIA)を作る"]
+      },
+      {
+        "action": "keyboard_press",
+        "args": ["Enter"]
+      },
+      {
+        "action": "wait_for_navigation"
+      }
+    ]
+  }
+  
+  
