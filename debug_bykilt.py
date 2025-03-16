@@ -96,7 +96,7 @@ async def execute_commands(commands):
             page = await browser.new_page()
             
             # Setup element indexer
-            # setup_element_indexer(page)
+            setup_element_indexer(page)
             
             for cmd in commands:
                 action = cmd["action"]
@@ -450,89 +450,68 @@ async def execute_complex_sequence(params):
     except Exception as e:
         print(f"\n実行エラー: {e}")
 
-# def setup_element_indexer(page):
-#     # Make element indexer available on the page
-#     page.evaluate("""() => {
-#         window.addElementIndices = () => {
-#             // Clear existing indices
-#             document.querySelectorAll('.element-index-overlay').forEach(el => el.remove());
-            
-#             // Get all visible elements
-#             const elements = Array.from(document.querySelectorAll('*'));
-#             const visibleElements = elements.filter(el => {
-#                 const style = window.getComputedStyle(el);
-#                 const rect = el.getBoundingClientRect();
-#                 return style.display !== 'none' && 
-#                        style.visibility !== 'hidden' && 
-#                        rect.width > 0 && rect.height > 0;
-#             });
-            
-#             // Add indices to elements
-#             visibleElements.forEach((el, i) => {
-#                 // Determine if element is interactive
-#                 const isInteractive = ['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'].includes(el.tagName) || 
-#                                     el.getAttribute('role') === 'button' || 
-#                                     parseInt(el.getAttribute('tabindex') || '-1') >= 0;
-                
-#                 // Create index prefix based on interactivity
-#                 const prefix = isInteractive ? `${i}[:]` : `_[:]`;
-                
-#                 // Create overlay element with index
-#                 const overlay = document.createElement('div');
-#                 overlay.className = 'element-index-overlay';
-#                 overlay.textContent = prefix + el.tagName.toLowerCase();
-#                 overlay.style.cssText = `
-#                     position: absolute;
-#                     background-color: ${isInteractive ? 'rgba(0, 255, 0, 0.7)' : 'rgba(255, 0, 0, 0.7)'};
-#                     color: white;
-#                     padding: 2px 5px;
-#                     border-radius: 3px;
-#                     font-size: 12px;
-#                     z-index: 10000;
-#                     pointer-events: none;
-#                 `;
-                
-#                 // Position the overlay
-#                 const rect = el.getBoundingClientRect();
-#                 overlay.style.top = `${window.scrollY + rect.top}px`;
-#                 overlay.style.left = `${window.scrollX + rect.left}px`;
-                
-#                 // Add to document
-#                 document.body.appendChild(overlay);
-                
-#                 // Store element data with selector for interaction
-#                 if (!window.__elementIndices) window.__elementIndices = [];
-#                 window.__elementIndices[i] = {
-#                     index: i,
-#                     isInteractive: isInteractive,
-#                     tagName: el.tagName.toLowerCase(),
-#                     element: el
-#                 };
-#             });
-            
-#             return window.__elementIndices ? window.__elementIndices.length : 0;
-#         };
+def setup_element_indexer(page):
+    # Make element indexer available on the page
+    # Setup the element indexing
+    page.evaluate("""() => {
+        // Clear existing indices
+        document.querySelectorAll('.element-index-overlay').forEach(el => el.remove());
         
-#         // Function to interact with indexed elements
-#         window.interactWithElement = (index, action, value) => {
-#             if (!window.__elementIndices || !window.__elementIndices[index]) return false;
-#             const elementData = window.__elementIndices[index];
-#             if (!elementData.isInteractive) return false;
+        // Get all visible elements
+        const elements = Array.from(document.querySelectorAll('*'));
+        const visibleElements = elements.filter(el => {
+            const style = window.getComputedStyle(el);
+            const rect = el.getBoundingClientRect();
+            return style.display !== 'none' && 
+                    style.visibility !== 'hidden' && 
+                    rect.width > 0 && rect.height > 0;
+        });
+        
+        // Add indices to elements
+        visibleElements.forEach((el, i) => {
+            // Determine if element is interactive
+            const isInteractive = ['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'].includes(el.tagName) || 
+                                el.getAttribute('role') === 'button' || 
+                                parseInt(el.getAttribute('tabindex') || '-1') >= 0;
             
-#             const el = elementData.element;
-#             if (!el) return false;
+            // Create index prefix based on interactivity
+            const prefix = isInteractive ? `${i}[:]` : `_[:]`;
             
-#             if (action === 'click') {
-#                 el.click();
-#             } else if (action === 'fill' && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
-#                 el.value = value;
-#                 el.dispatchEvent(new Event('input', { bubbles: true }));
-#                 el.dispatchEvent(new Event('change', { bubbles: true }));
-#             }
+            // Create overlay element with index
+            const overlay = document.createElement('div');
+            overlay.className = 'element-index-overlay';
+            overlay.textContent = prefix + el.tagName.toLowerCase();
+            overlay.style.cssText = `
+                position: absolute;
+                background-color: ${isInteractive ? 'rgba(0, 255, 0, 0.7)' : 'rgba(255, 0, 0, 0.7)'};
+                color: white;
+                padding: 2px 5px;
+                border-radius: 3px;
+                font-size: 12px;
+                z-index: 10000;
+                pointer-events: none;
+            `;
             
-#             return true;
-#         };
-#     }""")
+            // Position the overlay
+            const rect = el.getBoundingClientRect();
+            overlay.style.top = `${window.scrollY + rect.top}px`;
+            overlay.style.left = `${window.scrollX + rect.left}px`;
+            
+            // Add to document
+            document.body.appendChild(overlay);
+            
+            // Store element data with selector for interaction
+            if (!window.__elementIndices) window.__elementIndices = [];
+            window.__elementIndices[i] = {
+                index: i,
+                isInteractive: isInteractive,
+                tagName: el.tagName.toLowerCase(),
+                element: el
+            };
+        });
+        
+        return window.__elementIndices ? window.__elementIndices.length : 0;
+    }""")
 
 def show_help():
     print("LLMレスポンスデバッガ")
