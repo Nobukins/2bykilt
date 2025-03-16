@@ -271,6 +271,7 @@ The debug tool will execute the commands in a browser window, allowing you to se
 
 ## ロードマップ
 
+- [ ] **録画・ログの共通化**: Web-UIと同じブラウザ設定の継承と利用（録画、ログ、Agent historyなど）
 - [ ] **llms.txtパーサー**: カスタムアクション定義をより良くするためのllms.txtパーサーの実装と改良
 - [ ] **配布パッケージ**: PyinstallerとElectron(Mochas)を使用したクライアントインストール配布用パッケージの作成
 - [ ] **モジュール開発**: 各種モジュールの追加開発:
