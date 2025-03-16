@@ -149,6 +149,54 @@ For users who want to use Ollama as their LLM provider, follow these specific co
 
 > **Note:** LLMを利用するAgent開発においてはLLMとの通信を理解する必要があります。このため、LM Studioを利用したローカルでのLLMホストを開発環境では推奨します。この環境構築により実際にLLMからの自然言語での返信を確認する事が出来るので効率的なプロンプトエンジニアリングを実現されます。逆に言うと、ここまでやらないと何が起きているのか全くわからないブラックボックスになってしまいます。
 
+## Prompt inputs / プロンプト入力例
+
+#### LinkedIn search
+```
+search-linkedin query=Personal_AI_Assistant 
+```
+
+#### Beatport search
+```
+search-beatport query=Minimal 
+```
+
+## カスタマイズとスクリプト作成
+
+### llms.txtでアクションを定義
+
+プロジェクトルートにllms.txtを編集・更新しカスタマイズした自動化操作手順をYAML形式で保存する
+
+この場合、最初に宣言するname属性がコマンド呼び出し時の識別子となる。つまり「phrase-search」がそれに該当する。
+```yaml
+actions:
+  - name: phrase-search
+    type: browser-control
+    params:
+      - name: query
+        required: true
+        type: string
+        description: "Search query to execute"
+    slowmo: 1000
+    flow:
+      - action: command
+        url: "https://www.google.com"
+        wait_for: "#APjFqb"
+      - action: click
+        selector: "#APjFqb"
+        wait_for_navigation: true
+      - action: fill_form
+        selector: "#APjFqb"
+        value: "${params.query}"
+      - action: keyboard_press
+        selector: "Enter"
+```
+
+上記の様にカスタムで組んだ自動化スクリプトがllms.txtにあれば、以下のようなプロンプト入力でカスタム利用が可能となる。
+```
+phrase-search query=Personal_AI_Assistant
+```
+
 ## Debug tool / デバッグツール
 
 Bykiltでは、LLM（大規模言語モデル）からのレスポンスをシミュレートし、ブラウザ操作をデバッグするための簡易ツールを提供しています。
@@ -162,14 +210,12 @@ Run the debug tool by providing a JSON file containing LLM response data:
 python debug_bykilt.py <llm_response_file>
 ```
 
-Example(稼働確認済み):
-```bash
-python debug_bykilt.py external/sample_llm_response.json
-```
-
 2. サンプルJSONファイルをテストします：
 ```bash
 python debug_bykilt.py external/samples/navigate_url.json
+```
+```bash
+python debug_bykilt.py external/samples/search_word.json
 ```
 
 ### サポートされている機能
@@ -186,7 +232,7 @@ python debug_bykilt.py external/samples/navigate_url.json
 `external/samples/` ディレクトリには、様々なタイプのアクションをテストするためのサンプルJSONファイルが用意されています：
 
 - `navigate_url.json`: 基本的なURL移動
-- `search_query.json`: 検索クエリの実行
+- `search_word.json`: 検索クエリの実行
 - `form_input.json`: フォーム入力操作
 - `extract_content.json`: コンテンツ抽出操作
 - `complex_sequence.json`: 複数アクションの連続実行
@@ -209,10 +255,6 @@ The tool supports JSON files with the following formats:
 2. Command-based format:
 ```json
 {
-  "script_name": "go_to_url",
-  "params": {
-    "url": "https://www.google.com"
-  },
   "commands": [
     {
       "action": "command",
