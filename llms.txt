@@ -54,3 +54,17 @@ actions:
         value: "${params.query}"
       - action: keyboard_press
         selector: "Enter"
+
+  - name: site-defined-script
+    type: git-script
+    git: https://github.com/Nobukins/sample-tests.git
+    script_path: search_script.py
+    version: main
+    params:
+      - name: query
+        required: true
+        type: string
+        description: "Search query to execute"
+    command: pytest ${script_path} --query ${params.query}
+    timeout: 120
+    slowmo: 1000

@@ -10,6 +10,9 @@ import re
 import yaml
 import subprocess
 import requests
+import tempfile
+import shutil
+from pathlib import Path
 import gradio as gr
 from playwright.async_api import async_playwright
 from browser_use.agent.service import Agent
@@ -98,6 +101,44 @@ PLAYWRIGHT_COMMANDS = {
     'extract_content': 'query_selector_all'  # For content extraction
 }
 
+async def clone_git_repo(git_url, version='main', target_dir=None):
+    """Clone a git repository and checkout specified version/branch"""
+    if target_dir is None:
+        target_dir = tempfile.mkdtemp()
+    
+    try:
+        # If the directory already exists, handle it appropriately
+        if os.path.exists(target_dir):
+            if os.path.exists(os.path.join(target_dir, '.git')):
+                # It's a git repo, try to pull the latest changes
+                logger.info(f"Repository already exists at {target_dir}, pulling latest changes")
+                subprocess.run(['git', 'fetch', '--all'], cwd=target_dir, check=True)
+                subprocess.run(['git', 'reset', '--hard', 'origin/main'], cwd=target_dir, check=True)
+            else:
+                # Directory exists but is not a git repo, remove it and clone
+                logger.info(f"Directory exists but is not a git repo, removing: {target_dir}")
+                shutil.rmtree(target_dir)
+                os.makedirs(target_dir, exist_ok=True)
+                logger.info(f"Cloning repository from {git_url} to {target_dir}")
+                subprocess.run(['git', 'clone', git_url, target_dir], check=True)
+        else:
+            # Directory doesn't exist, create it and clone
+            os.makedirs(os.path.dirname(target_dir), exist_ok=True)
+            logger.info(f"Cloning repository from {git_url} to {target_dir}")
+            subprocess.run(['git', 'clone', git_url, target_dir], check=True)
+        
+        # Checkout specific version/branch if provided
+        if version:
+            logger.info(f"Checking out version/branch: {version}")
+            subprocess.run(['git', 'checkout', version], cwd=target_dir, check=True)
+        
+        return target_dir
+    except subprocess.SubprocessError as e:
+        logger.error(f"Git operation failed: {str(e)}")
+        if os.path.exists(target_dir):
+            shutil.rmtree(target_dir)
+        raise RuntimeError(f"Failed to clone repository: {str(e)}")
+
 async def run_script(script_info, params, headless=False, save_recording_path=None):
     """
     Run a browser automation script
@@ -112,34 +153,118 @@ async def run_script(script_info, params, headless=False, save_recording_path=No
         tuple: (execution message, script path)
     """
     try:
-        if script_info.get('type') == 'browser-control':
-            # Ensure directories exist
-            script_dir = os.path.join('tmp', 'myscript')
-            os.makedirs(script_dir, exist_ok=True)
-            
-            # Log the parameters being used
-            logger.info(f"Generating browser control script with params: {params}")
-            
-            # Generate and save the script
-            script_content = generate_browser_script(script_info, params)
-            script_path = os.path.join(script_dir, 'browser_control.py')
-            
-            # Create pytest.ini if needed
-            pytest_ini_path = os.path.join(script_dir, 'pytest.ini')
-            if not os.path.exists(pytest_ini_path):
-                with open(pytest_ini_path, 'w') as f:
-                    f.write('''[pytest]
+        if 'type' in script_info:
+            if script_info['type'] == 'browser-control':
+                # Ensure directories exist
+                script_dir = os.path.join('tmp', 'myscript')
+                os.makedirs(script_dir, exist_ok=True)
+                
+                # Log the parameters being used
+                logger.info(f"Generating browser control script with params: {params}")
+                
+                # Generate and save the script
+                script_content = generate_browser_script(script_info, params)
+                script_path = os.path.join(script_dir, 'browser_control.py')
+                
+                # Create pytest.ini if needed
+                pytest_ini_path = os.path.join(script_dir, 'pytest.ini')
+                if not os.path.exists(pytest_ini_path):
+                    with open(pytest_ini_path, 'w') as f:
+                        f.write('''[pytest]
 asyncio_mode = auto
 addopts = --verbose --capture=no
 markers =
     browser_control: mark tests as browser control automation
 ''')
-            
-            # Save the generated script
-            with open(script_path, 'w') as f:
-                f.write(script_content)
                 
-            logger.info(f"Generated browser control script at {script_path}")
+                # Save the generated script
+                with open(script_path, 'w') as f:
+                    f.write(script_content)
+                    
+                logger.info(f"Generated browser control script at {script_path}")
+            elif script_info['type'] == 'git-script':
+                # Handle git-script type
+                if 'git' not in script_info or 'script_path' not in script_info:
+                    logger.error("Git-script type requires 'git' and 'script_path' fields")
+                    raise ValueError("Missing required fields for git-script type")
+                
+                git_url = script_info['git']
+                script_path = script_info['script_path']
+                version = script_info.get('version', 'main')
+                
+                # Create directory for git repository
+                repo_dir = os.path.join(tempfile.gettempdir(), 'bykilt_gitscripts', Path(git_url).stem)
+                os.makedirs(os.path.dirname(repo_dir), exist_ok=True)
+                
+                # Clone repository
+                try:
+                    repo_dir = await clone_git_repo(git_url, version, repo_dir)
+                    full_script_path = os.path.join(repo_dir, script_path)
+                    
+                    if not os.path.exists(full_script_path):
+                        raise FileNotFoundError(f"Script not found at path: {full_script_path}")
+                    
+                    # Create conftest.py to handle custom pytest arguments
+                    # Using a unique prefix for our parameters to avoid conflicts
+                    conftest_path = os.path.join(os.path.dirname(full_script_path), 'conftest.py')
+                    with open(conftest_path, 'w') as f:
+                        f.write("""
+import pytest
+
+def pytest_addoption(parser):
+    # Add our custom parameters with unique names to avoid conflicts
+    parser.addoption("--query", action="store", default="")
+    
+    # Use a unique name for slowmo to avoid conflict with built-in parameters
+    parser.addoption("--bykilt-slowmo", action="store", type=int, default=0)
+
+@pytest.fixture
+def query(request):
+    return request.config.getoption("--query")
+
+@pytest.fixture
+def slowmo(request):
+    # Get value from our custom slowmo parameter
+    return request.config.getoption("--bykilt-slowmo")
+""")
+                    
+                    # Build and run command
+                    command = script_info.get('command', '')
+                    if command:
+                        # Replace placeholders in command
+                        command = command.replace('${script_path}', full_script_path)
+                        
+                        # Modify the slowmo parameter in the command if it exists
+                        if 'slowmo' in script_info and str(script_info['slowmo']).isdigit():
+                            # Replace any existing --slowmo with our renamed parameter
+                            if '--slowmo' in command:
+                                command = command.replace('--slowmo', '--bykilt-slowmo')
+                            else:
+                                # Add our slowmo parameter
+                                command += f" --bykilt-slowmo {script_info['slowmo']}"
+                        
+                        # Replace other parameters
+                        for param_name, param_value in params.items():
+                            command = command.replace(f"${{params.{param_name}}}", param_value)
+                        
+                        logger.info(f"Executing command: {command}")
+                        result = subprocess.run(command, shell=True, text=True, capture_output=True)
+                        
+                        if result.returncode != 0:
+                            logger.error(f"Command execution failed: {result.stderr}")
+                            raise RuntimeError(f"Script execution failed with exit code {result.returncode}")
+                        
+                        return f"Script executed successfully: {result.stdout}", full_script_path
+                    else:
+                        logger.error("No command specified for git-script execution")
+                        raise ValueError("Command field is required for git-script type")
+                        
+                except Exception as e:
+                    logger.error(f"Failed to execute git script: {str(e)}")
+                    raise
+            else:
+                logger.error(f"Unsupported script type: {script_info['type']}")
+                raise ValueError(f"Unsupported script type: {script_info['type']}")
         elif 'script' in script_info:
             # Use the existing script file
             script_path = os.path.join('tmp', 'myscript', script_info['script'])
