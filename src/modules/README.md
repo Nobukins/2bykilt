@@ -338,3 +338,50 @@ result = manager.execute_action("search-combined", query="最新技術動向")
 ```
 
 このシステムを活用することで、LLM呼び出しを削減しながら、効率的かつ柔軟なブラウザ自動化を実現できます。
+
+## 7. Git Script Repository (Gitスクリプトリポジトリ)
+
+**目的**: GitリポジトリからスクリプトやツールセットをBykilt内で活用できるようにします。
+
+**機能**:
+- Gitリポジトリからのスクリプト取得・実行
+- バージョン指定によるスクリプト管理
+- キャッシュによる効率的な実行
+- 柔軟なパラメータ受け渡し
+
+**使用方法**:
+```python
+from src.modules.automation_manager import BrowserAutomationManager
+
+# マネージャーの初期化
+manager = BrowserAutomationManager(local_path="llms.txt")
+
+# Gitベースのスクリプト実行
+result = manager.execute_action(
+    "login-script", 
+    username="myuser", 
+    password="mysecret"
+)
+```
+
+**YAMLでの定義例** (llms.txt):
+```yaml
+actions:
+  - name: login-script
+    git: https://github.com/username/automation-scripts.git
+    script_path: login.py
+    version: main  # オプション: ブランチ、タグ、コミットハッシュ
+    command: python ${script_path} --username ${username} --password ${password}
+    timeout: 120  # 秒単位
+    slowmo: 1000  # ブラウザの動作を遅くする（ミリ秒）
+```
+
+**技術的詳細**:
+- スクリプトは `./tmp/git_scripts/<リポジトリ名>` にクローンされます
+- 1時間おきに自動更新（設定変更可能）
+- スクリプト実行が失敗した場合はLLMにフォールバック
+
+**ユースケース**:
+- **共有自動化スクリプト**: チーム間で標準化された自動化ツールを共有
+- **専門的な処理**: 複雑なデータ処理や特定サイト向けのスクリプトをリポジトリで管理
+- **コミュニティリソース**: 公開リポジトリから有用なツールを直接活用

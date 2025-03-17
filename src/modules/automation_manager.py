@@ -1,6 +1,10 @@
 from src.modules.yaml_parser import BrowserAutomationConfig, InstructionLoader, InstructionResult
 from typing import Dict, Any, List, Optional
 import logging
+from src.modules.git_helper import clone_or_pull_repository, checkout_version
+import os
+import subprocess
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +16,8 @@ class BrowserAutomationManager:
         self.website_url = website_url
         self.actions = {}
         self.instruction_source = None
+        self.git_repos_dir = Path("./tmp/git_scripts").absolute()
+        self.git_repos_dir.mkdir(parents=True, exist_ok=True)
     
     def initialize(self):
         """
@@ -104,8 +110,78 @@ class BrowserAutomationManager:
         
         return True
     
+    def _prepare_git_script(self, action):
+        """Gitリポジトリからスクリプトを準備"""
+        if "git" not in action:
+            return False, None
+            
+        repo_url = action["git"]
+        repo_name = repo_url.split("/")[-1].replace(".git", "")
+        target_dir = self.git_repos_dir / repo_name
+        
+        # Clone or update repository
+        success = clone_or_pull_repository(repo_url, target_dir)
+        if not success:
+            return False, None
+        
+        # Checkout specific version if specified
+        version = action.get("version", None)
+        if version and not checkout_version(target_dir, version):
+            return False, None
+        
+        # Get script path
+        script_path = target_dir / action.get("script_path", "")
+        return True, str(script_path)
+    
     def _execute_script(self, action: Dict[str, Any], **params) -> bool:
-        """Execute a script-based automation"""
+        """スクリプト実行（Gitリポジトリ対応）"""
+        if "git" in action:
+            # Gitリポジトリからスクリプトを取得
+            success, script_path = self._prepare_git_script(action)
+            if not success:
+                logger.warning(f"Gitリポジトリの準備に失敗しました: {action['git']}")
+                # フォールバックとしてLLMを使用
+                return self._fallback_to_llm(action["name"], **params)
+            
+            # コマンド構築とパラメータ置換
+            command = action["command"]
+            
+            # ${script_path}を実際のパスで置換
+            command = command.replace("${script_path}", script_path)
+            
+            # コマンド内のパラメータを置換
+            for param_name, param_value in params.items():
+                placeholder = f"${{{param_name}}}"
+                if placeholder in command:
+                    command = command.replace(placeholder, str(param_value))
+            
+            # 環境変数の設定
+            env = os.environ.copy()
+            if "slowmo" in action:
+                env["SLOWMO"] = str(action["slowmo"])
+            
+            # コマンド実行
+            logger.info(f"コマンド実行: {command}")
+            try:
+                result = subprocess.run(
+                    command, 
+                    shell=True, 
+                    env=env, 
+                    timeout=action.get("timeout", 300),
+                    check=False
+                )
+                success = result.returncode == 0
+                if not success:
+                    logger.error(f"コマンド実行が失敗しました: コード {result.returncode}")
+                return success
+            except subprocess.TimeoutExpired:
+                logger.error(f"コマンド実行がタイムアウトしました")
+                return False
+            except Exception as e:
+                logger.error(f"コマンド実行エラー: {str(e)}")
+                return False
+        
+        # ...existing script execution code...
         script = action.get('script')
         command = action.get('command')
         
@@ -115,6 +191,13 @@ class BrowserAutomationManager:
         # This would run the specified script with parameters
         
         return True
+    
+    def _fallback_to_llm(self, action_name, **params):
+        """LLMを使用したフォールバック処理"""
+        logger.info(f"アクション実行をLLMにフォールバック: {action_name}")
+        # Implement the LLM fallback logic here
+        # This would connect to the existing LLM processing pipeline
+        return False
 
 # Main application function that integrates the above classes
 def setup_browser_automation(website_url: Optional[str] = None) -> BrowserAutomationManager:
