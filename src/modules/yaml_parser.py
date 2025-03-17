@@ -1,14 +1,33 @@
 import re
 import requests
 import yaml
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from dataclasses import dataclass
 import logging
 import os
+import time
+import jsonschema
+from jsonschema import validate
+from urllib3.util.retry import Retry
+import requests.adapters
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+def setup_requests_retry():
+    """Configure requests with retry capabilities"""
+    retry_strategy = Retry(
+        total=3,
+        backoff_factor=1,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["HEAD", "GET"]
+    )
+    adapter = requests.adapters.HTTPAdapter(max_retries=retry_strategy)
+    http = requests.Session()
+    http.mount("https://", adapter)
+    http.mount("http://", adapter)
+    return http
 
 @dataclass
 class InstructionResult:
@@ -22,13 +41,31 @@ class InstructionResult:
 class YamlInstructionSource:
     url: str
     raw_content: Optional[str] = None
+    cache_ttl: int = 3600  # Cache time-to-live in seconds
+    retry_count: int = 3
+    retry_backoff: float = 1.0
+    _last_fetch_time: Optional[float] = None
+    _session: Optional[requests.Session] = None
+    
+    def __post_init__(self):
+        self._session = setup_requests_retry()
     
     def fetch(self) -> str:
-        """Fetch content from the URL."""
+        """Fetch content from the URL with caching and retry support."""
+        current_time = time.time()
+        
+        # Return cached content if it's still valid
+        if (self.raw_content and self._last_fetch_time and 
+                current_time - self._last_fetch_time < self.cache_ttl):
+            logger.debug(f"Using cached content for {self.url}")
+            return self.raw_content
+            
         try:
-            response = requests.get(self.url)
+            logger.info(f"Fetching content from {self.url}")
+            response = self._session.get(self.url, timeout=10)
             response.raise_for_status()
             self.raw_content = response.text
+            self._last_fetch_time = current_time
             return self.raw_content
         except requests.RequestException as e:
             logger.error(f"Failed to fetch content from {self.url}: {e}")
@@ -40,15 +77,19 @@ class MarkdownYamlParser:
     
     def extract_yaml_blocks(self) -> List[str]:
         """Extract YAML code blocks from Markdown content."""
-        # Pattern to match code blocks with yaml language identifier
-        pattern = r'```yaml\s+(.*?)\s+```'
+        # More flexible pattern that handles various markdown code block formats
+        # Supports both ```yaml and ```yml markers with optional spaces
+        pattern = r'```\s*(yaml|yml)\s*(.*?)\s*```'
+        
         # re.DOTALL makes '.' match newlines as well
-        matches = re.findall(pattern, self.markdown_content, re.DOTALL)
+        matches = re.findall(pattern, self.markdown_content, re.DOTALL | re.IGNORECASE)
         
         if not matches:
             logger.warning("No YAML code blocks found in the Markdown content")
+            return []
         
-        return matches
+        # Extract just the content (second group)
+        return [match[1] for match in matches]
     
     def parse_yaml_blocks(self) -> List[Dict[str, Any]]:
         """Extract and parse YAML blocks from Markdown content."""
@@ -69,6 +110,39 @@ class MarkdownYamlParser:
         return parsed_blocks
 
 class BrowserAutomationConfig:
+    # Schema for validating browser automation instructions
+    INSTRUCTION_SCHEMA = {
+        "type": "object",
+        "required": ["name", "type"],
+        "properties": {
+            "name": {"type": "string"},
+            "type": {"type": "string"},
+            "params": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "required": ["name"],
+                    "properties": {
+                        "name": {"type": "string"},
+                        "required": {"type": "boolean"},
+                        "type": {"type": "string"},
+                        "description": {"type": "string"}
+                    }
+                }
+            },
+            "flow": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "required": ["action"],
+                    "properties": {
+                        "action": {"type": "string"}
+                    }
+                }
+            }
+        }
+    }
+    
     def __init__(self, config_url: str):
         self.config_url = config_url
         self.yaml_instructions = []
@@ -84,25 +158,23 @@ class BrowserAutomationConfig:
         return self.yaml_instructions
     
     def validate_instruction(self, instruction: Dict[str, Any]) -> bool:
-        """Validate a single browser automation instruction."""
-        required_fields = ['name', 'type']
-        
-        # Check required fields
-        for field in required_fields:
-            if field not in instruction:
-                logger.error(f"Missing required field '{field}' in instruction")
-                return False
-        
-        # Validate type-specific requirements
-        if instruction['type'] == 'browser-control':
-            if 'params' not in instruction:
-                logger.error(f"Missing 'params' field in browser-control instruction")
-                return False
-            if 'flow' not in instruction:
-                logger.error(f"Missing 'flow' field in browser-control instruction")
-                return False
-        
-        return True
+        """Validate a single browser automation instruction using JSON schema."""
+        try:
+            validate(instance=instruction, schema=self.INSTRUCTION_SCHEMA)
+            
+            # Additional type-specific validation
+            if instruction['type'] == 'browser-control':
+                if 'params' not in instruction:
+                    logger.error(f"Missing 'params' field in browser-control instruction")
+                    return False
+                if 'flow' not in instruction:
+                    logger.error(f"Missing 'flow' field in browser-control instruction")
+                    return False
+            
+            return True
+        except jsonschema.exceptions.ValidationError as e:
+            logger.error(f"Validation error in instruction: {e}")
+            return False
     
     def get_valid_instructions(self) -> List[Dict[str, Any]]:
         """Get only the valid browser automation instructions."""
@@ -111,18 +183,30 @@ class BrowserAutomationConfig:
 class InstructionLoader:
     """Handles loading browser automation instructions from different sources"""
     
-    def __init__(self, local_path: str = "llms.txt", website_url: Optional[str] = None):
+    def __init__(self, local_path: str = "llms.txt", website_url: Optional[str] = None, 
+                 mock_data: Optional[Dict] = None):
         self.local_path = local_path
         self.website_url = website_url
+        self.mock_data = mock_data  # For testing purposes
     
     def load_instructions(self) -> InstructionResult:
         """
         Load instructions following priority order:
-        1. Local file
-        2. Website
-        3. Fallback to LLM (by returning empty result)
+        1. Mock data (if in testing mode)
+        2. Local file
+        3. Website
+        4. Fallback to LLM (by returning empty result)
         """
         logger.info("Attempting to load instructions from available sources")
+        
+        # Testing mode: return mock data if provided
+        if self.mock_data is not None:
+            logger.info("Using mock data for testing")
+            return InstructionResult(
+                success=True,
+                instructions=self.mock_data.get("instructions", []),
+                source="mock"
+            )
         
         # Priority 1: Try local file first (user's content takes precedence)
         local_result = self._load_from_local()
@@ -275,3 +359,35 @@ class InstructionLoader:
         except Exception as e:
             logger.error(f"Error parsing content: {e}")
             return []
+
+def load_yaml_from_file(file_path: str) -> Union[Dict[str, Any], List[Dict[str, Any]], None]:
+    """Utility function to load YAML from a file with proper error handling."""
+    try:
+        with open(file_path, 'r') as file:
+            content = file.read()
+            return yaml.safe_load(content)
+    except FileNotFoundError:
+        logger.error(f"File not found: {file_path}")
+        return None
+    except yaml.YAMLError as e:
+        logger.error(f"YAML parsing error in {file_path}: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Error loading YAML from {file_path}: {e}")
+        return None
+
+def validate_yaml_structure(data: Any, expected_type: type, required_fields: List[str] = None) -> bool:
+    """Validate basic YAML structure and required fields."""
+    # Check type
+    if not isinstance(data, expected_type):
+        logger.error(f"Expected {expected_type.__name__}, got {type(data).__name__}")
+        return False
+    
+    # Check required fields if applicable
+    if required_fields and isinstance(data, dict):
+        missing_fields = [field for field in required_fields if field not in data]
+        if missing_fields:
+            logger.error(f"Missing required fields: {', '.join(missing_fields)}")
+            return False
+    
+    return True
