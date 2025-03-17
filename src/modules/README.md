@@ -1,4 +1,3 @@
-
 # Bykilt Enhanced Modules
 
 Bykiltには以下の拡張モジュールが含まれており、ブラウザ操作とAIエージェントの連携をさらに強化します。(全て今後実装予定。ロードマップとしてのみここに策定する。)
@@ -169,3 +168,173 @@ hub.debug_operations(
 **ユースケース**:
 - **ナレッジ共有**: 特定ドメイン向けの最適化されたワークフローを共有
 - **コラボレーション**: 複数チームが協力して複雑な自動化シナリオを開発・改良
+
+## 6. YAML Parser & Automation Manager (YAML構文解析＆自動化マネージャー)
+
+**目的**: カスタムアクションの定義をYAMLで効率的に管理し、ブラウザ操作を自動化します。
+
+**機能**:
+- Markdown内のYAMLブロック解析
+- ローカルファイルとリモートソースからのアクション定義読み込み
+- テンプレート化されたブラウザ操作フロー
+- 優先順位付きのソース管理（ローカル → リモート → LLMフォールバック）
+
+**使用方法**:
+```python
+from src.modules.yaml_parser import InstructionLoader
+from src.modules.automation_manager import BrowserAutomationManager
+
+# ローカルとリモートの両方のソースを設定
+loader = InstructionLoader(
+    local_path="llms.txt",
+    website_url="https://example.com/automation-configs.md"
+)
+
+# 自動化マネージャーのセットアップと初期化
+manager = BrowserAutomationManager(
+    local_path="llms.txt",
+    website_url="https://example.com/automation-configs.md"
+)
+manager.initialize()
+
+# アクションの実行
+result = manager.execute_action("search-nogtips", query="automation testing")
+if result:
+    print("アクションが正常に実行されました")
+```
+
+**カスタムアクション定義例**（llms.txt）:
+```yaml
+actions:
+  - name: search-google
+    type: browser-control
+    params:
+      - name: query
+        required: true
+        type: string
+        description: "検索クエリ"
+    flow:
+      - action: command
+        url: "https://www.google.com"
+      - action: fill_form
+        selector: "#APjFqb"
+        value: "${params.query}"
+      - action: keyboard_press
+        selector: "Enter"
+```
+
+**プロンプト処理のフロー**:
+```graph TD
+    A[ユーザー入力: "Googleでおそばを検索して"] --> B[pre_evaluate_prompt]
+    B --> C{YAMLパーサー: llms.txtのマッチ}
+    C -->|マッチあり| D[アクションテンプレート実行]
+    C -->|マッチなし| E[LLMによる処理]
+    D --> F[BrowserAutomationManager処理]
+    F --> G[テンプレート内のパラメータ置換]
+    G --> H[ブラウザアクション実行]
+    E --> I[CustomAgent処理]
+```
+
+1. ユーザープロンプトがシステムに入力される
+2. `pre_evaluate_prompt`関数がYAMLパーサーを使用して`llms.txt`内のパターンと照合
+3. マッチするアクションが見つかった場合:
+   - `InstructionLoader`がアクション定義を読み込み
+   - `BrowserAutomationManager`がパラメータを抽出（例：「おそば」を検索クエリとして）
+   - 定義されたフローに従ってブラウザ操作を実行
+4. マッチがない場合:
+   - 従来のLLMベースのCustomAgentが処理を引き継ぐ
+
+**ユースケース**:
+- **再利用可能な検索フロー**: 複数のウェブサイトに対する標準化された検索操作の定義
+- **サイト特化型アクション**: 特定サイト向けのカスタマイズされた複雑な操作シーケンス
+- **コミュニティ共有**: ユーザー間でのYAML定義の共有とカスタマイズ
+
+### モジュール連携の詳細
+
+YAML Parser、Automation Manager、Mainの3つのファイルは以下のように連携して動作します：
+
+#### 基本的なファイル構成と役割
+
+1. **yaml_parser.py**: YAMLフォーマットのアクション定義を解析します
+   - `InstructionLoader`: ローカルファイルやリモートソースからアクション定義を読み込み
+   - `MarkdownYamlParser`: Markdown内のYAMLブロックを抽出・解析
+   - `BrowserAutomationConfig`: 設定の読み込みと検証を担当
+
+2. **automation_manager.py**: 解析されたアクション定義を管理し実行します
+   - `BrowserAutomationManager`: アクションの登録と実行を管理
+   - `setup_browser_automation`: 優先順位に従った初期化を行う便利な関数
+
+3. **main.py**: エンドユーザー向けのシンプルなインターフェイスを提供します
+   - 設定の読み込みと初期化
+   - アクション実行のワンストップエントリーポイント
+
+#### 実装例: カスタム検索アクションの実行
+
+```python
+# 1. 基本的な使用方法（最もシンプル）
+from src.modules.main import main
+main()  # search-nogtipsアクションを自動的に実行
+
+# 2. カスタム検索の実装例
+from src.modules.automation_manager import setup_browser_automation
+
+def search_with_custom_engine(search_engine, query):
+    # マネージャーの初期化
+    manager = setup_browser_automation()
+    
+    # 検索エンジンに応じたアクション選択
+    if search_engine == "google":
+        action_name = "phrase-search"
+    elif search_engine == "nogtips":
+        action_name = "search-nogtips"
+    else:
+        return False
+    
+    # 検索実行
+    return manager.execute_action(action_name, query=query)
+
+# 使用例
+search_with_custom_engine("google", "Python自動化")
+```
+
+#### モジュール間の連携フロー
+
+1. **ユーザー入力処理**
+   ```
+   ユーザー入力 → main.py → automation_manager.py → yaml_parser.py → llms.txt
+   ```
+
+2. **アクション実行**
+   ```
+   main.py
+     ↓
+   setup_browser_automation() → BrowserAutomationManager
+     ↓
+   manager.execute_action() → _execute_browser_control()/_execute_script()
+     ↓
+   実際のブラウザ操作の実行
+   ```
+
+3. **パラメータ処理**
+   ```
+   アクション定義内の "${params.query}" → パラメータ抽出 → 値の置換 → 実行
+   ```
+
+#### 応用: 複数ソースからのアクション定義の優先順位管理
+
+```python
+# 複数のソースからアクション定義を読み込み、優先順位を設定
+sources = [
+    {"type": "local", "path": "custom_actions.txt", "priority": 1},
+    {"type": "remote", "url": "https://example.com/actions.md", "priority": 2},
+    {"type": "llm", "priority": 3}  # フォールバックとしてLLM処理
+]
+
+# 設定に基づいた初期化
+manager = setup_advanced_automation(sources)
+
+# アクション実行（複数ソースからのマージ結果を使用）
+result = manager.execute_action("search-combined", query="最新技術動向")
+```
+
+このシステムを活用することで、LLM呼び出しを削減しながら、効率的かつ柔軟なブラウザ自動化を実現できます。
