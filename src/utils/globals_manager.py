@@ -10,6 +10,7 @@ _global_browser = None
 _global_browser_context = None
 _global_agent = None
 _global_agent_state = AgentState()
+_use_own_browser_config = False  # Tracks the "Use Own Browser" setting
 
 def get_globals():
     """Get global variables for use in other modules"""
@@ -17,5 +18,6 @@ def get_globals():
         "browser": _global_browser,
         "browser_context": _global_browser_context,
         "agent": _global_agent,
-        "agent_state": _global_agent_state
+        "agent_state": _global_agent_state,
+        "use_own_browser_config": _use_own_browser_config
     }

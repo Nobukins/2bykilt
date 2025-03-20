@@ -19,7 +19,7 @@ from src.config.llms_parser import pre_evaluate_prompt, extract_params, resolve_
 from src.agent.agent_manager import stop_agent, stop_research_agent, run_org_agent, run_custom_agent
 from src.agent.agent_manager import run_deep_search, get_globals, run_browser_agent
 from src.ui.stream_manager import run_with_stream
-from src.browser.browser_manager import close_global_browser, prepare_recording_path
+from src.browser.browser_manager import close_global_browser, prepare_recording_path, initialize_browser
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -229,3 +229,13 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+async def run_custom_agent():
+    """Run the custom agent."""
+    globals_dict = get_globals()
+    use_own_browser = globals_dict["use_own_browser_config"]
+
+    # Use centralized browser initialization
+    browser = await initialize_browser(use_own_browser, window_w=1024, window_h=768)
+    globals_dict["browser"] = browser
+    # ...existing code...
