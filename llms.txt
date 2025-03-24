@@ -1,14 +1,24 @@
 actions:
   - name: search-linkedin
+    type: script
     script: search_script.py
-    params: query
-    command: pytest ./tmp/myscript/search_script.py --query query
+    params:
+      - name: query
+        required: true
+        type: string
+        description: "検索クエリ"
+    command: pytest ./tmp/myscript/search_script.py --query ${params.query}
     slowmo: 2500
 
   - name: search-beatport
+    type: script
     script: search_script_music.py
-    params: query
-    command: pytest ./tmp/myscript/search_script_music.py --query query
+    params:
+      - name: query
+        required: true
+        type: string
+        description: "検索クエリ"
+    command: pytest ./tmp/myscript/search_script_music.py --query ${params.query}
     slowmo: 2500
 
   - name: phrase-search
@@ -68,3 +78,23 @@ actions:
     command: pytest ${script_path} --query ${params.query}
     timeout: 120
     slowmo: 1000
+
+  - name: json
+    type: unlock-future
+    params:
+      - name: query
+        required: true
+        type: string
+        description: "Search query to execute"
+    flow:
+      - action: command
+        url: "https://www.google.com"
+        wait_for: "#APjFqb"
+      - action: click
+        selector: "#APjFqb"
+        wait_for_navigation: true
+      - action: fill_form
+        selector: "#APjFqb"
+        value: "${params.query}"
+      - action: keyboard_press
+        selector: "Enter"

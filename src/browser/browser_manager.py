@@ -20,8 +20,26 @@ async def close_global_browser():
     if browser:
         await browser.close()
         logger.info("Closed browser")
-        
-    return True
+
+async def initialize_browser(use_own_browser, window_w, window_h):
+    """Centralized browser initialization logic."""
+    chrome_path = None
+    extra_chromium_args = []
+
+    if use_own_browser:
+        chrome_path = os.getenv("CHROME_PATH", None)
+        if chrome_path == "":
+            chrome_path = None
+        chrome_user_data = os.getenv("CHROME_USER_DATA", None)
+        if chrome_user_data:
+            extra_chromium_args += [f"--user-data-dir={chrome_user_data}"]
+
+    browser = await p.chromium.launch(
+        headless=False,
+        executable_path=chrome_path,
+        args=extra_chromium_args + [f"--window-size={window_w},{window_h}"]
+    )
+    return browser
 
 def get_browser_configs(
     use_own_browser: bool, 
