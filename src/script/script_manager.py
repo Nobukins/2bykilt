@@ -240,71 +240,74 @@ markers =
                 os.makedirs(os.path.dirname(repo_dir), exist_ok=True)
                 
                 # Clone repository
-                try:
-                    repo_dir = await clone_git_repo(git_url, version, repo_dir)
-                    full_script_path = os.path.join(repo_dir, script_path)
-                    
-                    if not os.path.exists(full_script_path):
-                        raise FileNotFoundError(f"Script not found at path: {full_script_path}")
-                    
-                    # Create conftest.py to handle custom pytest arguments
-                    # Using a unique prefix for our parameters to avoid conflicts
-                    conftest_path = os.path.join(os.path.dirname(full_script_path), 'conftest.py')
-                    with open(conftest_path, 'w') as f:
-                        f.write("""
-import pytest
-
-def pytest_addoption(parser):
-    # Add our custom parameters with unique names to avoid conflicts
-    parser.addoption("--query", action="store", default="")
-    
-    # Use a unique name for slowmo to avoid conflict with built-in parameters
-    parser.addoption("--bykilt-slowmo", action="store", type=int, default=0)
-
-@pytest.fixture
-def query(request):
-    return request.config.getoption("--query")
-
-@pytest.fixture
-def slowmo(request):
-    # Get value from our custom slowmo parameter
-    return request.config.getoption("--bykilt-slowmo")
-""")
-                    
-                    # Build and run command
-                    command = script_info.get('command', '')
-                    if command:
-                        # Replace placeholders in command
-                        command = command.replace('${script_path}', full_script_path)
-                        
-                        # Modify the slowmo parameter in the command if it exists
-                        if 'slowmo' in script_info and str(script_info['slowmo']).isdigit():
-                            # Replace any existing --slowmo with our renamed parameter
-                            if '--slowmo' in command:
-                                command = command.replace('--slowmo', '--bykilt-slowmo')
-                            else:
-                                # Add our slowmo parameter
-                                command += f" --bykilt-slowmo {script_info['slowmo']}"
-                        
-                        # Replace other parameters
-                        for param_name, param_value in params.items():
-                            command = command.replace(f"${{params.{param_name}}}", param_value)
-                        
-                        logger.info(f"Executing command: {command}")
-                        result = subprocess.run(command, shell=True, text=True, capture_output=True)
-                        
-                        if result.returncode != 0:
-                            logger.error(f"Command execution failed: {result.stderr}")
-                            raise RuntimeError(f"Script execution failed with exit code {result.returncode}")
-                        
-                        return f"Script executed successfully: {result.stdout}", full_script_path
-                    else:
-                        logger.error("No command specified for git-script execution")
-                        raise ValueError("Command field is required for git-script type")
-                        
-                except Exception as e:
-                    logger.error(f"Failed to execute git script: {str(e)}")
-                    raise
+                repo_dir = await clone_git_repo(git_url, version, repo_dir)
+                full_script_path = os.path.join(repo_dir, script_path)
+                
+                if not os.path.exists(full_script_path):
+                    raise FileNotFoundError(f"Script not found at path: {full_script_path}")
+                
+                # Build command
+                command_template = script_info.get('command', '')
+                if not command_template:
+                    logger.error("No command specified for git-script execution")
+                    raise ValueError("Command field is required for git-script type")
+                
+                # Replace script path placeholder
+                command_template = command_template.replace('${script_path}', full_script_path)
+                
+                # Replace parameter placeholders
+                for param_name, param_value in params.items():
+                    placeholder = f"${{params.{param_name}}}"
+                    if placeholder in command_template:
+                        # Quote values with spaces or special characters
+                        if ' ' in str(param_value) or any(c in str(param_value) for c in '!@#$%^&*()'):
+                            param_value = f'"{param_value}"'
+                        command_template = command_template.replace(placeholder, str(param_value))
+                
+                # Parse command into parts for subprocess
+                command_parts = command_template.split()
+                
+                # Add slowmo parameter if specified
+                slowmo = script_info.get('slowmo')
+                if slowmo is not None:
+                    try:
+                        slowmo_ms = int(slowmo)
+                        if '--slowmo' not in command_template:
+                            command_parts.extend(['--slowmo', str(slowmo_ms)])
+                        logger.info(f"Slow motion enabled with {slowmo_ms}ms delay")
+                    except ValueError:
+                        logger.warning(f"Invalid slowmo value: {slowmo}, ignoring")
+                
+                # Add headless mode parameter
+                if not headless and '--headed' not in command_template:
+                    command_parts.append('--headed')
+                
+                # Set up environment variables
+                env = os.environ.copy()
+                if save_recording_path:
+                    os.makedirs(save_recording_path, exist_ok=True)
+                    env['RECORDING_PATH'] = save_recording_path
+                    logger.info(f"Recording enabled, saving to: {save_recording_path}")
+                
+                # Log command before execution
+                logger.info(f"Executing command: {' '.join(command_parts)}")
+                
+                # Run the command asynchronously
+                process = await asyncio.create_subprocess_exec(
+                    *command_parts,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    env=env
+                )
+                stdout, stderr = await process.communicate()
+                
+                # Process execution result
+                if process.returncode != 0:
+                    error_msg = f"Script execution failed: {stderr.decode()}"
+                    logger.error(error_msg)
+                    raise RuntimeError(f"Script execution failed with exit code {process.returncode}")
+                
+                return f"Script executed successfully: {stdout.decode()}", full_script_path
             elif script_type == 'unlock-future':
                 # Handle unlock-future type
                 logger.info(f"Executing unlock-future script: {script_info.get('name', 'unknown')}")
