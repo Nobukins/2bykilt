@@ -349,3 +349,103 @@ python debug_bykilt.py external/samples/search_word.json --use-own-browser
 - [x] **2025/01/26:** Thanks to @vvincent1234. Now browser-use-webui can combine with DeepSeek-r1 to engage in deep thinking!
 - [x] **2025/01/10:** Thanks to @casistack. Now we have Docker Setup option and also Support keep browser open between tasks.[Video tutorial demo](https://github.com/browser-use/web-ui/issues/1#issuecomment-2582511750).
 - [x] **2025/01/06:** Thanks to @richard-devbot. A New and Well-Designed WebUI is released. [Video tutorial demo](https://github.com/warmshao/browser-use-webui/issues/1#issuecomment-2573393113).
+
+# 2Bykilt
+
+Enhanced browser control with AI and human interaction.
+
+## Features
+
+- AI-powered browser automation
+- Multiple action types for different automation needs
+- JSON-based command execution
+- Script-based browser control
+- Circular reference detection and prevention
+- Support for custom parameters in actions
+
+## Action Examples
+
+### Browser Control Actions
+
+Browser control actions allow you to automate web browser interactions using a structured flow.
+
+```yaml
+# Example: Search on Google
+- name: phrase-search
+  type: browser-control
+  params:
+    - name: query
+      required: true
+      type: string
+      description: "Search query to execute"
+  flow:
+    - action: command
+      url: "https://www.google.com"
+      wait_for: "#APjFqb"
+    - action: click
+      selector: "#APjFqb"
+      wait_for_navigation: true
+    - action: fill_form
+      selector: "#APjFqb"
+      value: "${params.query}"
+    - action: keyboard_press
+      selector: "Enter"
+```
+
+### Script Actions
+
+Script actions allow you to execute pytest-based scripts for browser automation.
+
+```yaml
+# Example: LinkedIn Search Script
+- name: search-linkedin
+  type: script
+  script: search_script.py
+  params:
+    - name: query
+      required: true
+      type: string
+      description: "LinkedIn search query"
+  command: pytest ./tmp/myscript/search_script.py --query ${params.query}
+  slowmo: 2500
+```
+
+### JSON-Based Actions
+
+JSON-based actions (unlock-future type) use a JSON command structure for execution.
+
+```yaml
+# Example: JSON-based Google Search
+- name: json
+  type: unlock-future
+  params:
+    - name: query
+      required: true
+      type: string
+      description: "Search query to execute"
+  flow:
+    - action: command
+      url: "https://www.google.com"
+      wait_for: "#APjFqb"
+    - action: click
+      selector: "#APjFqb"
+    - action: fill_form
+      selector: "#APjFqb"
+      value: "${params.query}"
+    - action: keyboard_press
+      selector: "Enter"
+```
+
+## Usage
+
+You can execute these actions by providing the action name followed by parameters:
+
+```
+phrase-search query="Personal AI Assistant"
+search-linkedin query="AI developers"
+json query="Python programming"
+```
+
+## Installation
+
+Please refer to the installation guide for setup instructions.

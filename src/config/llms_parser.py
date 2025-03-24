@@ -118,3 +118,39 @@ def resolve_sensitive_env_variables(text: Optional[str]) -> Optional[str]:
         if env_value is not None:
             result = result.replace(var, env_value)
     return result
+
+def load_actions_config():
+    """Load actions configuration from llms.txt file."""
+    try:
+        # Look for llms.txt in the project root directory
+        config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'llms.txt')
+        if not os.path.exists(config_path):
+            logger.warning(f"Actions config file not found at {config_path}")
+            return {}
+            
+        with open(config_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+        
+        # Log loading information
+        logger.info(f"Loading actions from: {config_path}")
+        
+        # Parse YAML structure
+        try:
+            # Use YAML parser for the llms.txt file
+            actions_config = yaml.safe_load(content)
+            
+            # Validate structure
+            if isinstance(actions_config, dict) and 'actions' in actions_config:
+                logger.info(f"Action names: {[a.get('name') for a in actions_config['actions']]}")
+                return actions_config
+            else:
+                logger.warning("Invalid config format: missing 'actions' key")
+                return {}
+                
+        except Exception as yaml_err:
+            logger.error(f"Failed to parse YAML: {str(yaml_err)}")
+            return {}
+            
+    except Exception as e:
+        logger.error(f"Error loading actions config: {str(e)}")
+        return {}

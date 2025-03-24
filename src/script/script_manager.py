@@ -195,7 +195,9 @@ async def run_script(
     """
     try:
         if 'type' in script_info:
-            if script_info['type'] == 'browser-control':
+            script_type = script_info['type']
+            
+            if script_type == 'browser-control':
                 # Ensure directories exist
                 script_dir = os.path.join('tmp', 'myscript')
                 os.makedirs(script_dir, exist_ok=True)
@@ -223,7 +225,7 @@ markers =
                     f.write(script_content)
                     
                 logger.info(f"Generated browser control script at {script_path}")
-            elif script_info['type'] == 'git-script':
+            elif script_type == 'git-script':
                 # Handle git-script type
                 if 'git' not in script_info or 'script_path' not in script_info:
                     logger.error("Git-script type requires 'git' and 'script_path' fields")
@@ -303,14 +305,128 @@ def slowmo(request):
                 except Exception as e:
                     logger.error(f"Failed to execute git script: {str(e)}")
                     raise
+            elif script_type == 'unlock-future':
+                # Handle unlock-future type
+                logger.info(f"Executing unlock-future script: {script_info.get('name', 'unknown')}")
+                
+                # Convert the script to JSON format using ActionTranslator
+                from src.config.action_translator import ActionTranslator
+                translator = ActionTranslator()
+                from src.config.llms_parser import load_actions_config  # Updated import
+
+                # Get the complete actions list
+                actions_config = load_actions_config()
+                if isinstance(actions_config, dict) and 'actions' in actions_config:
+                    action_list = actions_config['actions']
+                else:
+                    action_list = actions_config  # Fallback if it's already a list
+
+                # Pass the complete list to the translator
+                json_path = translator.translate_to_json(
+                    script_info.get('name', ''), 
+                    params, 
+                    action_list
+                )
+                
+                # Execute the JSON commands using DebugUtils
+                from src.utils.debug_utils import DebugUtils
+                debug_utils = DebugUtils()
+                result = await debug_utils.test_llm_response(json_path, use_own_browser=True, headless=headless)
+                
+                return f"Unlock-future script executed successfully: {result}", json_path
+            elif script_type == 'script':
+                # Handle direct script execution type
+                logger.info(f"Executing direct script: {script_info.get('name', 'unknown')}")
+                
+                # Get script path and command
+                script_name = script_info.get('script')
+                if not script_name:
+                    error_msg = "Script type requires 'script' field"
+                    logger.error(error_msg)
+                    return error_msg, None
+                
+                # Ensure script directory exists
+                script_dir = os.path.join('tmp', 'myscript')
+                os.makedirs(script_dir, exist_ok=True)
+                
+                # Construct script path
+                script_path = os.path.join(script_dir, script_name)
+                
+                # Check if script exists
+                if not os.path.exists(script_path):
+                    error_msg = f"Script not found: {script_path}"
+                    logger.error(error_msg)
+                    return error_msg, None
+                
+                # Get command template
+                command_template = script_info.get('command', f'pytest {script_path}')
+                command_parts = []
+                
+                # Parse the command template
+                if isinstance(command_template, str):
+                    # Replace script path placeholder if present
+                    command_template = command_template.replace('${script_path}', script_path)
+                    
+                    # Replace parameter placeholders (${params.name} format)
+                    for param_name, param_value in params.items():
+                        placeholder = f"${{params.{param_name}}}"
+                        if placeholder in command_template:
+                            # Quote values with spaces or special characters
+                            if ' ' in str(param_value) or any(c in str(param_value) for c in '!@#$%^&*()'):
+                                param_value = f'"{param_value}"'
+                            command_template = command_template.replace(placeholder, str(param_value))
+                    
+                    # Split into parts for subprocess execution
+                    command_parts = command_template.split()
+                
+                # Add slowmo parameter if specified
+                slowmo = script_info.get('slowmo')
+                if slowmo is not None:
+                    try:
+                        slowmo_ms = int(slowmo)
+                        if '--slowmo' not in command_template:
+                            command_parts.extend(['--slowmo', str(slowmo_ms)])
+                        logger.info(f"Slow motion enabled with {slowmo_ms}ms delay")
+                    except ValueError:
+                        logger.warning(f"Invalid slowmo value: {slowmo}, ignoring")
+                
+                # Add headless mode parameter
+                if not headless and '--headed' not in command_template:
+                    command_parts.append('--headed')
+                
+                # Add recording configuration if enabled
+                env = os.environ.copy()
+                if save_recording_path:
+                    os.makedirs(save_recording_path, exist_ok=True)
+                    env['RECORDING_PATH'] = save_recording_path
+                    logger.info(f"Recording enabled, saving to: {save_recording_path}")
+                
+                # Log command before execution
+                logger.info(f"Executing script command: {' '.join(command_parts)}")
+                
+                # Run the command asynchronously with the environment variable
+                process = await asyncio.create_subprocess_exec(
+                    *command_parts,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    env=env
+                )
+                stdout, stderr = await process.communicate()
+                
+                # Process execution result
+                if process.returncode != 0:
+                    error_msg = f"Script execution failed: {stderr.decode()}"
+                    logger.error(error_msg)
+                    return error_msg, None
+                else:
+                    success_msg = f"Script executed successfully: {stdout.decode()}"
+                    logger.info(success_msg)
+                    return success_msg, script_path
             else:
-                logger.error(f"Unsupported script type: {script_info['type']}")
-                raise ValueError(f"Unsupported script type: {script_info['type']}")
-        elif 'script' in script_info:
-            # Use the existing script file
-            script_path = os.path.join('tmp', 'myscript', script_info['script'])
+                logger.error(f"Unsupported script type: {script_type}")
+                raise ValueError(f"Unsupported script type: {script_type}")
         else:
-            error_msg = "Invalid script_info: missing both 'type' and 'script' fields"
+            error_msg = "Invalid script_info: missing 'type' field"
             logger.error(error_msg)
             return error_msg, None
 

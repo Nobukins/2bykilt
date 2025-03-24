@@ -65,3 +65,56 @@ Utility functions and supporting modules:
 - Create new browser automation scripts by defining them in the `llms.txt` file
 - Enhance prompting by modifying the prompt templates in `custom_prompts.py`
 - Develop new functional modules in the `/src/modules` directory to extend capabilities
+
+# 2Bykilt Source Modules
+
+This directory contains the core modules of the 2Bykilt application.
+
+## Module Overview
+
+### Command Dispatcher
+
+The `CommandDispatcher` (in `modules/command_dispatcher.py`) parses user prompts, identifies the appropriate action type, and delegates execution to specialized handlers. Features include:
+
+- Circular reference detection to prevent infinite recursion
+- Action type registration system for extensibility
+- Parameter extraction from user prompts
+- Fallback to LLM for unknown commands
+
+### Action Translator
+
+The `ActionTranslator` (in `config/action_translator.py`) converts actions defined in the `llms.txt` file into JSON-based command structures for execution. Features include:
+
+- Support for multiple action types (browser-control, unlock-future)
+- Parameter substitution using `${params.name}` syntax
+- Input validation to ensure required fields like URLs are present
+- JSON serialization with proper error handling
+
+### Script Manager
+
+The `script_manager.py` module handles the execution of different script types:
+
+- **browser-control**: Generates and executes Playwright-based scripts
+- **script**: Executes pytest-based scripts with parameter substitution
+- **git-script**: Clones repositories and executes scripts from them
+- **unlock-future**: Uses JSON-based execution for browser automation
+
+### Execution Engines
+
+Multiple execution engines provide different ways to control browsers:
+
+- `ExecutionDebugEngine`: JSON-based command execution with detailed logging
+- `ExecutionEngine`: Traditional script-based execution
+
+## Available Action Types
+
+| Type | Description | File |
+|------|-------------|------|
+| browser-control | Traditional browser automation with Playwright | script_manager.py |
+| script | Direct execution of pytest scripts | script_manager.py |
+| git-script | Clone and execute scripts from git repositories | script_manager.py |
+| unlock-future | JSON-based browser automation | execution_debug_engine.py |
+
+## Feature: Parameter Substitution
+
+Actions can define parameters that users provide at runtime. The syntax `${params.name}` is used to insert these parameters into commands, URLs, or form values.

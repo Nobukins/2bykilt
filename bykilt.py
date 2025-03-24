@@ -21,8 +21,60 @@ from src.agent.agent_manager import run_deep_search, get_globals, run_browser_ag
 from src.ui.stream_manager import run_with_stream
 from src.browser.browser_manager import close_global_browser, prepare_recording_path, initialize_browser
 
+# Import the new modules for run_browser_agent
+from src.config.action_translator import ActionTranslator
+from src.utils.debug_utils import DebugUtils
+from src.browser.browser_debug_manager import BrowserDebugManager
+
+import yaml  # 必要であればインストール: pip install pyyaml
+
 # Configure logging
 logger = logging.getLogger(__name__)
+
+def load_actions_config():
+    """Load actions configuration from llms.txt file."""
+    try:
+        config_path = os.path.join(os.path.dirname(__file__), 'llms.txt')
+        if not os.path.exists(config_path):
+            logger.warning(f"Actions config file not found at {config_path}")
+            return {}
+            
+        with open(config_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+        
+        # デバッグ出力を追加
+        logger.info(f"Loading actions from: {config_path}")
+        
+        # YAMLとして解析を試みる
+        try:
+            # YAMLパーサーを使用（llms.txtはYAML形式に見える）
+            actions_config = yaml.safe_load(content)
+            logger.info(f"Parsed config type: {type(actions_config)}")
+            
+            if isinstance(actions_config, dict) and 'actions' in actions_config:
+                logger.info(f"Found {len(actions_config['actions'])} actions")
+                logger.info(f"Action names: {[a.get('name') for a in actions_config['actions']]}")
+            else:
+                logger.warning(f"Unexpected config structure: {list(actions_config.keys()) if isinstance(actions_config, dict) else type(actions_config)}")
+            
+            return actions_config
+            
+        except Exception as yaml_err:
+            logger.warning(f"YAML parsing failed: {yaml_err}")
+            
+            # YAMLパースに失敗した場合は元の実装方法を試す
+            actions_config = {}
+            for line in content.split('\n'):
+                if line.strip() and '=' in line:
+                    key, value = line.split('=', 1)
+                    actions_config[key.strip()] = value.strip()
+            
+            logger.info(f"Fallback parsing result: {actions_config}")
+            return actions_config
+            
+    except Exception as e:
+        logger.error(f"Error loading actions config: {e}")
+        return {}
 
 # Define proper mapping for Playwright commands
 PLAYWRIGHT_COMMANDS = {
@@ -43,7 +95,33 @@ theme_map = {
     "Origin": Origin(), "Citrus": Citrus(), "Ocean": Ocean(), "Base": Base()
 }
 
-# The run_browser_agent function has been moved to agent_manager.py
+async def run_browser_agent(task, **kwargs):
+    """Run the browser agent using JSON-based execution."""
+    # Parse the prompt
+    action_name, params = pre_evaluate_prompt(task)
+    
+    # Load actions from llms.txt
+    actions_config = load_actions_config()
+    
+    # Translate the action into JSON format
+    translator = ActionTranslator()
+    json_file_path = translator.translate_to_json(action_name, params, actions_config)
+    
+    # Use DebugUtils to process the JSON commands
+    browser_manager = BrowserDebugManager()
+    debug_utils = DebugUtils(browser_manager=browser_manager)
+    
+    # Apply browser settings
+    use_own_browser = kwargs.get('use_own_browser', False)
+    headless = kwargs.get('headless', False)
+    
+    try:
+        # Execute the JSON commands
+        result = await debug_utils.test_llm_response(json_file_path, use_own_browser, headless)
+        return result
+    finally:
+        # Clean up resources
+        await browser_manager.cleanup_resources()
 
 def create_ui(config, theme_name="Ocean"):
     """Create the Gradio UI with the specified configuration and theme"""
@@ -230,12 +308,44 @@ def main():
 if __name__ == '__main__':
     main()
 
-async def run_custom_agent():
-    """Run the custom agent."""
-    globals_dict = get_globals()
-    use_own_browser = globals_dict["use_own_browser_config"]
-
-    # Use centralized browser initialization
-    browser = await initialize_browser(use_own_browser, window_w=1024, window_h=768)
-    globals_dict["browser"] = browser
-    # ...existing code...
+async def on_run_agent_click(task, add_infos, llm_provider, llm_model_name, llm_num_ctx, llm_temperature, llm_base_url, llm_api_key, use_vision, use_own_browser, headless):
+    try:
+        # CommandDispatcherを使用してコマンド実行
+        from src.agent.agent_manager import run_command
+        result = await run_command(
+            prompt=task,
+            use_own_browser=use_own_browser,
+            headless=headless
+        )
+        
+        if result.get("action_type") == "llm":
+            # 既存のLLM処理フローを使用
+            return await run_browser_agent(task, add_infos, llm_provider, llm_model_name, llm_num_ctx, llm_temperature, llm_base_url, llm_api_key, use_vision, use_own_browser, headless)
+        
+        # アクション実行結果を表示
+        success = result.get("success", False)
+        message = f"### アクション実行結果\n\n"
+        message += f"**成功**: {'はい' if success else 'いいえ'}\n\n"
+        message += f"**アクションタイプ**: {result.get('action_type', '不明')}\n\n"
+        
+        if "message" in result:
+            message += f"**メッセージ**: {result.get('message', '')}\n\n"
+        
+        if "stdout" in result:
+            message += f"**出力**:\n```\n{result.get('stdout', '')}\n```\n\n"
+        
+        if "stderr" in result and result.get("stderr"):
+            message += f"**エラー出力**:\n```\n{result.get('stderr', '')}\n```\n\n"
+            
+        if "command" in result:
+            message += f"**実行コマンド**:\n```\n{result.get('command', '')}\n```\n\n"
+            
+        if "error" in result and result.get("error"):
+            message += f"**エラー**:\n```\n{result.get('error', '')}\n```\n\n"
+            
+        return message, "", gr.update(value="実行", interactive=True), gr.update(interactive=True)
+            
+    except Exception as e:
+        import traceback
+        error_msg = f"エラーが発生しました: {e}\n{traceback.format_exc()}"
+        return error_msg, "", gr.update(value="実行", interactive=True), gr.update(interactive=True)
