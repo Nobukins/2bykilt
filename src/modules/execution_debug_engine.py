@@ -11,7 +11,7 @@ class ExecutionDebugEngine:
         """実行エンジンの初期化"""
         self.browser_manager = BrowserDebugManager()
     
-    async def execute_commands(self, commands, use_own_browser=False, headless=False, tab_selection="active"):
+    async def execute_commands(self, commands, use_own_browser=False, headless=False, tab_selection="active_tab", action_type=None, keep_tab_open=None):
         """
         Execute a list of commands in the browser.
         
@@ -19,12 +19,20 @@ class ExecutionDebugEngine:
             commands: List of commands to execute.
             use_own_browser: Whether to use the user's own browser.
             headless: Whether to run in headless mode.
-            tab_selection: Strategy for selecting a tab ("new", "active", "last").
+            tab_selection: Strategy for selecting a tab ("new_tab", "active_tab", "last_tab").
+            action_type: Type of action (e.g., "unlock-future").
+            keep_tab_open: Whether to keep the tab open after execution.
         """
         print("\nコマンドを実行しています:")
         for i, cmd in enumerate(commands, 1):
             print(f" {i}. {cmd['action']}: {cmd.get('args', [])}")
 
+        # Default to true for unlock-future type, otherwise default to false
+        if keep_tab_open is None:
+            keep_tab_open = True if action_type == "unlock-future" else False
+        
+        print(f"🔍 DEBUG: Action Type: {action_type}, Keep Tab Open: {keep_tab_open}")
+        
         try:
             print("ブラウザを初期化しています...")
             browser_data = await self.browser_manager.initialize_custom_browser(use_own_browser, headless)
@@ -78,10 +86,16 @@ class ExecutionDebugEngine:
                 print("\nコマンドを実行しました。次のコマンドは3秒後...")
                 await asyncio.sleep(3)
 
-            # Close the tab if it was newly created
-            if is_new:
+            # Handle tab closure based on keep_tab_open setting
+            print("\n✅ Execution complete.")
+            if not keep_tab_open:
+                print("Tab will close in 5 seconds...")
+                print("(Press Ctrl+C to close earlier)")
+                await asyncio.sleep(5)
                 await page.close()
-                print("✅ 新しいタブを閉じました")
+                print("✅ タブを閉じました")
+            else:
+                print("✅ タブを開いたままにします（keep_tab_open: true）")
 
         except Exception as e:
             print(f"\nコマンド実行中にエラーが発生しました: {e}")
@@ -252,12 +266,18 @@ class ExecutionDebugEngine:
             import traceback
             print(traceback.format_exc())
 
-    async def execute_json_commands(self, commands_data, use_own_browser=False, headless=False, action_name=None, params=None):
+    async def execute_json_commands(self, commands_data, use_own_browser=False, headless=False, action_name=None, params=None, tab_selection=None):
         """Execute JSON or YAML commands for browser automation."""
         try:
             # Debug input data type and value
             print(f"🔍 DEBUG [execute_json_commands]: commands_data の型: {type(commands_data)}")
             print(f"🔍 DEBUG [execute_json_commands]: commands_data の値: {commands_data}")
+            
+            # Initial debugging for keep_tab_open
+            print(f"🔍 DEBUG [initial]: keep_tab_open の初期状態: {commands_data.get('keep_tab_open', 'Not Set')}")
+            
+            action_type = None
+            keep_tab_open = None
             
             # Handle file path input
             if isinstance(commands_data, str) and (commands_data.endswith('.txt') or commands_data.endswith('.yml') or commands_data.endswith('.yaml')):
@@ -286,91 +306,57 @@ class ExecutionDebugEngine:
                         # Debug action detection
                         print(f"🔍 DEBUG: 指定されたactionが見つかりました: {action is not None}")
                         if action:
-                            print(f"🔍 DEBUG: Action名: {action.get('name', '無名')}")
-                            print(f"🔍 DEBUG: フローステップ数: {len(action.get('flow', []))}")
-                            print(f"🔍 DEBUG: Action詳細: {json.dumps(action, ensure_ascii=False)}")
-                        
-                        if not action:
-                            print("❌ 指定されたactionがllms.txtに見つかりませんでした")
-                            return
+                            # Extract key information from the found action
+                            action_type = action.get('type')
+                            keep_tab_open = action.get('keep_tab_open', False)  # Default to False if not set
                             
-                        print(f"✅ 使用するaction: {action.get('name', '無名')}")
-                        
-                        # Convert action flow to commands format
-                        commands = []
-                        for i, step in enumerate(action.get('flow', [])):
-                            # Debug current step
-                            print(f"🔍 DEBUG: ステップ {i+1} を処理中: {step}")
-                            
-                            cmd = {"action": step.get('action', '')}
-                            
-                            # Handle different action types
-                            if 'url' in step:
-                                cmd['args'] = [step['url']]
-                                print(f"🔍 DEBUG: URLを追加: {step['url']}")
-                            elif 'selector' in step:
-                                cmd['selector'] = step['selector']
-                                print(f"🔍 DEBUG: セレクタを追加: {step['selector']}")
-                            
-                            # Handle additional parameters
-                            for key, value in step.items():
-                                if key not in ['action', 'url', 'args']:
-                                    # Perform parameter substitution
-                                    if isinstance(value, str) and '${params.' in value:
-                                        param_name = value.split('${params.')[1].split('}')[0]
-                                        if param_name in params:
-                                            value = value.replace(f"${{params.{param_name}}}", params[param_name])
-                                            print(f"🔍 DEBUG: パラメータ置換: {key}の値を{value}に変更")
-                                    cmd[key] = value
-                                    print(f"🔍 DEBUG: パラメータを追加 {key}: {value}")
-                                        
-                            commands.append(cmd)
-                            print(f"🔍 DEBUG: コマンドを追加: {cmd}")
-                        
-                        # Create the commands structure
-                        commands_data = {
-                            "action_type": action.get('type', 'browser-control'),
-                            "commands": commands,
-                            "slowmo": action.get('slowmo', 1000)
-                        }
-                        
-                        # Debug final commands_data structure
-                        print(f"🔍 DEBUG: 最終的なcommands_data構造:")
-                        print(f"🔍 DEBUG: - action_type: {commands_data['action_type']}")
-                        print(f"🔍 DEBUG: - コマンド数: {len(commands_data['commands'])}")
-                        print(f"🔍 DEBUG: - slowmo: {commands_data['slowmo']}")
-                        print(f"🔍 DEBUG: - 全コマンド: {json.dumps(commands_data['commands'], ensure_ascii=False)}")
-                        
-                        if hasattr(result, 'instructions'):
-                            print("🔎 読み込まれた指示の詳細:")
-                            for i, instr in enumerate(result.instructions):
-                                print(f"  指示 {i+1}:")
-                                print(f"  - タイプ: {type(instr)}")
-                                if isinstance(instr, dict):
-                                    print(f"  - キー: {list(instr.keys())}")
-                                    if 'name' in instr:
-                                        print(f"  - 名前: {instr['name']}")
-                                    if 'flow' in instr:
-                                        print(f"  - フローステップ数: {len(instr['flow'])}")
-                    
-                    # For other YAML files, use direct loading
+                            # Convert flow to commands format expected by execution engine
+                            flow = action.get('flow', [])
+                            commands_data = {
+                                'commands': flow,
+                                'action_type': action_type,
+                                'keep_tab_open': keep_tab_open,
+                                'slowmo': action.get('slowmo', 1000)
+                            }
+                            print(f"🔍 DEBUG: アクションから抽出したkeep_tab_open: {keep_tab_open}")
+
                     else:
-                        yaml_data = load_yaml_from_file(commands_data)
-                        if not yaml_data:
-                            print(f"❌ Failed to load or parse YAML from {commands_data}")
-                            return
-                        commands_data = yaml_data
+                        # For other YAML/YML files
+                        commands_data = load_yaml_from_file(commands_data)
                     
                 except Exception as e:
                     print(f"❌ Error processing file {commands_data}: {e}")
                     import traceback
-                    print(traceback.format_exc())
+                    traceback.print_exc()
                     return
             
+            # After processing llms.txt
+            if isinstance(commands_data, dict) and 'keep_tab_open' in commands_data:
+                print(f"🔍 DEBUG [after loading]: commands_data から keep_tab_open: {commands_data['keep_tab_open']}")
+            
             # Extract command information
-            action_type = commands_data.get("action_type", "browser-control")
+            action_type = action_type or commands_data.get("action_type", "unlock-future")
             commands = commands_data.get("commands", [])
             slowmo = commands_data.get("slowmo", 1000)
+            
+            # Get keep_tab_open flag - default to True for unlock-future type
+            if keep_tab_open is None:
+                keep_tab_open = commands_data.get("keep_tab_open", True)
+                print(f"🔍 DEBUG [default]: keep_tab_open の初期値: {keep_tab_open}")
+                if keep_tab_open is None:
+                    keep_tab_open = True 
+                    print(f"🔍 DEBUG [default]: 1.Setting keep_tab_open to True")
+                    if action_type == "unlock-future" and keep_tab_open:
+                        keep_tab_open = True
+                        print(f"🔍 DEBUG [unlock-future]: Setting keep_tab_open to True")
+                    else:
+                        keep_tab_open = True
+                        print(f"🔍 DEBUG [default]: 2.Setting keep_tab_open to True")
+                    
+            print(f"🔍 DEBUG [final decision]: Action Type: {action_type}, Keep Tab Open: {keep_tab_open}")
+            print(f"🔍 DEBUG [commands_data state]: 'keep_tab_open' in commands_data: {'keep_tab_open' in commands_data}")
+            if 'keep_tab_open' in commands_data:
+                print(f"🔍 DEBUG [commands_data state]: commands_data['keep_tab_open'] = {commands_data['keep_tab_open']}")
             
             # Validate commands structure
             if not commands:
@@ -383,15 +369,16 @@ class ExecutionDebugEngine:
             browser_data = await self.browser_manager.initialize_custom_browser(use_own_browser, headless)
             browser = browser_data["browser"]
             
-            # Get or create context
-            if browser_data.get("is_cdp", False):
-                context = browser.contexts[0] if browser.contexts else await browser.new_context()
-                print("✅ Using existing Chrome window with a new tab")
-            else:
-                context = browser_data.get("context") or await browser.new_context()
+            # 引数のtab_selectionを優先し、なければcommands_dataから取得
+            tab_strategy = tab_selection or commands_data.get('tab_selection_strategy', 'new_tab')
+            print(f"🔍 DEBUG [tab_selection_strategy]: Initial tab selection strategy: {tab_strategy}, from arg: {tab_selection}")
             
-            # Create a new page/tab
-            page = await context.new_page()
+            # Use tab selection strategy to get or create a tab
+            context, page, is_new = await self.browser_manager.get_or_create_tab(tab_strategy)
+            print(f"✅ {'新しい' if is_new else '既存の'}タブを使用します (タブ選択戦略: {tab_strategy})")
+            
+            # Highlight the tab being automated
+            await self.browser_manager.highlight_automated_tab(page)
             
             try:
                 # Execute each command
@@ -400,11 +387,11 @@ class ExecutionDebugEngine:
                     
                     # Log the command being executed
                     print(f"Command {i}/{len(commands)}: {action}")
-                    print(f"Details: {json.dumps(cmd, ensure_ascii=False)}")
+                    print(f"Details: {json.dumps(cmd, indent=2, ensure_ascii=False)}")
                     
                     if action == "command":
                         # Handle URL from args or direct url field
-                        url = cmd.get("url") or (cmd.get("args", [""])[0] if "args" in cmd else "")
+                        url = cmd.get("url") or (cmd.get("args", [""])[0] if "args" in cmd and cmd["args"] else "")
                         if not url:
                             print("⚠️ Missing URL in command action, skipping...")
                             continue
@@ -418,7 +405,8 @@ class ExecutionDebugEngine:
                             print(f"✅ Waited for selector: {cmd['wait_for']}")
                     
                     elif action == "click":
-                        selector = cmd.get("selector")
+                        # Get selector from direct property or args array
+                        selector = cmd.get("selector") or (cmd.get("args", [""])[0] if "args" in cmd and cmd["args"] else "")
                         if not selector:
                             print("⚠️ Missing selector for click action, skipping...")
                             continue
@@ -433,28 +421,20 @@ class ExecutionDebugEngine:
                             print("✅ Waited for navigation to complete")
                     
                     elif action == "fill_form":
-                        selector = cmd.get("selector")
-                        value = cmd.get("value")
+                        # Get selector and value from direct properties or args array
+                        selector = cmd.get("selector") or (cmd.get("args", [""])[0] if "args" in cmd and len(cmd.get("args", [])) > 0 else "")
+                        value = cmd.get("value") or (cmd.get("args", ["", ""])[1] if "args" in cmd and len(cmd.get("args", [])) > 1 else None)
                         
                         if not selector or value is None:
                             print("⚠️ Missing selector or value for fill_form action, skipping...")
                             continue
                         
-                        # コマンド生成部分で、valueがある場合に追加
-                        if 'value' in cmd and isinstance(cmd['value'], str) and '${params.' in cmd['value']:
-                            print(f"🔎 パラメータ置換前の値: {cmd['value']}")
-                            # パラメータ置換処理を実装
-                            param_name = cmd['value'].split('${params.')[1].split('}')[0]
-                            if param_name in params:
-                                cmd['value'] = cmd['value'].replace(f"${{params.{param_name}}}", params[param_name])
-                                print(f"🔎 パラメータ置換後の値: {cmd['value']}")
-                        
                         await page.fill(selector, value)
                         print(f"✅ Filled {selector} with: {value}")
                     
                     elif action == "keyboard_press":
-                        # Get key from selector or key property
-                        key = cmd.get("key") or cmd.get("selector")
+                        # Get key from selector, key property, or args array
+                        key = cmd.get("key") or cmd.get("selector") or (cmd.get("args", [""])[0] if "args" in cmd and cmd["args"] else "")
                         
                         if not key:
                             print("⚠️ Missing key for keyboard_press action, skipping...")
@@ -474,19 +454,30 @@ class ExecutionDebugEngine:
                     # Apply slowmo delay between actions
                     await asyncio.sleep(slowmo / 1000)
                 
+                # Just before tab closure decision
+                print(f"🔍 DEBUG [before closure decision]: Final keep_tab_open value: {keep_tab_open}")
+                
                 # Allow time to view the result
-                print("\n✅ Execution complete. Tab will close in 30 seconds...")
-                print("(Press Ctrl+C to close earlier)")
-                await asyncio.sleep(30)
+                print("\n✅ Execution complete.")
+                if not keep_tab_open:
+                    print("Tab will close in 5 seconds...")
+                    print("(Press Ctrl+C to close earlier)")
+                    await asyncio.sleep(5)
+                else:
+                    print("Tab will remain open as requested.")
                 
             except Exception as e:
                 print(f"❌ Error during command execution: {e}")
                 import traceback
-                print(traceback.format_exc())
+                traceback.print_exc()
                 
             finally:
-                # Keep tab open as requested
-                print("タブ開けっぱなし")
+                # Close tab based on keep_tab_open setting
+                if not keep_tab_open:
+                    await page.close()
+                    print("✅ タブを閉じました")
+                else:
+                    print("✅ タブを開いたままにしました（keep_tab_open: true）")
         
         except Exception as e:
             print(f"❌ Error in execute_json_commands: {e}")

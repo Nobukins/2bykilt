@@ -407,23 +407,23 @@ class BrowserDebugManager:
                 # Use the most recently active tab
                 active_tab_id = attached_tabs[-1].get('targetId')
                 for page in all_pages:
-                    if page._target_id == active_tab_id:
+                    if hasattr(page, '_target_id') and page._target_id == active_tab_id:
                         return page, False
         except Exception as e:
-            logger.error(f"Active tab detection via CDP failed: {e}")
+            print(f"Active tab detection via CDP failed: {e}")
 
         # Fallback: Use the last tab as the active tab
         return all_pages[-1], False
 
-    async def get_or_create_tab(self, tab_selection="active"):
+    async def get_or_create_tab(self, tab_selection="active_tab"):
         """
-        Get or create a tab based on the specified selection strategy.
+        タブ選択戦略に基づいてタブを取得または作成します
         
         Args:
-            tab_selection: Strategy for selecting a tab:
-                - "new_tab": Create a new tab.
-                - "active_tab": Use the currently visible tab.
-                - "last_tab": Use the last tab in the context.
+            tab_selection: タブの選択戦略：
+                - "new_tab": 新しいタブを作成
+                - "active_tab": 現在表示されているタブを使用
+                - "last_tab": コンテキスト内の最後のタブを使用
         
         Returns:
             tuple: (context, page, is_new)
@@ -433,22 +433,52 @@ class BrowserDebugManager:
 
         context = self.global_browser.contexts[0] if self.global_browser.contexts else await self.global_browser.new_context()
         
+        # 新しいタブを作成するケース
         if tab_selection == "new_tab" or not context.pages:
             print("✅ 新しいタブを作成します")
+            print(f"🔍 タブ選択戦略: {tab_selection}")
             page = await context.new_page()
             return context, page, True
-        elif tab_selection == "active_tab":
-            if context.pages:
-                page, is_new = await self.get_active_tab(self.global_browser)
-                if not is_new:
-                    print("✅ 現在表示中のタブを操作します")
-                    return context, page, False
+        
+        # アクティブなタブを使用するケース
+        elif tab_selection == "active_tab" and context.pages:
+            try:
+                # CDPでアクティブなタブを取得（可能な場合）
+                if hasattr(self, 'cdp_session') and self.cdp_session:
+                    targets = await self.cdp_session.send('Target.getTargets')
+                    active_targets = [t for t in targets.get('targetInfos', []) if t.get('type') == 'page' and t.get('attached')]
+                    if active_targets:
+                        active_target_id = active_targets[0].get('targetId')
+                        # アクティブなターゲットに対応するページを探す
+                        for existing_page in context.pages:
+                            if hasattr(existing_page, '_target_id') and existing_page._target_id == active_target_id:
+                                print("✅ アクティブなタブを使用します")
+                                print(f"🔍 タブ選択戦略: {tab_selection}")
+                                return context, existing_page, False
+                
+                # フォールバック: 最初のページを使用
+                if context.pages:
+                    print("✅ 最初のタブを使用します (アクティブタブを特定できませんでした)")
+                    print(f"🔍 タブ選択戦略: {tab_selection}")
+                    return context, context.pages[0], False
+                    
+            except Exception as e:
+                print(f"⚠️ アクティブタブの選択中にエラーが発生しました: {e}")
+                print("✅ 新しいタブにフォールバックします")
+            
+            # エラーまたはアクティブなタブが見つからない場合、新しいタブを作成
+            page = await context.new_page()
+            return context, page, True
+            
+        # 最後のタブを使用するケース
         elif tab_selection == "last_tab" and context.pages:
-            print(f"✅ 既存の最後のタブを再利用します (合計 {len(context.pages)} タブ中)")
+            print("✅ 最後のタブを使用します")
+            print(f"🔍 タブ選択戦略: {tab_selection}")
             return context, context.pages[-1], False
         
         # デフォルトケース - 新しいタブを作成
         print("✅ 新しいタブを作成します")
+        print(f"🔍 タブ選択戦略: {tab_selection}")
         page = await context.new_page()
         return context, page, True
 

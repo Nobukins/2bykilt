@@ -40,7 +40,9 @@ class ActionTranslator:
         json_commands = {
             "commands": [],
             "maintain_session": maintain_session,
-            "tab_selection_strategy": tab_selection_strategy  # Add tab selection strategy
+            "tab_selection_strategy": tab_selection_strategy,  # Include tab selection strategy
+            "keep_tab_open": action_def.get("keep_tab_open", False),
+            "slowmo": action_def.get("slowmo", 1000)
         }
         
         if action_def.get('type') in ['browser-control', 'unlock-future']:

@@ -81,6 +81,7 @@ actions:
 
   - name: search-jsonpayload
     type: unlock-future
+    keep_tab_open: true
     params:
       - name: query
         required: true
@@ -101,14 +102,30 @@ actions:
 
   - name: click-jsonpayload
     type: unlock-future
+    tab_selection_strategy: active_tab  # Explicitly specify active_tab
+    keep_tab_open: true
     flow:
       - action: keyboard_press
         key: "Enter"
 
   - name: nogtips-jsonpayload
-    type: browser-control
+    type: unlock-future
+    keep_tab_open: True
+    tab_selection_strategy: new_tab  # 明示的に新規タブを指定
+    params:
+      - name: query
+        required: true
+        type: string
+        description: "Search query to execute"
     slowmo: 1000
     flow:
       - action: command
         url: "https://nogtips.wordpress.com/"
         wait_until: "domcontentloaded"
+      - action: click
+        selector: "#eu-cookie-law > form > input"
+      - action: click
+        selector: "#search-2 > form > label > input"
+      - action: fill_form
+        selector: "#search-2 > form > label > input"
+        value: "${params.query}"

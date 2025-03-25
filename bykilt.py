@@ -293,7 +293,7 @@ def create_ui(config, theme_name="Ocean"):
                     # Add tab selection strategy control
                     tab_selection_strategy = gr.Radio(
                         choices=["new_tab", "active_tab", "last_tab"],
-                        value="new_tab",
+                        value="active_tab",
                         label="Tab Selection Strategy",
                         info="Choose which browser tab to use for automation when using own browser",
                         visible=True
