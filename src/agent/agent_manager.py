@@ -70,7 +70,8 @@ async def stop_research_agent():
 async def run_org_agent(
         llm, use_own_browser, keep_browser_open, headless, disable_security, window_w, window_h,
         save_recording_path, save_agent_history_path, save_trace_path, task, max_steps, use_vision,
-        max_actions_per_step, tool_calling_method
+        max_actions_per_step, tool_calling_method, maintain_browser_session=False,
+        existing_context=None, existing_page=None
 ) -> Tuple[str, str, str, str, Optional[str], Optional[str]]:
     """
     Run the original agent from browser-use library
@@ -82,33 +83,42 @@ async def run_org_agent(
     _global_agent_state.clear_stop()
 
     try:
-        extra_chromium_args = [f"--window-size={window_w},{window_h}"]
-        if use_own_browser:
-            chrome_path = os.getenv("CHROME_PATH", None)
-            if chrome_path == "":
-                chrome_path = None
-            chrome_user_data = os.getenv("CHROME_USER_DATA", None)
-            if chrome_user_data:
-                extra_chromium_args += [f"--user-data-dir={chrome_user_data}"]
+        # If maintain_browser_session is True and we have existing context/page, use them
+        if maintain_browser_session and existing_context and existing_page:
+            context = existing_context
+            page = existing_page
+            # Store these for future use
+            _global_browser_context = context
         else:
-            chrome_path = None
+            # Initialize browser and create a new page as before
+            extra_chromium_args = [f"--window-size={window_w},{window_h}"]
+            if use_own_browser:
+                chrome_path = os.getenv("CHROME_PATH", None)
+                if chrome_path == "":
+                    chrome_path = None
+                chrome_user_data = os.getenv("CHROME_USER_DATA", None)
+                if chrome_user_data:
+                    extra_chromium_args += [f"--user-data-dir={chrome_user_data}"]
+            else:
+                chrome_path = None
 
-        if _global_browser is None:
-            _global_browser = Browser(
-                config=BrowserConfig(
-                    headless=headless, disable_security=disable_security, chrome_instance_path=chrome_path,
-                    extra_chromium_args=extra_chromium_args,
+            if _global_browser is None:
+                _global_browser = Browser(
+                    config=BrowserConfig(
+                        headless=headless, disable_security=disable_security, chrome_instance_path=chrome_path,
+                        extra_chromium_args=extra_chromium_args,
+                    )
                 )
-            )
 
-        if _global_browser_context is None:
-            _global_browser_context = await _global_browser.new_context(
-                config=BrowserContextConfig(
-                    trace_path=save_trace_path if save_trace_path else None,
-                    save_recording_path=save_recording_path if save_recording_path else None,
-                    no_viewport=False, browser_window_size=BrowserContextWindowSize(width=window_w, height=window_h),
+            if _global_browser_context is None:
+                _global_browser_context = await _global_browser.new_context(
+                    config=BrowserContextConfig(
+                        trace_path=save_trace_path if save_trace_path else None,
+                        save_recording_path=save_recording_path if save_recording_path else None,
+                        no_viewport=False, browser_window_size=BrowserContextWindowSize(width=window_w, height=window_h),
+                    )
                 )
-            )
+                page = await _global_browser_context.new_page()
 
         if _global_agent is None:
             _global_agent = Agent(
@@ -132,8 +142,7 @@ async def run_org_agent(
         errors = str(e) + "\n" + traceback.format_exc()
         return '', errors, '', '', None, None
     finally:
-        _global_agent = None
-        if not keep_browser_open:
+        if not keep_browser_open and not maintain_browser_session:
             if _global_browser_context:
                 await _global_browser_context.close()
                 _global_browser_context = None
@@ -252,10 +261,38 @@ async def run_browser_agent(
     agent_type, llm_provider, llm_model_name, llm_num_ctx, llm_temperature, llm_base_url, llm_api_key,
     use_own_browser, keep_browser_open, headless, disable_security, window_w, window_h,
     save_recording_path, save_agent_history_path, save_trace_path, enable_recording, task, add_infos,
-    max_steps, use_vision, max_actions_per_step, tool_calling_method
+    max_steps, use_vision, max_actions_per_step, tool_calling_method, maintain_browser_session=False,
+    tab_selection_strategy="new_tab"  # Add parameter with default
 ):
     """
     Main function to run browser agent based on specified parameters
+
+    Args:
+        agent_type: Type of agent to run (org or custom)
+        llm_provider: Provider of the LLM model
+        llm_model_name: Name of the LLM model
+        llm_num_ctx: Number of context tokens for the LLM model
+        llm_temperature: Temperature setting for the LLM model
+        llm_base_url: Base URL for the LLM model API
+        llm_api_key: API key for the LLM model
+        use_own_browser: Whether to use own browser instance
+        keep_browser_open: Whether to keep the browser open after task completion
+        headless: Whether to run the browser in headless mode
+        disable_security: Whether to disable browser security settings
+        window_w: Width of the browser window
+        window_h: Height of the browser window
+        save_recording_path: Path to save browser recordings
+        save_agent_history_path: Path to save agent history
+        save_trace_path: Path to save browser trace files
+        enable_recording: Whether to enable browser recording
+        task: Task to be executed by the agent
+        add_infos: Additional information for the custom agent
+        max_steps: Maximum number of steps for the agent
+        use_vision: Whether to use vision capabilities
+        max_actions_per_step: Maximum number of actions per step
+        tool_calling_method: Method for calling tools
+        maintain_browser_session: Whether to maintain the browser session between tasks
+        tab_selection_strategy: Strategy for tab selection ("new_tab", "active_tab", or "last_tab")
     """
     # Get agent state from globals
     globals_dict = get_globals()
@@ -295,14 +332,28 @@ async def run_browser_agent(
             temperature=llm_temperature, base_url=llm_base_url, api_key=llm_api_key,
         )
         
-        # Run appropriate agent type
+        # Check for existing browser context if maintain_browser_session is True
+        existing_context = None
+        existing_page = None
+        if maintain_browser_session:
+            # Try to get existing browser context and page
+            if "_global_browser_context" in globals_dict and globals_dict["_global_browser_context"]:
+                existing_context = globals_dict["_global_browser_context"]
+                # Get the first page if available
+                if hasattr(existing_context, 'pages') and existing_context.pages:
+                    existing_page = existing_context.pages[0]
+        
+        # Pass existing_context and existing_page to the agent functions
         if agent_type == "org":
             final_result, errors, model_actions, model_thoughts, trace_file, history_file = await run_org_agent(
                 llm=llm, use_own_browser=use_own_browser, keep_browser_open=keep_browser_open, headless=headless,
                 disable_security=disable_security, window_w=window_w, window_h=window_h,
                 save_recording_path=recording_path, save_agent_history_path=save_agent_history_path,
                 save_trace_path=save_trace_path, task=task, max_steps=max_steps, use_vision=use_vision,
-                max_actions_per_step=max_actions_per_step, tool_calling_method=tool_calling_method
+                max_actions_per_step=max_actions_per_step, tool_calling_method=tool_calling_method,
+                maintain_browser_session=maintain_browser_session,
+                existing_context=existing_context,
+                existing_page=existing_page
             )
         elif agent_type == "custom":
             final_result, errors, model_actions, model_thoughts, trace_file, history_file = await run_custom_agent(

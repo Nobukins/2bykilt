@@ -140,6 +140,7 @@ async def cleanup_resources():
         print("🧹 ブラウザインスタンスをクリーンアップしています...")
         try:
             # 明示的に接続を閉じないでリソースのみ解放
+            # await global_browser.close()
             # これによりChromeウィンドウは開いたままになる
             await global_playwright.stop()
         except Exception as e:

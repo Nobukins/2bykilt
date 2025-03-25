@@ -201,7 +201,30 @@ phrase-search query=Personal_AI_Assistant
 
 Bykiltでは、LLM（大規模言語モデル）からのレスポンスをシミュレートし、ブラウザ操作をデバッグするための簡易ツールを提供しています。
 
-#### Usage / debug_bykilt.py の使用方法
+### デバッグ機能強化（2025/03/23）
+
+今回のアップデートでは、以下のデバッグ機能が強化されました：
+
+1. **詳細なログ出力**:
+   - コマンド実行フローの追跡が可能になりました
+   - llms.txtの解析過程を可視化
+   - パラメータ置換の詳細な診断情報
+
+2. **ビジュアルデバッグ**:
+   - 要素インデックス付け機能（`setup_element_indexer`）でページ内の要素に番号を表示
+   - ブラウザ操作の各ステップをより明確に確認可能
+
+3. **yaml_parser統合**:
+   - llms.txtからのアクション読み込みを効率化
+   - 様々なYAML形式に対応
+
+4. **エラー診断の強化**:
+   - 問題の原因特定を容易にする詳細なエラーメッセージ
+   - コマンド実行中の状態追跡
+
+### 使用方法
+
+#### debug_bykilt.py の使用方法
 Run the debug tool by providing a JSON file containing LLM response data:
 
 このツールを使用すると、JSONファイルを使ってLLMからのレスポンスをシミュレートし、Playwrightを使ってブラウザ操作を直接実行できます。
@@ -210,12 +233,25 @@ Run the debug tool by providing a JSON file containing LLM response data:
 python debug_bykilt.py <llm_response_file>
 ```
 
-2. サンプルJSONファイルをテストします：
+サンプルJSONファイルをテストします：
 ```bash
 python debug_bykilt.py external/samples/navigate_url.json
 ```
 ```bash
 python debug_bykilt.py external/samples/search_word.json
+```
+
+#### 要素インデキシングの使用方法
+```python
+from src.utils.debug_utils import DebugUtils
+
+async def debug_page(page):
+    debug = DebugUtils()
+    await debug.setup_element_indexer(page)  # ページ内の操作可能な要素に番号を表示
+    
+    # 他のデバッグ機能
+    debug.show_help()  # ヘルプ情報を表示
+    samples = debug.list_samples()  # 利用可能なサンプルを一覧表示
 ```
 
 ### サポートされている機能
@@ -345,6 +381,8 @@ python debug_bykilt.py external/samples/search_word.json --use-own-browser
   - [ ] **コミュニティハブ**: コミュニティ内でテンプレートやワークフローを共有
 
 ## Changelog
+- [x] **2025/03/23:** デバッグ機能強化: llms.txtパース改善、要素インデックス機能追加、コマンド実行フロー視覚化
+- [x] **2025/03/21:** ブラウザ管理・タブ操作の最適化: 単一ブラウザインスタンス、タブベースの操作改善
 - [x] **2025/03/06:** Thanks @Nobukins, you made magic comes true, Bykilt!
 - [x] **2025/01/26:** Thanks to @vvincent1234. Now browser-use-webui can combine with DeepSeek-r1 to engage in deep thinking!
 - [x] **2025/01/10:** Thanks to @casistack. Now we have Docker Setup option and also Support keep browser open between tasks.[Video tutorial demo](https://github.com/browser-use/web-ui/issues/1#issuecomment-2582511750).

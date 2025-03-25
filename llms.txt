@@ -79,7 +79,7 @@ actions:
     timeout: 120
     slowmo: 1000
 
-  - name: json
+  - name: search-jsonpayload
     type: unlock-future
     params:
       - name: query
@@ -97,4 +97,18 @@ actions:
         selector: "#APjFqb"
         value: "${params.query}"
       - action: keyboard_press
-        selector: "Enter"
+        key: "Enter"
+
+  - name: click-jsonpayload
+    type: unlock-future
+    flow:
+      - action: keyboard_press
+        key: "Enter"
+
+  - name: nogtips-jsonpayload
+    type: browser-control
+    slowmo: 1000
+    flow:
+      - action: command
+        url: "https://nogtips.wordpress.com/"
+        wait_until: "domcontentloaded"

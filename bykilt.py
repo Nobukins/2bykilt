@@ -2,8 +2,12 @@ import logging
 import argparse
 import os
 import glob
+import sys
+import time  # Added for restart logic
 from dotenv import load_dotenv
 load_dotenv()
+import subprocess
+import asyncio
 
 import gradio as gr
 from gradio.themes import Citrus, Default, Glass, Monochrome, Ocean, Origin, Soft, Base
@@ -95,33 +99,133 @@ theme_map = {
     "Origin": Origin(), "Citrus": Citrus(), "Ocean": Ocean(), "Base": Base()
 }
 
-async def run_browser_agent(task, **kwargs):
-    """Run the browser agent using JSON-based execution."""
-    # Parse the prompt
-    action_name, params = pre_evaluate_prompt(task)
-    
-    # Load actions from llms.txt
-    actions_config = load_actions_config()
-    
-    # Translate the action into JSON format
-    translator = ActionTranslator()
-    json_file_path = translator.translate_to_json(action_name, params, actions_config)
-    
-    # Use DebugUtils to process the JSON commands
+async def run_browser_agent(task, add_infos, llm_provider, llm_model_name, llm_num_ctx, llm_temperature, 
+                           llm_base_url, llm_api_key, use_vision, use_own_browser, headless, 
+                           maintain_browser_session=False, tab_selection_strategy="new_tab"):
+    """
+    Run the browser agent using JSON-based execution.
+    """
     browser_manager = BrowserDebugManager()
     debug_utils = DebugUtils(browser_manager=browser_manager)
     
-    # Apply browser settings
-    use_own_browser = kwargs.get('use_own_browser', False)
-    headless = kwargs.get('headless', False)
+    # セッションIDを取得（maintain_browser_sessionがTrueの場合のみ）
+    session_id = browser_manager.session_manager.active_session_id if maintain_browser_session else None
     
     try:
-        # Execute the JSON commands
-        result = await debug_utils.test_llm_response(json_file_path, use_own_browser, headless)
+        # ブラウザセッションを初期化
+        browser_result = await browser_manager.initialize_with_session(
+            session_id=session_id,
+            use_own_browser=use_own_browser,
+            headless=headless
+        )
+        
+        if browser_result.get("status") != "success":
+            return {"status": "error", "message": "ブラウザの初期化に失敗しました"}
+        
+        # 新しいセッションIDを取得
+        session_id = browser_result.get("session_id")
+        
+        # アクションの解析と実行
+        action_name, params = pre_evaluate_prompt(task)
+        actions_config = load_actions_config()
+        
+        # JSONに変換
+        translator = ActionTranslator()
+        json_file_path = translator.translate_to_json(
+            action_name, params, actions_config, 
+            maintain_session=maintain_browser_session,
+            tab_selection_strategy=tab_selection_strategy  # タブ選択戦略を渡す
+        )
+        
+        # JSON実行
+        result = await debug_utils.test_llm_response(
+            json_file_path, use_own_browser, headless, 
+            session_id=session_id,
+            tab_selection_strategy=tab_selection_strategy  # タブ選択戦略を渡す
+        )
+        
+        # セッション情報を結果に追加
+        result["session_id"] = session_id
+        result["session_maintained"] = maintain_browser_session
+        
         return result
     finally:
-        # Clean up resources
-        await browser_manager.cleanup_resources()
+        # セッション維持フラグに基づいてリソースをクリーンアップ
+        if not maintain_browser_session:
+            await browser_manager.cleanup_resources(session_id=session_id, maintain_session=False)
+        else:
+            # セッションを維持する場合は現在のブラウザ情報を更新
+            browser = browser_manager.global_browser
+            if (browser and session_id):
+                browser_info = browser_manager._get_browser_info(browser)
+                browser_manager.session_manager.update_session(session_id, browser_info)
+
+def chrome_restart_dialog():
+    """Chromeの再起動確認ダイアログを表示"""
+    with gr.Blocks() as dialog:
+        with gr.Box():
+            gr.Markdown("### ⚠️ Chromeの再起動が必要です")
+            gr.Markdown("Chromeは既に起動していますが、デバッグモードではありません。")
+            gr.Markdown("すべてのChromeウィンドウを閉じて、デバッグモードで再起動しますか？")
+            gr.Markdown("⚠️ **警告**: この操作により開いているすべてのChromeタブが閉じられます！")
+            
+            with gr.Row():
+                yes_button = gr.Button("はい、Chromeを再起動する", variant="primary")
+                no_button = gr.Button("いいえ、新しいウィンドウを試す", variant="secondary")
+            
+            result = gr.State(None)
+            
+            def set_yes():
+                return "yes"
+                
+            def set_no():
+                return "no"
+            
+            yes_button.click(fn=set_yes, outputs=result)
+            no_button.click(fn=set_no, outputs=result)
+    
+    return dialog
+
+async def show_restart_dialog():
+    """Show a dialog to confirm Chrome restart and execute the restart logic."""
+    dialog = chrome_restart_dialog()
+    result = await dialog.launch()
+    if result == "yes":
+        # Implement Chrome restart logic
+        try:
+            # Kill Chrome process based on platform
+            if sys.platform == 'darwin':  # macOS
+                subprocess.run(['killall', 'Google Chrome'], stderr=subprocess.DEVNULL)
+            elif sys.platform == 'win32':  # Windows
+                subprocess.run(['taskkill', '/F', '/IM', 'chrome.exe'], stderr=subprocess.DEVNULL)
+            else:  # Linux and others
+                subprocess.run(['killall', 'chrome'], stderr=subprocess.DEVNULL)
+            
+            # Wait for Chrome to completely close
+            time.sleep(2)
+            
+            # Start Chrome with debugging port
+            chrome_path = os.getenv("CHROME_PATH", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
+            chrome_debugging_port = os.getenv("CHROME_DEBUGGING_PORT", "9222")
+            chrome_user_data = os.getenv("CHROME_USER_DATA", "")
+            
+            cmd_args = [
+                chrome_path,
+                f"--remote-debugging-port={chrome_debugging_port}",
+                "--no-first-run",
+                "--no-default-browser-check"
+            ]
+            
+            if chrome_user_data and chrome_user_data.strip():
+                cmd_args.append(f"--user-data-dir={chrome_user_data}")
+            
+            # Start Chrome process
+            subprocess.Popen(cmd_args)
+            return "Chromeを再起動しました"
+        except Exception as e:
+            return f"再起動中にエラーが発生しました: {str(e)}"
+    else:
+        return "操作をキャンセルしました"
 
 def create_ui(config, theme_name="Ocean"):
     """Create the Gradio UI with the specified configuration and theme"""
@@ -180,6 +284,38 @@ def create_ui(config, theme_name="Ocean"):
                     save_trace_path = gr.Textbox(label="Trace Path", placeholder="e.g. ./tmp/traces", value=config['save_trace_path'], info="Path to save Agent traces", interactive=True)
                     save_agent_history_path = gr.Textbox(label="Agent History Save Path", placeholder="e.g., ./tmp/agent_history", value=config['save_agent_history_path'], info="Specify the directory where agent history should be saved.", interactive=True)
 
+                    maintain_browser_session = gr.Checkbox(
+                        label="Maintain Browser Session",
+                        value=False,
+                        info="Keep browser session active between commands (for multi-step interactions)"
+                    )
+
+                    # Add tab selection strategy control
+                    tab_selection_strategy = gr.Radio(
+                        choices=["new_tab", "active_tab", "last_tab"],
+                        value="new_tab",
+                        label="Tab Selection Strategy",
+                        info="Choose which browser tab to use for automation when using own browser",
+                        visible=True
+                    )
+
+                    # Make tab selection strategy depend on use_own_browser
+                    use_own_browser.change(
+                        fn=lambda enabled: gr.update(visible=enabled),
+                        inputs=use_own_browser,
+                        outputs=tab_selection_strategy
+                    )
+
+                    # 再起動確認セクションを追加
+                    with gr.Row():
+                        restart_button = gr.Button("ブラウザを再起動", variant="secondary")
+                        restart_status = gr.Markdown("")
+                        
+                        def restart_browser():
+                            return asyncio.run(show_restart_dialog())
+                        
+                        restart_button.click(fn=restart_browser, outputs=restart_status)
+
             with gr.TabItem("🤖 Run Agent", id=4):
                 task = gr.Textbox(label="Task Description", lines=4, placeholder="Enter your task or script name (e.g., search-for-something query=python)", value=config['task'], info="Describe what you want the agent to do or specify a script from llms.txt")
                 add_infos = gr.Textbox(label="Additional Information", lines=3, placeholder="Add any helpful context or instructions...", info="Optional hints to help the LLM complete the task")
@@ -225,7 +361,8 @@ def create_ui(config, theme_name="Ocean"):
                             agent_type, llm_provider, llm_model_name, llm_num_ctx, llm_temperature, llm_base_url, llm_api_key,
                             use_own_browser, keep_browser_open, headless, disable_security, window_w, window_h,
                             save_recording_path, save_agent_history_path, save_trace_path, enable_recording, task, add_infos,
-                            max_steps, use_vision, max_actions_per_step, tool_calling_method, dev_mode
+                            max_steps, use_vision, max_actions_per_step, tool_calling_method, dev_mode, maintain_browser_session,
+                            tab_selection_strategy  # Add tab selection strategy parameter
                         ],
                         outputs=[
                             browser_view, final_result_output, errors_output, model_actions_output, model_thoughts_output,
@@ -299,7 +436,10 @@ def main():
     parser.add_argument("--port", type=int, default=7788, help="Port to listen on")
     parser.add_argument("--theme", type=str, default="Ocean", choices=theme_map.keys(), help="Theme to use for the UI")
     parser.add_argument("--dark-mode", action="store_true", help="Enable dark mode")
-    args = parser.parse_args()
+    args = parser.parse_args()  # Fix: Use parse_args() to get arguments
+
+    print(f"🔍 DEBUG: Selected theme: {args.theme}")
+    print(f"🔍 DEBUG: Dark mode enabled: {args.dark_mode}")
 
     config_dict = default_config()
     demo = create_ui(config_dict, theme_name=args.theme)
@@ -307,9 +447,14 @@ def main():
 
 if __name__ == '__main__':
     main()
-
+    
 async def on_run_agent_click(task, add_infos, llm_provider, llm_model_name, llm_num_ctx, llm_temperature, llm_base_url, llm_api_key, use_vision, use_own_browser, headless):
     try:
+        # bykilt.pyのコマンド処理箇所に追加
+        print(f"🔎 入力コマンド解析: {task}")
+        action_name, params = pre_evaluate_prompt(task)
+        print(f"🔎 解析結果: アクション={action_name}, パラメータ={params}")
+
         # CommandDispatcherを使用してコマンド実行
         from src.agent.agent_manager import run_command
         result = await run_command(
