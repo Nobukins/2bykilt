@@ -35,7 +35,9 @@ async def run_with_stream(
     use_vision: bool,
     max_actions_per_step: int,
     tool_calling_method: str,
-    dev_mode: bool = False
+    dev_mode: bool = False,
+    maintain_browser_session: bool = False,  # Added parameter
+    tab_selection_strategy: str = "new_tab"  # Add parameter with default
 ):
     """
     Run browser agent with UI streaming of results
@@ -60,7 +62,8 @@ async def run_with_stream(
             save_recording_path=save_recording_path, save_agent_history_path=save_agent_history_path,
             save_trace_path=save_trace_path, enable_recording=enable_recording, task=task, add_infos=add_infos,
             max_steps=max_steps, use_vision=use_vision, max_actions_per_step=max_actions_per_step,
-            tool_calling_method=tool_calling_method
+            tool_calling_method=tool_calling_method, maintain_browser_session=maintain_browser_session,  # Pass parameter
+            tab_selection_strategy=tab_selection_strategy  # Pass the parameter
         )
         html_content = f"<h1 style='width:{stream_vw}vw; height:{stream_vh}vh'>Using browser...</h1>"
         yield [html_content] + list(result)
@@ -77,7 +80,8 @@ async def run_with_stream(
                     save_recording_path=save_recording_path, save_agent_history_path=save_agent_history_path,
                     save_trace_path=save_trace_path, enable_recording=enable_recording, task=task, add_infos=add_infos,
                     max_steps=max_steps, use_vision=use_vision, max_actions_per_step=max_actions_per_step,
-                    tool_calling_method=tool_calling_method
+                    tool_calling_method=tool_calling_method, maintain_browser_session=maintain_browser_session,  # Pass parameter
+                    tab_selection_strategy=tab_selection_strategy  # Pass the parameter
                 )
             )
 
