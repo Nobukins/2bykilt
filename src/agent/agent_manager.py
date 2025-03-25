@@ -262,7 +262,7 @@ async def run_browser_agent(
     use_own_browser, keep_browser_open, headless, disable_security, window_w, window_h,
     save_recording_path, save_agent_history_path, save_trace_path, enable_recording, task, add_infos,
     max_steps, use_vision, max_actions_per_step, tool_calling_method, maintain_browser_session=False,
-    tab_selection_strategy="new_tab"  # Add parameter with default
+    tab_selection_strategy="active_tab"  # Add parameter with default
 ):
     """
     Main function to run browser agent based on specified parameters
@@ -292,7 +292,7 @@ async def run_browser_agent(
         max_actions_per_step: Maximum number of actions per step
         tool_calling_method: Method for calling tools
         maintain_browser_session: Whether to maintain the browser session between tasks
-        tab_selection_strategy: Strategy for tab selection ("new_tab", "active_tab", or "last_tab")
+        tab_selection_strategy: Strategy for tab selection ("active_tab", "new_tab" or "last_tab")
     """
     # Get agent state from globals
     globals_dict = get_globals()

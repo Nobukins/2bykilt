@@ -328,7 +328,8 @@ markers =
                 json_path = translator.translate_to_json(
                     script_info.get('name', ''), 
                     params, 
-                    action_list
+                    action_list,
+                    tab_selection_strategy=script_info.get('tab_selection_strategy', 'new_tab')  # Pass tab selection strategy
                 )
                 
                 # Execute the JSON commands using DebugUtils

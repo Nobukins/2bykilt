@@ -14,16 +14,17 @@ class DebugUtils:
         self.browser_manager = browser_manager or BrowserDebugManager()
         # 循環参照を避けるため、ExecutionDebugEngineは必要な時に作成
     
-    async def test_llm_response(self, json_file_path, use_own_browser=False, headless=False, session_id=None, tab_selection_strategy="new_tab"):
+    async def test_llm_response(self, json_file_path, use_own_browser=False, headless=False, session_id=None, tab_selection_strategy=None, keep_browser_open=False):
         """
         JSON形式のLLMレスポンスをテストします。
         
         Args:
             json_file_path: JSONファイルのパス
             use_own_browser: 独自のブラウザを使用するかどうか
-            headless: ヘッドレスモードで実行するかどうか
+            headless: ヘッドレスモードで実行するか
             session_id: セッションID（オプション）
-            tab_selection_strategy: タブ選択戦略 ("new_tab", "active_tab", "last_tab")
+            tab_selection_strategy: タブ選択戦略 ("new_tab", "active_tab", "last_tab")。None の場合はコマンドの設定を使用
+            keep_browser_open: ブラウザを開いたままにするか
         """
         import json
         from src.modules.execution_debug_engine import ExecutionDebugEngine
@@ -31,41 +32,60 @@ class DebugUtils:
         try:
             with open(json_file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
-                data = json.loads(content)
+                commands_data = json.loads(content)
             
-            # コマンドの取得
-            commands = data.get('commands', [])
+            # Debug initial state
+            print(f"🔍 DEBUG [test_llm_response]: JSON File Path: {json_file_path}")
+            print(f"🔍 DEBUG [test_llm_response]: use_own_browser = {use_own_browser}")
+            print(f"🔍 DEBUG [test_llm_response]: headless = {headless}")
+            print(f"🔍 DEBUG [test_llm_response]: session_id = {session_id}")
+            print(f"🔍 DEBUG [test_llm_response]: initial tab_selection_strategy param = {tab_selection_strategy}")
             
-            if not commands:
+            # コマンドデータからtab_selection_strategyを取得（存在する場合）
+            cmd_tab_strategy = commands_data.get('tab_selection_strategy')
+            if cmd_tab_strategy:
+                print(f"🔍 DEBUG [test_llm_response]: Found strategy in commands: {cmd_tab_strategy}")
+                # パラメータが明示的に指定されていない場合は、コマンドの設定を使用
+                if tab_selection_strategy is None:
+                    tab_selection_strategy = cmd_tab_strategy
+                    print(f"🔍 DEBUG [test_llm_response]: Using command-specified strategy: {tab_selection_strategy}")
+            
+            # それでもNoneの場合はデフォルト値を設定
+            if tab_selection_strategy is None:
+                tab_selection_strategy = "new_tab"  # デフォルト値
+                print(f"🔍 DEBUG [test_llm_response]: Using default strategy: {tab_selection_strategy}")
+            
+            print(f"🔍 DEBUG [test_llm_response]: final tab_selection_strategy = {tab_selection_strategy}")
+            print(f"🔍 DEBUG [test_llm_response]: keep_browser_open = {keep_browser_open}")
+            print(f"🔍 DEBUG [test_llm_response]: initial commands_data.keep_tab_open = {commands_data.get('keep_tab_open', 'Not Set')}")
+            
+            # コマンドの存在確認
+            if 'commands' not in commands_data or not commands_data['commands']:
                 return {"status": "error", "message": "実行するコマンドがありません"}
-                
-            # # 各コマンドをExecutionDebugEngine用の形式に変換
-            # engine_commands = []
-            # for cmd in commands:
-            #     engine_command = {
-            #         "action": cmd.get('type', ''),
-            #         "args": []
-            #     }
-                
-            #     # コマンドタイプごとの引数設定
-            #     if cmd.get('type') == 'goto':
-            #         engine_command["args"] = [cmd.get('url', '')]
-            #     elif cmd.get('type') in ['click', 'wait_for_selector']:
-            #         engine_command["args"] = [cmd.get('selector', '')]
-            #     elif cmd.get('type') == 'fill':
-            #         engine_command["args"] = [cmd.get('selector', ''), cmd.get('value', '')]
-            #     elif cmd.get('type') == 'wait':
-            #         engine_command["args"] = [cmd.get('timeout', 5000)]
-            #     elif cmd.get('type') == 'keyboard_press':
-            #         engine_command["args"] = [cmd.get('key', '')]
-            #     # 必要に応じて他のタイプを追加
-                
-            #     engine_commands.append(engine_command)
             
-            # ExecutionDebugEngineを使用してコマンドを実行
+            # Keep tab open setting from JSON or function parameter
+            if keep_browser_open and "keep_tab_open" not in commands_data:
+                commands_data["keep_tab_open"] = True
+                print(f"🔍 DEBUG [test_llm_response]: Setting keep_tab_open to True due to keep_browser_open parameter")
+            
+            # Debug after potential modification
+            print(f"🔍 DEBUG [test_llm_response]: final commands_data.keep_tab_open = {commands_data.get('keep_tab_open', 'Not Set')}")
+            
+            # ActionタイプとパラメータがJSONにあれば取得
+            action_name = commands_data.get('action_name', None)
+            params = commands_data.get('params', {})
+            
+            # ExecutionDebugEngineを使用してJSONコマンドを実行
             engine = ExecutionDebugEngine()
-            # await engine.execute_commands(engine_commands, use_own_browser, headless, tab_selection_strategy)
-            await engine.execute_commands(commands, use_own_browser, headless, tab_selection_strategy)
+            await engine.execute_json_commands(
+                commands_data=commands_data,
+                use_own_browser=use_own_browser,
+                headless=headless,
+                action_name=action_name,
+                params=params,
+                tab_selection=tab_selection_strategy
+            )
+            
             return {"status": "success", "message": "コマンドを実行しました"}
                 
         except Exception as e:
