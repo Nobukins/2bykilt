@@ -48,14 +48,13 @@ python3.12 -m venv venv
 Activate the virtual environment:
 - macOS/Linux:
 ```bash
-source .venv/bin/activate
+source ./venv/bin/activate
 ```
 
 #### Step 3: Install Dependencies
 Install Python packages:
 ```bash
 pip install -r requirements.txt
-pip install requests pyyaml pytest pytest-playwright 
 ```
 
 Install Playwright:
@@ -65,10 +64,6 @@ playwright install
 
 #### Step 4: Configure Environment
 1. Create a copy of the example environment file:
-- Windows (Command Prompt):
-```bash
-copy .env.example .env
-```
 - macOS/Linux/Windows (PowerShell):
 ```bash
 cp .env.example .env
