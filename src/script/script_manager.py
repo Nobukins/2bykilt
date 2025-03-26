@@ -426,6 +426,77 @@ markers =
                     success_msg = f"Script executed successfully: {stdout.decode()}"
                     logger.info(success_msg)
                     return success_msg, script_path
+            elif script_type == 'action_runner_template':
+                # Handle action runner template type
+                logger.info(f"Executing action runner template: {script_info.get('name', 'unknown')}")
+                
+                # Get action script name
+                action_script = script_info.get('action_script')
+                if not action_script:
+                    error_msg = "Action runner template requires 'action_script' field"
+                    logger.error(error_msg)
+                    return error_msg, None
+                
+                # Get command template
+                command_template = script_info.get('command', '')
+                if not command_template:
+                    error_msg = "Command field is required for action_runner_template type"
+                    logger.error(error_msg)
+                    return error_msg, None
+                
+                # Replace action_script placeholder
+                command_template = command_template.replace('${action_script}', action_script)
+                
+                # Replace parameter placeholders (${params.name} format)
+                for param_name, param_value in params.items():
+                    placeholder = f"${{params.{param_name}}}"
+                    if placeholder in command_template:
+                        # Quote values with spaces or special characters
+                        if ' ' in str(param_value) or any(c in str(param_value) for c in '!@#$%^&*()'):
+                            param_value = f'"{param_value}"'
+                        command_template = command_template.replace(placeholder, str(param_value))
+                
+                # Split into parts for subprocess execution
+                command_parts = command_template.split()
+                
+                # Add slowmo parameter if specified and not already in command
+                slowmo = script_info.get('slowmo')
+                if slowmo is not None and '--slowmo' not in command_template:
+                    try:
+                        slowmo_ms = int(slowmo)
+                        command_parts.extend(['--slowmo', str(slowmo_ms)])
+                        logger.info(f"Slow motion enabled with {slowmo_ms}ms delay")
+                    except ValueError:
+                        logger.warning(f"Invalid slowmo value: {slowmo}, ignoring")
+                
+                # Set up environment variables
+                env = os.environ.copy()
+                if save_recording_path:
+                    os.makedirs(save_recording_path, exist_ok=True)
+                    env['RECORDING_PATH'] = save_recording_path
+                    logger.info(f"Recording enabled, saving to: {save_recording_path}")
+                
+                # Log command before execution
+                logger.info(f"Executing action runner command: {' '.join(command_parts)}")
+                
+                # Run the command asynchronously
+                process = await asyncio.create_subprocess_exec(
+                    *command_parts,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    env=env
+                )
+                stdout, stderr = await process.communicate()
+                
+                # Process execution result
+                if process.returncode != 0:
+                    error_msg = f"Action runner execution failed: {stderr.decode()}"
+                    logger.error(error_msg)
+                    return error_msg, None
+                else:
+                    success_msg = f"Action runner executed successfully: {stdout.decode()}"
+                    logger.info(success_msg)
+                    return success_msg, None
             else:
                 logger.error(f"Unsupported script type: {script_type}")
                 raise ValueError(f"Unsupported script type: {script_type}")
