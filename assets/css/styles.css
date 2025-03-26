@@ -1,0 +1,69 @@
+.gradio-container { 
+    max-width: 1200px !important; 
+    margin: auto !important; 
+    padding-top: 20px !important; 
+}
+.header-text { 
+    text-align: center; 
+    margin-bottom: 30px; 
+}
+.theme-section { 
+    margin-bottom: 20px; 
+    padding: 15px; 
+    border-radius: 10px; 
+}
+
+/* コマンドサジェスト用スタイル - 視認性向上 */
+.command-suggestions {
+    position: absolute;
+    border: 2px solid #0078d7; /* より目立つ枠線 */
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 9999;
+    max-height: 300px;
+    overflow-y: auto;
+    width: 350px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+.dark .command-suggestions {
+    background: #2c2c2c;
+    border-color: #444;
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+}
+.suggestion-item {
+    padding: 10px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.dark .suggestion-item {
+    border-bottom-color: #444;
+}
+.suggestion-item:hover, .suggestion-item.active {
+    background-color: #f0f7ff;
+}
+.dark .suggestion-item:hover, .dark .suggestion-item.active {
+    background-color: #3a3f4b;
+}
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+.suggestion-desc {
+    color: #666;
+    font-size: 0.85em;
+    margin-left: 8px;
+    opacity: 0.8;
+    flex-shrink: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 60%;
+}
+.dark .suggestion-desc {
+    color: #aaa;
+}

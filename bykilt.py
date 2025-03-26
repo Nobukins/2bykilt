@@ -29,56 +29,12 @@ from src.browser.browser_manager import close_global_browser, prepare_recording_
 from src.config.action_translator import ActionTranslator
 from src.utils.debug_utils import DebugUtils
 from src.browser.browser_debug_manager import BrowserDebugManager
+from src.ui.command_helper import CommandHelper  # Import CommandHelper class
 
 import yaml  # 必要であればインストール: pip install pyyaml
 
 # Configure logging
 logger = logging.getLogger(__name__)
-
-def load_actions_config():
-    """Load actions configuration from llms.txt file."""
-    try:
-        config_path = os.path.join(os.path.dirname(__file__), 'llms.txt')
-        if not os.path.exists(config_path):
-            logger.warning(f"Actions config file not found at {config_path}")
-            return {}
-            
-        with open(config_path, 'r', encoding='utf-8') as file:
-            content = file.read()
-        
-        # デバッグ出力を追加
-        logger.info(f"Loading actions from: {config_path}")
-        
-        # YAMLとして解析を試みる
-        try:
-            # YAMLパーサーを使用（llms.txtはYAML形式に見える）
-            actions_config = yaml.safe_load(content)
-            logger.info(f"Parsed config type: {type(actions_config)}")
-            
-            if isinstance(actions_config, dict) and 'actions' in actions_config:
-                logger.info(f"Found {len(actions_config['actions'])} actions")
-                logger.info(f"Action names: {[a.get('name') for a in actions_config['actions']]}")
-            else:
-                logger.warning(f"Unexpected config structure: {list(actions_config.keys()) if isinstance(actions_config, dict) else type(actions_config)}")
-            
-            return actions_config
-            
-        except Exception as yaml_err:
-            logger.warning(f"YAML parsing failed: {yaml_err}")
-            
-            # YAMLパースに失敗した場合は元の実装方法を試す
-            actions_config = {}
-            for line in content.split('\n'):
-                if line.strip() and '=' in line:
-                    key, value = line.split('=', 1)
-                    actions_config[key.strip()] = value.strip()
-            
-            logger.info(f"Fallback parsing result: {actions_config}")
-            return actions_config
-            
-    except Exception as e:
-        logger.error(f"Error loading actions config: {e}")
-        return {}
 
 # Define proper mapping for Playwright commands
 PLAYWRIGHT_COMMANDS = {
@@ -227,13 +183,17 @@ async def show_restart_dialog():
     else:
         return "操作をキャンセルしました"
 
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+
 def create_ui(config, theme_name="Ocean"):
     """Create the Gradio UI with the specified configuration and theme"""
-    css = """
-    .gradio-container { max-width: 1200px !important; margin: auto !important; padding-top: 20px !important; }
-    .header-text { text-align: center; margin-bottom: 30px; }
-    .theme-section { margin-bottom: 20px; padding: 15px; border-radius: 10px; }
-    """
+    # Load CSS from external file
+    css_path = os.path.join(os.path.dirname(__file__), "assets", "css", "styles.css")
+    with open(css_path, 'r', encoding='utf-8') as f:
+        css = f.read()
 
     with gr.Blocks(title="2Bykilt", theme=theme_map[theme_name], css=css) as demo:
         with gr.Row():
@@ -317,8 +277,47 @@ def create_ui(config, theme_name="Ocean"):
                         restart_button.click(fn=restart_browser, outputs=restart_status)
 
             with gr.TabItem("🤖 Run Agent", id=4):
-                task = gr.Textbox(label="Task Description", lines=4, placeholder="Enter your task or script name (e.g., search-for-something query=python)", value=config['task'], info="Describe what you want the agent to do or specify a script from llms.txt")
-                add_infos = gr.Textbox(label="Additional Information", lines=3, placeholder="Add any helpful context or instructions...", info="Optional hints to help the LLM complete the task")
+                # Add command helper integration
+                with gr.Accordion("📋 Available Commands", open=False):
+                    commands_table = gr.DataFrame(
+                        headers=["Command", "Description", "Usage"],
+                        label="Available Commands",
+                        interactive=False
+                    )
+                    
+                    def load_commands_table():
+                        """Load commands into the table"""
+                        helper = CommandHelper()
+                        return helper.get_commands_for_display()
+                    
+                    refresh_commands = gr.Button("🔄 Refresh Commands")
+                    refresh_commands.click(fn=load_commands_table, outputs=commands_table)
+                
+                # Update task input with placeholder for command usage
+                task = gr.Textbox(
+                    label="Task Description", 
+                    lines=4, 
+                    placeholder="Enter your task or use @command format (e.g., @search query=python)", 
+                    value=config['task'],
+                    info="Describe the task or use a command (@name or /name)"
+                )
+                
+                # Add command table click-to-insert functionality
+                def insert_command(evt: gr.SelectData):
+                    """Insert command template into task input"""
+                    helper = CommandHelper()
+                    commands = helper.get_commands_for_display()
+                    if evt.index[0] < len(commands):
+                        cmd_name = commands[evt.index[0]][0]  # First column is the command name
+                        return helper.generate_command_template(cmd_name)
+                    return ""
+                
+                commands_table.select(fn=insert_command, outputs=task)
+                
+                # Load commands into the table initially
+                commands_table.value = load_commands_table()
+                
+                add_infos = gr.Textbox(label="Additional Information", lines=3, placeholder="Add any helpful context or instructions...")
                 with gr.Row():
                     run_button = gr.Button("▶️ Run Agent", variant="primary", scale=2)
                     stop_button = gr.Button("⏹️ Stop", variant="stop", scale=1)
@@ -428,7 +427,28 @@ def create_ui(config, theme_name="Ocean"):
         use_own_browser.change(fn=close_global_browser)
         keep_browser_open.change(fn=close_global_browser)
 
+        # Load command suggestion JavaScript from external file
+        js_path = os.path.join(os.path.dirname(__file__), "assets", "js", "command_suggest.js")
+        with open(js_path, 'r', encoding='utf-8') as f:
+            command_js = f.read()
+            
+        # Add script tag to load JavaScript
+        gr.HTML(f"<script>{command_js}</script>")
+        
+        # Embed commands data for fallback
+        helper = CommandHelper()
+        commands_json = helper.get_all_commands()
+        import json
+        gr.HTML(f'''
+        <script>
+        // フォールバック用のコマンドデータ
+        window.embeddedCommands = {json.dumps(commands_json)};
+        </script>
+        ''')
+
     return demo
+
+from src.api.app import create_fastapi_app, run_app
 
 def main():
     parser = argparse.ArgumentParser(description="Gradio UI for 2Bykilt Agent")
@@ -436,14 +456,25 @@ def main():
     parser.add_argument("--port", type=int, default=7788, help="Port to listen on")
     parser.add_argument("--theme", type=str, default="Ocean", choices=theme_map.keys(), help="Theme to use for the UI")
     parser.add_argument("--dark-mode", action="store_true", help="Enable dark mode")
-    args = parser.parse_args()  # Fix: Use parse_args() to get arguments
+    args = parser.parse_args()
 
     print(f"🔍 DEBUG: Selected theme: {args.theme}")
     print(f"🔍 DEBUG: Dark mode enabled: {args.dark_mode}")
 
     config_dict = default_config()
     demo = create_ui(config_dict, theme_name=args.theme)
-    demo.launch(server_name=args.ip, server_port=args.port)
+    
+    # Create the asset directories if they don't exist
+    assets_dir = os.path.join(os.path.dirname(__file__), "assets")
+    css_dir = os.path.join(assets_dir, "css")
+    js_dir = os.path.join(assets_dir, "js")
+    
+    os.makedirs(css_dir, exist_ok=True)
+    os.makedirs(js_dir, exist_ok=True)
+    
+    # GradioとFastAPIを統合 - モジュール化版
+    app = create_fastapi_app(demo, args)
+    run_app(app, args)
 
 if __name__ == '__main__':
     main()
