@@ -21,6 +21,16 @@ actions:
     command: pytest ./tmp/myscript/search_script_music.py --query ${params.query}
     slowmo: 2500
 
+  - name: action-runner-nogtips
+    type: action_runner_template
+    action_script: nogtips_search
+    params:
+      - name: query
+        required: true
+        type: string
+        description: "検索クエリ"
+    command: python ./tmp/myscript/action_runner.py --action ${action_script} --query "${params.query}" --slowmo 2500 --countdown 3
+
   - name: phrase-search
     type: browser-control
     params:
