@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 import subprocess
 import asyncio
+import json  # Added to fix missing import
 
 import gradio as gr
 from gradio.themes import Citrus, Default, Glass, Monochrome, Ocean, Origin, Soft, Base
@@ -29,56 +30,12 @@ from src.browser.browser_manager import close_global_browser, prepare_recording_
 from src.config.action_translator import ActionTranslator
 from src.utils.debug_utils import DebugUtils
 from src.browser.browser_debug_manager import BrowserDebugManager
+from src.ui.command_helper import CommandHelper  # Import CommandHelper class
 
 import yaml  # 必要であればインストール: pip install pyyaml
 
 # Configure logging
 logger = logging.getLogger(__name__)
-
-def load_actions_config():
-    """Load actions configuration from llms.txt file."""
-    try:
-        config_path = os.path.join(os.path.dirname(__file__), 'llms.txt')
-        if not os.path.exists(config_path):
-            logger.warning(f"Actions config file not found at {config_path}")
-            return {}
-            
-        with open(config_path, 'r', encoding='utf-8') as file:
-            content = file.read()
-        
-        # デバッグ出力を追加
-        logger.info(f"Loading actions from: {config_path}")
-        
-        # YAMLとして解析を試みる
-        try:
-            # YAMLパーサーを使用（llms.txtはYAML形式に見える）
-            actions_config = yaml.safe_load(content)
-            logger.info(f"Parsed config type: {type(actions_config)}")
-            
-            if isinstance(actions_config, dict) and 'actions' in actions_config:
-                logger.info(f"Found {len(actions_config['actions'])} actions")
-                logger.info(f"Action names: {[a.get('name') for a in actions_config['actions']]}")
-            else:
-                logger.warning(f"Unexpected config structure: {list(actions_config.keys()) if isinstance(actions_config, dict) else type(actions_config)}")
-            
-            return actions_config
-            
-        except Exception as yaml_err:
-            logger.warning(f"YAML parsing failed: {yaml_err}")
-            
-            # YAMLパースに失敗した場合は元の実装方法を試す
-            actions_config = {}
-            for line in content.split('\n'):
-                if line.strip() and '=' in line:
-                    key, value = line.split('=', 1)
-                    actions_config[key.strip()] = value.strip()
-            
-            logger.info(f"Fallback parsing result: {actions_config}")
-            return actions_config
-            
-    except Exception as e:
-        logger.error(f"Error loading actions config: {e}")
-        return {}
 
 # Define proper mapping for Playwright commands
 PLAYWRIGHT_COMMANDS = {
@@ -227,15 +184,27 @@ async def show_restart_dialog():
     else:
         return "操作をキャンセルしました"
 
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+
 def create_ui(config, theme_name="Ocean"):
     """Create the Gradio UI with the specified configuration and theme"""
-    css = """
-    .gradio-container { max-width: 1200px !important; margin: auto !important; padding-top: 20px !important; }
-    .header-text { text-align: center; margin-bottom: 30px; }
-    .theme-section { margin-bottom: 20px; padding: 15px; border-radius: 10px; }
+    # Load CSS from external file
+    css_path = os.path.join(os.path.dirname(__file__), "assets", "css", "styles.css")
+    with open(css_path, 'r', encoding='utf-8') as f:
+        css = f.read()
+
+    # 追加: カスタムヘッダーにCSP設定を含める
+    custom_head = """
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; img-src * data:; font-src * data:;">
+    <script>
+    console.log('カスタムヘッダー読み込み完了');
+    </script>
     """
 
-    with gr.Blocks(title="2Bykilt", theme=theme_map[theme_name], css=css) as demo:
+    with gr.Blocks(title="2Bykilt", theme=theme_map[theme_name], css=css, head=custom_head) as demo:
         with gr.Row():
             gr.Markdown("# 🪄🌐 2Bykilt\n### Enhanced Browser Control with AI and human, because for you", elem_classes=["header-text"])
 
@@ -317,8 +286,68 @@ def create_ui(config, theme_name="Ocean"):
                         restart_button.click(fn=restart_browser, outputs=restart_status)
 
             with gr.TabItem("🤖 Run Agent", id=4):
-                task = gr.Textbox(label="Task Description", lines=4, placeholder="Enter your task or script name (e.g., search-for-something query=python)", value=config['task'], info="Describe what you want the agent to do or specify a script from llms.txt")
-                add_infos = gr.Textbox(label="Additional Information", lines=3, placeholder="Add any helpful context or instructions...", info="Optional hints to help the LLM complete the task")
+                # Add command helper integration
+                with gr.Accordion("📋 Available Commands", open=False):
+                    commands_table = gr.DataFrame(
+                        headers=["Command", "Description", "Usage"],
+                        label="Available Commands",
+                        interactive=False
+                    )
+                    
+                    def load_commands_table():
+                        """Load commands into the table"""
+                        helper = CommandHelper()
+                        return helper.get_commands_for_display()
+                    
+                    refresh_commands = gr.Button("🔄 Refresh Commands")
+                    refresh_commands.click(fn=load_commands_table, outputs=commands_table)
+                
+                # Update task input with placeholder for command usage
+                task = gr.Textbox(
+                    label="Task Description", 
+                    lines=4, 
+                    placeholder="Enter your task or use @command format (e.g., @search query=python)", 
+                    value=config['task'],
+                    info="Describe the task or use a command (@name or /name)"
+                )
+                
+                # Add command table click-to-insert functionality
+                def insert_command(evt: gr.SelectData):
+                    """コマンドテンプレートをタスク入力に挿入"""
+                    helper = CommandHelper()
+                    commands = helper.get_all_commands()
+                    
+                    # 表示用コマンドリストを取得
+                    display_commands = helper.get_commands_for_display()
+                    
+                    if evt.index[0] < len(display_commands):
+                        # 選択されたコマンド名を取得
+                        selected_command_name = display_commands[evt.index[0]][0]
+                        
+                        # 完全なコマンド情報を取得
+                        command = next((cmd for cmd in commands if cmd['name'] == selected_command_name), None)
+                        
+                        if command:
+                            # コマンドテンプレートを生成
+                            command_text = f"@{command['name']}"
+                            
+                            # 必須パラメータがあれば追加
+                            if command.get('params'):
+                                required_params = [p for p in command['params'] if p.get('required', False)]
+                                if required_params:
+                                    param_str = " ".join([f"{p['name']}=" for p in required_params])
+                                    command_text += f" {param_str}"
+                            
+                            return command_text
+                    
+                    return ""  # 何も選択されなかった場合
+                
+                commands_table.select(fn=insert_command, outputs=task)
+                
+                # Load commands into the table initially
+                commands_table.value = load_commands_table()
+                
+                add_infos = gr.Textbox(label="Additional Information", lines=3, placeholder="Add any helpful context or instructions...")
                 with gr.Row():
                     run_button = gr.Button("▶️ Run Agent", variant="primary", scale=2)
                     stop_button = gr.Button("⏹️ Stop", variant="stop", scale=1)
@@ -428,7 +457,262 @@ def create_ui(config, theme_name="Ocean"):
         use_own_browser.change(fn=close_global_browser)
         keep_browser_open.change(fn=close_global_browser)
 
+        # JavaScriptファイル読み込み部分を強化
+        try:
+            # コマンドデータ取得を強化
+            helper = CommandHelper()
+            commands_json = helper.get_all_commands()
+            
+            # デバッグ出力を追加
+            print(f"コマンドデータ取得: {len(commands_json)}件")
+            for cmd in commands_json[:3]:  # 最初の3つだけ表示
+                print(f"  - {cmd.get('name', 'No name')}: {cmd.get('description', 'No description')}")
+            
+            # JSONシリアライズを例外処理でラップ
+            try:
+                commands_json_str = json.dumps(commands_json)
+                print(f"JSONシリアライズ成功: {len(commands_json_str)}バイト")
+            except Exception as json_err:
+                print(f"JSONシリアライズエラー: {json_err}")
+                commands_json_str = "[]"  # 空の配列をフォールバックとして使用
+            
+            # HTMLとJavaScriptを結合
+            combined_html = f"""
+            <script>
+            // コマンドデータをグローバル変数として設定
+            console.log("コマンドデータを埋め込みます");
+            window.embeddedCommands = {commands_json_str};
+            console.log("埋め込みコマンド数:", window.embeddedCommands ? window.embeddedCommands.length : 0);
+            
+            // コマンドサジェスト機能クラス
+            class CommandSuggest {{
+                constructor() {{
+                    this.commands = window.embeddedCommands || [];
+                    this.initialized = false;
+                    this.suggestionsContainer = null;
+                    this.activeTextarea = null;
+                    console.log("CommandSuggest初期化:", this.commands.length + "個のコマンド");
+                    this.initialize();
+                }}
+                
+                initialize() {{
+                    // テキストエリアを検索
+                    setTimeout(() => this.findTextArea(), 1000);
+                }}
+                
+                findTextArea() {{
+                    const textareas = document.querySelectorAll('textarea[placeholder*="task" i], textarea[placeholder*="description" i]');
+                    if (textareas.length > 0) {{
+                        this.activeTextarea = textareas[0];
+                        console.log("テキストエリアを検出:", this.activeTextarea);
+                        this.setupListeners();
+                        this.createSuggestionsContainer();
+                        this.initialized = true;
+                    }} else {{
+                        console.log("テキストエリアが見つかりません。再試行します...");
+                        setTimeout(() => this.findTextArea(), 1000);
+                    }}
+                }}
+                
+                setupListeners() {{
+                    // テキストエリアにイベントリスナーを設定
+                    this.activeTextarea.addEventListener('input', (e) => this.handleInput(e));
+                    this.activeTextarea.addEventListener('keydown', (e) => this.handleKeydown(e));
+                }}
+                
+                createSuggestionsContainer() {{
+                    // コマンド候補表示用のコンテナを作成
+                    this.suggestionsContainer = document.createElement('div');
+                    this.suggestionsContainer.className = 'command-suggestions';
+                    this.suggestionsContainer.style.position = 'absolute';
+                    this.suggestionsContainer.style.zIndex = '9999';
+                    this.suggestionsContainer.style.backgroundColor = 'white';
+                    this.suggestionsContainer.style.border = '1px solid #ddd';
+                    this.suggestionsContainer.style.borderRadius = '4px';
+                    this.suggestionsContainer.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+                    this.suggestionsContainer.style.maxHeight = '200px';
+                    this.suggestionsContainer.style.overflow = 'auto';
+                    this.suggestionsContainer.style.width = 'auto';
+                    this.suggestionsContainer.style.minWidth = '300px';
+                    this.suggestionsContainer.style.display = 'none';
+                    document.body.appendChild(this.suggestionsContainer);
+                }}
+                
+                handleInput(e) {{
+                    const text = e.target.value;
+                    const cursorPos = e.target.selectionStart;
+                    
+                    // @または/の入力を検出
+                    const lastAtPos = text.lastIndexOf('@', cursorPos - 1);
+                    const lastSlashPos = text.lastIndexOf('/', cursorPos - 1);
+                    
+                    const triggerPos = Math.max(lastAtPos, lastSlashPos);
+                    
+                    if (triggerPos !== -1 && triggerPos < cursorPos) {{
+                        const commandPart = text.substring(triggerPos + 1, cursorPos);
+                        
+                        // スペースがなければコマンド入力中と判断
+                        if (!commandPart.includes(' ') && !commandPart.includes('\\n')) {{
+                            this.showSuggestions(commandPart, triggerPos);
+                            return;
+                        }}
+                    }}
+                    
+                    // サジェストを非表示
+                    if (this.suggestionsContainer) {{
+                        this.suggestionsContainer.style.display = 'none';
+                    }}
+                }}
+                
+                showSuggestions(inputText, triggerPos) {{
+                    // コマンド候補をフィルタリング
+                    const filtered = this.commands.filter(cmd => 
+                        cmd.name.toLowerCase().startsWith(inputText.toLowerCase())
+                    );
+                    
+                    // 結果がなければ非表示
+                    if (filtered.length === 0) {{
+                        this.suggestionsContainer.style.display = 'none';
+                        return;
+                    }}
+                    
+                    // 位置調整
+                    const rect = this.activeTextarea.getBoundingClientRect();
+                    this.suggestionsContainer.style.top = `${{rect.bottom + window.scrollY}}px`;
+                    this.suggestionsContainer.style.left = `${{rect.left + window.scrollX}}px`;
+                    
+                    // サジェスト項目の生成
+                    this.suggestionsContainer.innerHTML = '';
+                    filtered.forEach(cmd => {{
+                        const item = document.createElement('div');
+                        item.className = 'suggestion-item';
+                        item.dataset.command = cmd.name;
+                        item.style.padding = '8px 12px';
+                        item.style.cursor = 'pointer';
+                        
+                        const nameSpan = document.createElement('span');
+                        nameSpan.textContent = cmd.name;
+                        nameSpan.style.fontWeight = 'bold';
+                        item.appendChild(nameSpan);
+                        
+                        if (cmd.description) {{
+                            const descSpan = document.createElement('span');
+                            descSpan.style.color = '#666';
+                            descSpan.style.marginLeft = '10px';
+                            descSpan.textContent = cmd.description;
+                            item.appendChild(descSpan);
+                        }}
+                        
+                        // クリックイベント
+                        item.addEventListener('click', () => {{
+                            this.insertCommand(cmd, triggerPos);
+                        }});
+                        
+                        this.suggestionsContainer.appendChild(item);
+                    }});
+                    
+                    // 表示
+                    this.suggestionsContainer.style.display = 'block';
+                }}
+                
+                handleKeydown(e) {{
+                    // キーボード操作の処理
+                    if (this.suggestionsContainer && this.suggestionsContainer.style.display === 'block') {{
+                        const items = this.suggestionsContainer.querySelectorAll('.suggestion-item');
+                        let activeItem = this.suggestionsContainer.querySelector('.suggestion-item.active');
+                        
+                        switch(e.key) {{
+                            case 'Enter':
+                                if (activeItem) {{
+                                    e.preventDefault();
+                                    const cmdName = activeItem.dataset.command;
+                                    const cmd = this.commands.find(c => c.name === cmdName);
+                                    if (cmd) {{
+                                        this.insertCommand(cmd, parseInt(this.activeTextarea.dataset.triggerPos));
+                                    }}
+                                }}
+                                break;
+                            case 'Escape':
+                                this.suggestionsContainer.style.display = 'none';
+                                break;
+                        }}
+                    }}
+                }}
+                
+                insertCommand(cmd, triggerPos) {{
+                    // コマンドを挿入
+                    const textarea = this.activeTextarea;
+                    const text = textarea.value;
+                    
+                    let newText = text.substring(0, triggerPos + 1) + cmd.name;
+                    
+                    // 必須パラメータがあれば追加
+                    if (cmd.params && cmd.params.length > 0) {{
+                        const requiredParams = cmd.params.filter(p => p.required);
+                        if (requiredParams.length > 0) {{
+                            newText += ' ' + requiredParams.map(p => `${{p.name}}=`).join(' ');
+                        }}
+                    }}
+                    
+                    // カーソル以降のテキスト
+                    newText += text.substring(textarea.selectionStart);
+                    
+                    textarea.value = newText;
+                    textarea.focus();
+                    
+                    // サジェスト非表示
+                    this.suggestionsContainer.style.display = 'none';
+                }}
+                
+                showDebugInfo() {{
+                    console.log("=== コマンドサジェスト状態 ===");
+                    console.log("初期化完了:", this.initialized);
+                    console.log("コマンド数:", this.commands.length);
+                    if (this.commands.length > 0) {{
+                        console.log("コマンド例:", this.commands[0]);
+                    }}
+                    console.log("テキストエリア:", this.activeTextarea ? "検出済み" : "未検出");
+                    console.log("サジェストコンテナ:", this.suggestionsContainer ? "作成済み" : "未作成");
+                    console.log("========================");
+                }}
+            }}
+            
+            // ページ読み込み完了時に初期化
+            window.addEventListener('load', function() {{
+                setTimeout(function() {{
+                    console.log("CommandSuggest初期化を開始");
+                    window.CommandSuggest = new CommandSuggest();
+                    window.commandSuggestLoaded = true;
+                }}, 1000);
+            }});
+            </script>
+            
+            <div style="margin: 10px 0; text-align: center;">
+                <button onclick="console.log('デバッグボタンがクリックされました'); console.log('window.embeddedCommandsの状態:', window.embeddedCommands ? ('存在します(' + window.embeddedCommands.length + '件)') : '存在しません'); console.log('window.CommandSuggestの状態:', window.CommandSuggest ? '初期化済み' : '未初期化'); window.CommandSuggest && window.CommandSuggest.showDebugInfo(); return false;" 
+                        style="padding: 8px 12px; background: #0078d7; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    コマンドサジェスト詳細デバッグ
+                </button>
+            </div>
+            """
+            
+            # 結合したHTMLを埋め込み
+            gr.HTML(combined_html)
+            
+        except Exception as e:
+            import traceback
+            print(f"JavaScriptファイル読み込みエラー: {e}")
+            print(traceback.format_exc())
+            gr.HTML(f'''
+            <div style="color: red; padding: 10px; border: 1px solid red; margin: 10px 0;">
+                <h3>JavaScript読み込みエラー</h3>
+                <p>{str(e)}</p>
+                <pre>{traceback.format_exc()}</pre>
+            </div>
+            ''')
+
     return demo
+
+from src.api.app import create_fastapi_app, run_app
 
 def main():
     parser = argparse.ArgumentParser(description="Gradio UI for 2Bykilt Agent")
@@ -436,14 +720,40 @@ def main():
     parser.add_argument("--port", type=int, default=7788, help="Port to listen on")
     parser.add_argument("--theme", type=str, default="Ocean", choices=theme_map.keys(), help="Theme to use for the UI")
     parser.add_argument("--dark-mode", action="store_true", help="Enable dark mode")
-    args = parser.parse_args()  # Fix: Use parse_args() to get arguments
+    args = parser.parse_args()
 
     print(f"🔍 DEBUG: Selected theme: {args.theme}")
     print(f"🔍 DEBUG: Dark mode enabled: {args.dark_mode}")
 
     config_dict = default_config()
     demo = create_ui(config_dict, theme_name=args.theme)
-    demo.launch(server_name=args.ip, server_port=args.port)
+    
+    # Create the asset directories if they don't exist
+    assets_dir = os.path.join(os.path.dirname(__file__), "assets")
+    css_dir = os.path.join(assets_dir, "css")
+    js_dir = os.path.join(assets_dir, "js")
+    fonts_dir = os.path.join(assets_dir, "fonts")
+    
+    os.makedirs(css_dir, exist_ok=True)
+    os.makedirs(js_dir, exist_ok=True)
+    os.makedirs(fonts_dir, exist_ok=True)
+    
+    # Create font family directories
+    for family in ["ui-sans-serif", "system-ui"]:
+        family_dir = os.path.join(fonts_dir, family)
+        os.makedirs(family_dir, exist_ok=True)
+        
+        # Create placeholder font files if they don't exist
+        for weight in ["Regular", "Bold"]:
+            font_path = os.path.join(family_dir, f"{family}-{weight}.woff2")
+            if not os.path.exists(font_path):
+                # Create an empty file as placeholder
+                with open(font_path, 'wb') as f:
+                    pass
+    
+    # GradioとFastAPIを統合 - モジュール化版
+    app = create_fastapi_app(demo, args)
+    run_app(app, args)
 
 if __name__ == '__main__':
     main()
