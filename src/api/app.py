@@ -4,17 +4,30 @@ This module handles the integration between FastAPI and Gradio interface
 """
 
 import logging
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
 from gradio.routes import mount_gradio_app
 import uvicorn
 import nest_asyncio
+import os
 
 from src.ui.command_helper import CommandHelper
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+# CSPを緩和するミドルウェア
+class CSPMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        # data: URLを許可するようにCSPを更新
+        response.headers["Content-Security-Policy"] = (
+            "default-src *; img-src * data:; font-src * data:; style-src * 'unsafe-inline'; script-src * 'unsafe-inline' 'unsafe-eval';"
+        )
+        return response
 
 def create_fastapi_app(demo, args):
     """Create and configure the FastAPI application with Gradio integration
@@ -37,6 +50,15 @@ def create_fastapi_app(demo, args):
         allow_headers=["*"],
     )
     
+    # CSPミドルウェアを追加
+    app.add_middleware(CSPMiddleware)
+    
+    # 静的ファイル提供の設定
+    assets_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/static", StaticFiles(directory=assets_dir), name="static")
+        logger.info(f"静的ファイルディレクトリをマウント: {assets_dir}")
+    
     # デバッグ用のルートエンドポイント
     @app.get("/api/status")
     async def root():
@@ -45,31 +67,18 @@ def create_fastapi_app(demo, args):
     # コマンド一覧を取得するAPIエンドポイント - デバッグ情報追加
     @app.get("/api/commands")
     async def get_commands():
+        """Return available commands from llms.txt for command suggestions"""
         try:
             helper = CommandHelper()
             commands = helper.get_all_commands()
             logger.info(f"APIリクエスト: /api/commands - {len(commands)}件のコマンドを返します")
-            
-            # 追加デバッグ情報をログに出力
-            if commands:
-                logger.info(f"最初のコマンド例: {commands[0]}")
-            else:
-                logger.warning("コマンドが0件です")
-            
-            # CORS設定を明示的に追加
-            headers = {
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "GET, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type"
-            }
-            return JSONResponse(content=commands, headers=headers)
+            return JSONResponse(content=commands, headers={"Access-Control-Allow-Origin": "*"})
         except Exception as e:
-            import traceback
-            error_details = traceback.format_exc()
-            logger.error(f"APIエラー: {str(e)}\n{error_details}")
+            logger.error(f"コマンド取得エラー: {str(e)}")
             return JSONResponse(
-                content={"error": str(e), "details": error_details},
-                status_code=500
+                content={"error": "Failed to retrieve commands", "details": str(e)},
+                status_code=500,
+                headers={"Access-Control-Allow-Origin": "*"}
             )
     
     # 簡易的なコマンド一覧取得用エンドポイント（エラー処理を簡略化）
@@ -111,6 +120,28 @@ def create_fastapi_app(demo, args):
         </body>
         </html>
         """)
+    
+    # グローバル変数チェック用エンドポイント（デバッグ用）
+    @app.get("/api/debug-info")
+    async def get_debug_info():
+        """デバッグ情報を返すエンドポイント"""
+        helper = CommandHelper()
+        commands = helper.get_all_commands()
+        
+        import platform
+        import sys
+        
+        debug_info = {
+            "python_version": platform.python_version(),
+            "platform": platform.platform(),
+            "commands_count": len(commands),
+            "api_status": "active"
+        }
+        
+        return JSONResponse(
+            content=debug_info,
+            headers={"Access-Control-Allow-Origin": "*"}
+        )
     
     # GradioアプリをFastAPIにマウント
     mount_gradio_app(app, demo, path="/")

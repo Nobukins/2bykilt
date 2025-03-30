@@ -1,375 +1,397 @@
-// コマンドサジェスト機能
-const DEBUG = true;  // デバッグモードを有効化
+// グローバル変数の明示的な設定
+window.CommandSystem = {
+    initialized: false,
+    commands: [],
+    activeTextarea: null,
+    suggestionsContainer: null,
+    currentTrigger: null,
+    selectedIndex: -1,
+    filterText: '',
+    isShowingSuggestions: false
+};
 
-function debugLog(...args) {
-    if (DEBUG) {
-        console.log('[CommandSuggest]', ...args);
-    }
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    debugLog('コマンドサジェスト機能の初期化を開始します');
-    // UIが完全にロードされるのを待つ
-    setTimeout(initCommandSuggestions, 2000); // タイミングをさらに長く調整
-});
-
-async function initCommandSuggestions() {
-    debugLog('コマンドサジェスト機能を初期化しています...');
-    let commands = [];
-
-    try {
-        debugLog('APIリクエスト試行: /api/commands');
-        const response = await fetch('/api/commands');
-        if (!response.ok) {
-            throw new Error(`APIエラー: ${response.status}`);
-        }
-        commands = await response.json();
-        debugLog('コマンド情報を取得しました:', commands.length + '件', commands);
-    } catch (error) {
-        console.error('APIリクエスト失敗:', error);
-        if (window.embeddedCommands) {
-            commands = window.embeddedCommands;
-            debugLog('埋め込みデータから', commands.length, '件のコマンドを使用');
+// 即時実行関数
+(function() {
+    async function fetchCommands() {
+        console.log("🔄 Fetching command data...");
+        try {
+            const response = await fetch('/api/commands');
+            if (response.ok) {
+                const data = await response.json();
+                console.log(`✅ Retrieved ${data.length} commands`);
+                window.CommandSystem.commands = data;
+                return data;
+            } else {
+                console.error("❌ Failed to fetch commands:", response.status);
+                return [];
+            }
+        } catch (error) {
+            console.error("❌ Error fetching commands:", error);
+            return [];
         }
     }
 
-    if (!commands || commands.length === 0) {
-        debugLog('警告: コマンドが取得できませんでした。機能は無効化されます。');
-        return;
-    }
-
-    // 複数の方法でテキストエリアを検索
-    const findTaskInput = () => {
-        debugLog('テキストエリア検索を開始');
-        let candidates = [];
+    function setupTextareaMonitoring() {
+        console.log("🔍 Monitoring textareas...");
         const textareas = document.querySelectorAll('textarea');
-        
-        debugLog(`テキストエリア合計: ${textareas.length}件`);
-        
-        // すべてのテキストエリアの情報をログ出力
-        textareas.forEach((textarea, idx) => {
-            const placeholderText = textarea.placeholder || '';
-            const labelEl = textarea.closest('.gradio-group')?.querySelector('label');
-            const labelText = labelEl ? labelEl.textContent : '';
-            
-            debugLog(`テキストエリア[${idx}] placeholder="${placeholderText}" label="${labelText}"`);
-            
-            // 条件に一致するテキストエリアを候補に追加
-            if ((labelText && (labelText.includes('Task') || labelText.includes('タスク'))) ||
-                (placeholderText && (
-                    placeholderText.includes('task') || 
-                    placeholderText.includes('command') ||
-                    placeholderText.includes('Enter your task')
-                ))) {
-                candidates.push(textarea);
-                debugLog(`テキストエリア[${idx}]は候補に追加されました`);
-            }
+        textareas.forEach((textarea) => {
+            if (textarea.getAttribute('data-command-monitor') === 'true') return;
+            textarea.setAttribute('data-command-monitor', 'true');
+            textarea.addEventListener('input', handleTextareaInput);
+            textarea.addEventListener('keydown', handleTextareaKeydown);
+            textarea.style.border = "2px dashed red"; // Visual feedback
         });
-        
-        // 最も適切な候補を選択（ヒューリスティック）
-        if (candidates.length > 0) {
-            // まず表示されている要素のみをフィルタリング
-            const visibleCandidates = candidates.filter(el => {
-                const style = window.getComputedStyle(el);
-                return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
-            });
-            
-            // 表示されている要素があればそれを使う、なければ最初の候補
-            return visibleCandidates.length > 0 ? visibleCandidates[0] : candidates[0];
-        }
-        
-        // 候補がなければ、最後の手段としてid/class名で推測
-        for (let i = 0; i < textareas.length; i++) {
-            const classes = textareas[i].className;
-            if (classes.includes('task') || classes.includes('prompt')) {
-                debugLog(`クラス名による検出: テキストエリア[${i}]`);
-                return textareas[i];
-            }
-        }
-        
-        return null;
-    };
-
-    let taskInput = findTaskInput();
-    if (!taskInput) {
-        debugLog('タスク入力欄が見つかりません。再試行します...');
-        let retryCount = 0;
-        const maxRetries = 20; // 最大再試行回数
-        
-        const retryInterval = setInterval(() => {
-            retryCount++;
-            taskInput = findTaskInput();
-            
-            if (taskInput) {
-                clearInterval(retryInterval);
-                debugLog(`タスク入力欄を検出しました（遅延: ${retryCount}回目）`);
-                setupCommandSuggestions(taskInput, commands);
-            } else if (retryCount >= maxRetries) {
-                clearInterval(retryInterval);
-                debugLog('最大再試行回数に達しました。タスク入力欄の検出に失敗しました。');
-            }
-        }, 500);
-    } else {
-        debugLog('タスク入力欄を検出しました（初回）');
-        setupCommandSuggestions(taskInput, commands);
-    }
-}
-
-function setupCommandSuggestions(textarea, commands) {
-    debugLog('サジェスト機能をセットアップ中:', textarea);
-    
-    // 既存のコンテナを削除
-    let suggestionsContainer = document.querySelector('.command-suggestions');
-    if (suggestionsContainer) {
-        suggestionsContainer.remove();
-        debugLog('既存のサジェストコンテナを削除しました');
     }
 
-    // 新しいコンテナを作成
-    suggestionsContainer = document.createElement('div');
-    suggestionsContainer.className = 'command-suggestions';
-    suggestionsContainer.style.display = 'none';
-    document.body.appendChild(suggestionsContainer);
-    
-    // グローバル変数で現在のトリガー位置を追跡
-    window.currentTriggerPos = -1;
+    function handleTextareaInput(e) {
+        const textarea = e.target;
+        const text = textarea.value;
+        const cursorPos = textarea.selectionStart;
+        const lastChar = cursorPos > 0 ? text.charAt(cursorPos - 1) : "";
 
-    // 入力イベント処理
-    const inputHandler = function() {
-        const text = this.value;
-        const cursorPos = this.selectionStart;
-        
-        debugLog(`入力検出: カーソル位置=${cursorPos}, テキスト長=${text.length}`);
-        
-        // @または/の入力を検出
-        const lastAtPos = text.lastIndexOf('@', cursorPos - 1);
-        const lastSlashPos = text.lastIndexOf('/', cursorPos - 1);
-        
-        const triggerPos = Math.max(lastAtPos, lastSlashPos);
-        debugLog(`トリガー文字位置: @ at ${lastAtPos}, / at ${lastSlashPos}, 最終=${triggerPos}`);
-        
-        if (triggerPos !== -1 && triggerPos < cursorPos) {
-            const inputCommand = text.substring(triggerPos + 1, cursorPos);
-            debugLog(`入力コマンド文字列: "${inputCommand}"`);
-            
-            // スペースがなければコマンド入力中
-            if (!inputCommand.includes(' ')) {
-                window.currentTriggerPos = triggerPos;
-                debugLog('コマンド入力検出:', inputCommand, 'at position:', triggerPos);
-                showSuggestions(inputCommand, triggerPos, textarea, suggestionsContainer, commands);
+        console.log(`📝 Input detected:`, {
+            cursorPos,
+            lastChar,
+            trigger: lastChar === "@" || lastChar === "/" ? "✅" : "❌"
+        });
+
+        // トリガー文字の検出
+        if (lastChar === "@" || lastChar === "/") {
+            console.log(`🎯 Trigger character detected: ${lastChar}`);
+            window.CommandSystem.currentTrigger = lastChar;
+            window.CommandSystem.activeTextarea = textarea;
+            window.CommandSystem.filterText = '';
+            window.CommandSystem.selectedIndex = -1;
+            showSuggestions(textarea, cursorPos);
+        } 
+        // 提案表示中の入力処理
+        else if (window.CommandSystem.isShowingSuggestions) {
+            // カーソル位置がトリガー文字より前に移動した場合、提案を閉じる
+            const triggerPos = findLastTriggerPosition(text, cursorPos);
+            if (triggerPos === -1) {
+                hideSuggestions();
                 return;
             }
-        }
-        
-        hideSuggestions(suggestionsContainer);
-    };
 
-    // キーボードイベント処理
-    const keydownHandler = function(e) {
-        if (suggestionsContainer.style.display === 'none') return;
-        
-        const items = suggestionsContainer.querySelectorAll('.suggestion-item');
-        if (items.length === 0) return;
-        
-        let activeItem = suggestionsContainer.querySelector('.suggestion-item.active');
-        let activeIndex = -1;
-        
-        if (activeItem) {
-            for (let i = 0; i < items.length; i++) {
-                if (items[i] === activeItem) {
-                    activeIndex = i;
-                    break;
-                }
-            }
+            // フィルターテキストを更新
+            window.CommandSystem.filterText = text.substring(triggerPos + 1, cursorPos);
+            updateSuggestions();
         }
-        
-        debugLog(`キーボードイベント: ${e.key}, アクティブインデックス: ${activeIndex}`);
-        
+    }
+
+    function handleTextareaKeydown(e) {
+        if (!window.CommandSystem.isShowingSuggestions) return;
+
         switch (e.key) {
-            case 'ArrowDown':
-                e.preventDefault();
-                if (activeItem) activeItem.classList.remove('active');
-                activeIndex = (activeIndex + 1) % items.length;
-                items[activeIndex].classList.add('active');
-                items[activeIndex].scrollIntoView({block: 'nearest'});
-                break;
-                
             case 'ArrowUp':
                 e.preventDefault();
-                if (activeItem) activeItem.classList.remove('active');
-                activeIndex = activeIndex <= 0 ? items.length - 1 : activeIndex - 1;
-                items[activeIndex].classList.add('active');
-                items[activeIndex].scrollIntoView({block: 'nearest'});
+                navigateSuggestion(-1);
                 break;
-                
+            case 'ArrowDown':
+                e.preventDefault();
+                navigateSuggestion(1);
+                break;
             case 'Enter':
-                if (activeItem) {
+                if (window.CommandSystem.selectedIndex >= 0) {
                     e.preventDefault();
-                    const cmdName = activeItem.dataset.command;
-                    debugLog(`Enter キーによるコマンド選択: ${cmdName}`);
-                    const cmd = commands.find(c => c.name === cmdName);
-                    if (cmd) {
-                        insertCommand(cmd, textarea, suggestionsContainer);
-                    }
+                    selectCurrentSuggestion();
                 }
                 break;
-                
             case 'Escape':
                 e.preventDefault();
-                hideSuggestions(suggestionsContainer);
+                hideSuggestions();
+                break;
+            case 'Tab':
+                if (window.CommandSystem.isShowingSuggestions) {
+                    e.preventDefault();
+                    selectCurrentSuggestion();
+                }
                 break;
         }
-    };
+    }
 
-    // フォーカス喪失時に候補を非表示
-    const blurHandler = function() {
-        setTimeout(() => hideSuggestions(suggestionsContainer), 200);
-    };
+    function findLastTriggerPosition(text, cursorPos) {
+        // カーソル位置より前の最後のトリガー文字の位置を見つける
+        const textBeforeCursor = text.substring(0, cursorPos);
+        const lastAtPos = textBeforeCursor.lastIndexOf('@');
+        const lastSlashPos = textBeforeCursor.lastIndexOf('/');
+        
+        // 最後に見つかったトリガー文字の位置を返す
+        const lastTriggerPos = Math.max(lastAtPos, lastSlashPos);
+        
+        // トリガー文字が見つからない、または空白で区切られている場合は-1を返す
+        if (lastTriggerPos === -1) return -1;
+        
+        // トリガー文字の前に空白があるか、文字列の先頭の場合のみ有効
+        const charBeforeTrigger = lastTriggerPos > 0 ? textBeforeCursor.charAt(lastTriggerPos - 1) : ' ';
+        if (charBeforeTrigger === ' ' || charBeforeTrigger === '\n' || lastTriggerPos === 0) {
+            return lastTriggerPos;
+        }
+        
+        return -1;
+    }
 
-    // 既存のイベントリスナーを削除してからバインド
-    textarea.removeEventListener('input', inputHandler);
-    textarea.removeEventListener('keydown', keydownHandler);
-    textarea.removeEventListener('blur', blurHandler);
-    
-    textarea.addEventListener('input', inputHandler);
-    textarea.addEventListener('keydown', keydownHandler);
-    textarea.addEventListener('blur', blurHandler);
-    
-    // Gradioの再描画対策（要素が再生成された場合に対応）
-    const observer = new MutationObserver(function(mutations) {
-        mutations.forEach(function(mutation) {
-            if (mutation.type === 'childList' && mutation.removedNodes.length > 0) {
-                for (let i = 0; i < mutation.removedNodes.length; i++) {
-                    const node = mutation.removedNodes[i];
-                    if (node === textarea || node.contains(textarea)) {
-                        debugLog('監視対象のテキストエリアが削除されました。再セットアップを試みます...');
-                        setTimeout(initCommandSuggestions, 500);
-                        observer.disconnect();
-                        return;
-                    }
+    function showSuggestions(textarea, cursorPos) {
+        // 既存の提案コンテナを削除
+        if (window.CommandSystem.suggestionsContainer) {
+            window.CommandSystem.suggestionsContainer.remove();
+        }
+
+        // 新しい提案コンテナを作成
+        const suggestionsContainer = document.createElement('div');
+        suggestionsContainer.className = 'command-suggestions';
+        suggestionsContainer.style.position = 'absolute';
+        suggestionsContainer.style.zIndex = '10000';
+        suggestionsContainer.style.backgroundColor = 'white';
+        suggestionsContainer.style.border = '1px solid #ccc';
+        suggestionsContainer.style.borderRadius = '4px';
+        suggestionsContainer.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+        suggestionsContainer.style.maxHeight = '200px';
+        suggestionsContainer.style.overflowY = 'auto';
+        suggestionsContainer.style.width = '300px';
+
+        // テキストエリアの位置に基づいて配置
+        const rect = textarea.getBoundingClientRect();
+        const lineHeight = parseInt(getComputedStyle(textarea).lineHeight) || 20;
+        
+        // カーソル位置の座標を計算（簡易的な実装）
+        const textBeforeCursor = textarea.value.substring(0, cursorPos);
+        const lines = textBeforeCursor.split('\n');
+        const currentLine = lines.length;
+        
+        suggestionsContainer.style.top = `${rect.top + window.scrollY + (currentLine * lineHeight)}px`;
+        suggestionsContainer.style.left = `${rect.left + window.scrollX}px`;
+
+        // 提案リストを表示
+        updateSuggestionsContent(suggestionsContainer);
+        
+        // DOMに追加
+        document.body.appendChild(suggestionsContainer);
+        window.CommandSystem.suggestionsContainer = suggestionsContainer;
+        window.CommandSystem.isShowingSuggestions = true;
+    }
+
+    function updateSuggestions() {
+        if (!window.CommandSystem.suggestionsContainer) return;
+        updateSuggestionsContent(window.CommandSystem.suggestionsContainer);
+    }
+
+    function updateSuggestionsContent(container) {
+        // フィルタリングされたコマンドリストを取得
+        const filteredCommands = filterCommands(window.CommandSystem.filterText);
+        
+        // コンテナをクリア
+        container.innerHTML = '';
+        
+        if (filteredCommands.length === 0) {
+            const noResults = document.createElement('div');
+            noResults.textContent = 'No commands found';
+            noResults.style.padding = '8px 12px';
+            noResults.style.color = '#999';
+            container.appendChild(noResults);
+            return;
+        }
+        
+        // 提案リストを作成
+        filteredCommands.forEach((command, index) => {
+            const item = document.createElement('div');
+            item.className = 'suggestion-item';
+            item.style.padding = '8px 12px';
+            item.style.cursor = 'pointer';
+            
+            if (index === window.CommandSystem.selectedIndex) {
+                item.classList.add('active');
+                item.style.backgroundColor = '#e0e0e0';
+            }
+            
+            // コマンド名と説明を表示
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = command.name;
+            nameSpan.style.fontWeight = 'bold';
+            
+            const descSpan = document.createElement('span');
+            descSpan.textContent = command.description ? ` - ${command.description}` : '';
+            descSpan.style.color = '#666';
+            
+            item.appendChild(nameSpan);
+            item.appendChild(descSpan);
+            
+            // クリックイベントを追加
+            item.addEventListener('click', () => {
+                window.CommandSystem.selectedIndex = index;
+                selectCurrentSuggestion();
+            });
+            
+            // マウスオーバーイベントを追加
+            item.addEventListener('mouseover', () => {
+                window.CommandSystem.selectedIndex = index;
+                updateSuggestions();
+            });
+            
+            container.appendChild(item);
+        });
+    }
+
+    function filterCommands(filterText) {
+        if (!window.CommandSystem.commands || window.CommandSystem.commands.length === 0) {
+            return [];
+        }
+        
+        if (!filterText) {
+            return window.CommandSystem.commands;
+        }
+        
+        // フィルターテキストに基づいてコマンドをフィルタリング
+        return window.CommandSystem.commands.filter(cmd => 
+            cmd.name.toLowerCase().includes(filterText.toLowerCase())
+        );
+    }
+
+    function navigateSuggestion(direction) {
+        const filteredCommands = filterCommands(window.CommandSystem.filterText);
+        if (filteredCommands.length === 0) return;
+        
+        // 選択インデックスを更新
+        let newIndex = window.CommandSystem.selectedIndex + direction;
+        if (newIndex < 0) {
+            newIndex = filteredCommands.length - 1;
+        } else if (newIndex >= filteredCommands.length) {
+            newIndex = 0;
+        }
+        
+        window.CommandSystem.selectedIndex = newIndex;
+        updateSuggestions();
+        
+        // 選択項目が見えるようにスクロール
+        const container = window.CommandSystem.suggestionsContainer;
+        const selectedItem = container.children[newIndex];
+        if (selectedItem) {
+            if (selectedItem.offsetTop < container.scrollTop) {
+                container.scrollTop = selectedItem.offsetTop;
+            } else if (selectedItem.offsetTop + selectedItem.offsetHeight > container.scrollTop + container.offsetHeight) {
+                container.scrollTop = selectedItem.offsetTop + selectedItem.offsetHeight - container.offsetHeight;
+            }
+        }
+    }
+
+    function selectCurrentSuggestion() {
+        const filteredCommands = filterCommands(window.CommandSystem.filterText);
+        if (filteredCommands.length === 0 || window.CommandSystem.selectedIndex < 0) {
+            hideSuggestions();
+            return;
+        }
+        
+        const selectedCommand = filteredCommands[window.CommandSystem.selectedIndex];
+        const textarea = window.CommandSystem.activeTextarea;
+        if (!textarea || !selectedCommand) return;
+        
+        // テキストエリアの現在の値を取得
+        const text = textarea.value;
+        const cursorPos = textarea.selectionStart;
+        
+        // トリガー文字の位置を見つける
+        const triggerPos = findLastTriggerPosition(text, cursorPos);
+        if (triggerPos === -1) {
+            hideSuggestions();
+            return;
+        }
+        
+        // コマンドテンプレートを生成
+        let commandTemplate = selectedCommand.name;
+        
+        // 必須パラメータがあれば追加
+        if (selectedCommand.params) {
+            const requiredParams = selectedCommand.params.filter(p => p.required);
+            if (requiredParams.length > 0) {
+                commandTemplate += ' ' + requiredParams.map(p => `${p.name}=`).join(' ');
+            }
+        }
+        
+        // テキストエリアの値を更新
+        const newText = text.substring(0, triggerPos) + 
+                        window.CommandSystem.currentTrigger + 
+                        commandTemplate + 
+                        text.substring(cursorPos);
+        
+        textarea.value = newText;
+        
+        // カーソル位置を更新
+        const newCursorPos = triggerPos + window.CommandSystem.currentTrigger.length + commandTemplate.length;
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+        
+        // 提案を閉じる
+        hideSuggestions();
+        
+        // input イベントを発火させて変更を通知
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    function hideSuggestions() {
+        if (window.CommandSystem.suggestionsContainer) {
+            window.CommandSystem.suggestionsContainer.remove();
+            window.CommandSystem.suggestionsContainer = null;
+        }
+        window.CommandSystem.isShowingSuggestions = false;
+        window.CommandSystem.selectedIndex = -1;
+        window.CommandSystem.filterText = '';
+    }
+
+    async function initCommandSystem() {
+        if (window.CommandSystem.initialized) {
+            console.log("⚠️ Command system already initialized");
+            return;
+        }
+
+        console.log("🚀 Initializing command system...");
+        await fetchCommands();
+        setupTextareaMonitoring();
+        window.CommandSystem.initialized = true;
+        console.log("✅ Command system initialized");
+        
+        // ウィンドウクリックイベントを追加（提案リスト外をクリックしたら閉じる）
+        document.addEventListener('click', (e) => {
+            if (window.CommandSystem.isShowingSuggestions) {
+                const container = window.CommandSystem.suggestionsContainer;
+                if (container && !container.contains(e.target) && 
+                    e.target !== window.CommandSystem.activeTextarea) {
+                    hideSuggestions();
                 }
             }
         });
-    });
-    
-    observer.observe(document.body, { childList: true, subtree: true });
-    
-    debugLog('サジェスト機能のセットアップ完了');
-    
-    // 動作確認のために直接呼び出してみる
-    setTimeout(() => {
-        debugLog('コマンドリスト表示機能をテスト中...');
-        showSuggestions('', -1, textarea, suggestionsContainer, commands);
-    }, 1000);
+    }
+
+    if (document.readyState === 'complete') {
+        setTimeout(initCommandSystem, 1000);
+    } else {
+        window.addEventListener('load', () => setTimeout(initCommandSystem, 1000));
+    }
+})();
+
+// CSSスタイルを追加（一度だけ）
+const style = document.createElement('style');
+style.textContent = `
+.command-suggestions {
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    color: #333;
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    max-height: 200px;
+    overflow-y: auto;
+    width: 300px;
 }
-
-function showSuggestions(inputText, triggerPos, textarea, container, commands) {
-    // 最初から全部表示し、入力があればフィルタリング
-    let filtered = commands;
-    if (inputText.length > 0) {
-        const exactMatches = commands.filter(cmd => 
-            cmd.name.toLowerCase().startsWith(inputText.toLowerCase())
-        );
-        
-        const partialMatches = commands.filter(cmd => 
-            !cmd.name.toLowerCase().startsWith(inputText.toLowerCase()) &&
-            cmd.name.toLowerCase().includes(inputText.toLowerCase())
-        );
-        
-        filtered = [...exactMatches, ...partialMatches];
-    }
-
-    if (filtered.length === 0) {
-        debugLog('フィルタリング結果: 候補なし');
-        hideSuggestions(container);
-        return;
-    }
-
-    debugLog('フィルタリングされた候補:', filtered.length + '件');
-    
-    // 位置調整
-    const rect = textarea.getBoundingClientRect();
-    debugLog('テキストエリア位置:', rect);
-    
-    container.style.top = `${rect.top + 30}px`;
-    container.style.left = `${rect.left + 20}px`;
-    container.innerHTML = '';
-
-    filtered.forEach(cmd => {
-        const item = document.createElement('div');
-        item.className = 'suggestion-item';
-        item.dataset.command = cmd.name;
-
-        const nameSpan = document.createElement('span');
-        nameSpan.innerHTML = `<strong>${cmd.name}</strong>`;
-        item.appendChild(nameSpan);
-
-        if (cmd.description) {
-            const descSpan = document.createElement('span');
-            descSpan.className = 'suggestion-desc';
-            descSpan.textContent = cmd.description.substring(0, 40) + 
-                (cmd.description.length > 40 ? '...' : '');
-            item.appendChild(descSpan);
-        }
-
-        item.addEventListener('click', () => {
-            debugLog(`コマンド選択: ${cmd.name} (クリック)`);
-            insertCommand(cmd, textarea, container);
-        });
-
-        container.appendChild(item);
-    });
-
-    const firstItem = container.querySelector('.suggestion-item');
-    if (firstItem) firstItem.classList.add('active');
-    
-    // グローバル変数にtriggerPosを保存
-    window.currentTriggerPos = triggerPos;
-    debugLog(`サジェスト表示: トリガー位置=${triggerPos}, 候補数=${filtered.length}`);
-    
-    container.style.display = 'block';
+.suggestion-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background-color 0.3s;
 }
-
-function hideSuggestions(container) {
-    if (container) {
-        container.style.display = 'none';
-        debugLog('サジェストを非表示');
-    }
+.suggestion-item:hover {
+    background-color: #f0f0f0;
 }
-
-function insertCommand(cmd, textarea, container) {
-    const text = textarea.value;
-    const triggerPos = window.currentTriggerPos;
-    
-    debugLog(`コマンド挿入: ${cmd.name}, トリガー位置=${triggerPos}`);
-    
-    if (triggerPos === -1 || triggerPos >= text.length) {
-        debugLog('警告: 無効なトリガー位置です');
-        return;
-    }
-    
-    // コマンド部分を置き換え
-    let newText = text.substring(0, triggerPos + 1) + cmd.name + ' ';
-    
-    // 必須パラメータのプレースホルダーを追加
-    const requiredParams = cmd.params ? cmd.params.filter(p => p.required) : [];
-    if (requiredParams.length > 0) {
-        newText += requiredParams.map(p => `${p.name}=`).join(' ');
-    }
-    
-    // カーソル位置以降のテキストを追加
-    newText += text.substring(textarea.selectionStart);
-    
-    debugLog('新しいテキスト:', newText);
-    textarea.value = newText;
-    
-    // カーソルを適切な位置に設定
-    const newCursorPos = triggerPos + 1 + cmd.name.length + 1 + 
-        (requiredParams.length > 0 ? 
-            requiredParams.reduce((acc, p) => acc + p.name.length + 1, 0) : 0);
-    
-    textarea.focus();
-    textarea.selectionStart = textarea.selectionEnd = newCursorPos;
-    hideSuggestions(container);
-    debugLog(`コマンドを挿入しました: ${cmd.name}, 新カーソル位置=${newCursorPos}`);
+.suggestion-item.active {
+    background-color: #e0e0e0;
 }
+`;
+document.head.appendChild(style);
