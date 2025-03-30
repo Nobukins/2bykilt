@@ -14,16 +14,13 @@ import uvicorn
 import nest_asyncio
 import os
 
-from src.ui.command_helper import CommandHelper
-
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# CSPを緩和するミドルウェア
+# Simplified CSP middleware
 class CSPMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
-        # data: URLを許可するようにCSPを更新
         response.headers["Content-Security-Policy"] = (
             "default-src *; img-src * data:; font-src * data:; style-src * 'unsafe-inline'; script-src * 'unsafe-inline' 'unsafe-eval';"
         )
@@ -64,26 +61,10 @@ def create_fastapi_app(demo, args):
     async def root():
         return {"message": "APIサーバーは正常に動作しています"}
     
-    # コマンド一覧を取得するAPIエンドポイント - デバッグ情報追加
-    @app.get("/api/commands")
-    async def get_commands():
-        """Return available commands from llms.txt for command suggestions"""
-        try:
-            helper = CommandHelper()
-            commands = helper.get_all_commands()
-            logger.info(f"APIリクエスト: /api/commands - {len(commands)}件のコマンドを返します")
-            return JSONResponse(content=commands, headers={"Access-Control-Allow-Origin": "*"})
-        except Exception as e:
-            logger.error(f"コマンド取得エラー: {str(e)}")
-            return JSONResponse(
-                content={"error": "Failed to retrieve commands", "details": str(e)},
-                status_code=500,
-                headers={"Access-Control-Allow-Origin": "*"}
-            )
-    
     # 簡易的なコマンド一覧取得用エンドポイント（エラー処理を簡略化）
     @app.get("/api/commands-simple")
     async def get_commands_simple():
+        from src.ui.command_helper import CommandHelper
         helper = CommandHelper()
         return helper.get_commands_for_display()
     
@@ -106,7 +87,7 @@ def create_fastapi_app(demo, args):
                 const resultEl = document.getElementById('result');
                 resultEl.textContent = "リクエスト中...";
                 try {
-                    const response = await fetch('/api/commands');
+                    const response = await fetch('/api/commands-simple');
                     if (!response.ok) {
                         throw new Error(`ステータス: ${response.status}`);
                     }
@@ -125,6 +106,7 @@ def create_fastapi_app(demo, args):
     @app.get("/api/debug-info")
     async def get_debug_info():
         """デバッグ情報を返すエンドポイント"""
+        from src.ui.command_helper import CommandHelper
         helper = CommandHelper()
         commands = helper.get_all_commands()
         
