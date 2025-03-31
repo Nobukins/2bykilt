@@ -87,7 +87,7 @@ def save_as_action_file(script_content, file_name, action_name=None):
             
         # Get the actions directory path
         root_dir = Path(__file__).parent.parent.parent
-        actions_dir = root_dir / 'actions'
+        actions_dir = root_dir / 'tmp/myscript/actions'
         
         # Create actions directory if it doesn't exist
         if not actions_dir.exists():
