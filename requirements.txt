@@ -2,7 +2,7 @@
 browser-use==0.1.37
 python-dotenv>=0.19.0
 pyyaml>=6.0
-gradio==5.10.0
+gradio>=5.10.0  # Always installs latest compatible version
 requests>=2.28.0
 jsonschema>=4.0.0
 json-repair
@@ -23,7 +23,9 @@ pytest>=7.0.0  # For running test scripts
 pytest-playwright>=0.4.0  # For browser testing
 pytest-asyncio>=0.18.0  # For async test support
 
-# Note: After installing playwright, run: playwright install
+# Installation notes:
+# Run: pip install -r requirements.txt --upgrade
+# After installing playwright, run: playwright install
 # Additional LLM providers can be installed as needed:
 # langchain-openai  # For OpenAI/Azure OpenAI
 # langchain-anthropic  # For Claude models
