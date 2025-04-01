@@ -11,18 +11,6 @@ actions:
     command: pytest ./tmp/myscript/search_script.py --query ${params.query}
     slowmo: 2500
 
-  - name: search-beatport
-    type: script
-    script: search_script_music.py
-    description: "beatport.comにてジャンル検索"
-    params:
-      - name: query
-        required: true
-        type: string
-        description: "検索クエリ"
-    command: pytest ./tmp/myscript/search_script_music.py --query ${params.query}
-    slowmo: 2500
-
   - name: action-runner-nogtips
     type: action_runner_template
     action_script: nogtips_search
@@ -130,6 +118,7 @@ actions:
     type: unlock-future
     keep_tab_open: True
     tab_selection_strategy: new_tab  # 明示的に新規タブを指定
+    description: "unlock-futureを利用したインタラクティブセッション　その３"
     params:
       - name: query
         required: true
@@ -147,22 +136,4 @@ actions:
       - action: fill_form
         selector: "#search-2 > form > label > input"
         value: "${params.query}"
-  - name: search-yahoo
-    type: action_runner_template
-    action_script: actions/yahoo-search.py
-    params:
-      - name: query
-        required: true
-        type: string
-        description: "検索クエリ"
-    command: python ./tmp/myscript/action_runner.py --action ${action_script} --query "${params.query}" --slowmo 1500 --countdown 3
-
-  - name: dasf
-    type: action_runner_template
-    action_script: actions/dasdafq.py
-    params:
-      - name: query
-        required: true
-        type: string
-        description: "検索クエリ"
-    command: python ./tmp/myscript/action_runner.py --action ${action_script} --query "${params.query}" --slowmo 1500 --countdown 3
+        
