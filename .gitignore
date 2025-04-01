@@ -164,7 +164,11 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 temp
-tmp
+tmp/agent_history
+tmp/deep_research
+tmp/json_commands
+tmp/record_videos
+tmp/traces
 
 
 .DS_Store
