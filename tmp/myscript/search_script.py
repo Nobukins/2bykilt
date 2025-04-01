@@ -130,8 +130,6 @@ async def test_text_search(request) -> None:
         await page.get_by_role("button", name="閉じて承認").click()
         await page.get_by_role("link", name="nogtips").click()
         await page.get_by_role("heading", name="LLMs.txtについて").get_by_role("link").click()
-        await page.get_by_role("link", name="Personal AI Assistant（PAIA）を作る", exact=True).click()
-        await page.get_by_role("link", name="bykilt", exact=True).click()
         await page.get_by_role("searchbox", name="検索:").click()
         await page.get_by_role("searchbox", name="検索:").fill(query)
         await page.get_by_role("searchbox", name="検索:").press("Enter")
