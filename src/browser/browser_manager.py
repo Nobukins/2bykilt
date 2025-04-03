@@ -3,9 +3,12 @@ import logging
 from typing import Dict, Optional, Any
 
 from src.utils.globals_manager import get_globals
+from src.browser.browser_config import BrowserConfig
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+browser_config = BrowserConfig()
 
 async def close_global_browser():
     """Close the global browser and browser context if they exist"""
@@ -21,23 +24,20 @@ async def close_global_browser():
         await browser.close()
         logger.info("Closed browser")
 
-async def initialize_browser(use_own_browser, window_w, window_h):
-    """Centralized browser initialization logic."""
-    chrome_path = None
-    extra_chromium_args = []
+async def initialize_browser(use_own_browser, window_w, window_h, browser_type=None):
+    """Centralized browser initialization logic with support for Chrome and Edge."""
+    settings = browser_config.get_browser_settings(browser_type)
+    chrome_path = settings["path"]
+    user_data_dir = settings["user_data"]
+    extra_chromium_args = [f"--window-size={window_w},{window_h}"]
 
-    if use_own_browser:
-        chrome_path = os.getenv("CHROME_PATH", None)
-        if chrome_path == "":
-            chrome_path = None
-        chrome_user_data = os.getenv("CHROME_USER_DATA", None)
-        if chrome_user_data:
-            extra_chromium_args += [f"--user-data-dir={chrome_user_data}"]
+    if use_own_browser and user_data_dir:
+        extra_chromium_args.append(f"--user-data-dir={user_data_dir}")
 
     browser = await p.chromium.launch(
         headless=False,
         executable_path=chrome_path,
-        args=extra_chromium_args + [f"--window-size={window_w},{window_h}"]
+        args=extra_chromium_args
     )
     return browser
 

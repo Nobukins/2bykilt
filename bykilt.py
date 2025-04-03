@@ -25,6 +25,7 @@ from src.agent.agent_manager import stop_agent, stop_research_agent, run_org_age
 from src.agent.agent_manager import run_deep_search, get_globals, run_browser_agent
 from src.ui.stream_manager import run_with_stream
 from src.browser.browser_manager import close_global_browser, prepare_recording_path, initialize_browser
+from src.browser.browser_config import BrowserConfig
 
 # Import the new modules for run_browser_agent
 from src.config.action_translator import ActionTranslator
@@ -190,6 +191,8 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
+browser_config = BrowserConfig()
+
 def create_ui(config, theme_name="Ocean"):
     """Create the Gradio UI with the specified configuration and theme"""
     # Load CSS from external file
@@ -241,6 +244,17 @@ def create_ui(config, theme_name="Ocean"):
 
             with gr.TabItem("🌐 Browser Settings", id=3):
                 with gr.Group():
+                    browser_type = gr.Dropdown(
+                        choices=["chrome", "edge"],
+                        value=browser_config.config["current_browser"],
+                        label="Browser Type",
+                        info="Select the browser to use for automation"
+                    )
+                    browser_type.change(
+                        fn=lambda bt: browser_config.set_current_browser(bt),
+                        inputs=[browser_type],
+                        outputs=[]
+                    )
                     with gr.Row():
                         use_own_browser = gr.Checkbox(label="Use Own Browser", value=config['use_own_browser'], info="Use your existing browser instance")
                         keep_browser_open = gr.Checkbox(label="Keep Browser Open", value=config['keep_browser_open'], info="Keep Browser Open between Tasks")

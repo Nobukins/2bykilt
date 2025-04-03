@@ -5,8 +5,10 @@ import subprocess
 import uuid
 from datetime import datetime
 from src.browser.session_manager import SessionManager
+from src.browser.browser_config import BrowserConfig
 
 browser_sessions = {}
+browser_config = BrowserConfig()
 
 class BrowserDebugManager:
     """ブラウザの初期化と管理のためのクラス"""
@@ -30,133 +32,36 @@ class BrowserDebugManager:
         
         self.session_manager = SessionManager()
     
-    async def initialize_browser(self, use_own_browser=False, headless=False, maintain_session=False):
-        """
-        Initialize or reuse a browser instance.
-        
-        Args:
-            use_own_browser: Whether to use the user's own browser.
-            headless: Whether to run in headless mode.
-            maintain_session: Whether to maintain an existing session.
-        
-        Returns:
-            dict: Browser session information.
-        """
-        # Check if we should reuse an existing session
-        if maintain_session and self.global_browser:
-            return {
-                "browser": self.global_browser,
-                "context": self.global_context,
-                "page": self.global_page,
-                "playwright": self.global_playwright,
-                "is_cdp": True,
-                "is_reused": True
-            }
-        
-        # Start new playwright instance if needed
-        from playwright.async_api import async_playwright
-        
-        playwright = await async_playwright().start()
-        self.global_playwright = playwright
-        
-        chrome_debugging_port = os.getenv("CHROME_DEBUGGING_PORT", "9222")
-        chrome_path = os.getenv("CHROME_PATH", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
-        
-        # Check user data directory
-        chrome_user_data = os.getenv("CHROME_USER_DATA")
-        if not chrome_user_data or chrome_user_data.strip() == "":
-            chrome_user_data = os.path.expanduser("~/Library/Application Support/Google/Chrome")
-        
+    async def initialize_browser(self, use_own_browser=False, headless=False, browser_type=None):
+        """Initialize or reuse a browser instance with support for Chrome and Edge."""
+        settings = browser_config.get_browser_settings(browser_type)
+        browser_path = settings["path"]
+        user_data_dir = settings["user_data"]
+        debugging_port = settings["debugging_port"]
+
         if use_own_browser:
-            # Check if Chrome is running
-            chrome_running = False
-            try:
-                chrome_running = any("Google Chrome" in p.name() for p in psutil.process_iter(['name']))
-            except:
-                pass
-            
-            if chrome_running:
-                # Try to connect to existing Chrome
-                try:
-                    browser = await playwright.chromium.connect_over_cdp(
-                        endpoint_url=f'http://localhost:{chrome_debugging_port}',
-                        timeout=3000
-                    )
-                    self.global_browser = browser
-                    
-                    # Get or create a context
-                    context = browser.contexts[0] if browser.contexts else await browser.new_context()
-                    self.global_context = context
-                    
-                    # Create a new page
-                    page = await context.new_page()
-                    self.global_page = page
-                    
-                    return {
-                        "browser": browser,
-                        "context": context,
-                        "page": page,
-                        "playwright": playwright,
-                        "is_cdp": True,
-                        "is_reused": False
-                    }
-                except Exception:
-                    pass  # Handle connection failure
-            
-            # Start new Chrome instance
             cmd_args = [
-                chrome_path,
-                f"--remote-debugging-port={chrome_debugging_port}",
+                browser_path,
+                f"--remote-debugging-port={debugging_port}",
                 "--no-first-run",
                 "--no-default-browser-check"
             ]
-            
-            if chrome_user_data and chrome_user_data.strip():
-                cmd_args.append(f"--user-data-dir={chrome_user_data}")
-            
+            if user_data_dir:
+                cmd_args.append(f"--user-data-dir={user_data_dir}")
             chrome_process = subprocess.Popen(cmd_args)
-            await asyncio.sleep(3)  # Wait for Chrome to start
-            
+            await asyncio.sleep(3)
             try:
-                browser = await playwright.chromium.connect_over_cdp(
-                    endpoint_url=f'http://localhost:{chrome_debugging_port}'
+                browser = await self.playwright.chromium.connect_over_cdp(
+                    endpoint_url=f'http://localhost:{debugging_port}'
                 )
                 self.global_browser = browser
-                
-                context = browser.contexts[0] if browser.contexts else await browser.new_context()
-                self.global_context = context
-                
-                page = await context.new_page()
-                self.global_page = page
-                
-                return {
-                    "browser": browser,
-                    "context": context,
-                    "page": page,
-                    "playwright": playwright,
-                    "is_cdp": True,
-                    "is_reused": False
-                }
-            except Exception:
-                pass  # Fallback to standard browser
-        
-        # Fallback: Launch a new browser instance
-        browser = await playwright.chromium.launch(headless=headless)
-        context = await browser.new_context()
-        page = await context.new_page()
-        
-        self.global_browser = browser
-        self.global_context = context
-        self.global_page = page
-        
-        return {
-            "browser": browser,
-            "context": context,
-            "page": page,
-            "playwright": playwright,
-            "is_cdp": False,
-            "is_reused": False
-        }
+                return {"browser": browser, "status": "success"}
+            except Exception as e:
+                logger.error(f"Failed to connect to browser: {e}")
+        else:
+            browser = await self.playwright.chromium.launch(headless=headless)
+            self.global_browser = browser
+            return {"browser": browser, "status": "success"}
 
     async def initialize_custom_browser(self, use_own_browser=False, headless=False, tab_selection_strategy="new_tab"):
         """カスタムプロファイル付きでブラウザインスタンスを初期化、
