@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 import os
+from src.utils.app_logger import logger  # Use AppLogger
 
 class ActionTranslator:
     """Converts llms.txt actions into JSON command format."""
@@ -9,6 +10,7 @@ class ActionTranslator:
         """Initialize the translator with a temporary directory."""
         self.temp_dir = temp_dir
         os.makedirs(self.temp_dir, exist_ok=True)
+        logger.debug(f"ActionTranslator initialized with temp directory: {temp_dir}")
     
     def translate_to_json(self, action_name, params, actions_config, maintain_session=False, tab_selection_strategy="new_tab"):
         """
@@ -24,6 +26,8 @@ class ActionTranslator:
         Returns:
             str: Path to the generated JSON file.
         """
+        logger.info(f"Starting translation: Action '{action_name}' to JSON commands.")
+        
         # Handle both dict and list formats for actions_config
         if isinstance(actions_config, dict) and 'actions' in actions_config:
             action_list = actions_config.get('actions', [])
@@ -34,7 +38,11 @@ class ActionTranslator:
         # Find the action definition
         action_def = next((action for action in action_list if action.get('name') == action_name), None)
         if not action_def:
-            raise ValueError(f"Action '{action_name}' is not defined in the provided actions configuration.")
+            error_msg = f"Action '{action_name}' is not defined in the provided actions configuration."
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+        
+        logger.debug(f"Found action definition: {action_name}")
         
         # Create JSON command structure
         json_commands = {
@@ -86,4 +94,5 @@ class ActionTranslator:
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(json_commands, f, ensure_ascii=False, indent=2)
         
+        logger.info(f"JSON commands saved to: {file_path}")
         return str(file_path)

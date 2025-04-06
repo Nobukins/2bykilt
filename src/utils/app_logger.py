@@ -77,7 +77,8 @@ class AppLogger:
         if save_for_gradio:
             with self._lock:
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                self._gradio_logs.append(f"{timestamp} [{level_name}] - {message}")
+                self._gradio_logs.append(f"[{timestamp}] [{level_name}] {message}")
+                # Limit buffer size
                 if len(self._gradio_logs) > self._max_buffer_size:
                     self._gradio_logs = self._gradio_logs[-self._max_buffer_size:]
     

@@ -1,4 +1,3 @@
-import logging
 import os
 import tempfile
 import subprocess
@@ -6,9 +5,7 @@ import shutil
 import asyncio
 from pathlib import Path
 from typing import Dict, Any, Tuple, Optional, List
-
-# Configure logging
-logger = logging.getLogger(__name__)
+from src.utils.app_logger import logger
 
 async def clone_git_repo(git_url: str, version: str = 'main', target_dir: Optional[str] = None) -> str:
     """Clone a git repository and checkout specified version/branch"""
@@ -175,6 +172,63 @@ def test_browser_control(page: Page):
 '''
     return script_content
 
+# Helper function to capture and log subprocess output
+async def log_subprocess_output(process):
+    """Capture and log subprocess output in real-time"""
+    while True:
+        line = await process.stdout.readline()
+        if not line:
+            break
+        line_str = line.decode('utf-8').strip()
+        if line_str:
+            logger.info(f"SUBPROCESS: {line_str}")
+
+async def process_execution(command_parts, env=None, cwd=None):
+    """
+    Execute a subprocess command asynchronously with real-time output capture.
+    
+    Args:
+        command_parts (list): Command to execute as a list of string parts
+        env (dict, optional): Environment variables for the subprocess
+        cwd (str, optional): Working directory for the subprocess
+        
+    Returns:
+        tuple: (process, output_lines) - The subprocess object and captured output lines
+    """
+    if env is None:
+        env = os.environ.copy()
+    
+    logger.info(f"Executing command: {' '.join(command_parts)}")
+    
+    process = await asyncio.create_subprocess_exec(
+        *command_parts,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        env=env,
+        cwd=cwd
+    )
+    
+    output_lines = []
+
+    async def read_stream(stream, is_error=False):
+        while True:
+            line = await stream.readline()
+            if not line:
+                break
+            line_str = line.decode('utf-8').rstrip()
+            if line_str:
+                if is_error:
+                    logger.error(f"SUBPROCESS ERROR: {line_str}")
+                else:
+                    logger.info(f"SUBPROCESS: {line_str}")
+                    output_lines.append(line_str)
+
+    stdout_task = asyncio.create_task(read_stream(process.stdout))
+    stderr_task = asyncio.create_task(read_stream(process.stderr, is_error=True))
+    await asyncio.gather(stdout_task, stderr_task)
+    
+    return process, output_lines
+
 async def run_script(
     script_info: Dict[str, Any], 
     params: Dict[str, str], 
@@ -215,6 +269,7 @@ async def run_script(
                     with open(pytest_ini_path, 'w') as f:
                         f.write('''[pytest]
 asyncio_mode = auto
+asyncio_default_fixture_loop_scope = function
 addopts = --verbose --capture=no
 markers =
     browser_control: mark tests as browser control automation
@@ -289,25 +344,37 @@ markers =
                     env['RECORDING_PATH'] = save_recording_path
                     logger.info(f"Recording enabled, saving to: {save_recording_path}")
                 
-                # Log command before execution
-                logger.info(f"Executing command: {' '.join(command_parts)}")
-                
-                # Run the command asynchronously
-                process = await asyncio.create_subprocess_exec(
-                    *command_parts,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                    env=env
+                # Execute the command using process_execution
+                process, output_lines = await process_execution(
+                    command_parts,
+                    env=env,
+                    cwd=os.path.dirname(full_script_path)
                 )
+                
+                # Get any remaining stdout/stderr
                 stdout, stderr = await process.communicate()
                 
-                # Process execution result
-                if process.returncode != 0:
-                    error_msg = f"Script execution failed: {stderr.decode()}"
-                    logger.error(error_msg)
-                    raise RuntimeError(f"Script execution failed with exit code {process.returncode}")
+                # Log any remaining output
+                if stdout:
+                    for line in stdout.decode('utf-8').splitlines():
+                        if line.strip() and line.strip() not in output_lines:
+                            logger.info(f"SCRIPT: {line.strip()}")
+                            output_lines.append(line.strip())
                 
-                return f"Script executed successfully: {stdout.decode()}", full_script_path
+                if stderr:
+                    for line in stderr.decode('utf-8').splitlines():
+                        if line.strip():
+                            logger.error(f"SCRIPT ERROR: {line.strip()}")
+                
+                # Check return code and return results
+                if process.returncode != 0:
+                    error_msg = f"Script execution failed with exit code {process.returncode}"
+                    logger.error(error_msg)
+                    return error_msg, None
+                else:
+                    success_msg = "Script executed successfully"
+                    logger.info(success_msg)
+                    return success_msg, full_script_path
             elif script_type == 'unlock-future':
                 # Handle unlock-future type
                 logger.info(f"Executing unlock-future script: {script_info.get('name', 'unknown')}")
@@ -405,25 +472,34 @@ markers =
                     env['RECORDING_PATH'] = save_recording_path
                     logger.info(f"Recording enabled, saving to: {save_recording_path}")
                 
-                # Log command before execution
-                logger.info(f"Executing script command: {' '.join(command_parts)}")
-                
-                # Run the command asynchronously with the environment variable
-                process = await asyncio.create_subprocess_exec(
-                    *command_parts,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
+                # Execute the command using process_execution
+                process, output_lines = await process_execution(
+                    command_parts,
                     env=env
                 )
+                
+                # Get any remaining stdout/stderr
                 stdout, stderr = await process.communicate()
                 
-                # Process execution result
+                # Log any remaining output
+                if stdout:
+                    for line in stdout.decode('utf-8').splitlines():
+                        if line.strip() and line.strip() not in output_lines:
+                            logger.info(f"SCRIPT: {line.strip()}")
+                            output_lines.append(line.strip())
+                
+                if stderr:
+                    for line in stderr.decode('utf-8').splitlines():
+                        if line.strip():
+                            logger.error(f"SCRIPT ERROR: {line.strip()}")
+                
+                # Check return code and return results
                 if process.returncode != 0:
-                    error_msg = f"Script execution failed: {stderr.decode()}"
+                    error_msg = f"Script execution failed with exit code {process.returncode}"
                     logger.error(error_msg)
                     return error_msg, None
                 else:
-                    success_msg = f"Script executed successfully: {stdout.decode()}"
+                    success_msg = "Script executed successfully"
                     logger.info(success_msg)
                     return success_msg, script_path
             elif script_type == 'action_runner_template':
@@ -476,25 +552,34 @@ markers =
                     env['RECORDING_PATH'] = save_recording_path
                     logger.info(f"Recording enabled, saving to: {save_recording_path}")
                 
-                # Log command before execution
-                logger.info(f"Executing action runner command: {' '.join(command_parts)}")
-                
-                # Run the command asynchronously
-                process = await asyncio.create_subprocess_exec(
-                    *command_parts,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
+                # Execute the command using process_execution
+                process, output_lines = await process_execution(
+                    command_parts,
                     env=env
                 )
+                
+                # Get any remaining stdout/stderr
                 stdout, stderr = await process.communicate()
                 
-                # Process execution result
+                # Log any remaining output
+                if stdout:
+                    for line in stdout.decode('utf-8').splitlines():
+                        if line.strip() and line.strip() not in output_lines:
+                            logger.info(f"SCRIPT: {line.strip()}")
+                            output_lines.append(line.strip())
+                
+                if stderr:
+                    for line in stderr.decode('utf-8').splitlines():
+                        if line.strip():
+                            logger.error(f"SCRIPT ERROR: {line.strip()}")
+                
+                # Check return code and return results
                 if process.returncode != 0:
-                    error_msg = f"Action runner execution failed: {stderr.decode()}"
+                    error_msg = f"Action runner execution failed with exit code {process.returncode}"
                     logger.error(error_msg)
                     return error_msg, None
                 else:
-                    success_msg = f"Action runner executed successfully: {stdout.decode()}"
+                    success_msg = "Action runner executed successfully"
                     logger.info(success_msg)
                     return success_msg, None
             else:
@@ -547,15 +632,42 @@ markers =
             stderr=asyncio.subprocess.PIPE,
             env=env
         )
+        
+        # Track the output to return later
+        output_lines = []
+        
+        # Process stdout in real-time
+        while True:
+            line = await process.stdout.readline()
+            if not line:
+                break
+            line_str = line.decode('utf-8').strip()
+            if line_str:
+                logger.info(f"SCRIPT: {line_str}")
+                output_lines.append(line_str)
+        
+        # Get any remaining stdout/stderr
         stdout, stderr = await process.communicate()
         
-        # Process execution result
+        # Log any remaining output
+        if stdout:
+            for line in stdout.decode('utf-8').splitlines():
+                if line.strip() and line.strip() not in output_lines:
+                    logger.info(f"SCRIPT: {line.strip()}")
+                    output_lines.append(line.strip())
+        
+        if stderr:
+            for line in stderr.decode('utf-8').splitlines():
+                if line.strip():
+                    logger.error(f"SCRIPT ERROR: {line.strip()}")
+        
+        # Check return code and return results
         if process.returncode != 0:
-            error_msg = f"Script execution failed: {stderr.decode()}"
+            error_msg = f"Script execution failed with exit code {process.returncode}"
             logger.error(error_msg)
             return error_msg, None
         else:
-            success_msg = f"Script executed successfully: {stdout.decode()}"
+            success_msg = "Script executed successfully"
             logger.info(success_msg)
             return success_msg, script_path
     

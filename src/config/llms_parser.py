@@ -1,12 +1,9 @@
 import re
 import os
-import logging
 import yaml
 import requests
 from typing import Dict, List, Any, Optional, Union
-
-# Configure logging
-logger = logging.getLogger(__name__)
+from src.utils.app_logger import logger  # Use AppLogger
 
 def fetch_llms_txt(prompt: str) -> str:
     """
@@ -24,13 +21,16 @@ def fetch_llms_txt(prompt: str) -> str:
     url_match = re.search(r'https?://[^\s]+/llms.txt', prompt)
     if url_match:
         url = url_match.group(0)
+        logger.info(f"Fetching llms.txt from URL: {url}")
         response = requests.get(url)
         response.raise_for_status()
         return response.text
     elif os.path.exists('llms.txt'):
+        logger.info("Fetching llms.txt from local file.")
         with open('llms.txt', 'r') as file:
             return file.read()
     else:
+        logger.error("llms.txt not found locally and no URL provided in prompt.")
         raise FileNotFoundError("llms.txt not found locally and no URL provided in prompt.")
 
 def parse_llms_txt(content: str) -> List[Dict[str, Any]]:
@@ -43,6 +43,7 @@ def parse_llms_txt(content: str) -> List[Dict[str, Any]]:
     Returns:
         List[Dict[str, Any]]: List of action dictionaries
     """
+    logger.debug("Parsing llms.txt content.")
     data = yaml.safe_load(content)
     return data['actions']
 
@@ -57,15 +58,17 @@ def pre_evaluate_prompt(prompt: str) -> Optional[Dict[str, Any]]:
         Optional[Dict[str, Any]]: Matched action or None
     """
     try:
+        logger.info("Evaluating prompt against llms.txt actions.")
         content = fetch_llms_txt(prompt)
         actions = parse_llms_txt(content)
         for action in actions:
             if isinstance(action, dict) and 'name' in action and action['name'] in prompt:
-                print(f"Found matching action: {action['name']}")
+                logger.info(f"Found matching action: {action['name']}")
                 return action
+        logger.warning("No matching action found in llms.txt.")
         return None
     except Exception as e:
-        print(f"pre_evaluate_prompt error: {str(e)}")
+        logger.error(f"Error in pre_evaluate_prompt: {str(e)}")
         return None
 
 def extract_params(prompt: str, param_names: Union[str, List[Dict[str, Any]], None]) -> Dict[str, str]:
@@ -79,6 +82,7 @@ def extract_params(prompt: str, param_names: Union[str, List[Dict[str, Any]], No
     Returns:
         Dict[str, str]: Extracted parameters
     """
+    logger.debug("Extracting parameters from prompt.")
     params = {}
     if not param_names:
         return params
@@ -110,6 +114,7 @@ def resolve_sensitive_env_variables(text: Optional[str]) -> Optional[str]:
     if not text:
         return text
         
+    logger.debug("Resolving sensitive environment variables.")
     env_vars = re.findall(r'\$SENSITIVE_[A-Za-z0-9_]*', text)
     result = text
     for var in env_vars:
@@ -141,7 +146,7 @@ def load_actions_config():
             
             # Validate structure
             if isinstance(actions_config, dict) and 'actions' in actions_config:
-                logger.info(f"Action names: {[a.get('name') for a in actions_config['actions']]}")
+                logger.info(f"Loaded action names: {[a.get('name') for a in actions_config['actions']]}")
                 return actions_config
             else:
                 logger.warning("Invalid config format: missing 'actions' key")
