@@ -77,70 +77,155 @@ class BrowserDebugManager:
         # BrowserConfigの参照関係とインスタンスIDを出力
         global browser_config
         logger.info(f"BrowserConfig instance ID: {id(browser_config)}")
-        logger.info(f"Current browser in config: {browser_config.config.get('current_browser')}")
         
-        # 現在のブラウザ設定を取得
+        # 現在設定されているブラウザの確認
         current_browser = browser_config.config.get("current_browser", "chrome")
+        logger.info(f"Current browser in config: {current_browser}")
+        
+        # ブラウザ設定の詳細ログ
+        browser_settings = browser_config.get_browser_settings()
         logger.info(f"🔍 DEBUG: ブラウザ初期化開始 - 設定されたブラウザタイプ: {current_browser}")
-        logger.info(f"🔍 DEBUG: BrowserConfig直接チェック: {browser_config.get_browser_settings()}")
+        logger.info(f"🔍 DEBUG: BrowserConfig直接チェック: {browser_settings}")
         
         # すでにブラウザインスタンスが存在する場合はそれを返す
         if self.global_browser is not None:
-            logger.info(f"✅ 既存のブラウザインスタンスを再利用します (タイプ: {current_browser})")
-            return {"browser": self.global_browser, "playwright": self.global_playwright, "is_cdp": True, "status": "success"}
+            logger.info(f"✅ 既存のブラウザインスタンスを再利用します: {self.browser_type}")
+            return {"browser": self.global_browser, "playwright": self.global_playwright, "status": "success"}
         
         try:
-            # プレイライトを初期化
+            # Playwrightインスタンスを先に初期化
             from playwright.async_api import async_playwright
+            
             playwright = await async_playwright().start()
             self.global_playwright = playwright
             
-            # ブラウザタイプに基づいて適切な設定を使用
             if use_own_browser:
-                browser_settings = browser_config.get_browser_settings()
-                browser_debug_port = browser_settings["debugging_port"]
-                browser_path = browser_settings["path"]
-                browser_user_data = browser_settings["user_data"]
-                browser_name = "Edge" if current_browser == "edge" else "Chrome"
-                
-                logger.info(f"🔍 use_own_browser が有効です。{browser_name} を探します...")
-                logger.info(f"📁 ユーザーデータディレクトリ: {browser_user_data}")
-                logger.info(f"🚀 {browser_name} を起動します: {browser_path}")
-                logger.info(f"🔌 デバッグポート: {browser_debug_port}")
-                
-                cmd_args = [
-                    browser_path,
-                    f"--remote-debugging-port={browser_debug_port}",
-                    "--no-first-run",
-                    "--no-default-browser-check"
-                ]
-                if browser_user_data:
-                    cmd_args.append(f"--user-data-dir={browser_user_data}")
-                
-                self.chrome_process = subprocess.Popen(cmd_args)
-                await asyncio.sleep(3)
-                
-                try:
-                    endpoint_url = f'http://localhost:{browser_debug_port}'
-                    browser = await playwright.chromium.connect_over_cdp(endpoint_url=endpoint_url)
-                    self.global_browser = browser
-                    logger.info(f"✅ {browser_name} に接続しました (ポート {browser_debug_port})")
-                    return {"browser": browser, "status": "success"}
-                except Exception as e:
-                    logger.error(f"⚠️ {browser_name} への接続に失敗しました: {e}")
-                    raise
+                # ブラウザタイプに応じた設定
+                if current_browser == "edge":
+                    browser_path = browser_settings.get("path")
+                    browser_user_data = browser_settings.get("user_data")
+                    browser_debug_port = browser_settings.get("debugging_port", 9223)
+                    logger.info(f"🔍 use_own_browser が有効です。Edge を探します...")
+                    logger.info(f"📁 ユーザーデータディレクトリ: {browser_user_data}")
+                    logger.info(f"🚀 Edge を起動します: {browser_path}")
+                    logger.info(f"🔌 デバッグポート: {browser_debug_port}")
+                    
+                    # Edge接続テスト
+                    import requests
+                    try:
+                        response = requests.get(f"http://localhost:{browser_debug_port}/json/version", timeout=5)
+                        logger.info(f"✅ Edgeデバッグエンドポイント接続成功: {response.status_code}")
+                    except Exception as e:
+                        logger.warning(f"⚠️ デバッグエンドポイントへの接続確認に失敗: {e}")
+                        
+                        # Edgeが実行中でない場合は起動を試みる
+                        if browser_path:
+                            import subprocess
+                            cmd = [
+                                browser_path,
+                                f"--remote-debugging-port={browser_debug_port}",
+                                "--no-first-run",
+                                "--no-default-browser-check"
+                            ]
+                            if browser_user_data:
+                                cmd.append(f"--user-data-dir={browser_user_data}")
+                            
+                            logger.info(f"🚀 Edge起動コマンド: {' '.join(cmd)}")
+                            subprocess.Popen(cmd)
+                            # 接続のために少し待機
+                            import asyncio
+                            await asyncio.sleep(3)
+                    
+                    try:
+                        # EdgeにはPlaywrightのchromiumドライバーを使用
+                        browser = await self.global_playwright.chromium.connect_over_cdp(f"http://localhost:{browser_debug_port}")
+                        self.global_browser = browser
+                        self.browser_type = "edge"
+                        logger.info("✅ 起動したEdgeインスタンスに接続しました")
+                        return {"browser": browser, "playwright": playwright, "status": "success"}
+                    except Exception as e:
+                        logger.error(f"⚠️ Edge への接続に失敗しました: {e}")
+                        # 詳細な診断を実行
+                        diagnostic_file = BrowserDiagnostic.capture_browser_state(f"startup_issue_edge")
+                        logger.error(f"ブラウザ起動診断情報: {diagnostic_file}")
+                        return {"status": "error", "message": f"Edgeの初期化に失敗しました: {e}"}
+                else:
+                    # Chrome用の設定
+                    browser_path = browser_settings.get("path")
+                    browser_user_data = browser_settings.get("user_data")
+                    browser_debug_port = browser_settings.get("debugging_port", 9222)
+                    logger.info(f"🔍 use_own_browser が有効です。Chrome を探します...")
+                    logger.info(f"📁 ユーザーデータディレクトリ: {browser_user_data}")
+                    logger.info(f"🚀 Chrome を起動します: {browser_path}")
+                    logger.info(f"🔌 デバッグポート: {browser_debug_port}")
+                    
+                    # Chrome接続テスト
+                    import requests
+                    try:
+                        response = requests.get(f"http://localhost:{browser_debug_port}/json/version", timeout=5)
+                        logger.info(f"✅ Chromeデバッグエンドポイント接続成功: {response.status_code}")
+                    except Exception as e:
+                        logger.warning(f"⚠️ デバッグエンドポイントへの接続確認に失敗: {e}")
+                        
+                        # Chromeが実行中でない場合は起動を試みる
+                        if browser_path:
+                            import subprocess
+                            cmd = [
+                                browser_path,
+                                f"--remote-debugging-port={browser_debug_port}",
+                                "--no-first-run",
+                                "--no-default-browser-check"
+                            ]
+                            if browser_user_data:
+                                cmd.append(f"--user-data-dir={browser_user_data}")
+                            
+                            logger.info(f"🚀 Chrome起動コマンド: {' '.join(cmd)}")
+                            subprocess.Popen(cmd)
+                            # 接続のために少し待機
+                            import asyncio
+                            await asyncio.sleep(3)
+                    
+                    try:
+                        # ChromeにはPlaywrightのchromiumドライバーを使用
+                        browser = await self.global_playwright.chromium.connect_over_cdp(f"http://localhost:{browser_debug_port}")
+                        self.global_browser = browser
+                        self.browser_type = "chrome"
+                        logger.info("✅ 起動したChromeインスタンスに接続しました")
+                        return {"browser": browser, "playwright": self.global_playwright, "status": "success"}
+                    except Exception as e:
+                        logger.error(f"⚠️ Chrome への接続に失敗しました: {e}")
+                        # 詳細な診断を実行
+                        diagnostic_file = BrowserDiagnostic.capture_browser_state(f"startup_issue_chrome")
+                        logger.error(f"ブラウザ起動診断情報: {diagnostic_file}")
+                        return {"status": "error", "message": f"Chromeの初期化に失敗しました: {e}"}
+                    
             else:
-                # Playwright管理ブラウザを使用
-                browser = await playwright.chromium.launch(headless=headless)
+                # Playwright管理ブラウザを使用 - ブラウザタイプに基づき選択
+                if current_browser == "edge":
+                    logger.info("✅ Playwright管理のEdgeブラウザを起動します")
+                    browser = await self.global_playwright.chromium.launch(
+                        headless=headless,
+                        executable_path=browser_settings.get("path")
+                    )
+                else:
+                    logger.info("✅ Playwright管理のChromeブラウザを起動します")
+                    browser = await self.global_playwright.chromium.launch(headless=headless)
+                    
                 self.global_browser = browser
-                logger.info("✅ Playwright管理ブラウザを起動しました")
-                return {"browser": browser, "status": "success"}
+                self.browser_type = current_browser
+                logger.info(f"✅ Playwright管理{current_browser}ブラウザを起動しました")
+                return {"browser": browser, "playwright": playwright, "status": "success"}
+                
         except Exception as e:
-            logger.error(f"⚠️ ブラウザ初期化中にエラーが発生しました: {e}")
-            # 診断情報を収集
-            diagnostic_file = BrowserDiagnostic.capture_browser_state("error_during_init")
-            logger.error(f"詳細な診断情報: {diagnostic_file['filename']}")
-            raise
+            logger.error(f"⚠️ ブラウザセッションの初期化中にエラーが発生しました: {e}")
+            import traceback
+            logger.error(f"スタックトレース: {traceback.format_exc()}")
+            
+            # 詳細な診断情報を保存
+            diagnostic_file = BrowserDiagnostic.capture_browser_state(f"browser_init_error")
+            logger.error(f"詳細診断情報: {diagnostic_file}")
+            
+            return {"status": "error", "message": f"ブラウザセッションの初期化中にエラーが発生しました: {e}"}
 
     async def initialize_with_session(self, session_id=None, use_own_browser=False, headless=False):
         """ブラウザセッションを初期化"""

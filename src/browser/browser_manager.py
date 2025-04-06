@@ -58,18 +58,64 @@ def get_browser_configs(
         "extra_chromium_args": extra_chromium_args
     }
 
-async def initialize_browser(use_own_browser, window_w, window_h, browser_type=None):
-    """Centralized browser initialization logic with support for Chrome and Edge."""
-    browser_configs = get_browser_configs(use_own_browser, window_w, window_h, browser_type)
-    browser_path = browser_configs["browser_path"]
-    extra_chromium_args = browser_configs["extra_chromium_args"]
-
-    browser = await p.chromium.launch(
-        headless=False,
-        executable_path=browser_path,
-        args=extra_chromium_args
-    )
-    return browser
+async def initialize_browser(use_own_browser=False, headless=False, browser_type=None, auto_fallback=True):
+    """ブラウザを初期化し、失敗時には代替ブラウザにフォールバック"""
+    browser_debug_manager = BrowserDebugManager()
+    
+    # 使用するブラウザタイプを決定
+    if browser_type is None:
+        browser_type = browser_config.config.get("current_browser", "chrome")
+    
+    logger.info(f"🔄 ブラウザ初期化開始: {browser_type.upper()}")
+    
+    try:
+        # 指定されたブラウザタイプで初期化
+        result = await browser_debug_manager.initialize_custom_browser(
+            use_own_browser=use_own_browser, 
+            headless=headless,
+            tab_selection_strategy="new_tab"
+        )
+        
+        if result.get("status") == "success":
+            logger.info(f"✅ {browser_type.upper()} の初期化に成功しました")
+            return result
+        
+        logger.error(f"❌ {browser_type.upper()} の初期化に失敗しました: {result.get('message', 'Unknown error')}")
+        
+        # 自動フォールバックが有効なら代替ブラウザを試す
+        if auto_fallback:
+            fallback_type = "chrome" if browser_type == "edge" else "edge"
+            logger.warning(f"⚠️ {fallback_type.upper()} へのフォールバックを試みます")
+            
+            from src.browser.browser_diagnostic import BrowserDiagnostic
+            BrowserDiagnostic.diagnose_browser_startup_issues(
+                browser_type, 
+                browser_config.get_browser_settings().get("debugging_port"),
+                result.get("message", ""),
+                attempt_repair=False  # 診断のみ
+            )
+            
+            # 代替ブラウザでの初期化を試みる（再帰呼び出し、無限ループ防止のためauto_fallback=False）
+            return await initialize_browser(
+                use_own_browser=use_own_browser,
+                headless=headless,
+                browser_type=fallback_type,
+                auto_fallback=False
+            )
+    except Exception as e:
+        logger.error(f"❌ ブラウザ初期化中の予期せぬエラー: {e}")
+        if auto_fallback:
+            fallback_type = "chrome" if browser_type == "edge" else "edge"
+            logger.warning(f"⚠️ 例外発生のため {fallback_type.upper()} へのフォールバックを試みます")
+            return await initialize_browser(
+                use_own_browser=use_own_browser,
+                headless=headless,
+                browser_type=fallback_type,
+                auto_fallback=False
+            )
+    
+    # すべて失敗した場合
+    return {"status": "error", "message": f"すべてのブラウザ初期化試行が失敗しました"}
 
 def prepare_recording_path(enable_recording: bool, save_recording_path: Optional[str]) -> Optional[str]:
     """Prepare recording path based on settings"""
