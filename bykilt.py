@@ -141,7 +141,7 @@ def chrome_restart_dialog():
                 return "no"
             
             yes_button.click(fn=set_yes, outputs=result)
-            no_button.click(fn=set_no, outputs=result)
+            no_button.click(fn=set_no(), outputs=result)
     
     return dialog
 
@@ -209,6 +209,19 @@ def create_ui(config, theme_name="Ocean"):
     """
 
     with gr.Blocks(title="2Bykilt", theme=theme_map[theme_name], css=css, head=custom_head) as demo:
+        # ======================================================
+        # Define shared variables for all tabs
+        # ======================================================
+        window_w = gr.Number(value=config.get('window_width', 1920), label="ブラウザウィンドウ幅", precision=0, visible=False)
+        window_h = gr.Number(value=config.get('window_height', 1080), label="ブラウザウィンドウ高さ", precision=0, visible=False)
+        enable_recording = gr.Checkbox(label="録画を有効にする", value=config.get('enable_recording', True), visible=False)
+        maintain_browser_session = gr.Checkbox(label="ブラウザセッションを維持", value=config.get('maintain_browser_session', False), visible=False)
+        tab_selection_strategy = gr.Radio(["new_tab", "reuse_tab"], label="タブ選択戦略", 
+                                           value=config.get('tab_selection_strategy', "new_tab"), visible=False)
+        save_recording_path = gr.Textbox(label="録画保存パス", value=config.get('save_recording_path', './tmp/record_videos'), visible=False)
+        save_trace_path = gr.Textbox(label="トレース保存パス", value=config.get('save_trace_path', './tmp/traces'), visible=False)
+        save_agent_history_path = gr.Textbox(label="エージェント履歴パス", value=config.get('save_agent_history_path', './tmp/agent_history'), visible=False)
+
         with gr.Row():
             gr.Markdown("# 🪄🌐 2Bykilt\n### Enhanced Browser Control with AI and human, because for you", elem_classes=["header-text"])
 
@@ -243,62 +256,94 @@ def create_ui(config, theme_name="Ocean"):
                         )
 
             with gr.TabItem("🌐 Browser Settings", id=3):
-                with gr.Group():
-                    browser_type = gr.Dropdown(
-                        choices=["chrome", "edge"],
-                        value=browser_config.config["current_browser"],
-                        label="Browser Type",
-                        info="Select the browser to use for automation"
-                    )
-                    browser_type.change(
-                        fn=lambda bt: browser_config.set_current_browser(bt),
-                        inputs=[browser_type],
-                        outputs=[]
-                    )
-                    with gr.Row():
-                        use_own_browser = gr.Checkbox(label="Use Own Browser", value=config['use_own_browser'], info="Use your existing browser instance")
-                        keep_browser_open = gr.Checkbox(label="Keep Browser Open", value=config['keep_browser_open'], info="Keep Browser Open between Tasks")
-                        headless = gr.Checkbox(label="Headless Mode", value=config['headless'], info="Run browser without GUI")
-                        disable_security = gr.Checkbox(label="Disable Security", value=config['disable_security'], info="Disable browser security features")
-                        enable_recording = gr.Checkbox(label="Enable Recording", value=config['enable_recording'], info="Enable saving browser recordings")
-                    with gr.Row():
-                        window_w = gr.Number(label="Window Width", value=config['window_w'], info="Browser window width")
-                        window_h = gr.Number(label="Window Height", value=config['window_h'], info="Browser window height")
-                    save_recording_path = gr.Textbox(label="Recording Path", placeholder="e.g. ./tmp/record_videos", value=config['save_recording_path'], info="Path to save browser recordings", interactive=True)
-                    save_trace_path = gr.Textbox(label="Trace Path", placeholder="e.g. ./tmp/traces", value=config['save_trace_path'], info="Path to save Agent traces", interactive=True)
-                    save_agent_history_path = gr.Textbox(label="Agent History Save Path", placeholder="e.g., ./tmp/agent_history", value=config['save_agent_history_path'], info="Specify the directory where agent history should be saved.", interactive=True)
-
-                    maintain_browser_session = gr.Checkbox(
-                        label="Maintain Browser Session",
-                        value=False,
-                        info="Keep browser session active between commands (for multi-step interactions)"
-                    )
-
-                    # Add tab selection strategy control
-                    tab_selection_strategy = gr.Radio(
-                        choices=["new_tab", "active_tab", "last_tab"],
-                        value="active_tab",
-                        label="Tab Selection Strategy",
-                        info="Choose which browser tab to use for automation when using own browser",
-                        visible=True
-                    )
-
-                    # Make tab selection strategy depend on use_own_browser
-                    use_own_browser.change(
-                        fn=lambda enabled: gr.update(visible=enabled),
-                        inputs=use_own_browser,
-                        outputs=tab_selection_strategy
-                    )
-
-                    # 再起動確認セクションを追加
-                    with gr.Row():
-                        restart_button = gr.Button("ブラウザを再起動", variant="secondary")
-                        restart_status = gr.Markdown("")
+                with gr.Row():
+                    with gr.Column():
+                        gr.Markdown("### ブラウザー設定")
                         
-                        def restart_browser():
-                            return asyncio.run(show_restart_dialog())
+                        browser_type = gr.Dropdown(
+                            choices=["chrome", "edge"], 
+                            label="使用するブラウザ", 
+                            value=browser_config.config.get("current_browser", "chrome"),
+                            info="Chrome または Edge を選択してください"
+                        )
                         
-                        restart_button.click(fn=restart_browser, outputs=restart_status)
+                        use_own_browser = gr.Checkbox(label="既存のブラウザを使用", value=False)
+                        headless = gr.Checkbox(label="ヘッドレスモード", value=False)
+                        keep_browser_open = gr.Checkbox(label="ブラウザを開いたままにする", value=False)
+                        disable_security = gr.Checkbox(
+                            label="セキュリティを無効化", 
+                            value=browser_config.get_browser_settings()["disable_security"],
+                            info="ブラウザのセキュリティ機能を無効化します"
+                        )
+                        
+                        # Directly render components instead of using .update()
+                        with gr.Row():
+                            window_w = gr.Number(value=config.get('window_width', 1920), 
+                                                 label="ブラウザウィンドウ幅", 
+                                                 precision=0)
+                            window_h = gr.Number(value=config.get('window_height', 1080), 
+                                                 label="ブラウザウィンドウ高さ", 
+                                                 precision=0)
+                        
+                        enable_recording = gr.Checkbox(label="録画を有効にする", 
+                                                       value=config.get('enable_recording', True))
+                        maintain_browser_session = gr.Checkbox(label="ブラウザセッションを維持", 
+                                                               value=config.get('maintain_browser_session', False))
+                        tab_selection_strategy = gr.Radio(["new_tab", "reuse_tab"], 
+                                                           label="タブ選択戦略",
+                                                           value=config.get('tab_selection_strategy', "new_tab"))
+                        save_recording_path = gr.Textbox(label="録画保存パス", 
+                                                         value=config.get('save_recording_path', './tmp/record_videos'))
+                        save_trace_path = gr.Textbox(label="トレース保存パス", 
+                                                     value=config.get('save_trace_path', './tmp/traces'))
+                        save_agent_history_path = gr.Textbox(label="エージェント履歴パス", 
+                                                             value=config.get('save_agent_history_path', './tmp/agent_history'))
+                        
+                        browser_path_info = gr.Markdown(
+                            value=f"**現在のブラウザパス**: {browser_config.get_browser_settings()['path']}", 
+                            visible=True
+                        )
+                        user_data_info = gr.Markdown(
+                            value=f"**ユーザーデータパス**: {browser_config.get_browser_settings()['user_data']}",
+                            visible=True
+                        )
+                        
+                        update_browser_btn = gr.Button("ブラウザ設定を更新", variant="primary")
+                        browser_update_result = gr.Markdown("")
+                        
+                        def update_browser_settings(browser_selection, disable_security_flag):
+                            """Update browser settings and return results."""
+                            try:
+                                browser_config.set_current_browser(browser_selection)
+                                settings = browser_config.get_browser_settings()
+                                settings["disable_security"] = disable_security_flag
+                                
+                                browser_path = f"**現在のブラウザパス**: {settings['path']}"
+                                user_data = f"**ユーザーデータパス**: {settings['user_data']}"
+                                
+                                return (
+                                    browser_path,
+                                    user_data,
+                                    f"✅ ブラウザ設定を {browser_selection.upper()} に更新しました"
+                                )
+                            except Exception as e:
+                                return (
+                                    browser_path_info.value,
+                                    user_data_info.value,
+                                    f"❌ エラーが発生しました: {str(e)}"
+                                )
+                        
+                        browser_type.change(
+                            fn=update_browser_settings,
+                            inputs=[browser_type, disable_security],
+                            outputs=[browser_path_info, user_data_info, browser_update_result]
+                        )
+                        
+                        update_browser_btn.click(
+                            fn=update_browser_settings,
+                            inputs=[browser_type, disable_security],
+                            outputs=[browser_path_info, user_data_info, browser_update_result]
+                        )
 
             with gr.TabItem("🤖 Run Agent", id=4):
                 # Add command helper integration
@@ -709,7 +754,6 @@ def create_ui(config, theme_name="Ocean"):
                             descSpan.style.color = '#666';
                             descSpan.style.marginLeft = '10px';
                             descSpan.textContent = cmd.description;
-                            item.appendChild(descSpan);
                         }}
                         
                         // クリックイベント

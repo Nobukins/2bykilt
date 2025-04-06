@@ -24,45 +24,52 @@ async def close_global_browser():
         await browser.close()
         logger.info("Closed browser")
 
-async def initialize_browser(use_own_browser, window_w, window_h, browser_type=None):
-    """Centralized browser initialization logic with support for Chrome and Edge."""
-    settings = browser_config.get_browser_settings(browser_type)
-    chrome_path = settings["path"]
-    user_data_dir = settings["user_data"]
-    extra_chromium_args = [f"--window-size={window_w},{window_h}"]
-
-    if use_own_browser and user_data_dir:
-        extra_chromium_args.append(f"--user-data-dir={user_data_dir}")
-
-    browser = await p.chromium.launch(
-        headless=False,
-        executable_path=chrome_path,
-        args=extra_chromium_args
-    )
-    return browser
-
 def get_browser_configs(
     use_own_browser: bool, 
     window_w: int, 
-    window_h: int
+    window_h: int,
+    browser_type: str = "chrome"  # Add browser_type parameter with default
 ) -> Dict[str, Any]:
     """Generate browser configuration based on parameters"""
     extra_chromium_args = [f"--window-size={window_w},{window_h}"]
     
-    chrome_path = None
+    browser_path = None
+    browser_user_data = None
+    
     if use_own_browser:
-        chrome_path = os.getenv("CHROME_PATH", "")
-        if chrome_path == "":
-            chrome_path = None
+        # Use correct environment variables based on browser type
+        if browser_type == "edge":
+            browser_path = os.getenv("EDGE_PATH", "")
+            browser_user_data = os.getenv("EDGE_USER_DATA", None)
+            logger.info(f"Using Edge browser: {browser_path}")
+        else:  # Default to Chrome
+            browser_path = os.getenv("CHROME_PATH", "")
+            browser_user_data = os.getenv("CHROME_USER_DATA", None)
+            logger.info(f"Using Chrome browser: {browser_path}")
             
-        chrome_user_data = os.getenv("CHROME_USER_DATA", None)
-        if chrome_user_data:
-            extra_chromium_args += [f"--user-data-dir={chrome_user_data}"]
+        if browser_path == "":
+            browser_path = None
+            
+        if browser_user_data:
+            extra_chromium_args += [f"--user-data-dir={browser_user_data}"]
     
     return {
-        "chrome_path": chrome_path,
+        "browser_path": browser_path,  # Changed from chrome_path
         "extra_chromium_args": extra_chromium_args
     }
+
+async def initialize_browser(use_own_browser, window_w, window_h, browser_type=None):
+    """Centralized browser initialization logic with support for Chrome and Edge."""
+    browser_configs = get_browser_configs(use_own_browser, window_w, window_h, browser_type)
+    browser_path = browser_configs["browser_path"]
+    extra_chromium_args = browser_configs["extra_chromium_args"]
+
+    browser = await p.chromium.launch(
+        headless=False,
+        executable_path=browser_path,
+        args=extra_chromium_args
+    )
+    return browser
 
 def prepare_recording_path(enable_recording: bool, save_recording_path: Optional[str]) -> Optional[str]:
     """Prepare recording path based on settings"""

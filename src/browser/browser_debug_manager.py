@@ -6,6 +6,10 @@ import uuid
 from datetime import datetime
 from src.browser.session_manager import SessionManager
 from src.browser.browser_config import BrowserConfig
+from src.utils.logger import Logger
+from src.utils.diagnostics import BrowserDiagnostics
+
+logger = Logger.setup("browser_debug_manager")
 
 browser_sessions = {}
 browser_config = BrowserConfig()
@@ -63,134 +67,139 @@ class BrowserDebugManager:
             self.global_browser = browser
             return {"browser": browser, "status": "success"}
 
+    @Logger.log_async_method_calls(logger)
     async def initialize_custom_browser(self, use_own_browser=False, headless=False, tab_selection_strategy="new_tab"):
-        """カスタムプロファイル付きでブラウザインスタンスを初期化、
-        またはCDPを介して接続します。"""
+        """カスタムプロファイル付きでブラウザインスタンスを初期化"""
+        # 完全なブラウザ設定診断を実行
+        from src.browser.browser_diagnostic import BrowserDiagnostic
+        debug_file = BrowserDiagnostic.capture_browser_state("browser_init_debug")
+        
+        # BrowserConfigの参照関係とインスタンスIDを出力
+        global browser_config
+        logger.info(f"BrowserConfig instance ID: {id(browser_config)}")
+        logger.info(f"Current browser in config: {browser_config.config.get('current_browser')}")
+        
+        # 現在のブラウザ設定を取得
+        current_browser = browser_config.config.get("current_browser", "chrome")
+        logger.info(f"🔍 DEBUG: ブラウザ初期化開始 - 設定されたブラウザタイプ: {current_browser}")
+        logger.info(f"🔍 DEBUG: BrowserConfig直接チェック: {browser_config.get_browser_settings()}")
+        
         # すでにブラウザインスタンスが存在する場合はそれを返す
         if self.global_browser is not None:
-            print("✅ 既存のブラウザインスタンスを再利用します")
+            logger.info(f"✅ 既存のブラウザインスタンスを再利用します (タイプ: {current_browser})")
             return {"browser": self.global_browser, "playwright": self.global_playwright, "is_cdp": True, "status": "success"}
         
-        from playwright.async_api import async_playwright
-        
-        playwright = await async_playwright().start()
-        self.global_playwright = playwright
-        
-        chrome_debugging_port = os.getenv("CHROME_DEBUGGING_PORT", "9222")
-        chrome_path = os.getenv("CHROME_PATH", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
-        
-        # ユーザーデータディレクトリの確認
-        chrome_user_data = os.getenv("CHROME_USER_DATA")
-        if not chrome_user_data or chrome_user_data.strip() == "":
-            chrome_user_data = os.path.expanduser("~/Library/Application Support/Google/Chrome")
-            print(f"⚠️ CHROME_USER_DATA が設定されていないため、デフォルト値を使用します: {chrome_user_data}")
-        
-        if use_own_browser:
-            print(f"🔍 use_own_browser が有効です。Chrome を探します...")
-            # Chromeが実行中かチェック
-            chrome_running = False
-            if self.have_psutil:
-                chrome_running = any("Google Chrome" in p.name() for p in self.psutil.process_iter(['name']))
-                print(f"🔍 Chrome 実行中: {chrome_running}")
+        try:
+            # プレイライトを初期化
+            from playwright.async_api import async_playwright
+            playwright = await async_playwright().start()
+            self.global_playwright = playwright
             
-            if chrome_running:
-                print(f"⚠️ Chromeが既に実行中です。CDPデバッグポート {chrome_debugging_port} に接続を試みます...")
-                # 既存のChromeを一度閉じずに、タイムアウトを設定してCDPに接続を試みる
-                try:
-                    endpoint_url = f'http://localhost:{chrome_debugging_port}'
-                    print(f"🔌 接続先: {endpoint_url}")
-                    browser = await playwright.chromium.connect_over_cdp(
-                        endpoint_url=endpoint_url,
-                        timeout=5000  # 5秒のタイムアウト
-                    )
-                    print(f"✅ 既存のChromeインスタンスに接続しました (ポート {chrome_debugging_port})")
-                    self.global_browser = browser
-                    
-                    # Return the default context if available
-                    default_context = browser.contexts[0] if browser.contexts else None
-                    return {"browser": browser, "context": default_context, "playwright": playwright, "is_cdp": True, "status": "success"}
-                except Exception as e:
-                    print(f"⚠️ 既存のChromeに接続失敗: {str(e)}")
-                    # 失敗したら既存のChromeをデバッグモードで再起動するか確認
-                    return {
-                        "status": "needs_restart",
-                        "message": "既存のChromeに接続できませんでした。再起動が必要です。",
-                        "playwright": playwright
-                    }
-            
-            # 新しいChromeインスタンスを起動
-            try:
-                print(f"🚀 新しいChrome起動: {chrome_path}")
-                # Chrome起動引数を構築
+            # ブラウザタイプに基づいて適切な設定を使用
+            if use_own_browser:
+                browser_settings = browser_config.get_browser_settings()
+                browser_debug_port = browser_settings["debugging_port"]
+                browser_path = browser_settings["path"]
+                browser_user_data = browser_settings["user_data"]
+                browser_name = "Edge" if current_browser == "edge" else "Chrome"
+                
+                logger.info(f"🔍 use_own_browser が有効です。{browser_name} を探します...")
+                logger.info(f"📁 ユーザーデータディレクトリ: {browser_user_data}")
+                logger.info(f"🚀 {browser_name} を起動します: {browser_path}")
+                logger.info(f"🔌 デバッグポート: {browser_debug_port}")
+                
                 cmd_args = [
-                    chrome_path,
-                    f"--remote-debugging-port={chrome_debugging_port}",
+                    browser_path,
+                    f"--remote-debugging-port={browser_debug_port}",
                     "--no-first-run",
                     "--no-default-browser-check"
                 ]
+                if browser_user_data:
+                    cmd_args.append(f"--user-data-dir={browser_user_data}")
                 
-                # ユーザーデータディレクトリの追加
-                if chrome_user_data and chrome_user_data.strip():
-                    cmd_args.append(f"--user-data-dir={chrome_user_data}")
-                    print(f"📁 ユーザーデータディレクトリを使用: {chrome_user_data}")
-                
-                print(f"🚀 コマンド: {' '.join(cmd_args)}")
                 self.chrome_process = subprocess.Popen(cmd_args)
-                print(f"🔄 デバッグモードでChromeを起動しました (ポート {chrome_debugging_port})")
-                await asyncio.sleep(3)  # Chromeが起動する時間を確保
-
-                # 接続を試行
+                await asyncio.sleep(3)
+                
                 try:
-                    endpoint_url = f'http://localhost:{chrome_debugging_port}'
-                    browser = await playwright.chromium.connect_over_cdp(
-                        endpoint_url=endpoint_url
-                    )
-                    print(f"✅ 起動したChromeインスタンスに接続しました (ポート {chrome_debugging_port})")
+                    endpoint_url = f'http://localhost:{browser_debug_port}'
+                    browser = await playwright.chromium.connect_over_cdp(endpoint_url=endpoint_url)
                     self.global_browser = browser
-                    
-                    # Return the default context if available
-                    default_context = browser.contexts[0] if browser.contexts else None
-                    return {"browser": browser, "context": default_context, "playwright": playwright, "is_cdp": True, "status": "success"}
+                    logger.info(f"✅ {browser_name} に接続しました (ポート {browser_debug_port})")
+                    return {"browser": browser, "status": "success"}
                 except Exception as e:
-                    print(f"⚠️ 起動したChromeへの接続に失敗しました: {e}")
-                    # フォールバックへ進む
-            except Exception as e:
-                print(f"⚠️ Chromeの起動中にエラーが発生しました: {e}")
-                # フォールバックへ進む
-        
-        # フォールバック: 通常のPlaywright管理ブラウザを使用
-        print("🔄 Playwright管理ブラウザを使用します")
-        browser = await playwright.chromium.launch(headless=headless)
-        context = await browser.new_context()
-        self.global_browser = browser
-        return {"browser": browser, "context": context, "playwright": playwright, "is_cdp": False, "status": "success"}
+                    logger.error(f"⚠️ {browser_name} への接続に失敗しました: {e}")
+                    raise
+            else:
+                # Playwright管理ブラウザを使用
+                browser = await playwright.chromium.launch(headless=headless)
+                self.global_browser = browser
+                logger.info("✅ Playwright管理ブラウザを起動しました")
+                return {"browser": browser, "status": "success"}
+        except Exception as e:
+            logger.error(f"⚠️ ブラウザ初期化中にエラーが発生しました: {e}")
+            # 診断情報を収集
+            diagnostic_file = BrowserDiagnostic.capture_browser_state("error_during_init")
+            logger.error(f"詳細な診断情報: {diagnostic_file['filename']}")
+            raise
 
     async def initialize_with_session(self, session_id=None, use_own_browser=False, headless=False):
-        """セッションIDを使用してブラウザを初期化（既存または新規）"""
-        browser = None
-        
-        # 既存セッションがあれば再利用を試みる
-        if session_id and self.session_manager.get_session(session_id):
-            browser = await self._try_reuse_browser(session_id)
-        
-        # 既存ブラウザが見つからないか利用できない場合、新しいブラウザを作成
-        if not browser:
-            browser = await self._create_new_browser(use_own_browser, headless)
+        """ブラウザセッションを初期化"""
+        try:
+            # グローバル設定を使用
+            global browser_config
+            direct_browser_type = browser_config.config.get("current_browser", "chrome")
+            settings_browser_type = browser_config.get_browser_settings()["browser_type"]
             
-            if browser:
-                # 新しいセッション情報を作成
-                browser_info = self._get_browser_info(browser)
-                session_id = self.session_manager.create_session(browser_info)
+            # 設定の不一致を検出
+            if direct_browser_type != settings_browser_type:
+                logger.error(f"⚠️ ブラウザ設定の不一致を検出: config={direct_browser_type}, settings={settings_browser_type}")
+                # 不一致を解決
+                browser_config.config["current_browser"] = settings_browser_type
+                logger.info(f"✅ ブラウザ設定を修正: {settings_browser_type}")
+            
+            if use_own_browser:
+                browser_settings = browser_config.get_browser_settings()
+                port = browser_settings["debugging_port"]
+                browser_path = browser_settings["path"]
+                user_data_dir = browser_settings["user_data"]
+                browser_name = "Edge" if settings_browser_type == "edge" else "Chrome"
+                
+                logger.info(f"🔍 use_own_browser が有効です。{browser_name} を探します...")
+                logger.info(f"🚀 {browser_name} を起動します: {browser_path}")
+                logger.info(f"📁 ユーザーデータディレクトリ: {user_data_dir}")
+                logger.info(f"🔌 デバッグポート: {port}")
+                
+                cmd_args = [
+                    browser_path,
+                    f"--remote-debugging-port={port}",
+                    "--no-first-run",
+                    "--no-default-browser-check"
+                ]
+                if user_data_dir:
+                    cmd_args.append(f"--user-data-dir={user_data_dir}")
+                
+                self.chrome_process = subprocess.Popen(cmd_args)
+                await asyncio.sleep(3)
+                
+                try:
+                    endpoint_url = f'http://localhost:{port}'
+                    browser = await self.global_playwright.chromium.connect_over_cdp(endpoint_url=endpoint_url)
+                    self.global_browser = browser
+                    logger.info(f"✅ {browser_name} に接続しました (ポート {port})")
+                    return {"browser": browser, "status": "success"}
+                except Exception as e:
+                    logger.error(f"⚠️ {browser_name} への接続に失敗しました: {e}")
+                    return {"status": "error", "message": f"{browser_name} への接続に失敗しました: {e}"}
             else:
-                return {"status": "error", "message": "ブラウザの初期化に失敗しました"}
-        
-        # セッション情報を返す
-        return {
-            "status": "success", 
-            "message": "ブラウザセッションを初期化しました", 
-            "session_id": session_id
-        }
-    
+                # Playwright管理ブラウザを使用
+                browser = await self.global_playwright.chromium.launch(headless=headless)
+                self.global_browser = browser
+                logger.info("✅ Playwright管理ブラウザを起動しました")
+                return {"browser": browser, "status": "success"}
+        except Exception as e:
+            logger.error(f"⚠️ ブラウザセッションの初期化中にエラーが発生しました: {e}")
+            return {"status": "error", "message": f"ブラウザセッションの初期化中にエラーが発生しました: {e}"}
+
     async def cleanup_resources(self, session_id=None, maintain_session=False):
         """リソースのクリーンアップ"""
         if not maintain_session:
@@ -220,36 +229,6 @@ class BrowserDebugManager:
             logger.error(f"ブラウザ情報取得エラー: {e}")
             return {"error": str(e)}
     
-    async def initialize_with_session(self, session_id=None, use_own_browser=False, headless=False):
-        """
-        Initialize or reuse a browser session.
-        
-        Args:
-            session_id: Optional session ID to reuse an existing session.
-            use_own_browser: Whether to use the user's own browser.
-            headless: Whether to run in headless mode.
-        
-        Returns:
-            dict: Browser session information.
-        """
-        if session_id and session_id in browser_sessions:
-            # Reuse existing session
-            self.browser = browser_sessions[session_id].get('browser')
-            self.page = browser_sessions[session_id].get('page')
-            return {"status": "success", "session_id": session_id}
-        else:
-            # Create a new session
-            result = await self.initialize(use_own_browser, headless)
-            if result.get("status") == "success":
-                new_session_id = str(uuid.uuid4())
-                browser_sessions[new_session_id] = {
-                    "browser": self.browser,
-                    "page": self.page,
-                    "created_at": datetime.now()
-                }
-                return {"status": "success", "session_id": new_session_id}
-            return result
-
     async def cleanup_resources(self, session_id=None, maintain_session=False):
         """
         Clean up browser resources.
