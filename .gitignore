@@ -170,7 +170,6 @@ tmp/json_commands
 tmp/record_videos
 tmp/traces
 
-
 .DS_Store
 
 private_example.py
@@ -201,3 +200,13 @@ error.png
 
 # original files as backup or comparison
 original/*.*
+
+# log files
+*.log/
+logs/*
+*.log
+
+# temporally cleanup for dynamically generated files
+assets/fonts/
+tmp/myscript/pytest.ini
+tmp/myscript/browser_control.py

@@ -14,9 +14,8 @@ import uvicorn
 import nest_asyncio
 import os
 from src.browser.browser_config import BrowserConfig
-
-# Configure logging
-logger = logging.getLogger(__name__)
+from src.utils.log_ui import create_log_tab  # Correct import from log_ui instead of app_logger
+from src.utils.app_logger import logger
 
 # Simplified CSP middleware
 class CSPMiddleware(BaseHTTPMiddleware):
@@ -169,3 +168,14 @@ def run_app(app, args):
         logger.error(f"サーバー起動エラー: {str(e)}")
         import sys
         sys.exit(1)
+
+def create_ui():
+    """Create basic Gradio UI without log tab."""
+    with gr.Blocks() as demo:
+        pass  # Add other necessary UI elements if needed
+    return demo
+
+if __name__ == "__main__":
+    logger.info("Starting application", emoji=True)
+    ui = create_ui()
+    ui.launch()
