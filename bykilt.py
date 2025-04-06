@@ -33,6 +33,7 @@ from src.utils.debug_utils import DebugUtils
 from src.browser.browser_debug_manager import BrowserDebugManager
 from src.ui.command_helper import CommandHelper  # Import CommandHelper class
 from src.utils.playwright_codegen import run_playwright_codegen, save_as_action_file
+from src.utils.log_ui import create_log_tab  # Import log UI integration
 
 import yaml  # 必要であればインストール: pip install pyyaml
 
@@ -862,6 +863,9 @@ def create_ui(config, theme_name="Ocean"):
                 <pre>{traceback.format_exc()}</pre>
             </div>
             ''')
+
+        # Add log display tab
+        create_log_tab()
 
     return demo
 

@@ -7,13 +7,14 @@ from pathlib import Path
 import argparse
 from dotenv import load_dotenv
 import subprocess  # Ensure subprocess is imported
+from src.utils.app_logger import logger
 
 # Load environment variables with error handling
 try:
     load_dotenv()
-    print("✅ Environment variables loaded successfully")
+    logger.info("✅ Environment variables loaded successfully")
 except Exception as e:
-    print(f"⚠️ Warning: Error loading .env file: {e}")
+    logger.warning(f"⚠️ Warning: Error loading .env file: {e}")
 
 # 省略可能な依存関係のチェック
 HAVE_PSUTIL = False
@@ -34,7 +35,7 @@ async def initialize_custom_browser(use_own_browser=False, headless=False):
     
     # すでにブラウザインスタンスが存在する場合はそれを返す
     if global_browser is not None:
-        print("✅ 既存のブラウザインスタンスを再利用します")
+        logger.info("✅ 既存のブラウザインスタンスを再利用します")
         return {"browser": global_browser, "playwright": global_playwright, "is_cdp": True}
     
     from playwright.async_api import async_playwright
@@ -50,7 +51,7 @@ async def initialize_custom_browser(use_own_browser=False, headless=False):
     chrome_user_data = os.getenv("CHROME_USER_DATA")
     if not chrome_user_data or chrome_user_data.strip() == "":
         chrome_user_data = os.path.expanduser("~/Library/Application Support/Google/Chrome")
-        print(f"⚠️ CHROME_USER_DATA が設定されていないため、デフォルト値を使用します: {chrome_user_data}")
+        logger.warning(f"⚠️ CHROME_USER_DATA が設定されていないため、デフォルト値を使用します: {chrome_user_data}")
     
     if use_own_browser:
         # Chromeが実行中かチェック
@@ -59,14 +60,14 @@ async def initialize_custom_browser(use_own_browser=False, headless=False):
             chrome_running = any("Google Chrome" in p.name() for p in psutil.process_iter(['name']))
         
         if chrome_running:
-            print("⚠️ Chromeが既に実行中です。デバッグポートを有効にして接続を試みます...")
+            logger.warning("⚠️ Chromeが既に実行中です。デバッグポートを有効にして接続を試みます...")
             # 既存のChromeを一度閉じずに、タイムアウトを設定してCDPに接続を試みる
             try:
                 browser = await playwright.chromium.connect_over_cdp(
                     endpoint_url=f'http://localhost:{chrome_debugging_port}',
                     timeout=3000  # 3秒のタイムアウト
                 )
-                print(f"✅ 既存のChromeインスタンスに接続しました (ポート {chrome_debugging_port})")
+                logger.info(f"✅ 既存のChromeインスタンスに接続しました (ポート {chrome_debugging_port})")
                 global_browser = browser
                 
                 # Return the default context if available
@@ -74,14 +75,14 @@ async def initialize_custom_browser(use_own_browser=False, headless=False):
                 return {"browser": browser, "context": default_context, "playwright": playwright, "is_cdp": True}
             except Exception:
                 # 失敗したら既存のChromeをデバッグモードで再起動するか確認
-                print("\n⚠️ 既存のChromeに接続できませんでした。")
-                print("既存のChromeを閉じてデバッグモードで再起動しますか？")
-                print("⚠️ これにより、現在開いているすべてのChromeタブが閉じられます。")
+                logger.warning("\n⚠️ 既存のChromeに接続できませんでした。")
+                logger.warning("既存のChromeを閉じてデバッグモードで再起動しますか？")
+                logger.warning("⚠️ これにより、現在開いているすべてのChromeタブが閉じられます。")
                 result = input("続行しますか？ (y/n): ").lower().startswith('y')
                 
                 if result:
                     # ユーザーが確認したので、Chromeを終了して再起動
-                    print("既存のChromeインスタンスを終了しています...")
+                    logger.info("既存のChromeインスタンスを終了しています...")
                     if sys.platform == 'darwin':  # macOS
                         subprocess.run(['killall', 'Google Chrome'], stderr=subprocess.DEVNULL)
                     elif sys.platform == 'win32':  # Windows
@@ -89,10 +90,10 @@ async def initialize_custom_browser(use_own_browser=False, headless=False):
                     else:  # Linux and others
                         subprocess.run(['killall', 'chrome'], stderr=subprocess.DEVNULL)
                     
-                    print("Chromeが完全に終了するのを待っています...")
+                    logger.info("Chromeが完全に終了するのを待っています...")
                     await asyncio.sleep(2)
                 else:
-                    print("新しいChromeウィンドウの開始を試みます...")
+                    logger.info("新しいChromeウィンドウの開始を試みます...")
         
         # 新しいChromeインスタンスを起動（既存が閉じられたか、ユーザーが拒否した場合）
         cmd_args = [
@@ -105,11 +106,11 @@ async def initialize_custom_browser(use_own_browser=False, headless=False):
         # ユーザーデータディレクトリの追加
         if chrome_user_data and chrome_user_data.strip():
             cmd_args.append(f"--user-data-dir={chrome_user_data}")
-            print(f"📁 ユーザーデータディレクトリを使用: {chrome_user_data}")
+            logger.info(f"📁 ユーザーデータディレクトリを使用: {chrome_user_data}")
         
-        print(f"Chromeを起動しています: {' '.join(cmd_args)}")
+        logger.info(f"Chromeを起動しています: {' '.join(cmd_args)}")
         chrome_process = subprocess.Popen(cmd_args)
-        print(f"🔄 デバッグモードでChromeを起動しました (ポート {chrome_debugging_port})")
+        logger.info(f"🔄 デバッグモードでChromeを起動しました (ポート {chrome_debugging_port})")
         await asyncio.sleep(3)  # Chromeが起動する時間を確保
 
         # 接続を再試行
@@ -117,15 +118,15 @@ async def initialize_custom_browser(use_own_browser=False, headless=False):
             browser = await playwright.chromium.connect_over_cdp(
                 endpoint_url=f'http://localhost:{chrome_debugging_port}'
             )
-            print(f"✅ 起動したChromeインスタンスに接続しました (ポート {chrome_debugging_port})")
+            logger.info(f"✅ 起動したChromeインスタンスに接続しました (ポート {chrome_debugging_port})")
             global_browser = browser
             
             # Return the default context if available
             default_context = browser.contexts[0] if browser.contexts else None
             return {"browser": browser, "context": default_context, "playwright": playwright, "is_cdp": True}
         except Exception as e:
-            print(f"⚠️ 起動したChromeへの接続に失敗しました: {e}")
-            print("新しいブラウザインスタンスの起動にフォールバックします...")
+            logger.warning(f"⚠️ 起動したChromeへの接続に失敗しました: {e}")
+            logger.warning("新しいブラウザインスタンスの起動にフォールバックします...")
     
     # フォールバック: 通常のPlaywright管理ブラウザを使用
     browser = await playwright.chromium.launch(headless=headless)
@@ -137,21 +138,21 @@ async def cleanup_resources():
     global global_browser, global_playwright
     
     if global_browser:
-        print("🧹 ブラウザインスタンスをクリーンアップしています...")
+        logger.info("🧹 ブラウザインスタンスをクリーンアップしています...")
         try:
             # 明示的に接続を閉じないでリソースのみ解放
             # await global_browser.close()
             # これによりChromeウィンドウは開いたままになる
             await global_playwright.stop()
         except Exception as e:
-            print(f"クリーンアップ中にエラーが発生しました: {e}")
+            logger.error(f"クリーンアップ中にエラーが発生しました: {e}")
         
         global_browser = None
         global_playwright = None
 
 async def test_llm_response(json_file_path, use_own_browser=False, headless=False):
     """LLMレスポンスのJSONファイルを読み込んでPlaywrightで直接処理する"""
-    print(f"Settings: Use Own Browser={use_own_browser}, Headless={headless}")
+    logger.info(f"Settings: Use Own Browser={use_own_browser}, Headless={headless}")
     
     try:
         # JSONファイルを読み込み
@@ -160,30 +161,30 @@ async def test_llm_response(json_file_path, use_own_browser=False, headless=Fals
             # JSONをパース
             try:
                 response_data = json.loads(content)
-                print("パースされたJSON:")
-                print(json.dumps(response_data, indent=2))
+                logger.info("パースされたJSON:")
+                logger.info(json.dumps(response_data, indent=2))
             except json.JSONDecodeError as e:
                 # JSON形式でない場合、JSONブロックを探す
                 json_blocks = re.findall(r'```(?:json)?\s*(.*?)```', content, re.DOTALL)
                 if not json_blocks:
-                    print(f"JSONのパースに失敗し、JSONブロックも見つかりませんでした: {e}")
+                    logger.error(f"JSONのパースに失敗し、JSONブロックも見つかりませんでした: {e}")
                     return
                 # 最初のJSONブロックを処理
                 try:
                     response_data = json.loads(json_blocks[0].strip())
-                    print("JSONブロックからパースされたデータ:")
-                    print(json.dumps(response_data, indent=2))
+                    logger.info("JSONブロックからパースされたデータ:")
+                    logger.info(json.dumps(response_data, indent=2))
                 except json.JSONDecodeError as e2:
-                    print(f"JSONブロックのパースにも失敗しました: {e2}")
-                    print(f"問題のあるJSON文字列: {json_blocks[0][:100]}...")
+                    logger.error(f"JSONブロックのパースにも失敗しました: {e2}")
+                    logger.error(f"問題のあるJSON文字列: {json_blocks[0][:100]}...")
                     return
         
         # スクリプト名とパラメータを取得
         if "script_name" in response_data:
             script_name = response_data["script_name"]
             params = response_data.get("params", {})
-            print(f"\n実行するスクリプト: {script_name}")
-            print(f"パラメータ: {params}")
+            logger.info(f"\n実行するスクリプト: {script_name}")
+            logger.info(f"パラメータ: {params}")
             
             # Playwrightを使用して処理
             if script_name == "search-beatport" and "query" in params:
@@ -195,7 +196,7 @@ async def test_llm_response(json_file_path, use_own_browser=False, headless=Fals
                 if url:
                     await execute_goto_url(url, use_own_browser, headless)
                 else:
-                    print("URLが指定されていません")
+                    logger.error("URLが指定されていません")
             elif script_name == "form_input":
                 await execute_form_input(params, use_own_browser, headless)
             elif script_name == "extract_content":
@@ -203,22 +204,22 @@ async def test_llm_response(json_file_path, use_own_browser=False, headless=Fals
             elif script_name == "complex_sequence":
                 await execute_complex_sequence(params, use_own_browser, headless)
             else:
-                print(f"未対応のスクリプト名: {script_name}")
+                logger.error(f"未対応のスクリプト名: {script_name}")
         # コマンドが含まれている場合
         elif "commands" in response_data:
             await execute_commands(response_data["commands"], use_own_browser, headless)
         
         else:
-            print("\n認識可能なフォーマットではありません。")
-            print("JSONには 'script_name' または 'commands' が必要です。")
+            logger.error("\n認識可能なフォーマットではありません。")
+            logger.error("JSONには 'script_name' または 'commands' が必要です。")
     except Exception as e:
-        print(f"エラーが発生しました: {e}")
+        logger.error(f"エラーが発生しました: {e}")
 
 async def execute_commands(commands, use_own_browser=False, headless=False):
     """Execute a list of commands in the browser."""
-    print("\nコマンドを実行しています:")
+    logger.info("\nコマンドを実行しています:")
     for i, cmd in enumerate(commands, 1):
-        print(f" {i}. {cmd['action']}: {cmd.get('args', [])}")
+        logger.info(f" {i}. {cmd['action']}: {cmd.get('args', [])}")
 
     try:
         browser_data = await initialize_custom_browser(use_own_browser, headless)
@@ -227,7 +228,7 @@ async def execute_commands(commands, use_own_browser=False, headless=False):
         # Use the default context for CDP browsers to ensure new tabs appear in the existing window
         if browser_data.get("is_cdp", False):
             context = browser.contexts[0] if browser.contexts else await browser.new_context()
-            print("✅ 既存のChromeウィンドウに新しいタブを作成します")
+            logger.info("✅ 既存のChromeウィンドウに新しいタブを作成します")
         else:
             context = browser_data.get("context") or await browser.new_context()
         
@@ -238,27 +239,27 @@ async def execute_commands(commands, use_own_browser=False, headless=False):
         for cmd in commands:
             action = cmd["action"]
             args = cmd.get("args", [])
-            print(f"実行中: {action} {args}")
+            logger.info(f"実行中: {action} {args}")
 
             if action == "command" and args and args[0].startswith("http"):
                 await page.goto(args[0], wait_until="domcontentloaded")
                 await page.wait_for_load_state("networkidle")
-                print(f"ナビゲートしました: {args[0]}")
+                logger.info(f"ナビゲートしました: {args[0]}")
             elif action == "wait_for_navigation":
                 await page.wait_for_load_state("networkidle")
-                print("ナビゲーションが完了しました。")
+                logger.info("ナビゲーションが完了しました。")
             elif action == "fill_form" and len(args) >= 2:
                 selector, value = args[0], args[1]
                 await page.fill(selector, value)
-                print(f"フォーム '{selector}' に '{value}' を入力しました")
+                logger.info(f"フォーム '{selector}' に '{value}' を入力しました")
             elif action == "click" and args:
                 selector = args[0]
                 await page.click(selector)
-                print(f"要素 '{selector}' をクリックしました")
+                logger.info(f"要素 '{selector}' をクリックしました")
             elif action == "keyboard_press" and args:
                 key = args[0]
                 await page.keyboard.press(key)
-                print(f"キー '{key}' を押しました")
+                logger.info(f"キー '{key}' を押しました")
             elif action == "extract_content":
                 selectors = args if args else ["h1", "h2", "h3", "p"]
                 content = {}
@@ -266,10 +267,10 @@ async def execute_commands(commands, use_own_browser=False, headless=False):
                     elements = await page.query_selector_all(selector)
                     texts = [await element.text_content() for element in elements if (await element.text_content()).strip()]
                     content[selector] = texts
-                print("\n抽出されたコンテンツ:")
-                print(json.dumps(content, indent=2, ensure_ascii=False))
+                logger.info("\n抽出されたコンテンツ:")
+                logger.info(json.dumps(content, indent=2, ensure_ascii=False))
 
-            print("\nコマンドを実行しました。次のコマンドは3秒後...")
+            logger.info("\nコマンドを実行しました。次のコマンドは3秒後...")
             await asyncio.sleep(3)
 
         # タブを閉じるが、ブラウザは開いたままにする
@@ -280,7 +281,7 @@ async def execute_commands(commands, use_own_browser=False, headless=False):
             await browser_data["playwright"].stop()
 
     except Exception as e:
-        print(f"\nコマンド実行中にエラーが発生しました: {e}")
+        logger.error(f"\nコマンド実行中にエラーが発生しました: {e}")
 
 async def execute_google_search(query, use_own_browser=False, headless=False):
     """Googleで検索を実行"""
@@ -291,7 +292,7 @@ async def execute_google_search(query, use_own_browser=False, headless=False):
         # Use the default context for CDP browsers
         if browser_data.get("is_cdp", False):
             context = browser.contexts[0] if browser.contexts else await browser.new_context()
-            print("✅ 既存のChromeウィンドウに新しいタブを作成します")
+            logger.info("✅ 既存のChromeウィンドウに新しいタブを作成します")
         else:
             context = browser_data.get("context") or await browser.new_context()
         
@@ -303,9 +304,9 @@ async def execute_google_search(query, use_own_browser=False, headless=False):
         if search_input:
             await search_input.fill(query)
             await search_input.press("Enter")
-            print(f"検索クエリ「{query}」を入力しEnterを押しました")
+            logger.info(f"検索クエリ「{query}」を入力しEnterを押しました")
         await page.wait_for_load_state("networkidle")
-        print("検索結果ページが読み込まれました")
+        logger.info("検索結果ページが読み込まれました")
 
         # Close the tab but keep the browser open
         await page.close()
@@ -315,18 +316,18 @@ async def execute_google_search(query, use_own_browser=False, headless=False):
             await browser_data["playwright"].stop()
 
     except Exception as e:
-        print(f"\n実行エラー: {e}")
+        logger.error(f"\n実行エラー: {e}")
 
 async def execute_beatport_search(query, use_own_browser=False, headless=False):
     """Beatportで検索を実行"""
     try:
-        print(f"\nBeatportで「{query}」を検索します...")
+        logger.info(f"\nBeatportで「{query}」を検索します...")
         browser_data = await initialize_custom_browser(use_own_browser, headless)
         
         # Use the default context for CDP browsers
         if browser_data.get("is_cdp", False):
             context = browser_data["browser"].contexts[0] if browser_data["browser"].contexts else await browser_data["browser"].new_context()
-            print("✅ 既存のChromeウィンドウに新しいタブを作成します")
+            logger.info("✅ 既存のChromeウィンドウに新しいタブを作成します")
         else:
             context = browser_data["context"]
         
@@ -338,36 +339,36 @@ async def execute_beatport_search(query, use_own_browser=False, headless=False):
         # Cookieの承認をクリック
         try:
             await page.get_by_role("button", name="I Accept").click()
-            print("Cookieの承認ボタンをクリックしました")
+            logger.info("Cookieの承認ボタンをクリックしました")
         except Exception as e:
-            print(f"Cookieの承認ボタンの検索中にエラー: {e}")
+            logger.error(f"Cookieの承認ボタンの検索中にエラー: {e}")
         
         # 検索アイコンをクリック（サイトのレイアウトによる）
         try:
             # 検索ボタンを探す（サイトの構造に依存）
             search_button = page.get_by_test_id("header-search-input")
             await search_button.click()
-            print("検索ボタンをクリックしました")
+            logger.info("検索ボタンをクリックしました")
         except Exception as e:
-            print(f"検索ボタンの検索中にエラー: {e}")
-            print("検索フィールドを直接探します...")
+            logger.error(f"検索ボタンの検索中にエラー: {e}")
+            logger.info("検索フィールドを直接探します...")
         
         # 検索入力フィールドを探して入力
         try:
             search_input = page.get_by_test_id("header-search-input")
             await search_input.fill(query)
             await search_input.press("Enter")
-            print(f"検索クエリ「{query}」を入力しEnterを押しました")
+            logger.info(f"検索クエリ「{query}」を入力しEnterを押しました")
         except Exception as e:
-            print(f"検索フィールドの操作中にエラー: {e}")
+            logger.error(f"検索フィールドの操作中にエラー: {e}")
         
         # 検索結果が表示されるのを待つ
         await page.wait_for_load_state("networkidle")
-        print("検索結果ページが読み込まれました")
+        logger.info("検索結果ページが読み込まれました")
         
         # ユーザーに検査する時間を与える
-        print("\n実行完了。ブラウザは30秒後に閉じられます...")
-        print("(Ctrl+Cで早く終了できます)")
+        logger.info("\n実行完了。ブラウザは30秒後に閉じられます...")
+        logger.info("(Ctrl+Cで早く終了できます)")
         await asyncio.sleep(30)
         await context.close()
         if browser_data["browser"]:
@@ -375,24 +376,24 @@ async def execute_beatport_search(query, use_own_browser=False, headless=False):
         await browser_data["playwright"].stop()
     
     except ImportError:
-        print("\nPlaywrightがインストールされていません。")
-        print("以下のコマンドでインストールできます:")
-        print("pip install playwright")
-        print("playwright install")
+        logger.error("\nPlaywrightがインストールされていません。")
+        logger.error("以下のコマンドでインストールできます:")
+        logger.error("pip install playwright")
+        logger.error("playwright install")
     
     except Exception as e:
-        print(f"\n実行エラー: {e}")
+        logger.error(f"\n実行エラー: {e}")
 
 async def execute_goto_url(url, use_own_browser=False, headless=False):
     """指定したURLに移動"""
     try:
-        print(f"\n{url} に移動します...")
+        logger.info(f"\n{url} に移動します...")
         browser_data = await initialize_custom_browser(use_own_browser, headless)
         
         # Use the default context for CDP browsers
         if browser_data.get("is_cdp", False):
             context = browser_data["browser"].contexts[0] if browser_data["browser"].contexts else await browser_data["browser"].new_context()
-            print("✅ 既存のChromeウィンドウに新しいタブを作成します")
+            logger.info("✅ 既存のChromeウィンドウに新しいタブを作成します")
         else:
             context = browser_data["context"]
         
@@ -400,11 +401,11 @@ async def execute_goto_url(url, use_own_browser=False, headless=False):
         
         await page.goto(url)
         await page.wait_for_load_state("networkidle")
-        print(f"ページに移動しました: {url}")
+        logger.info(f"ページに移動しました: {url}")
         
         # ユーザーに検査する時間を与える
-        print("\n実行完了。ブラウザは30秒後に閉じられます...")
-        print("(Ctrl+Cで早く終了できます)")
+        logger.info("\n実行完了。ブラウザは30秒後に閉じられます...")
+        logger.info("(Ctrl+Cで早く終了できます)")
         await asyncio.sleep(30)
         await context.close()
         if browser_data["browser"]:
@@ -412,13 +413,13 @@ async def execute_goto_url(url, use_own_browser=False, headless=False):
         await browser_data["playwright"].stop()
     
     except ImportError:
-        print("\nPlaywrightがインストールされていません。")
-        print("以下のコマンドでインストールできます:")
-        print("pip install playwright")
-        print("playwright install")
+        logger.error("\nPlaywrightがインストールされていません。")
+        logger.error("以下のコマンドでインストールできます:")
+        logger.error("pip install playwright")
+        logger.error("playwright install")
     
     except Exception as e:
-        print(f"\n実行エラー: {e}")
+        logger.error(f"\n実行エラー: {e}")
 
 async def execute_form_input(params, use_own_browser=False, headless=False):
     """フォーム入力を実行"""
@@ -426,14 +427,14 @@ async def execute_form_input(params, use_own_browser=False, headless=False):
         url = params.get("url")
         inputs = params.get("inputs", [])
         submit_selector = params.get("submit_selector")
-        print(f"\n{url} のフォームに入力します...")
+        logger.info(f"\n{url} のフォームに入力します...")
         browser_data = await initialize_custom_browser(use_own_browser, headless)
         browser = browser_data["browser"]
         
         # Use the default context for CDP browsers
         if browser_data.get("is_cdp", False):
             context = browser.contexts[0] if browser.contexts else await browser.new_context()
-            print("✅ 既存のChromeウィンドウに新しいタブを作成します")
+            logger.info("✅ 既存のChromeウィンドウに新しいタブを作成します")
         else:
             context = browser_data.get("context") or await browser.new_context()
         
@@ -442,7 +443,7 @@ async def execute_form_input(params, use_own_browser=False, headless=False):
         
         await page.goto(url)
         await page.wait_for_load_state("networkidle")
-        print(f"ページに移動しました: {url}")
+        logger.info(f"ページに移動しました: {url}")
         
         # 各フィールドに入力
         for input_data in inputs:
@@ -450,43 +451,43 @@ async def execute_form_input(params, use_own_browser=False, headless=False):
             value = input_data.get("value")
             if selector and value:  # Fix: removed Japanese と
                 await page.fill(selector, value)
-                print(f"フィールド '{selector}' に '{value}' を入力しました")
+                logger.info(f"フィールド '{selector}' に '{value}' を入力しました")
         
         # 送信ボタンをクリック
         if submit_selector:
             await page.click(submit_selector)
-            print(f"送信ボタン '{submit_selector}' をクリックしました")
+            logger.info(f"送信ボタン '{submit_selector}' をクリックしました")
             await page.wait_for_load_state("networkidle")
         
         # ユーザーに検査する時間を与える
-        print("\n実行完了。30秒後にタブを閉じます...")
-        print("(Ctrl+Cで早く終了できます)")
+        logger.info("\n実行完了。30秒後にタブを閉じます...")
+        logger.info("(Ctrl+Cで早く終了できます)")
         await asyncio.sleep(30)
         
         # タブのみを閉じる
         await page.close()
     
     except ImportError:
-        print("\nPlaywrightがインストールされていません。")
-        print("以下のコマンドでインストールできます:")
-        print("pip install playwright")
-        print("playwright install")
+        logger.error("\nPlaywrightがインストールされていません。")
+        logger.error("以下のコマンドでインストールできます:")
+        logger.error("pip install playwright")
+        logger.error("playwright install")
     
     except Exception as e:
-        print(f"\n実行エラー: {e}")
+        logger.error(f"\n実行エラー: {e}")
 
 async def execute_extract_content(params, use_own_browser=False, headless=False):
     """コンテンツ抽出を実行"""
     try:
         url = params.get("url")
         selectors = params.get("selectors", ["h1", "h2", "h3", "p"])
-        print(f"\n{url} からコンテンツを抽出します...")
+        logger.info(f"\n{url} からコンテンツを抽出します...")
         browser_data = await initialize_custom_browser(use_own_browser, headless)
         
         # Use the default context for CDP browsers
         if browser_data.get("is_cdp", False):
             context = browser_data["browser"].contexts[0] if browser_data["browser"].contexts else await browser_data["browser"].new_context()
-            print("✅ 既存のChromeウィンドウに新しいタブを作成します")
+            logger.info("✅ 既存のChromeウィンドウに新しいタブを作成します")
         else:
             context = browser_data["context"]
         
@@ -494,7 +495,7 @@ async def execute_extract_content(params, use_own_browser=False, headless=False)
         
         await page.goto(url)
         await page.wait_for_load_state("networkidle")
-        print(f"ページに移動しました: {url}")
+        logger.info(f"ページに移動しました: {url}")
         
         # コンテンツを抽出
         content = {}
@@ -507,12 +508,12 @@ async def execute_extract_content(params, use_own_browser=False, headless=False)
                     texts.append(text.strip())
             content[selector] = texts
         
-        print("\n抽出されたコンテンツ:")
-        print(json.dumps(content, indent=2, ensure_ascii=False))
+        logger.info("\n抽出されたコンテンツ:")
+        logger.info(json.dumps(content, indent=2, ensure_ascii=False))
         
         # ユーザーに検査する時間を与える
-        print("\n実行完了。ブラウザは30秒後に閉じられます...")
-        print("(Ctrl+Cで早く終了できます)")
+        logger.info("\n実行完了。ブラウザは30秒後に閉じられます...")
+        logger.info("(Ctrl+Cで早く終了できます)")
         await asyncio.sleep(30)
         await context.close()
         if browser_data["browser"]:
@@ -520,13 +521,13 @@ async def execute_extract_content(params, use_own_browser=False, headless=False)
         await browser_data["playwright"].stop()
     
     except ImportError:
-        print("\nPlaywrightがインストールされていません。")
-        print("以下のコマンドでインストールできます:")
-        print("pip install playwright")
-        print("playwright install")
+        logger.error("\nPlaywrightがインストールされていません。")
+        logger.error("以下のコマンドでインストールできます:")
+        logger.error("pip install playwright")
+        logger.error("playwright install")
     
     except Exception as e:
-        print(f"\n実行エラー: {e}")
+        logger.error(f"\n実行エラー: {e}")
 
 async def execute_complex_sequence(params, use_own_browser=False, headless=False):
     """複雑なシーケンスを実行"""
@@ -534,14 +535,14 @@ async def execute_complex_sequence(params, use_own_browser=False, headless=False
         url = params.get("url")
         search_term = params.get("search_term")
         click_result_index = params.get("click_result_index", 0)
-        print(f"\n複雑なシーケンスを実行します... URL: {url}, 検索語: {search_term}")
+        logger.info(f"\n複雑なシーケンスを実行します... URL: {url}, 検索語: {search_term}")
         browser_data = await initialize_custom_browser(use_own_browser, headless)
         browser = browser_data["browser"]
         
         # Use the default context for CDP browsers
         if browser_data.get("is_cdp", False):
             context = browser.contexts[0] if browser.contexts else await browser.new_context()
-            print("✅ 既存のChromeウィンドウに新しいタブを作成します")
+            logger.info("✅ 既存のChromeウィンドウに新しいタブを作成します")
         else:
             context = browser_data.get("context") or await browser.new_context()
         
@@ -551,23 +552,23 @@ async def execute_complex_sequence(params, use_own_browser=False, headless=False
         # URLに移動
         await page.goto(url)
         await page.wait_for_load_state("networkidle")
-        print(f"ページに移動しました: {url}")
+        logger.info(f"ページに移動しました: {url}")
         
         # 検索フォームに入力
         await page.fill('input[name="q"]', search_term)
-        print(f"検索語 '{search_term}' を入力しました")
+        logger.info(f"検索語 '{search_term}' を入力しました")
         
         # Enterキーを押して検索
         await page.keyboard.press("Enter")
         await page.wait_for_load_state("networkidle")
-        print("検索を実行しました")
+        logger.info("検索を実行しました")
         
         # 検索結果をクリック
         result_links = await page.query_selector_all('#search a')
         if result_links and len(result_links) > click_result_index:  # Fix: removed Japanese と
             await result_links[click_result_index].click()
             await page.wait_for_load_state("networkidle")
-            print(f"検索結果 {click_result_index + 1} 番目をクリックしました")
+            logger.info(f"検索結果 {click_result_index + 1} 番目をクリックしました")
             
             # コンテンツを抽出
             content = {}
@@ -580,27 +581,27 @@ async def execute_complex_sequence(params, use_own_browser=False, headless=False
                         texts.append(text.strip())
                 content[selector] = texts
             
-            print("\n抽出されたコンテンツ:")
-            print(json.dumps(content, indent=2, ensure_ascii=False))
+            logger.info("\n抽出されたコンテンツ:")
+            logger.info(json.dumps(content, indent=2, ensure_ascii=False))
         else:
-            print(f"クリックする検索結果が見つかりませんでした")
+            logger.error(f"クリックする検索結果が見つかりませんでした")
         
         # ユーザーに検査する時間を与える
-        print("\n実行完了。30秒後にタブを閉じます...")
-        print("(Ctrl+Cで早く終了できます)")
+        logger.info("\n実行完了。30秒後にタブを閉じます...")
+        logger.info("(Ctrl+Cで早く終了できます)")
         await asyncio.sleep(30)
         
         # タブのみを閉じる
         await page.close()
     
     except ImportError:
-        print("\nPlaywrightがインストールされていません。")
-        print("以下のコマンドでインストールできます:")
-        print("pip install playwright")
-        print("playwright install")
+        logger.error("\nPlaywrightがインストールされていません。")
+        logger.error("以下のコマンドでインストールできます:")
+        logger.error("pip install playwright")
+        logger.error("playwright install")
     
     except Exception as e:
-        print(f"\n実行エラー: {e}")
+        logger.error(f"\n実行エラー: {e}")
 
 async def setup_element_indexer(page):
     """Setup element indexer with proper async handling."""
@@ -665,14 +666,14 @@ async def setup_element_indexer(page):
     }""")
 
 def show_help():
-    print("LLMレスポンスデバッガ")
-    print("使用法: python debug_bykilt.py <llm_response_file>")
-    print("\nオプション:")
-    print("  --list        利用可能なサンプルを一覧表示")
-    print("  --use-own-browser Use your own browser profile")
-    print("  --headless        Run browser in headless mode")
-    print("\n例:")
-    print("  python debug_bykilt.py external/samples/navigate_url.json")
+    logger.info("LLMレスポンスデバッガ")
+    logger.info("使用法: python debug_bykilt.py <llm_response_file>")
+    logger.info("\nオプション:")
+    logger.info("  --list        利用可能なサンプルを一覧表示")
+    logger.info("  --use-own-browser Use your own browser profile")
+    logger.info("  --headless        Run browser in headless mode")
+    logger.info("\n例:")
+    logger.info("  python debug_bykilt.py external/samples/navigate_url.json")
 
 def list_samples():
     samples_dir = Path("external/samples")
@@ -683,13 +684,13 @@ def list_samples():
                     data = json.load(f)
                     script_name = data.get("script_name", "unknown")
                     params = data.get("params", {})
-                    print(f"- {sample_file.name} ({script_name}): {params}")
+                    logger.info(f"- {sample_file.name} ({script_name}): {params}")
                 except json.JSONDecodeError:
-                    print(f"- {sample_file.name} (解析エラー)")
+                    logger.error(f"- {sample_file.name} (解析エラー)")
     else:
-        print(f"サンプルディレクトリが見つかりません: {samples_dir}")
-        print("ディレクトリを作成するには:")
-        print(f"  mkdir -p {samples_dir}")
+        logger.error(f"サンプルディレクトリが見つかりません: {samples_dir}")
+        logger.info("ディレクトリを作成するには:")
+        logger.info(f"  mkdir -p {samples_dir}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="LLM Response Debugger")
@@ -697,7 +698,12 @@ if __name__ == "__main__":
     parser.add_argument("--list", action="store_true", help="List available sample JSON files")
     parser.add_argument("--use-own-browser", action="store_true", help="Use your own browser profile")
     parser.add_argument("--headless", action="store_true", help="Run browser in headless mode")
+    parser.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+                        help="Set logging level")
     args = parser.parse_args()
+    
+    logger.set_level(args.log_level)
+    logger.info("Starting LLM Response Debugger")
     
     if args.list:
         list_samples()
@@ -711,7 +717,7 @@ if __name__ == "__main__":
         json_file_path = args.file
         asyncio.run(test_llm_response(json_file_path, args.use_own_browser, args.headless))
     except KeyboardInterrupt:
-        print("\n🛑 実行が中断されました。リソースをクリーンアップしています...")
+        logger.error("\n🛑 実行が中断されました。リソースをクリーンアップしています...")
     finally:
         # プログラム終了時にリソースをクリーンアップ
         try:
@@ -719,6 +725,6 @@ if __name__ == "__main__":
             asyncio.set_event_loop(loop)
             loop.run_until_complete(cleanup_resources())
             loop.close()
-            print("✅ リソースのクリーンアップが完了しました")
+            logger.info("✅ リソースのクリーンアップが完了しました")
         except Exception as e:
-            print(f"⚠️ クリーンアップ中にエラーが発生しました: {e}")
+            logger.error(f"⚠️ クリーンアップ中にエラーが発生しました: {e}")

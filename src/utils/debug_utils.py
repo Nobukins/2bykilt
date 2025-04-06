@@ -3,7 +3,8 @@ import re
 import asyncio
 from pathlib import Path
 from src.browser.browser_debug_manager import BrowserDebugManager
-# Removed circular import from here
+from src.utils.app_logger import logger
+from src.modules.execution_debug_engine import ExecutionDebugEngine
 
 class DebugUtils:
     """デバッグツールのユーティリティ機能を提供するクラス"""
@@ -26,73 +27,51 @@ class DebugUtils:
             tab_selection_strategy: タブ選択戦略 ("new_tab", "active_tab", "last_tab")。None の場合はコマンドの設定を使用
             keep_browser_open: ブラウザを開いたままにするか
         """
-        import json
-        from src.modules.execution_debug_engine import ExecutionDebugEngine
-        
         try:
             with open(json_file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
                 commands_data = json.loads(content)
             
-            # Debug initial state
-            print(f"🔍 DEBUG [test_llm_response]: JSON File Path: {json_file_path}")
-            print(f"🔍 DEBUG [test_llm_response]: use_own_browser = {use_own_browser}")
-            print(f"🔍 DEBUG [test_llm_response]: headless = {headless}")
-            print(f"🔍 DEBUG [test_llm_response]: session_id = {session_id}")
-            print(f"🔍 DEBUG [test_llm_response]: initial tab_selection_strategy param = {tab_selection_strategy}")
+            logger.debug(f"JSON File Path: {json_file_path}")
+            logger.debug(f"use_own_browser = {use_own_browser}")
+            logger.debug(f"headless = {headless}")
+            logger.debug(f"session_id = {session_id}")
+            logger.debug(f"initial tab_selection_strategy param = {tab_selection_strategy}")
             
-            # コマンドデータからtab_selection_strategyを取得（存在する場合）
             cmd_tab_strategy = commands_data.get('tab_selection_strategy')
             if cmd_tab_strategy:
-                print(f"🔍 DEBUG [test_llm_response]: Found strategy in commands: {cmd_tab_strategy}")
-                # パラメータが明示的に指定されていない場合は、コマンドの設定を使用
+                logger.debug(f"Found strategy in commands: {cmd_tab_strategy}")
                 if tab_selection_strategy is None:
                     tab_selection_strategy = cmd_tab_strategy
-                    print(f"🔍 DEBUG [test_llm_response]: Using command-specified strategy: {tab_selection_strategy}")
+                    logger.debug(f"Using command-specified strategy: {tab_selection_strategy}")
             
-            # それでもNoneの場合はデフォルト値を設定
             if tab_selection_strategy is None:
-                tab_selection_strategy = "new_tab"  # デフォルト値
-                print(f"🔍 DEBUG [test_llm_response]: Using default strategy: {tab_selection_strategy}")
+                tab_selection_strategy = "new_tab"
+                logger.debug(f"Using default strategy: {tab_selection_strategy}")
             
-            print(f"🔍 DEBUG [test_llm_response]: final tab_selection_strategy = {tab_selection_strategy}")
-            print(f"🔍 DEBUG [test_llm_response]: keep_browser_open = {keep_browser_open}")
-            print(f"🔍 DEBUG [test_llm_response]: initial commands_data.keep_tab_open = {commands_data.get('keep_tab_open', 'Not Set')}")
+            logger.debug(f"final tab_selection_strategy = {tab_selection_strategy}")
+            logger.debug(f"keep_browser_open = {keep_browser_open}")
             
-            # コマンドの存在確認
-            if 'commands' not in commands_data or not commands_data['commands']:
-                return {"status": "error", "message": "実行するコマンドがありません"}
+            # Fix: Create ExecutionDebugEngine without the browser_manager parameter
+            execution_engine = ExecutionDebugEngine()
             
-            # Keep tab open setting from JSON or function parameter
-            if keep_browser_open and "keep_tab_open" not in commands_data:
-                commands_data["keep_tab_open"] = True
-                print(f"🔍 DEBUG [test_llm_response]: Setting keep_tab_open to True due to keep_browser_open parameter")
+            if session_id:
+                logger.info(f"Using saved session ID: {session_id}")
             
-            # Debug after potential modification
-            print(f"🔍 DEBUG [test_llm_response]: final commands_data.keep_tab_open = {commands_data.get('keep_tab_open', 'Not Set')}")
-            
-            # ActionタイプとパラメータがJSONにあれば取得
-            action_name = commands_data.get('action_name', None)
-            params = commands_data.get('params', {})
-            
-            # ExecutionDebugEngineを使用してJSONコマンドを実行
-            engine = ExecutionDebugEngine()
-            await engine.execute_json_commands(
-                commands_data=commands_data,
-                use_own_browser=use_own_browser,
+            await execution_engine.execute_json_commands(
+                commands_data, 
+                use_own_browser=use_own_browser, 
                 headless=headless,
-                action_name=action_name,
-                params=params,
                 tab_selection=tab_selection_strategy
             )
             
-            return {"status": "success", "message": "コマンドを実行しました"}
-                
+            return True
+            
         except Exception as e:
-            print(f"Error processing JSON: {e}")
+            logger.error(f"Error in test_llm_response: {str(e)}")
             import traceback
-            traceback.print_exc()
-            return {"status": "error", "message": str(e)}
+            logger.error(traceback.format_exc())
+            return False
     
     async def setup_element_indexer(self, page):
         """ページ内の要素にインデックスを付けて視覚化"""
@@ -142,7 +121,7 @@ class DebugUtils:
                 }
             });
         }""")
-        print("✅ ページ内の要素にインデックスを付けました。")
+        logger.info("✅ ページ内の要素にインデックスを付けました。")
 
     def show_help(self):
         """ヘルプ情報を表示"""
@@ -177,7 +156,7 @@ class DebugUtils:
           "maintain_session": true  // セッションを維持するかどうか
         }
         """
-        print(help_text)
+        logger.info(help_text)
         return help_text
 
     def list_samples(self):
@@ -187,15 +166,15 @@ class DebugUtils:
 
         sample_dir = Path(__file__).parent.parent.parent / "samples" / "debug"
         if not sample_dir.exists():
-            print(f"❌ サンプルディレクトリが見つかりません: {sample_dir}")
+            logger.error(f"❌ サンプルディレクトリが見つかりません: {sample_dir}")
             return []
 
         sample_files = list(sample_dir.glob("*.json"))
         if not sample_files:
-            print("❌ サンプルJSONファイルが見つかりません。")
+            logger.error("❌ サンプルJSONファイルが見つかりません。")
             return []
 
-        print(f"📋 利用可能なサンプルJSONファイル ({len(sample_files)}個):")
+        logger.info(f"📋 利用可能なサンプルJSONファイル ({len(sample_files)}個):")
         samples_info = []
         for i, file_path in enumerate(sample_files):
             try:
@@ -210,28 +189,28 @@ class DebugUtils:
                     'description': description,
                     'commands_count': commands_count
                 })
-                print(f"\n{i+1}. {title}")
-                print(f"   📄 ファイル: {file_path.name}")
-                print(f"   📝 説明: {description}")
-                print(f"   🔢 コマンド数: {commands_count}")
+                logger.info(f"\n{i+1}. {title}")
+                logger.info(f"   📄 ファイル: {file_path.name}")
+                logger.info(f"   📝 説明: {description}")
+                logger.info(f"   🔢 コマンド数: {commands_count}")
             except Exception as e:
-                print(f"⚠️ {file_path.name} の読み込みに失敗: {e}")
+                logger.error(f"⚠️ {file_path.name} の読み込みに失敗: {e}")
         return samples_info
 
     def debug_command_structure(self, commands_data):
         """Debug helper to inspect command structure"""
-        print("\n🔍 DEBUG COMMAND STRUCTURE:")
-        print(f"Type: {type(commands_data)}")
-        print(f"Contents: {json.dumps(commands_data, indent=2, ensure_ascii=False)}")
+        logger.debug("\n🔍 DEBUG COMMAND STRUCTURE:")
+        logger.debug(f"Type: {type(commands_data)}")
+        logger.debug(f"Contents: {json.dumps(commands_data, indent=2, ensure_ascii=False)}")
         
         if isinstance(commands_data, dict):
             action_type = commands_data.get("action_type", "unknown")
             commands = commands_data.get("commands", [])
-            print(f"Action Type: {action_type}")
-            print(f"Commands Count: {len(commands)}")
+            logger.debug(f"Action Type: {action_type}")
+            logger.debug(f"Commands Count: {len(commands)}")
             
             if commands:
-                print("\nFirst Command Structure:")
-                print(json.dumps(commands[0], indent=2, ensure_ascii=False))
+                logger.debug("\nFirst Command Structure:")
+                logger.debug(json.dumps(commands[0], indent=2, ensure_ascii=False))
         
         return commands_data
