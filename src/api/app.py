@@ -13,6 +13,7 @@ from gradio.routes import mount_gradio_app
 import uvicorn
 import nest_asyncio
 import os
+from src.browser.browser_config import BrowserConfig
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -130,6 +131,15 @@ def create_fastapi_app(demo, args):
     
     return app
 
+browser_config = BrowserConfig()
+
+def log_browser_startup_message():
+    """Log startup message for the selected browser."""
+    settings = browser_config.get_browser_settings()
+    browser_name = "Edge" if settings["browser_type"] == "edge" else "Chrome"
+    logger.info(f"注意: {browser_name}の自動化を使用する場合は、以下のコマンドで{browser_name}を起動してください:")
+    logger.info(f"  open -a \"{browser_name}\" --args --remote-debugging-port={settings['debugging_port']}")
+
 def run_app(app, args):
     """Run the FastAPI application
     
@@ -146,14 +156,8 @@ def run_app(app, args):
     import platform
     logger.info(f"実行環境: Python {platform.python_version()} on {platform.system()} {platform.release()}")
     
-    # Chrome接続に関する注意事項
-    logger.info("注意: Chromeの自動化を使用する場合は、以下のコマンドでChromeを起動してください:")
-    if platform.system() == "Darwin":  # macOS
-        logger.info("  open -a \"Google Chrome\" --args --remote-debugging-port=9222")
-    elif platform.system() == "Windows":
-        logger.info("  start chrome --remote-debugging-port=9222")
-    else:  # Linux
-        logger.info("  google-chrome --remote-debugging-port=9222")
+    # ブラウザ接続に関する注意事項
+    log_browser_startup_message()
     
     # FastAPIの実行
     nest_asyncio.apply()
