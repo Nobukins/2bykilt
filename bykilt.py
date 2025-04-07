@@ -32,7 +32,7 @@ from src.config.action_translator import ActionTranslator
 from src.utils.debug_utils import DebugUtils
 from src.browser.browser_debug_manager import BrowserDebugManager
 from src.ui.command_helper import CommandHelper  # Import CommandHelper class
-from src.utils.playwright_codegen import run_playwright_codegen, save_as_action_file
+from src.utils.playwright_codegen import run_playwright_codegen, save_as_action_file  # Updated import
 from src.utils.log_ui import create_log_tab  # Import log UI integration
 
 import yaml  # 必要であればインストール: pip install pyyaml
@@ -484,98 +484,100 @@ def create_ui(config, theme_name="Ocean"):
                 refresh_button.click(fn=list_recordings, inputs=save_recording_path, outputs=recordings_gallery)
 
             with gr.TabItem("🎭 Playwright Codegen", id=8):
-                with gr.Group():
-                    gr.Markdown("### 🎮 ブラウザ操作スクリプト自動生成")
-                    gr.Markdown("URLを入力してPlaywright codegenを起動し、ブラウザ操作を記録。生成されたスクリプトはアクションファイルとして保存できます。")
-                    
-                    with gr.Row():
-                        url_input = gr.Textbox(
-                            label="ウェブサイトURL", 
-                            placeholder="記録するURLを入力（例: https://example.com）",
-                            info="Playwrightが記録を開始するURL"
-                        )
-                        run_codegen_button = gr.Button("▶️ Playwright Codegenを実行", variant="primary")
-                        
-                    codegen_status = gr.Markdown("")
-                    
-                    with gr.Accordion("生成されたスクリプト", open=True):
-                        generated_script = gr.Code(
-                            label="生成スクリプト",
-                            language="python",
-                            value="# ここに生成されたスクリプトが表示されます",
-                            interactive=False,
-                            lines=15
-                        )
-                        copy_script_button = gr.Button("📋 クリップボードにコピー")
-                        
-                    with gr.Accordion("アクションとして保存", open=True):
-                        with gr.Row():
-                            action_file_name = gr.Textbox(
-                                label="ファイル名", 
-                                placeholder="ファイル名を入力（.pyは不要）",
-                                info="保存するアクションファイル名（actionsフォルダに保存されます）"
-                            )
-                            action_command_name = gr.Textbox(
-                                label="コマンド名", 
-                                placeholder="llms.txtに登録するコマンド名（空白の場合はファイル名を使用）",
-                                info="llms.txtに登録するコマンド名（空白の場合はファイル名を使用）"
-                            )
-                        
-                        save_action_button = gr.Button("💾 アクションファイルとして保存", variant="primary")
-                        save_status = gr.Markdown("")
-                        
-                    # Playwright codegen操作のハンドラ関数
-                    def handle_run_codegen(url):
-                        if not url or url.strip() == "":
-                            return "⚠️ 有効なURLを入力してください", "# URLを入力してスクリプトを生成してください"
-                        
-                        success, result = run_playwright_codegen(url)
-                        if success:
-                            return "✅ スクリプトが正常に生成されました", result
-                        else:
-                            return f"❌ エラー: {result}", "# スクリプト生成中にエラーが発生しました"
-                    
-                    def handle_save_action(script, file_name, command_name):
-                        if not script or script.strip() == "# ここに生成されたスクリプトが表示されます" or script.strip() == "# URLを入力してスクリプトを生成してください" or script.strip() == "# スクリプト生成中にエラーが発生しました":
-                            return "⚠️ 保存する有効なスクリプトがありません。まずスクリプトを生成してください。"
-                        
-                        if not file_name or file_name.strip() == "":
-                            return "⚠️ 有効なファイル名を入力してください。"
-                        
-                        success, message = save_as_action_file(script, file_name, command_name)
-                        if success:
-                            return f"✅ {message}"
-                        else:
-                            return f"❌ {message}"
-                    
-                    # UI要素と関数の連携
-                    run_codegen_button.click(
-                        fn=handle_run_codegen,
-                        inputs=[url_input],
-                        outputs=[codegen_status, generated_script]
+                gr.Markdown("### 🎮 ブラウザ操作スクリプト自動生成")
+                gr.Markdown("URLを入力してPlaywright codegenを起動し、ブラウザ操作を記録。生成されたスクリプトはアクションファイルとして保存できます。")
+                
+                with gr.Row():
+                    url_input = gr.Textbox(
+                        label="ウェブサイトURL", 
+                        placeholder="記録するURLを入力（例: https://example.com）",
+                        info="Playwrightが記録を開始するURL"
                     )
-                    
-                    save_action_button.click(
-                        fn=handle_save_action,
-                        inputs=[generated_script, action_file_name, action_command_name],
-                        outputs=[save_status]
+                    browser_type = gr.Radio(
+                        label="ブラウザタイプ",
+                        choices=["Chrome", "Edge"],
+                        value="Chrome",
+                        info="記録に使用するブラウザを選択"
                     )
-                    
-                    # クリップボード機能のためのJavaScript
-                    copy_script_button.click(fn=None, js="""
-                    () => {
-                        const codeBlock = document.querySelector('.gradio-container [data-testid="code"] pre code');
-                        if (codeBlock) {
-                            const text = codeBlock.textContent;
-                            navigator.clipboard.writeText(text);
-                            const button = document.querySelector('button:contains("クリップボードにコピー")');
-                            const originalText = button.textContent;
-                            button.textContent = "✓ コピーしました！";
-                            setTimeout(() => { button.textContent = originalText; }, 2000);
-                        }
-                        return null;
-                    }
+                run_codegen_button = gr.Button("▶️ Playwright Codegenを実行", variant="primary")
+                
+                codegen_status = gr.Markdown("")
+                
+                with gr.Accordion("生成されたスクリプト", open=True):
+                    generated_script = gr.Code(
+                        label="生成スクリプト",
+                        language="python",
+                        value="# ここに生成されたスクリプトが表示されます",
+                        interactive=False,
+                        lines=15,
+                        elem_classes="codegen-script"  # クラス名を追加
+                    )
+                    # HTMLボタンでクリップボードコピー機能を実装
+                    gr.HTML("""
+                    <button onclick="navigator.clipboard.writeText(document.querySelector('.codegen-script textarea').value); alert('スクリプトをクリップボードにコピーしました');" 
+                            style="padding: 8px 12px; background: #0078d7; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px 0;">
+                        📋 クリップボードにコピー
+                    </button>
                     """)
+
+                with gr.Accordion("アクションとして保存", open=True):
+                    with gr.Row():
+                        action_file_name = gr.Textbox(
+                            label="ファイル名",
+                            placeholder="my_action",
+                            info="保存するファイル名を入力 (.py拡張子は不要)"
+                        )
+                        action_name = gr.Textbox(
+                            label="アクション名",
+                            placeholder="MyAction",
+                            info="アクションの表示名"
+                        )
+                    save_script_button = gr.Button("💾 アクションとして保存", variant="primary")
+                
+                def handle_run_codegen(url, browser_choice):
+                    if not url or url.strip() == "":
+                        return "⚠️ 有効なURLを入力してください", "# URLを入力してスクリプトを生成してください"
+                    
+                    # ブラウザタイプの判定
+                    browser_type = browser_choice.lower()
+                    
+                    # ユーザーデータディレクトリの存在確認
+                    if browser_type == "edge":
+                        user_data_dir = os.getenv("EDGE_USER_DATA", "")
+                        if not user_data_dir or not os.path.exists(user_data_dir):
+                            return "⚠️ Edgeのユーザーデータディレクトリが見つかりません。自動検出を試みます...", "# ブラウザ設定確認中..."
+                    else:  # Chrome
+                        user_data_dir = os.getenv("CHROME_USER_DATA", "")
+                        if not user_data_dir or not os.path.exists(user_data_dir):
+                            return "⚠️ Chromeのユーザーデータディレクトリが見つかりません。自動検出を試みます...", "# ブラウザ設定確認中..."
+                    
+                    # Playwright codegen実行
+                    from src.utils.playwright_codegen import run_playwright_codegen
+                    success, result = run_playwright_codegen(url, browser_type)
+                    if success:
+                        return f"✅ {browser_choice}を使用してスクリプトが正常に生成されました", result
+                    else:
+                        return f"❌ エラー: {result}", "# スクリプト生成中にエラーが発生しました"
+                
+                def handle_save_script(script_content, file_name, action_name):
+                    from src.utils.playwright_codegen import save_as_action_file
+                    success, message = save_as_action_file(script_content, file_name, action_name)
+                    if success:
+                        return f"✅ {message}"
+                    else:
+                        return f"❌ {message}"
+                
+                run_codegen_button.click(
+                    fn=handle_run_codegen,
+                    inputs=[url_input, browser_type],
+                    outputs=[codegen_status, generated_script]
+                )
+
+                save_script_button.click(
+                    fn=handle_save_script,
+                    inputs=[generated_script, action_file_name, action_name],
+                    outputs=[codegen_status]
+                )
 
             with gr.TabItem("📁 Configuration", id=9):
                 with gr.Group():
