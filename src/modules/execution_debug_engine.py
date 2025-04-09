@@ -189,30 +189,29 @@ class ExecutionDebugEngine:
             logger.error(traceback.format_exc())
 
     async def execute_extract_content(self, params, use_own_browser=False, headless=False, 
-                                     save_to_file=False, file_path=None, format_type='json',
-                                     maintain_browser_session=False, tab_selection_strategy="new_tab"):
+                                       save_to_file=False, file_path=None, format_type='json',
+                                       maintain_browser_session=False, tab_selection_strategy="new_tab"):
         """コンテンツ抽出を実行"""
         try:
             logger.info(f"コンテンツ抽出を実行しています: {params}")
             
-            # セッション管理の準備
-            session_id = self.browser_manager.session_manager.active_session_id if maintain_browser_session else None
-            
-            # ブラウザセッションを初期化（unlock-futureと同じ方法で）
-            browser_result = await self.browser_manager.initialize_with_session(
-                session_id=session_id,
-                use_own_browser=use_own_browser,
-                headless=headless
+            # Browser Settingsと一貫したブラウザ初期化方法を使用
+            browser_data = await self.browser_manager.initialize_custom_browser(
+                use_own_browser=use_own_browser, 
+                headless=headless,
+                tab_selection_strategy=tab_selection_strategy
             )
             
-            if browser_result.get("status") != "success":
-                logger.error("ブラウザの初期化に失敗しました")
-                return {"error": "ブラウザの初期化に失敗しました"}
+            if not browser_data or "status" in browser_data and browser_data["status"] == "error":
+                error_msg = browser_data.get("message", "不明なエラーでブラウザを初期化できませんでした") if browser_data else "ブラウザデータが返されませんでした"
+                logger.error(f"ブラウザ初期化エラー: {error_msg}")
+                return {"error": error_msg}
                 
-            # 新しいセッションIDを取得
-            session_id = browser_result.get("session_id")
-            browser = browser_result.get("browser")
-            
+            browser = browser_data.get("browser")
+            if not browser:
+                logger.error("ブラウザインスタンスが初期化されていません")
+                return {"error": "ブラウザインスタンスが初期化されていません"}
+                
             # タブ選択戦略に基づいてタブを取得
             context, page, is_new = await self.browser_manager.get_or_create_tab(tab_selection_strategy)
             if is_new:
@@ -221,12 +220,13 @@ class ExecutionDebugEngine:
                 logger.info("既存のタブを再利用します")
             
             # URLに移動
+            logger.info(f"URLに移動します: {params['url']}")
             await page.goto(params["url"], wait_until="domcontentloaded")
             try:
                 # ネットワークアイドル待ち（タイムアウト設定）
                 await page.wait_for_load_state("networkidle", timeout=10000)
             except Exception as e:
-                logger.warning(f"ネットワークアイドル状態に達しませんでしたが、ページは使用可能です: {e}")
+                logger.warning(f"ネットワークアイドル状態に達しませんでしたが、続行します: {e}")
             
             # 結果を格納する辞書
             content = {}
@@ -278,29 +278,29 @@ class ExecutionDebugEngine:
                     "selectors": params["selectors"]
                 }
             }
-            
-            # 最後に抽出したコンテンツを保存（後で再利用できるように）
+
+            # 将来の参照用にデータを保存
             self.last_extracted_content = extracted_data
             
             # データを保存（リクエストされた場合）
             if save_to_file:
                 save_result = await self.save_extracted_content(file_path, format_type)
                 extracted_data["saved"] = save_result
-                
+            
             logger.info("抽出されたコンテンツ:")
             logger.info(json.dumps(content, indent=2, ensure_ascii=False))
             
-            # タブ管理（セッション維持に基づく）
+            # 維持フラグがなければタブを閉じる
             if not maintain_browser_session:
                 await page.close()
-                # セッションを維持しない場合は、ブラウザをクリーンアップ
-                await self.browser_manager.cleanup_resources(session_id=session_id, maintain_session=False)
-            else:
-                logger.info("ブラウザセッションを維持します")
-            
+                if not browser_data.get("is_cdp", False) and "playwright" in browser_data:
+                    await browser_data["playwright"].stop()
+                
             return extracted_data
+            
         except Exception as e:
             logger.error(f"コンテンツ抽出中にエラーが発生しました: {e}")
+            import traceback
             logger.error(traceback.format_exc())
             return {"error": str(e), "traceback": traceback.format_exc()}
 
