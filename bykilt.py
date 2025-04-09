@@ -617,14 +617,14 @@ def create_ui(config, theme_name="Ocean"):
                 gr.Markdown("### 🔍 ページからデータを抽出")
                 
                 with gr.Row():
-                    with gr.Column():
+                    with gr.Column(scale=1):
                         extraction_url = gr.Textbox(
                             label="抽出先URL",
                             placeholder="https://example.com",
                             lines=1
                         )
                         
-                        with gr.Accordion("抽出セレクターの詳細設定", open=False):
+                        with gr.Accordion("抽出セレクター設定", open=True):
                             selector_type = gr.Radio(
                                 ["シンプル", "詳細"],
                                 value="シンプル",
@@ -648,7 +648,27 @@ def create_ui(config, theme_name="Ocean"):
 }''',
                                 visible=False
                             )
-                            
+                        
+                        with gr.Row():
+                            use_extract_browser = gr.Checkbox(
+                                label="既存のブラウザを使用", 
+                                value=True
+                            )
+                            extract_headless = gr.Checkbox(
+                                label="ヘッドレスモード", 
+                                value=False
+                            )
+                            maintain_extract_session = gr.Checkbox(
+                                label="ブラウザセッションを維持", 
+                                value=True
+                            )
+                        
+                        extract_tab_strategy = gr.Radio(
+                            ["new_tab", "active_tab", "last_tab"], 
+                            label="タブ選択戦略", 
+                            value="new_tab"
+                        )
+                        
                         with gr.Row():
                             extract_button = gr.Button("データを抽出", variant="primary")
                             save_format = gr.Dropdown(
@@ -665,25 +685,27 @@ def create_ui(config, theme_name="Ocean"):
                         
                         save_button = gr.Button("データを保存", variant="secondary")
                         
-                    with gr.Column():
-                        extraction_result = gr.JSON(label="抽出結果")
+                    with gr.Column(scale=2):
+                        extraction_result = gr.JSON(
+                            label="抽出結果",
+                            elem_id="extraction_result"
+                        )
                         extraction_status = gr.Markdown("結果はここに表示されます")
-                
-                # セレクタータイプの切り替え関数
-                def toggle_selector_visibility(selector_type):
-                    if selector_type == "シンプル":
-                        return gr.update(visible=True), gr.update(visible=False)
-                    else:
-                        return gr.update(visible=False), gr.update(visible=True)
-                
+                        
+                # セレクタータイプの切り替え
                 selector_type.change(
-                    fn=toggle_selector_visibility,
+                    fn=lambda type_val: (
+                        gr.update(visible=(type_val == "シンプル")), 
+                        gr.update(visible=(type_val == "詳細"))
+                    ),
                     inputs=[selector_type],
                     outputs=[simple_selectors, advanced_selectors]
                 )
                 
                 # データ抽出関数
-                async def run_extraction(url, selector_type, simple_selectors, advanced_selectors, save_format):
+                async def run_extraction(url, selector_type, simple_selectors, advanced_selectors, 
+                                        use_own_browser, headless, maintain_session, tab_selection,
+                                        save_format):
                     if not url:
                         return None, "URLを入力してください"
                     
@@ -697,7 +719,6 @@ def create_ui(config, theme_name="Ocean"):
                                 selectors = ["h1", "h2", "h3", "p"]
                         else:
                             try:
-                                import json
                                 selectors = json.loads(advanced_selectors)
                             except json.JSONDecodeError:
                                 return None, "JSONセレクターの形式が正しくありません"
@@ -709,12 +730,16 @@ def create_ui(config, theme_name="Ocean"):
                         
                         result = await engine.execute_extract_content(
                             params,
-                            use_own_browser=False,
-                            headless=False,
-                            save_to_file=False
+                            use_own_browser=use_own_browser,
+                            headless=headless,
+                            maintain_browser_session=maintain_session,
+                            tab_selection_strategy=tab_selection
                         )
                         
-                        return result, f"抽出が完了しました。{len(result.get('content', {}))}項目のデータを取得しました。"
+                        if "error" in result:
+                            return result, f"抽出中にエラーが発生しました: {result['error']}"
+                            
+                        return result, f"✅ 抽出が完了しました。{len(result.get('content', {}))}項目のデータを取得しました。"
                     
                     except Exception as e:
                         import traceback
@@ -737,10 +762,10 @@ def create_ui(config, theme_name="Ocean"):
                             format_type=save_format
                         )
                         
-                        if save_result.get("success", False):
-                            return f"✅ {save_result.get('message', '保存が完了しました')}"
+                        if save_result.get("success"):
+                            return f"✅ {save_result.get('message')}"
                         else:
-                            return f"❌ {save_result.get('message', '保存に失敗しました')}"
+                            return f"❌ {save_result.get('message')}"
                     
                     except Exception as e:
                         import traceback
@@ -750,7 +775,17 @@ def create_ui(config, theme_name="Ocean"):
                 # ボタンイベントの接続
                 extract_button.click(
                     fn=run_extraction,
-                    inputs=[extraction_url, selector_type, simple_selectors, advanced_selectors, save_format],
+                    inputs=[
+                        extraction_url, 
+                        selector_type, 
+                        simple_selectors, 
+                        advanced_selectors,
+                        use_extract_browser,
+                        extract_headless,
+                        maintain_extract_session,
+                        extract_tab_strategy,
+                        save_format
+                    ],
                     outputs=[extraction_result, extraction_status]
                 )
                 
