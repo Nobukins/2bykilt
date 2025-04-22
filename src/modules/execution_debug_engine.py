@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+from datetime import datetime
 from src.browser.browser_debug_manager import BrowserDebugManager
 from src.modules.yaml_parser import load_yaml_from_file, InstructionLoader
 from src.utils.app_logger import logger
@@ -187,30 +188,164 @@ class ExecutionDebugEngine:
             import traceback
             logger.error(traceback.format_exc())
 
-    async def execute_extract_content(self, params, use_own_browser=False, headless=False):
+    async def execute_extract_content(self, params, use_own_browser=False, headless=False, 
+                                       save_to_file=False, file_path=None, format_type='json',
+                                       maintain_browser_session=False, tab_selection_strategy="new_tab"):
         """コンテンツ抽出を実行"""
         try:
             logger.info(f"コンテンツ抽出を実行しています: {params}")
-            browser_data = await self.browser_manager.initialize_custom_browser(use_own_browser, headless)
-            browser = browser_data["browser"]
-            context = browser.contexts[0] if browser.contexts else await browser.new_context()
-            page = await context.new_page()
+            
+            # Browser Settingsと一貫したブラウザ初期化方法を使用
+            browser_data = await self.browser_manager.initialize_custom_browser(
+                use_own_browser=use_own_browser, 
+                headless=headless,
+                tab_selection_strategy=tab_selection_strategy
+            )
+            
+            if not browser_data or "status" in browser_data and browser_data["status"] == "error":
+                error_msg = browser_data.get("message", "不明なエラーでブラウザを初期化できませんでした") if browser_data else "ブラウザデータが返されませんでした"
+                logger.error(f"ブラウザ初期化エラー: {error_msg}")
+                return {"error": error_msg}
+                
+            browser = browser_data.get("browser")
+            if not browser:
+                logger.error("ブラウザインスタンスが初期化されていません")
+                return {"error": "ブラウザインスタンスが初期化されていません"}
+                
+            # タブ選択戦略に基づいてタブを取得
+            context, page, is_new = await self.browser_manager.get_or_create_tab(tab_selection_strategy)
+            if is_new:
+                logger.info("新しいタブを作成しました")
+            else:
+                logger.info("既存のタブを再利用します")
+            
+            # URLに移動
+            logger.info(f"URLに移動します: {params['url']}")
             await page.goto(params["url"], wait_until="domcontentloaded")
-            await page.wait_for_load_state("networkidle")
+            try:
+                # ネットワークアイドル待ち（タイムアウト設定）
+                await page.wait_for_load_state("networkidle", timeout=10000)
+            except Exception as e:
+                logger.warning(f"ネットワークアイドル状態に達しませんでしたが、続行します: {e}")
+            
+            # 結果を格納する辞書
             content = {}
-            for selector in params["selectors"]:
+            extracted_data = {}
+            
+            # セレクター情報に基づいてデータを抽出
+            if isinstance(params["selectors"], list):
+                for selector in params["selectors"]:
+                    elements = await page.query_selector_all(selector)
+                    texts = [await element.text_content() for element in elements if (await element.text_content()).strip()]
+                    content[selector] = texts
+                    
+            elif isinstance(params["selectors"], dict):
+                for key, selector_info in params["selectors"].items():
+                    selector = selector_info if isinstance(selector_info, str) else selector_info.get("selector")
+                    extraction_type = "text" if isinstance(selector_info, str) else selector_info.get("type", "text")
+                    attribute = None if isinstance(selector_info, str) else selector_info.get("attribute")
+                    
+                    try:
+                        locator = page.locator(selector)
+                        count = await locator.count()
+                        
+                        if count > 0:
+                            if extraction_type == "text":
+                                content[key] = await locator.text_content() if count == 1 else [await locator.nth(i).text_content() for i in range(count)]
+                            elif extraction_type == "inner_text":
+                                content[key] = await locator.inner_text() if count == 1 else [await locator.nth(i).inner_text() for i in range(count)]
+                            elif extraction_type == "html":
+                                content[key] = await locator.inner_html() if count == 1 else [await locator.nth(i).inner_html() for i in range(count)]
+                            elif extraction_type == "attribute" and attribute:
+                                content[key] = await locator.get_attribute(attribute) if count == 1 else [await locator.nth(i).get_attribute(attribute) for i in range(count)]
+                            elif extraction_type == "count":
+                                content[key] = count
+                    except Exception as e:
+                        logger.error(f"セレクター '{selector}' の抽出中にエラーが発生: {e}")
+                        content[key] = f"エラー: {str(e)}"
+            else:
+                selector = params["selectors"]
                 elements = await page.query_selector_all(selector)
                 texts = [await element.text_content() for element in elements if (await element.text_content()).strip()]
                 content[selector] = texts
+
+            # メタデータを追加
+            extracted_data = {
+                "content": content,
+                "metadata": {
+                    "url": params["url"],
+                    "timestamp": datetime.now().isoformat(),
+                    "selectors": params["selectors"]
+                }
+            }
+
+            # 将来の参照用にデータを保存
+            self.last_extracted_content = extracted_data
+            
+            # データを保存（リクエストされた場合）
+            if save_to_file:
+                save_result = await self.save_extracted_content(file_path, format_type)
+                extracted_data["saved"] = save_result
+            
             logger.info("抽出されたコンテンツ:")
             logger.info(json.dumps(content, indent=2, ensure_ascii=False))
-            await page.close()
-            if not browser_data.get("is_cdp", False):
-                await browser_data["playwright"].stop()
+            
+            # 維持フラグがなければタブを閉じる
+            if not maintain_browser_session:
+                await page.close()
+                if not browser_data.get("is_cdp", False) and "playwright" in browser_data:
+                    await browser_data["playwright"].stop()
+                
+            return extracted_data
+            
         except Exception as e:
             logger.error(f"コンテンツ抽出中にエラーが発生しました: {e}")
             import traceback
             logger.error(traceback.format_exc())
+            return {"error": str(e), "traceback": traceback.format_exc()}
+
+    async def save_extracted_content(self, file_path=None, format_type='json'):
+        """最後に抽出したコンテンツをファイルに保存する"""
+        if not hasattr(self, 'last_extracted_content') or not self.last_extracted_content:
+            logger.error("保存するコンテンツがありません。先に extract_content を実行してください。")
+            return {"success": False, "message": "保存するコンテンツがありません"}
+        
+        try:
+            save_path = file_path or self._generate_default_save_path(format_type)
+            self._save_extracted_data_to_file(self.last_extracted_content, save_path, format_type)
+            logger.info(f"データを保存しました: {save_path}")
+            return {"success": True, "message": f"データを保存しました: {save_path}", "file_path": save_path}
+        except Exception as e:
+            logger.error(f"データ保存中にエラーが発生しました: {e}")
+            logger.error(traceback.format_exc())
+            return {"success": False, "message": f"エラー: {str(e)}"}
+
+    def _generate_default_save_path(self, format_type):
+        """デフォルトの保存パスを生成"""
+        data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data')
+        os.makedirs(data_dir, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        return os.path.join(data_dir, f"extracted_content_{timestamp}.{format_type}")
+
+    def _save_extracted_data_to_file(self, data, file_path, format_type):
+        """データを指定された形式でファイルに保存"""
+        if file_path.endswith('.json') or format_type == 'json':
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+        elif file_path.endswith('.csv') or format_type == 'csv':
+            import csv
+            content = data.get("content", {})
+            flattened_data = {}
+            for key, value in content.items():
+                if isinstance(value, list):
+                    for i, item in enumerate(value):
+                        flattened_data[f"{key}_{i+1}"] = str(item)
+                else:
+                    flattened_data[key] = str(value)
+            with open(file_path, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                writer.writerow(flattened_data.keys())
+                writer.writerow(flattened_data.values())
 
     async def execute_complex_sequence(self, params, use_own_browser=False, headless=False):
         """複雑なシーケンスを実行"""

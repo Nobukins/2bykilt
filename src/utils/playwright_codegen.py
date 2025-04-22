@@ -1,4 +1,5 @@
 import os
+import sys
 import subprocess
 import tempfile
 import logging
@@ -7,21 +8,77 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-def run_playwright_codegen(url):
+def get_default_edge_user_data():
+    """Get the default Edge user data directory based on the OS"""
+    if sys.platform == 'win32':  # Windows
+        return os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\Edge\User Data")
+    elif sys.platform == 'darwin':  # macOS
+        return os.path.expanduser("~/Library/Application Support/Microsoft Edge")
+    else:  # Linux
+        return os.path.expanduser("~/.config/microsoft-edge")
+
+def detect_browser_paths():
+    """ブラウザパスとユーザーデータディレクトリを検出"""
+    # Edge検出
+    edge_path = os.getenv("EDGE_PATH", "")
+    edge_user_data = os.getenv("EDGE_USER_DATA", "")
+    
+    if not edge_path:
+        if sys.platform == 'win32':  # Windows
+            possible_paths = [
+                r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+                r"C:\Program Files\Microsoft\Edge\Application\msedge.exe"
+            ]
+        elif sys.platform == 'darwin':  # macOS
+            possible_paths = [
+                "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"
+            ]
+        else:  # Linux
+            possible_paths = [
+                "/usr/bin/microsoft-edge",
+                "/usr/bin/microsoft-edge-stable"
+            ]
+        for path in possible_paths:
+            if os.path.exists(path):
+                edge_path = path
+                os.environ["EDGE_PATH"] = path
+                logger.info(f"✅ Edgeパスを検出: {path}")
+                break
+    
+    if not edge_user_data:
+        default_edge_data = get_default_edge_user_data()
+        if os.path.exists(default_edge_data):
+            edge_user_data = default_edge_data
+            os.environ["EDGE_USER_DATA"] = default_edge_data
+            logger.info(f"✅ Edgeユーザーデータディレクトリを検出: {default_edge_data}")
+    
+    return {
+        "edge_path": edge_path,
+        "edge_user_data": edge_user_data
+    }
+
+def run_playwright_codegen(url, browser_type='chrome'):
     """
-    Run playwright codegen for the given URL and capture the generated script.
+    指定URLに対してplaywright codegenを実行し、生成スクリプトを取得。
+    browser_typeは 'chrome' または 'edge'
+    """
+    if browser_type.lower() == 'edge':
+        return run_edge_codegen(url)
+    else:
+        return run_normal_codegen(url)
+
+def run_normal_codegen(url):
+    """
+    通常のPlaywright codegenコマンドを実行（Chromeなど）
     """
     try:
         fd, temp_path = tempfile.mkstemp(suffix='.py')
         os.close(fd)
         
-        cmd = f"playwright codegen {url} --target python -o {temp_path}"
-        process = subprocess.Popen(
-            cmd,
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
-        )
+        cmd = ["playwright", "codegen", url, "--target", "python", "-o", temp_path]
+        logger.info(f"実行するコマンド: {' '.join(cmd)}")
+        
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = process.communicate(timeout=300)
         
         if process.returncode == 0 and os.path.exists(temp_path):
@@ -31,14 +88,89 @@ def run_playwright_codegen(url):
             os.unlink(temp_path)
             return True, script_content
         else:
-            error_msg = stderr.decode('utf-8') if stderr else "Unknown error"
-            return False, f"Error running playwright codegen: {error_msg}"
+            error_msg = stderr.decode('utf-8') if stderr else "不明なエラー"
+            return False, f"Playwright codegen実行エラー: {error_msg}"
     except subprocess.TimeoutExpired:
         process.kill()
-        return False, "Playwright codegen timed out after 5 minutes"
+        return False, "Playwright codegenが5分後にタイムアウトしました"
     except Exception as e:
-        logger.error(f"Failed to run playwright codegen: {str(e)}")
-        return False, f"Failed to run playwright codegen: {str(e)}"
+        logger.error(f"Playwright codegen実行失敗: {str(e)}")
+        return False, f"Playwright codegen実行失敗: {str(e)}"
+
+def run_edge_codegen(url):
+    """
+    EdgeブラウザでPlaywright codegenを実行
+    """
+    try:
+        # 一時ファイルを作成して出力先にする
+        fd, temp_path = tempfile.mkstemp(suffix='.py')
+        os.close(fd)
+        
+        # ブラウザパスとユーザーデータディレクトリを検出
+        browser_paths = detect_browser_paths()
+        user_data_dir = browser_paths.get("edge_user_data", "")
+        
+        # コマンドを構築
+        cmd = [
+            "playwright", "codegen",
+            url,
+            "--target", "python",
+            "-o", temp_path,
+            "--browser", "chromium",  # chromiumを指定
+            "--channel", "msedge"     # チャネルとしてmsedgeを指定
+        ]
+        
+        # 環境変数を設定
+        env = os.environ.copy()
+        if user_data_dir and os.path.exists(user_data_dir):
+            env["PLAYWRIGHT_BROWSERS_PATH"] = "0"  # ブラウザをダウンロードさせない
+            env["PLAYWRIGHT_MSEDGE_USER_DATA_DIR"] = user_data_dir
+            logger.info(f"Edgeユーザーデータディレクトリ: {user_data_dir}")
+        
+        logger.info(f"実行するコマンド: {' '.join(cmd)}")
+        logger.info(f"環境変数PLAYWRIGHT_MSEDGE_USER_DATA_DIR設定済み: {user_data_dir}")
+        
+        # コマンド実行
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+        
+        # ユーザーが操作を終えるのを待つ
+        stdout, stderr = process.communicate(timeout=600)  # 10分のタイムアウト
+        
+        # 結果確認
+        if process.returncode == 0 and os.path.exists(temp_path) and os.path.getsize(temp_path) > 0:
+            with open(temp_path, 'r') as f:
+                script_content = f.read()
+            script_content = convert_to_action_format(script_content)
+            os.unlink(temp_path)
+            return True, script_content
+        else:
+            # エラー内容を詳細に表示
+            logger.error(f"Playwright codegen終了コード: {process.returncode}")
+            logger.error(f"標準出力: {stdout.decode('utf-8', errors='replace')}")
+            logger.error(f"標準エラー: {stderr.decode('utf-8', errors='replace')}")
+            
+            if os.path.exists(temp_path):
+                if os.path.getsize(temp_path) == 0:
+                    return False, "操作記録ファイルが空です。ブラウザで何か操作を行ってください。"
+                else:
+                    # ファイルは存在するが、他の理由でエラーが起きた場合
+                    with open(temp_path, 'r') as f:
+                        script_content = f.read()
+                    script_content = convert_to_action_format(script_content)
+                    os.unlink(temp_path)
+                    return True, script_content
+            
+            error_msg = stderr.decode('utf-8', errors='replace') if stderr else "不明なエラー"
+            return False, f"Playwright codegen実行エラー: {error_msg}"
+            
+    except subprocess.TimeoutExpired:
+        process.kill()
+        return False, "Playwright codegenのタイムアウト（10分）。長時間の操作は分割して記録してください。"
+    except Exception as e:
+        logger.error(f"Playwright codegen実行エラー: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return False, f"Playwright codegen実行エラー: {str(e)}"
 
 def convert_to_action_format(script_content):
     """

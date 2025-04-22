@@ -137,12 +137,23 @@ class BrowserDebugManager:
                             await asyncio.sleep(3)
                     
                     try:
+                        # Playwrightインスタンスが正しく初期化されているか確認
+                        if self.global_playwright is None:
+                            logger.error("⚠️ Playwrightインスタンスが初期化されていません")
+                            from playwright.async_api import async_playwright
+                            self.global_playwright = await async_playwright().start()
+                            logger.info("✅ Playwrightインスタンスを再初期化しました")
+                        
                         # EdgeにはPlaywrightのchromiumドライバーを使用
-                        browser = await self.global_playwright.chromium.connect_over_cdp(f"http://localhost:{browser_debug_port}")
-                        self.global_browser = browser
-                        self.browser_type = "edge"
-                        logger.info("✅ 起動したEdgeインスタンスに接続しました")
-                        return {"browser": browser, "playwright": playwright, "status": "success"}
+                        if hasattr(self.global_playwright, 'chromium'):
+                            browser = await self.global_playwright.chromium.connect_over_cdp(f"http://localhost:{browser_debug_port}")
+                            self.global_browser = browser
+                            self.browser_type = "edge"
+                            logger.info("✅ 起動したEdgeインスタンスに接続しました")
+                            return {"browser": browser, "playwright": self.global_playwright, "status": "success"}
+                        else:
+                            logger.error("⚠️ Playwrightインスタンスにchromiumドライバーが見つかりません")
+                            return {"status": "error", "message": "Playwrightインスタンスにchromiumドライバーが見つかりません"}
                     except Exception as e:
                         logger.error(f"⚠️ Edge への接続に失敗しました: {e}")
                         # 詳細な診断を実行

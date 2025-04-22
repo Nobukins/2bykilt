@@ -494,8 +494,14 @@ def create_ui(config, theme_name="Ocean"):
                             placeholder="記録するURLを入力（例: https://example.com）",
                             info="Playwrightが記録を開始するURL"
                         )
-                        run_codegen_button = gr.Button("▶️ Playwright Codegenを実行", variant="primary")
-                        
+                        browser_type_codegen = gr.Radio(
+                            label="ブラウザタイプ",
+                            choices=["Chrome", "Edge"],
+                            value="Chrome",
+                            info="記録に使用するブラウザを選択"
+                        )
+                    run_codegen_button = gr.Button("▶️ Playwright Codegenを実行", variant="primary")
+                    
                     codegen_status = gr.Markdown("")
                     
                     with gr.Accordion("生成されたスクリプト", open=True):
@@ -525,38 +531,38 @@ def create_ui(config, theme_name="Ocean"):
                         save_status = gr.Markdown("")
                         
                     # Playwright codegen操作のハンドラ関数
-                    def handle_run_codegen(url):
+                    def handle_run_codegen(url, browser_choice):
                         if not url or url.strip() == "":
                             return "⚠️ 有効なURLを入力してください", "# URLを入力してスクリプトを生成してください"
                         
-                        success, result = run_playwright_codegen(url)
+                        # ブラウザタイプの判定
+                        browser_type = browser_choice.lower()
+                        
+                        # ユーザーデータディレクトリの存在確認
+                        if browser_type == "edge":
+                            from src.utils.playwright_codegen import detect_browser_paths
+                            browser_paths = detect_browser_paths()
+                            user_data_dir = browser_paths.get("edge_user_data", "")
+                            if not user_data_dir or not os.path.exists(user_data_dir):
+                                return "⚠️ Edgeのユーザーデータディレクトリが見つかりません。自動検出を試みます...", "# ブラウザ設定確認中..."
+                        
+                        # Playwright codegen実行
+                        from src.utils.playwright_codegen import run_playwright_codegen
+                        success, result = run_playwright_codegen(url, browser_type)
                         if success:
-                            return "✅ スクリプトが正常に生成されました", result
+                            return f"✅ {browser_choice}を使用してスクリプトが正常に生成されました", result
                         else:
                             return f"❌ エラー: {result}", "# スクリプト生成中にエラーが発生しました"
                     
-                    def handle_save_action(script, file_name, command_name):
-                        if not script or script.strip() == "# ここに生成されたスクリプトが表示されます" or script.strip() == "# URLを入力してスクリプトを生成してください" or script.strip() == "# スクリプト生成中にエラーが発生しました":
-                            return "⚠️ 保存する有効なスクリプトがありません。まずスクリプトを生成してください。"
-                        
-                        if not file_name or file_name.strip() == "":
-                            return "⚠️ 有効なファイル名を入力してください。"
-                        
-                        success, message = save_as_action_file(script, file_name, command_name)
-                        if success:
-                            return f"✅ {message}"
-                        else:
-                            return f"❌ {message}"
-                    
-                    # UI要素と関数の連携
+                    # UI要素と関数の連携を更新
                     run_codegen_button.click(
                         fn=handle_run_codegen,
-                        inputs=[url_input],
+                        inputs=[url_input, browser_type_codegen],
                         outputs=[codegen_status, generated_script]
                     )
                     
                     save_action_button.click(
-                        fn=handle_save_action,
+                        fn=save_as_action_file,
                         inputs=[generated_script, action_file_name, action_command_name],
                         outputs=[save_status]
                     )
@@ -606,6 +612,188 @@ def create_ui(config, theme_name="Ocean"):
                         ],
                         outputs=[config_status]
                     )
+
+            with gr.TabItem("📊 データ抽出", id="data_extract"):
+                gr.Markdown("### 🔍 ページからデータを抽出")
+                
+                with gr.Row():
+                    with gr.Column(scale=1):
+                        extraction_url = gr.Textbox(
+                            label="抽出先URL",
+                            placeholder="https://example.com",
+                            lines=1
+                        )
+                        
+                        with gr.Accordion("抽出セレクター設定", open=True):
+                            selector_type = gr.Radio(
+                                ["シンプル", "詳細"],
+                                value="シンプル",
+                                label="セレクタータイプ"
+                            )
+                            
+                            simple_selectors = gr.Textbox(
+                                label="セレクター (カンマで区切る)",
+                                placeholder="h1, .main-content, #title",
+                                lines=2,
+                                visible=True
+                            )
+                            
+                            advanced_selectors = gr.Code(
+                                label="セレクター (JSON形式)",
+                                language="json",
+                                value='''{
+  "タイトル": {"selector": "h1", "type": "text"},
+  "本文": {"selector": ".content", "type": "html"},
+  "画像URL": {"selector": "img.main", "type": "attribute", "attribute": "src"}
+}''',
+                                visible=False
+                            )
+                        
+                        with gr.Row():
+                            use_extract_browser = gr.Checkbox(
+                                label="既存のブラウザを使用", 
+                                value=True
+                            )
+                            extract_headless = gr.Checkbox(
+                                label="ヘッドレスモード", 
+                                value=False
+                            )
+                            maintain_extract_session = gr.Checkbox(
+                                label="ブラウザセッションを維持", 
+                                value=True
+                            )
+                        
+                        extract_tab_strategy = gr.Radio(
+                            ["new_tab", "active_tab", "last_tab"], 
+                            label="タブ選択戦略", 
+                            value="new_tab"
+                        )
+                        
+                        with gr.Row():
+                            extract_button = gr.Button("データを抽出", variant="primary")
+                            save_format = gr.Dropdown(
+                                ["json", "csv"], 
+                                value="json", 
+                                label="保存形式"
+                            )
+                        
+                        save_path = gr.Textbox(
+                            label="保存先ファイルパス (空白の場合は自動生成)",
+                            placeholder="/path/to/save/extracted_data.json",
+                            lines=1
+                        )
+                        
+                        save_button = gr.Button("データを保存", variant="secondary")
+                        
+                    with gr.Column(scale=2):
+                        extraction_result = gr.JSON(
+                            label="抽出結果",
+                            elem_id="extraction_result"
+                        )
+                        extraction_status = gr.Markdown("結果はここに表示されます")
+                        
+                # セレクタータイプの切り替え
+                selector_type.change(
+                    fn=lambda type_val: (
+                        gr.update(visible=(type_val == "シンプル")), 
+                        gr.update(visible=(type_val == "詳細"))
+                    ),
+                    inputs=[selector_type],
+                    outputs=[simple_selectors, advanced_selectors]
+                )
+                
+                # データ抽出関数
+                async def run_extraction(url, selector_type, simple_selectors, advanced_selectors, 
+                                        use_own_browser, headless, maintain_session, tab_selection,
+                                        save_format):
+                    if not url:
+                        return None, "URLを入力してください"
+                    
+                    try:
+                        from src.modules.execution_debug_engine import ExecutionDebugEngine
+                        engine = ExecutionDebugEngine()
+                        
+                        if selector_type == "シンプル":
+                            selectors = [s.strip() for s in simple_selectors.split(',') if s.strip()]
+                            if not selectors:
+                                selectors = ["h1", "h2", "h3", "p"]
+                        else:
+                            try:
+                                selectors = json.loads(advanced_selectors)
+                            except json.JSONDecodeError:
+                                return None, "JSONセレクターの形式が正しくありません"
+                        
+                        params = {
+                            "url": url,
+                            "selectors": selectors
+                        }
+                        
+                        result = await engine.execute_extract_content(
+                            params,
+                            use_own_browser=use_own_browser,
+                            headless=headless,
+                            maintain_browser_session=maintain_session,
+                            tab_selection_strategy=tab_selection
+                        )
+                        
+                        if "error" in result:
+                            return result, f"抽出中にエラーが発生しました: {result['error']}"
+                            
+                        return result, f"✅ 抽出が完了しました。{len(result.get('content', {}))}項目のデータを取得しました。"
+                    
+                    except Exception as e:
+                        import traceback
+                        error_trace = traceback.format_exc()
+                        return None, f"エラーが発生しました: {str(e)}\n\n{error_trace}"
+                
+                # データ保存関数
+                async def save_extracted_data(result, save_path, save_format):
+                    if not result:
+                        return "抽出データがありません。先にデータを抽出してください。"
+                    
+                    try:
+                        from src.modules.execution_debug_engine import ExecutionDebugEngine
+                        engine = ExecutionDebugEngine()
+                        
+                        engine.last_extracted_content = result
+                        
+                        save_result = await engine.save_extracted_content(
+                            file_path=save_path if save_path else None,
+                            format_type=save_format
+                        )
+                        
+                        if save_result.get("success"):
+                            return f"✅ {save_result.get('message')}"
+                        else:
+                            return f"❌ {save_result.get('message')}"
+                    
+                    except Exception as e:
+                        import traceback
+                        error_trace = traceback.format_exc()
+                        return f"❌ 保存中にエラーが発生しました: {str(e)}\n\n{error_trace}"
+                
+                # ボタンイベントの接続
+                extract_button.click(
+                    fn=run_extraction,
+                    inputs=[
+                        extraction_url, 
+                        selector_type, 
+                        simple_selectors, 
+                        advanced_selectors,
+                        use_extract_browser,
+                        extract_headless,
+                        maintain_extract_session,
+                        extract_tab_strategy,
+                        save_format
+                    ],
+                    outputs=[extraction_result, extraction_status]
+                )
+                
+                save_button.click(
+                    fn=save_extracted_data,
+                    inputs=[extraction_result, save_path, save_format],
+                    outputs=[extraction_status]
+                )
 
         llm_provider.change(lambda provider, api_key, base_url: update_model_dropdown(provider, api_key, base_url), inputs=[llm_provider, llm_api_key, llm_base_url], outputs=llm_model_name)
         enable_recording.change(lambda enabled: gr.update(interactive=enabled), inputs=enable_recording, outputs=save_recording_path)

@@ -37,6 +37,86 @@
 - 複雑な判断が必要な場合はLLM（魔導士）が対応
 - 人間とAIの最適な協力関係を実現
 
+### 🔮 魔法の書からの知識抽出
+
+**「賢者は必要な知識のみを集め、混沌から秩序を生み出す」**
+
+- **魔法の目**: ウェブ上の情報を正確に見定め抽出
+- **知識の結晶化**: 集めた情報を整理して保存
+- **魔術の応用**: 抽出データを様々な形式で再利用
+
+## 🧙‍♂️ データ抽出の秘術
+
+### 知識の収集術
+
+```
+# 「データ抽出」タブを開き、情報を集めたいページのURLを入力
+https://example.com
+```
+
+魔術師はシンプルな呪文と高度な呪文、二つの方法で知識を集められます：
+
+### シンプルな抽出術
+
+基本の魔法陣（セレクター）を使って必要な情報を素早く集めます：
+
+```
+h1, .main-content, #title, .price
+```
+
+### 高度な抽出術
+
+複雑な情報を集める場合は、詳細な魔法陣（JSON形式）を使います：
+
+```json
+{
+  "書名": {"selector": "h1.book-title", "type": "text"},
+  "著者": {"selector": ".author", "type": "inner_text"},
+  "表紙画像": {"selector": ".cover img", "type": "attribute", "attribute": "src"},
+  "内容紹介": {"selector": ".description", "type": "html"}
+}
+```
+
+### 抽出魔法の種類
+
+- **text**: 生の文字情報を取り出す基本魔法
+- **inner_text**: 表示されたままの形で文字を写し取る魔法
+- **html**: 構造そのものを含めて情報を複写する魔法
+- **attribute**: 特定の属性（src、href、alt）のみを取り出す魔法
+- **count**: 要素の数を数え上げる計数魔法
+
+### 知識の保存法
+
+集めた知識は「秘伝書」として保存できます：
+
+1. 「保存形式」で知識の記録方法を選択（json または csv）
+2. 必要であれば「保存先ファイルパス」を指定
+3. 「データを保存」の魔法で知識を結晶化
+
+## 🏺 抽出された知識の活用例
+
+### 商品情報の収集
+
+```json
+{
+  "商品名": {"selector": "h1.product-title", "type": "text"},
+  "価格": {"selector": ".price", "type": "inner_text"},
+  "評価": {"selector": ".rating", "type": "text"},
+  "在庫数": {"selector": ".stock-count", "type": "inner_text"}
+}
+```
+
+### ニュース記事の要約作成
+
+```json
+{
+  "見出し": {"selector": "h1.headline", "type": "text"},
+  "著者": {"selector": ".author-name", "type": "text"},
+  "発行日": {"selector": ".publish-date", "type": "text"},
+  "本文": {"selector": ".article-content p", "type": "inner_text"}
+}
+```
+
 ## 🪄 魔法の使い方
 
 ### 魔法の記録法
