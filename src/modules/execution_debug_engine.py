@@ -195,6 +195,9 @@ class ExecutionDebugEngine:
         try:
             logger.info(f"コンテンツ抽出を実行しています: {params}")
             
+            # Import globals manager to access the global agent state
+            from src.utils.globals_manager import _global_agent_state
+            
             # Browser Settingsと一貫したブラウザ初期化方法を使用
             browser_data = await self.browser_manager.initialize_custom_browser(
                 use_own_browser=use_own_browser, 
@@ -260,6 +263,13 @@ class ExecutionDebugEngine:
                                 content[key] = await locator.get_attribute(attribute) if count == 1 else [await locator.nth(i).get_attribute(attribute) for i in range(count)]
                             elif extraction_type == "count":
                                 content[key] = count
+                                
+                            # Store extracted data in the global agent state
+                            _global_agent_state.store_extracted_data(
+                                key=key, 
+                                data=content[key], 
+                                source=f"url:{params['url']},selector:{selector}"
+                            )
                     except Exception as e:
                         logger.error(f"セレクター '{selector}' の抽出中にエラーが発生: {e}")
                         content[key] = f"エラー: {str(e)}"
@@ -268,6 +278,11 @@ class ExecutionDebugEngine:
                 elements = await page.query_selector_all(selector)
                 texts = [await element.text_content() for element in elements if (await element.text_content()).strip()]
                 content[selector] = texts
+                _global_agent_state.store_extracted_data(
+                    key=selector, 
+                    data=texts, 
+                    source=f"url:{params['url']}"
+                )
 
             # メタデータを追加
             extracted_data = {
@@ -281,6 +296,13 @@ class ExecutionDebugEngine:
 
             # 将来の参照用にデータを保存
             self.last_extracted_content = extracted_data
+            
+            # Store the entire content in the global agent state
+            _global_agent_state.store_extracted_data(
+                key="last_extracted_content", 
+                data=extracted_data, 
+                source=f"url:{params['url']}"
+            )
             
             # データを保存（リクエストされた場合）
             if save_to_file:
