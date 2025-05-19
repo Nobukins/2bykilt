@@ -242,7 +242,7 @@ def create_ui(config, theme_name="Ocean"):
         with gr.Row():
             gr.Markdown("# 🪄🌐 2Bykilt\n### Enhanced Browser Control with AI and human, because for you", elem_classes=["header-text"])
 
-        with gr.Tabs(selected=9) as tabs:  # Default to Playwright Codegen tab
+        with gr.Tabs(selected=4) as tabs:  # Default to Run Agent tab
             # Define Agent Settings first for dependency
             with gr.TabItem("⚙️ Agent Settings", id=1):
                 with gr.Group():
@@ -344,13 +344,20 @@ def create_ui(config, theme_name="Ocean"):
 
             # New tab for editing llms.txt directly
             with gr.TabItem("📄 LLMS Config", id=5):
-                llms_text = gr.Textbox(label="LLMS Config (llms.txt)", value=load_llms_file(), lines=20, interactive=True)
-                with gr.Row():
-                    save_btn = gr.Button("Save llms.txt", variant="primary")
-                    reload_btn = gr.Button("Reload llms.txt")
-                status_llms = gr.Markdown()
-                save_btn.click(fn=save_llms_file, inputs=llms_text, outputs=status_llms)
-                reload_btn.click(fn=load_llms_file, inputs=None, outputs=llms_text)
+                # View section for llms.txt
+                with gr.Accordion("📄 View LLMS Config", open=False):
+                    llms_code = gr.Code(label="LLMS Config View", language="markdown", value=load_llms_file(), interactive=False, lines=20)
+                    refresh_view_btn = gr.Button("🔄 Refresh View", variant="secondary")
+                    refresh_view_btn.click(fn=load_llms_file, inputs=None, outputs=llms_code)
+                # Edit section for llms.txt
+                with gr.Accordion("✏️ Edit LLMS Config", open=True):
+                    llms_text = gr.Textbox(label="LLMS Config (llms.txt)", value=load_llms_file(), lines=20, interactive=True)
+                    with gr.Row():
+                        save_btn = gr.Button("💾 Save llms.txt", variant="primary")
+                        reload_btn = gr.Button("🔄 Reload llms.txt")
+                    status_llms = gr.Markdown()
+                    save_btn.click(fn=save_llms_file, inputs=llms_text, outputs=status_llms)
+                    reload_btn.click(fn=load_llms_file, inputs=None, outputs=llms_text)
 
             with gr.TabItem("🌐 Browser Settings", id=3):
                 with gr.Row():
@@ -463,16 +470,38 @@ def create_ui(config, theme_name="Ocean"):
                     
                     codegen_status = gr.Markdown("")
                     
-                    with gr.Accordion("生成されたスクリプト", open=True):
-                        generated_script = gr.Code(
-                            label="生成スクリプト",
+                    # View generated script
+                    with gr.Accordion("📄 View Generated Script", open=True):
+                        generated_script_view = gr.Code(
+                            label="Generated Script",
                             language="python",
                             value="# ここに生成されたスクリプトが表示されます",
                             interactive=False,
                             lines=15
                         )
-                        copy_script_button = gr.Button("📋 クリップボードにコピー")
-                        
+                        copy_script_button = gr.Button("📋 Copy to Clipboard")
+
+                    # Edit generated script
+                    with gr.Accordion("✏️ Edit Generated Script", open=False):
+                        generated_script_edit = gr.Textbox(
+                            label="Edit Generated Script",
+                            value="",
+                            lines=15,
+                            interactive=True
+                        )
+                        with gr.Row():
+                            reload_edit_btn = gr.Button("🔄 Load into Editor", variant="secondary")
+                        # load view code into editor
+                        reload_edit_btn.click(fn=lambda code: code, inputs=generated_script_view, outputs=generated_script_edit)
+                    # Save action file using edited script
+                    with gr.Accordion("アクションとして保存", open=True):
+                        with gr.Row():
+                            action_file_name = gr.Textbox(label="ファイル名", placeholder="ファイル名を入力（.pyは不要）")
+                            action_command_name = gr.Textbox(label="コマンド名", placeholder="コマンド名（空白でファイル名使用）")
+                        save_action_button = gr.Button("💾 Save as Action", variant="primary")
+                        save_status = gr.Markdown("")
+                        save_action_button.click(fn=save_as_action_file, inputs=[generated_script_edit, action_file_name, action_command_name], outputs=[save_status])
+                    
                     with gr.Accordion("アクションとして保存", open=True):
                         with gr.Row():
                             action_file_name = gr.Textbox(
@@ -517,12 +546,12 @@ def create_ui(config, theme_name="Ocean"):
                     run_codegen_button.click(
                         fn=handle_run_codegen,
                         inputs=[url_input, browser_type_codegen],
-                        outputs=[codegen_status, generated_script]
+                        outputs=[codegen_status, generated_script_view]
                     )
                     
                     save_action_button.click(
                         fn=save_as_action_file,
-                        inputs=[generated_script, action_file_name, action_command_name],
+                        inputs=[generated_script_edit, action_file_name, action_command_name],
                         outputs=[save_status]
                     )
                     
@@ -541,6 +570,68 @@ def create_ui(config, theme_name="Ocean"):
                         return null;
                     }
                     """)
+
+            with gr.TabItem("🔎 データ抽出", id="data_extract"):  # Data Extraction tab with restored UI
+                gr.Markdown("### 🔍 ページからデータを抽出")
+                with gr.Row():
+                    with gr.Column(scale=1):
+                        extraction_url = gr.Textbox(label="抽出先URL", placeholder="https://example.com", lines=1)
+                        with gr.Accordion("抽出セレクター設定", open=True):
+                            selector_type = gr.Radio(["シンプル", "詳細"], value="シンプル", label="セレクタータイプ")
+                            simple_selectors = gr.Textbox(label="セレクター (カンマで区切る)", placeholder="h1, .main-content, #title", lines=2)
+                            advanced_selectors = gr.Code(label="セレクター (JSON形式)", language="json",
+                                                        value='''{
+  "タイトル": {"selector": "h1", "type": "text"},
+  "本文": {"selector": ".content", "type": "html"},
+  "画像URL": {"selector": "img.main", "type": "attribute", "attribute": "src"}
+}''')
+                        extract_button = gr.Button("データを抽出", variant="primary")
+                        save_path = gr.Textbox(label="保存先ファイルパス (空白で自動生成)", placeholder="/path/to/output.json", lines=1)
+                        save_format = gr.Dropdown(choices=["json", "csv"], value="json", label="保存形式")
+                        save_button = gr.Button("データを保存", variant="secondary")
+                    with gr.Column(scale=2):
+                        extraction_result = gr.JSON(label="抽出結果")
+                        extraction_status = gr.Markdown(label="ステータス")
+                # Toggle between simple and advanced selectors
+                selector_type.change(fn=lambda t: (gr.update(visible=(t=="シンプル")), gr.update(visible=(t=="詳細"))),
+                                     inputs=selector_type, outputs=[simple_selectors, advanced_selectors])
+                
+                # Extraction logic
+                async def run_extraction(url, selector_type, simple_s, advanced_s, use_own, headless, maintain_sess, tab_strategy):
+                    if not url:
+                        return None, "URLを入力してください"
+                    try:
+                        from src.modules.execution_debug_engine import ExecutionDebugEngine
+                        engine = ExecutionDebugEngine()
+                        selectors = simple_s.split(",") if selector_type=="シンプル" else advanced_s
+                        result = await engine.execute_extract_content({"url":url, "selectors":selectors},
+                                                                    use_own_browser=use_own, headless=headless,
+                                                                    maintain_browser_session=maintain_sess,
+                                                                    tab_selection_strategy=tab_strategy)
+                        if result.get("error"):
+                            return None, f"❌ エラー: {result['error']}"
+                        return result, "✅ 抽出完了"
+                    except Exception as e:
+                        return None, f"❌ 抽出中に例外: {e}"
+                
+                async def save_extracted_data(data, path, fmt):
+                    if not data:
+                        return "❌ 保存するデータがありません"
+                    try:
+                        from src.modules.execution_debug_engine import ExecutionDebugEngine
+                        engine = ExecutionDebugEngine()
+                        engine.last_extracted_content = data
+                        save_result = await engine.save_extracted_content(file_path=path or None, format_type=fmt)
+                        return "✅ 保存完了" if save_result.get("success") else f"❌ {save_result.get('message')}"
+                    except Exception as e:
+                        return f"❌ 保存中に例外: {e}"
+                
+                extract_button.click(fn=run_extraction,
+                                     inputs=[extraction_url, selector_type, simple_selectors, advanced_selectors,
+                                             use_own_browser, headless, maintain_browser_session, tab_selection_strategy],
+                                     outputs=[extraction_result, extraction_status])
+                save_button.click(fn=save_extracted_data,
+                                  inputs=[extraction_result, save_path, save_format], outputs=[extraction_status])
 
             with gr.TabItem("📁 Configuration", id=10):
                 with gr.Group():
