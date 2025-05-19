@@ -16,6 +16,7 @@ import os
 from src.browser.browser_config import BrowserConfig
 from src.utils.log_ui import create_log_tab  # Correct import from log_ui instead of app_logger
 from src.utils.app_logger import logger
+import gradio as gr
 
 # Simplified CSP middleware
 class CSPMiddleware(BaseHTTPMiddleware):
@@ -38,13 +39,14 @@ def create_fastapi_app(demo, args):
     """
     app = FastAPI()
     
-    # CORSを全ドメインに許可
+    # CORS設定（環境変数 ALLOWED_ORIGINS を利用、デフォルトは http://localhost:7788 ）
+    allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:7788").split(",")
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=allowed_origins,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Content-Type", "Authorization"]
     )
     
     # CSPミドルウェアを追加
