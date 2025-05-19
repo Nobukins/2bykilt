@@ -36,6 +36,22 @@ from src.utils.playwright_codegen import run_playwright_codegen, save_as_action_
 from src.utils.log_ui import create_log_tab  # Import log UI integration
 
 import yaml  # 必要であればインストール: pip install pyyaml
+import os
+
+# Functions to load and save llms.txt for UI editing
+def load_llms_file():
+    path = os.path.join(os.path.dirname(__file__), 'llms.txt')
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return f.read()
+    except FileNotFoundError:
+        return ''
+
+def save_llms_file(content):
+    path = os.path.join(os.path.dirname(__file__), 'llms.txt')
+    with open(path, 'w', encoding='utf-8') as f:
+        f.write(content)
+    return "✅ llms.txtを保存しました"
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -226,7 +242,7 @@ def create_ui(config, theme_name="Ocean"):
         with gr.Row():
             gr.Markdown("# 🪄🌐 2Bykilt\n### Enhanced Browser Control with AI and human, because for you", elem_classes=["header-text"])
 
-        with gr.Tabs() as tabs:
+        with gr.Tabs(selected=9) as tabs:  # Default to Playwright Codegen tab
             with gr.TabItem("⚙️ Agent Settings", id=1):
                 with gr.Group():
                     agent_type = gr.Radio(["org", "custom"], label="Agent Type", value=config['agent_type'], info="Select the type of agent to use")
@@ -415,7 +431,17 @@ def create_ui(config, theme_name="Ocean"):
                 with gr.Row():
                     browser_view = gr.HTML(value="<h1 style='width:80vw; height:50vh'>Waiting for browser session...</h1>", label="Live Browser View")
 
-            with gr.TabItem("🧐 Deep Research", id=5):
+            # New tab for editing llms.txt directly
+            with gr.TabItem("📄 LLMS Config", id=5):
+                llms_text = gr.Textbox(label="LLMS Config (llms.txt)", value=load_llms_file(), lines=20, interactive=True)
+                with gr.Row():
+                    save_btn = gr.Button("Save llms.txt", variant="primary")
+                    reload_btn = gr.Button("Reload llms.txt")
+                status_llms = gr.Markdown()
+                save_btn.click(fn=save_llms_file, inputs=llms_text, outputs=status_llms)
+                reload_btn.click(fn=load_llms_file, inputs=None, outputs=llms_text)
+
+            with gr.TabItem("🧐 Deep Research", id=6):
                 research_task_input = gr.Textbox(label="Research Task", lines=5, value="Compose a report on the use of Reinforcement Learning for training Large Language Models, encompassing its origins, current advancements, and future prospects, substantiated with examples of relevant models and techniques. The report should reflect original insights and analysis, moving beyond mere summarization of existing literature.")
                 with gr.Row():
                     max_search_iteration_input = gr.Number(label="Max Search Iteration", value=3, precision=0)
@@ -426,7 +452,7 @@ def create_ui(config, theme_name="Ocean"):
                 markdown_output_display = gr.Markdown(label="Research Report")
                 markdown_download = gr.File(label="Download Research Report")
 
-            with gr.TabItem("📊 Results", id=6):
+            with gr.TabItem("📊 Results", id=7):
                 with gr.Group():
                     recording_display = gr.Video(label="Latest Recording")
                     gr.Markdown("### Results")
@@ -470,7 +496,7 @@ def create_ui(config, theme_name="Ocean"):
                     )
                     stop_research_button.click(fn=stop_research_agent, inputs=[], outputs=[stop_research_button, research_button])
 
-            with gr.TabItem("🎥 Recordings", id=7):
+            with gr.TabItem("🎥 Recordings", id=8):
                 def list_recordings(save_recording_path):
                     if not os.path.exists(save_recording_path):
                         return []
@@ -483,7 +509,7 @@ def create_ui(config, theme_name="Ocean"):
                 refresh_button = gr.Button("🔄 Refresh Recordings", variant="secondary")
                 refresh_button.click(fn=list_recordings, inputs=save_recording_path, outputs=recordings_gallery)
 
-            with gr.TabItem("🎭 Playwright Codegen", id=8):
+            with gr.TabItem("🎭 Playwright Codegen", id=9):
                 with gr.Group():
                     gr.Markdown("### 🎮 ブラウザ操作スクリプト自動生成")
                     gr.Markdown("URLを入力してPlaywright codegenを起動し、ブラウザ操作を記録。生成されたスクリプトはアクションファイルとして保存できます。")
@@ -583,9 +609,10 @@ def create_ui(config, theme_name="Ocean"):
                     }
                     """)
 
-            with gr.TabItem("📁 Configuration", id=9):
+            with gr.TabItem("📁 Configuration", id=10):
                 with gr.Group():
                     config_file_input = gr.File(label="Load Config File", file_types=[".pkl"], interactive=True)
+                    git_token = gr.Textbox(label="Git Token (for non-git users)", type="password", info="Personal token for downloading scripts without Git")
                     load_config_button = gr.Button("Load Existing Config From File", variant="primary")
                     save_config_button = gr.Button("Save Current Config", variant="primary")
                     config_status = gr.Textbox(label="Status", lines=2, interactive=False)
