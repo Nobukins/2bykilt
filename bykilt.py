@@ -210,6 +210,19 @@ from fastapi.middleware.cors import CORSMiddleware
 
 browser_config = BrowserConfig()
 
+def load_env_browser_settings_file(env_file):
+    if not env_file:
+        return ("", "", "❌ No env file selected")
+    # Load environment vars from file path
+    load_dotenv(env_file.name)
+    path = os.getenv('CHROME_PATH', '')
+    user_data = os.getenv('CHROME_USER_DATA', '')
+    return (
+        f"**現在のブラウザパス**: {path}",
+        f"**ユーザーデータパス**: {user_data}",
+        "✅ Env settings loaded"
+    )
+
 def create_ui(config, theme_name="Ocean"):
     """Create the Gradio UI with the specified configuration and theme"""
     # Load CSS from external file
@@ -414,6 +427,17 @@ def create_ui(config, theme_name="Ocean"):
                         
                         update_browser_btn = gr.Button("ブラウザ設定を更新", variant="primary")
                         browser_update_result = gr.Markdown("")
+                        
+                        # Env file loader for browser paths
+                        env_file_input = gr.File(label="Load .env File", file_types=[".env"], interactive=True)
+                        load_env_btn = gr.Button("🔄 Load Env Settings", variant="secondary")
+                        
+                        # Hook to reload browser path/user data from .env
+                        load_env_btn.click(
+                            fn=load_env_browser_settings_file,
+                            inputs=[env_file_input],
+                            outputs=[browser_path_info, user_data_info, browser_update_result]
+                        )
                         
                         def update_browser_settings(browser_selection, disable_security_flag):
                             """Update browser settings and return results."""
