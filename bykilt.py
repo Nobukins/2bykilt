@@ -36,6 +36,22 @@ from src.utils.playwright_codegen import run_playwright_codegen, save_as_action_
 from src.utils.log_ui import create_log_tab  # Import log UI integration
 
 import yaml  # 必要であればインストール: pip install pyyaml
+import os
+
+# Functions to load and save llms.txt for UI editing
+def load_llms_file():
+    path = os.path.join(os.path.dirname(__file__), 'llms.txt')
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return f.read()
+    except FileNotFoundError:
+        return ''
+
+def save_llms_file(content):
+    path = os.path.join(os.path.dirname(__file__), 'llms.txt')
+    with open(path, 'w', encoding='utf-8') as f:
+        f.write(content)
+    return "✅ llms.txtを保存しました"
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -194,6 +210,19 @@ from fastapi.middleware.cors import CORSMiddleware
 
 browser_config = BrowserConfig()
 
+def load_env_browser_settings_file(env_file):
+    if not env_file:
+        return ("", "", "❌ No env file selected")
+    # Load environment vars from file path
+    load_dotenv(env_file.name)
+    path = os.getenv('CHROME_PATH', '')
+    user_data = os.getenv('CHROME_USER_DATA', '')
+    return (
+        f"**現在のブラウザパス**: {path}",
+        f"**ユーザーデータパス**: {user_data}",
+        "✅ Env settings loaded"
+    )
+
 def create_ui(config, theme_name="Ocean"):
     """Create the Gradio UI with the specified configuration and theme"""
     # Load CSS from external file
@@ -226,7 +255,8 @@ def create_ui(config, theme_name="Ocean"):
         with gr.Row():
             gr.Markdown("# 🪄🌐 2Bykilt\n### Enhanced Browser Control with AI and human, because for you", elem_classes=["header-text"])
 
-        with gr.Tabs() as tabs:
+        with gr.Tabs(selected=4) as tabs:  # Default to Run Agent tab
+            # Define Agent Settings first for dependency
             with gr.TabItem("⚙️ Agent Settings", id=1):
                 with gr.Group():
                     agent_type = gr.Radio(["org", "custom"], label="Agent Type", value=config['agent_type'], info="Select the type of agent to use")
@@ -254,96 +284,6 @@ def create_ui(config, theme_name="Ocean"):
                             label="Dev Mode",
                             value=config['dev_mode'],
                             info="Use LM Studio compatible endpoints"
-                        )
-
-            with gr.TabItem("🌐 Browser Settings", id=3):
-                with gr.Row():
-                    with gr.Column():
-                        gr.Markdown("### ブラウザー設定")
-                        
-                        browser_type = gr.Dropdown(
-                            choices=["chrome", "edge"], 
-                            label="使用するブラウザ", 
-                            value=browser_config.config.get("current_browser", "chrome"),
-                            info="Chrome または Edge を選択してください"
-                        )
-                        
-                        use_own_browser = gr.Checkbox(label="既存のブラウザを使用", value=False)
-                        headless = gr.Checkbox(label="ヘッドレスモード", value=False)
-                        keep_browser_open = gr.Checkbox(label="ブラウザを開いたままにする", value=False)
-                        disable_security = gr.Checkbox(
-                            label="セキュリティを無効化", 
-                            value=browser_config.get_browser_settings()["disable_security"],
-                            info="ブラウザのセキュリティ機能を無効化します"
-                        )
-                        
-                        # Directly render components instead of using .update()
-                        with gr.Row():
-                            window_w = gr.Number(value=config.get('window_width', 1920), 
-                                                 label="ブラウザウィンドウ幅", 
-                                                 precision=0)
-                            window_h = gr.Number(value=config.get('window_height', 1080), 
-                                                 label="ブラウザウィンドウ高さ", 
-                                                 precision=0)
-                        
-                        enable_recording = gr.Checkbox(label="録画を有効にする", 
-                                                       value=config.get('enable_recording', True))
-                        maintain_browser_session = gr.Checkbox(label="ブラウザセッションを維持", 
-                                                               value=config.get('maintain_browser_session', False))
-                        tab_selection_strategy = gr.Radio(["new_tab", "reuse_tab"], 
-                                                           label="タブ選択戦略",
-                                                           value=config.get('tab_selection_strategy', "new_tab"))
-                        save_recording_path = gr.Textbox(label="録画保存パス", 
-                                                         value=config.get('save_recording_path', './tmp/record_videos'))
-                        save_trace_path = gr.Textbox(label="トレース保存パス", 
-                                                     value=config.get('save_trace_path', './tmp/traces'))
-                        save_agent_history_path = gr.Textbox(label="エージェント履歴パス", 
-                                                             value=config.get('save_agent_history_path', './tmp/agent_history'))
-                        
-                        browser_path_info = gr.Markdown(
-                            value=f"**現在のブラウザパス**: {browser_config.get_browser_settings()['path']}", 
-                            visible=True
-                        )
-                        user_data_info = gr.Markdown(
-                            value=f"**ユーザーデータパス**: {browser_config.get_browser_settings()['user_data']}",
-                            visible=True
-                        )
-                        
-                        update_browser_btn = gr.Button("ブラウザ設定を更新", variant="primary")
-                        browser_update_result = gr.Markdown("")
-                        
-                        def update_browser_settings(browser_selection, disable_security_flag):
-                            """Update browser settings and return results."""
-                            try:
-                                browser_config.set_current_browser(browser_selection)
-                                settings = browser_config.get_browser_settings()
-                                settings["disable_security"] = disable_security_flag
-                                
-                                browser_path = f"**現在のブラウザパス**: {settings['path']}"
-                                user_data = f"**ユーザーデータパス**: {settings['user_data']}"
-                                
-                                return (
-                                    browser_path,
-                                    user_data,
-                                    f"✅ ブラウザ設定を {browser_selection.upper()} に更新しました"
-                                )
-                            except Exception as e:
-                                return (
-                                    browser_path_info.value,
-                                    user_data_info.value,
-                                    f"❌ エラーが発生しました: {str(e)}"
-                                )
-                        
-                        browser_type.change(
-                            fn=update_browser_settings,
-                            inputs=[browser_type, disable_security],
-                            outputs=[browser_path_info, user_data_info, browser_update_result]
-                        )
-                        
-                        update_browser_btn.click(
-                            fn=update_browser_settings,
-                            inputs=[browser_type, disable_security],
-                            outputs=[browser_path_info, user_data_info, browser_update_result]
                         )
 
             with gr.TabItem("🤖 Run Agent", id=4):
@@ -415,75 +355,125 @@ def create_ui(config, theme_name="Ocean"):
                 with gr.Row():
                     browser_view = gr.HTML(value="<h1 style='width:80vw; height:50vh'>Waiting for browser session...</h1>", label="Live Browser View")
 
-            with gr.TabItem("🧐 Deep Research", id=5):
-                research_task_input = gr.Textbox(label="Research Task", lines=5, value="Compose a report on the use of Reinforcement Learning for training Large Language Models, encompassing its origins, current advancements, and future prospects, substantiated with examples of relevant models and techniques. The report should reflect original insights and analysis, moving beyond mere summarization of existing literature.")
-                with gr.Row():
-                    max_search_iteration_input = gr.Number(label="Max Search Iteration", value=3, precision=0)
-                    max_query_per_iter_input = gr.Number(label="Max Query per Iteration", value=1, precision=0)
-                with gr.Row():
-                    research_button = gr.Button("▶️ Run Deep Research", variant="primary", scale=2)
-                    stop_research_button = gr.Button("⏹️ Stop", variant="stop", scale=1)
-                markdown_output_display = gr.Markdown(label="Research Report")
-                markdown_download = gr.File(label="Download Research Report")
-
-            with gr.TabItem("📊 Results", id=6):
-                with gr.Group():
-                    recording_display = gr.Video(label="Latest Recording")
-                    gr.Markdown("### Results")
+            # New tab for editing llms.txt directly
+            with gr.TabItem("📄 LLMS Config", id=5):
+                # View section for llms.txt
+                with gr.Accordion("📄 View LLMS Config", open=False):
+                    llms_code = gr.Code(label="LLMS Config View", language="markdown", value=load_llms_file(), interactive=False, lines=20)
+                    refresh_view_btn = gr.Button("🔄 Refresh View", variant="secondary")
+                    refresh_view_btn.click(fn=load_llms_file, inputs=None, outputs=llms_code)
+                # Edit section for llms.txt
+                with gr.Accordion("✏️ Edit LLMS Config", open=True):
+                    llms_text = gr.Textbox(label="LLMS Config (llms.txt)", value=load_llms_file(), lines=20, interactive=True)
                     with gr.Row():
-                        with gr.Column():
-                            final_result_output = gr.Textbox(label="Final Result", lines=3, show_label=True)
-                        with gr.Column():
-                            errors_output = gr.Textbox(label="Errors", lines=3, show_label=True)
-                    with gr.Row():
-                        with gr.Column():
-                            model_actions_output = gr.Textbox(label="Model Actions", lines=3, show_label=True)
-                        with gr.Column():
-                            model_thoughts_output = gr.Textbox(label="Model Thoughts", lines=3, show_label=True)
-                    trace_file = gr.File(label="Trace File")
-                    agent_history_file = gr.File(label="Agent History")
+                        save_btn = gr.Button("💾 Save llms.txt", variant="primary")
+                        reload_btn = gr.Button("🔄 Reload llms.txt")
+                    status_llms = gr.Markdown()
+                    save_btn.click(fn=save_llms_file, inputs=llms_text, outputs=status_llms)
+                    reload_btn.click(fn=load_llms_file, inputs=None, outputs=llms_text)
 
-                    # Connect buttons to functions
-                    stop_button.click(fn=stop_agent, inputs=[], outputs=[errors_output, stop_button, run_button])
-                    run_button.click(
-                        fn=run_with_stream,
-                        inputs=[
-                            agent_type, llm_provider, llm_model_name, llm_num_ctx, llm_temperature, llm_base_url, llm_api_key,
-                            use_own_browser, keep_browser_open, headless, disable_security, window_w, window_h,
-                            save_recording_path, save_agent_history_path, save_trace_path, enable_recording, task, add_infos,
-                            max_steps, use_vision, max_actions_per_step, tool_calling_method, dev_mode, maintain_browser_session,
-                            tab_selection_strategy  # Add tab selection strategy parameter
-                        ],
-                        outputs=[
-                            browser_view, final_result_output, errors_output, model_actions_output, model_thoughts_output,
-                            recording_display, trace_file, agent_history_file, stop_button, run_button
-                        ],
-                    )
-                    research_button.click(
-                        fn=run_deep_search,
-                        inputs=[
-                            research_task_input, max_search_iteration_input, max_query_per_iter_input,
-                            llm_provider, llm_model_name, llm_num_ctx, llm_temperature, llm_base_url, 
-                            llm_api_key, use_vision, use_own_browser, headless
-                        ],
-                        outputs=[markdown_output_display, markdown_download, stop_research_button, research_button]
-                    )
-                    stop_research_button.click(fn=stop_research_agent, inputs=[], outputs=[stop_research_button, research_button])
+            with gr.TabItem("🌐 Browser Settings", id=3):
+                with gr.Row():
+                    with gr.Column():
+                        gr.Markdown("### ブラウザー設定")
+                        
+                        browser_type = gr.Dropdown(
+                            choices=["chrome", "edge"], 
+                            label="使用するブラウザ", 
+                            value=browser_config.config.get("current_browser", "chrome"),
+                            info="Chrome または Edge を選択してください"
+                        )
+                        
+                        use_own_browser = gr.Checkbox(label="既存のブラウザを使用", value=False)
+                        headless = gr.Checkbox(label="ヘッドレスモード", value=False)
+                        keep_browser_open = gr.Checkbox(label="ブラウザを開いたままにする", value=False)
+                        disable_security = gr.Checkbox(
+                            label="セキュリティを無効化", 
+                            value=browser_config.get_browser_settings()["disable_security"],
+                            info="ブラウザのセキュリティ機能を無効化します"
+                        )
+                        
+                        # Directly render components instead of using .update()
+                        with gr.Row():
+                            window_w = gr.Number(value=config.get('window_width', 1920), 
+                                                 label="ブラウザウィンドウ幅", 
+                                                 precision=0)
+                            window_h = gr.Number(value=config.get('window_height', 1080), 
+                                                 label="ブラウザウィンドウ高さ", 
+                                                 precision=0)
+                        
+                        enable_recording = gr.Checkbox(label="録画を有効にする", 
+                                                       value=config.get('enable_recording', True))
+                        maintain_browser_session = gr.Checkbox(label="ブラウザセッションを維持", 
+                                                               value=config.get('maintain_browser_session', False))
+                        tab_selection_strategy = gr.Radio(["new_tab", "reuse_tab"], 
+                                                           label="タブ選択戦略",
+                                                           value=config.get('tab_selection_strategy', "new_tab"))
+                        save_recording_path = gr.Textbox(label="録画保存パス", 
+                                                         value=config.get('save_recording_path', './tmp/record_videos'))
+                        save_trace_path = gr.Textbox(label="トレース保存パス", 
+                                                     value=config.get('save_trace_path', './tmp/traces'))
+                        save_agent_history_path = gr.Textbox(label="エージェント履歴パス", 
+                                                             value=config.get('save_agent_history_path', './tmp/agent_history'))
+                        
+                        browser_path_info = gr.Markdown(
+                            value=f"**現在のブラウザパス**: {browser_config.get_browser_settings()['path']}", 
+                            visible=True
+                        )
+                        user_data_info = gr.Markdown(
+                            value=f"**ユーザーデータパス**: {browser_config.get_browser_settings()['user_data']}",
+                            visible=True
+                        )
+                        
+                        update_browser_btn = gr.Button("ブラウザ設定を更新", variant="primary")
+                        browser_update_result = gr.Markdown("")
+                        
+                        # Env file loader for browser paths
+                        env_file_input = gr.File(label="Load .env File", file_types=[".env"], interactive=True)
+                        load_env_btn = gr.Button("🔄 Load Env Settings", variant="secondary")
+                        
+                        # Hook to reload browser path/user data from .env
+                        load_env_btn.click(
+                            fn=load_env_browser_settings_file,
+                            inputs=[env_file_input],
+                            outputs=[browser_path_info, user_data_info, browser_update_result]
+                        )
+                        
+                        def update_browser_settings(browser_selection, disable_security_flag):
+                            """Update browser settings and return results."""
+                            try:
+                                browser_config.set_current_browser(browser_selection)
+                                settings = browser_config.get_browser_settings()
+                                settings["disable_security"] = disable_security_flag
+                                
+                                browser_path = f"**現在のブラウザパス**: {settings['path']}"
+                                user_data = f"**ユーザーデータパス**: {settings['user_data']}"
+                                
+                                return (
+                                    browser_path,
+                                    user_data,
+                                    f"✅ ブラウザ設定を {browser_selection.upper()} に更新しました"
+                                )
+                            except Exception as e:
+                                return (
+                                    browser_path_info.value,
+                                    user_data_info.value,
+                                    f"❌ エラーが発生しました: {str(e)}"
+                                )
+                        
+                        browser_type.change(
+                            fn=update_browser_settings,
+                            inputs=[browser_type, disable_security],
+                            outputs=[browser_path_info, user_data_info, browser_update_result]
+                        )
+                        
+                        update_browser_btn.click(
+                            fn=update_browser_settings,
+                            inputs=[browser_type, disable_security],
+                            outputs=[browser_path_info, user_data_info, browser_update_result]
+                        )
 
-            with gr.TabItem("🎥 Recordings", id=7):
-                def list_recordings(save_recording_path):
-                    if not os.path.exists(save_recording_path):
-                        return []
-                    recordings = glob.glob(os.path.join(save_recording_path, "*.[mM][pP]4")) + glob.glob(os.path.join(save_recording_path, "*.[wW][eE][bB][mM]"))
-                    recordings.sort(key=os.path.getctime)
-                    numbered_recordings = [(recording, f"{idx}. {os.path.basename(recording)}") for idx, recording in enumerate(recordings, start=1)]
-                    return numbered_recordings
-
-                recordings_gallery = gr.Gallery(label="Recordings", value=list_recordings(config['save_recording_path']), columns=3, height="auto", object_fit="contain")
-                refresh_button = gr.Button("🔄 Refresh Recordings", variant="secondary")
-                refresh_button.click(fn=list_recordings, inputs=save_recording_path, outputs=recordings_gallery)
-
-            with gr.TabItem("🎭 Playwright Codegen", id=8):
+            with gr.TabItem("🎭 Playwright Codegen", id=9):
                 with gr.Group():
                     gr.Markdown("### 🎮 ブラウザ操作スクリプト自動生成")
                     gr.Markdown("URLを入力してPlaywright codegenを起動し、ブラウザ操作を記録。生成されたスクリプトはアクションファイルとして保存できます。")
@@ -504,16 +494,38 @@ def create_ui(config, theme_name="Ocean"):
                     
                     codegen_status = gr.Markdown("")
                     
-                    with gr.Accordion("生成されたスクリプト", open=True):
-                        generated_script = gr.Code(
-                            label="生成スクリプト",
+                    # View generated script
+                    with gr.Accordion("📄 View Generated Script", open=True):
+                        generated_script_view = gr.Code(
+                            label="Generated Script",
                             language="python",
                             value="# ここに生成されたスクリプトが表示されます",
                             interactive=False,
                             lines=15
                         )
-                        copy_script_button = gr.Button("📋 クリップボードにコピー")
-                        
+                        copy_script_button = gr.Button("📋 Copy to Clipboard")
+
+                    # Edit generated script
+                    with gr.Accordion("✏️ Edit Generated Script", open=False):
+                        generated_script_edit = gr.Textbox(
+                            label="Edit Generated Script",
+                            value="",
+                            lines=15,
+                            interactive=True
+                        )
+                        with gr.Row():
+                            reload_edit_btn = gr.Button("🔄 Load into Editor", variant="secondary")
+                        # load view code into editor
+                        reload_edit_btn.click(fn=lambda code: code, inputs=generated_script_view, outputs=generated_script_edit)
+                    # Save action file using edited script
+                    with gr.Accordion("アクションとして保存", open=True):
+                        with gr.Row():
+                            action_file_name = gr.Textbox(label="ファイル名", placeholder="ファイル名を入力（.pyは不要）")
+                            action_command_name = gr.Textbox(label="コマンド名", placeholder="コマンド名（空白でファイル名使用）")
+                        save_action_button = gr.Button("💾 Save as Action", variant="primary")
+                        save_status = gr.Markdown("")
+                        save_action_button.click(fn=save_as_action_file, inputs=[generated_script_edit, action_file_name, action_command_name], outputs=[save_status])
+                    
                     with gr.Accordion("アクションとして保存", open=True):
                         with gr.Row():
                             action_file_name = gr.Textbox(
@@ -558,12 +570,12 @@ def create_ui(config, theme_name="Ocean"):
                     run_codegen_button.click(
                         fn=handle_run_codegen,
                         inputs=[url_input, browser_type_codegen],
-                        outputs=[codegen_status, generated_script]
+                        outputs=[codegen_status, generated_script_view]
                     )
                     
                     save_action_button.click(
                         fn=save_as_action_file,
-                        inputs=[generated_script, action_file_name, action_command_name],
+                        inputs=[generated_script_edit, action_file_name, action_command_name],
                         outputs=[save_status]
                     )
                     
@@ -583,9 +595,72 @@ def create_ui(config, theme_name="Ocean"):
                     }
                     """)
 
-            with gr.TabItem("📁 Configuration", id=9):
+            with gr.TabItem("🔎 データ抽出", id="data_extract"):  # Data Extraction tab with restored UI
+                gr.Markdown("### 🔍 ページからデータを抽出")
+                with gr.Row():
+                    with gr.Column(scale=1):
+                        extraction_url = gr.Textbox(label="抽出先URL", placeholder="https://example.com", lines=1)
+                        with gr.Accordion("抽出セレクター設定", open=True):
+                            selector_type = gr.Radio(["シンプル", "詳細"], value="シンプル", label="セレクタータイプ")
+                            simple_selectors = gr.Textbox(label="セレクター (カンマで区切る)", placeholder="h1, .main-content, #title", lines=2)
+                            advanced_selectors = gr.Code(label="セレクター (JSON形式)", language="json",
+                                                        value='''{
+  "タイトル": {"selector": "h1", "type": "text"},
+  "本文": {"selector": ".content", "type": "html"},
+  "画像URL": {"selector": "img.main", "type": "attribute", "attribute": "src"}
+}''')
+                        extract_button = gr.Button("データを抽出", variant="primary")
+                        save_path = gr.Textbox(label="保存先ファイルパス (空白で自動生成)", placeholder="/path/to/output.json", lines=1)
+                        save_format = gr.Dropdown(choices=["json", "csv"], value="json", label="保存形式")
+                        save_button = gr.Button("データを保存", variant="secondary")
+                    with gr.Column(scale=2):
+                        extraction_result = gr.JSON(label="抽出結果")
+                        extraction_status = gr.Markdown(label="ステータス")
+                # Toggle between simple and advanced selectors
+                selector_type.change(fn=lambda t: (gr.update(visible=(t=="シンプル")), gr.update(visible=(t=="詳細"))),
+                                     inputs=selector_type, outputs=[simple_selectors, advanced_selectors])
+                
+                # Extraction logic
+                async def run_extraction(url, selector_type, simple_s, advanced_s, use_own, headless, maintain_sess, tab_strategy):
+                    if not url:
+                        return None, "URLを入力してください"
+                    try:
+                        from src.modules.execution_debug_engine import ExecutionDebugEngine
+                        engine = ExecutionDebugEngine()
+                        selectors = simple_s.split(",") if selector_type=="シンプル" else advanced_s
+                        result = await engine.execute_extract_content({"url":url, "selectors":selectors},
+                                                                    use_own_browser=use_own, headless=headless,
+                                                                    maintain_browser_session=maintain_sess,
+                                                                    tab_selection_strategy=tab_strategy)
+                        if result.get("error"):
+                            return None, f"❌ エラー: {result['error']}"
+                        return result, "✅ 抽出完了"
+                    except Exception as e:
+                        return None, f"❌ 抽出中に例外: {e}"
+                
+                async def save_extracted_data(data, path, fmt):
+                    if not data:
+                        return "❌ 保存するデータがありません"
+                    try:
+                        from src.modules.execution_debug_engine import ExecutionDebugEngine
+                        engine = ExecutionDebugEngine()
+                        engine.last_extracted_content = data
+                        save_result = await engine.save_extracted_content(file_path=path or None, format_type=fmt)
+                        return "✅ 保存完了" if save_result.get("success") else f"❌ {save_result.get('message')}"
+                    except Exception as e:
+                        return f"❌ 保存中に例外: {e}"
+                
+                extract_button.click(fn=run_extraction,
+                                     inputs=[extraction_url, selector_type, simple_selectors, advanced_selectors,
+                                             use_own_browser, headless, maintain_browser_session, tab_selection_strategy],
+                                     outputs=[extraction_result, extraction_status])
+                save_button.click(fn=save_extracted_data,
+                                  inputs=[extraction_result, save_path, save_format], outputs=[extraction_status])
+
+            with gr.TabItem("📁 Configuration", id=10):
                 with gr.Group():
                     config_file_input = gr.File(label="Load Config File", file_types=[".pkl"], interactive=True)
+                    git_token = gr.Textbox(label="Git Token (for non-git users)", type="password", info="Personal token for downloading scripts without Git")
                     load_config_button = gr.Button("Load Existing Config From File", variant="primary")
                     save_config_button = gr.Button("Save Current Config", variant="primary")
                     config_status = gr.Textbox(label="Status", lines=2, interactive=False)
@@ -613,187 +688,73 @@ def create_ui(config, theme_name="Ocean"):
                         outputs=[config_status]
                     )
 
-            with gr.TabItem("📊 データ抽出", id="data_extract"):
-                gr.Markdown("### 🔍 ページからデータを抽出")
-                
+            with gr.TabItem("📊 Results", id=7):
+                with gr.Group():
+                    recording_display = gr.Video(label="Latest Recording")
+                    gr.Markdown("### Results")
+                    with gr.Row():
+                        with gr.Column():
+                            final_result_output = gr.Textbox(label="Final Result", lines=3, show_label=True)
+                        with gr.Column():
+                            errors_output = gr.Textbox(label="Errors", lines=3, show_label=True)
+                    with gr.Row():
+                        with gr.Column():
+                            model_actions_output = gr.Textbox(label="Model Actions", lines=3, show_label=True)
+                        with gr.Column():
+                            model_thoughts_output = gr.Textbox(label="Model Thoughts", lines=3, show_label=True)
+                    trace_file = gr.File(label="Trace File")
+                    agent_history_file = gr.File(label="Agent History")
+
+                    # Connect buttons to functions
+                    stop_button.click(fn=stop_agent, inputs=[], outputs=[errors_output, stop_button, run_button])
+                    run_button.click(
+                        fn=run_with_stream,
+                        inputs=[
+                            agent_type, llm_provider, llm_model_name, llm_num_ctx, llm_temperature, llm_base_url, llm_api_key,
+                            use_own_browser, keep_browser_open, headless, disable_security, window_w, window_h,
+                            save_recording_path, save_agent_history_path, save_trace_path, enable_recording, task, add_infos,
+                            max_steps, use_vision, max_actions_per_step, tool_calling_method, dev_mode, maintain_browser_session,
+                            tab_selection_strategy  # Add tab selection strategy parameter
+                        ],
+                        outputs=[
+                            browser_view, final_result_output, errors_output, model_actions_output, model_thoughts_output,
+                            recording_display, trace_file, agent_history_file, stop_button, run_button
+                        ],
+                    )
+                    # research_button.click(
+                    #     fn=run_deep_search,
+                    #     inputs=[
+                    #         research_task_input, max_search_iteration_input, max_query_per_iter_input,
+                    #         llm_provider, llm_model_name, llm_num_ctx, llm_temperature, llm_base_url, 
+                    #         llm_api_key, use_vision, use_own_browser, headless
+                    #     ],
+                    #     outputs=[markdown_output_display, markdown_download, stop_research_button, research_button]
+                    # )
+                    # stop_research_button.click(fn=stop_research_agent, inputs=[], outputs=[stop_research_button, research_button])
+
+            with gr.TabItem("🎥 Recordings", id=8):
+                def list_recordings(save_recording_path):
+                    if not os.path.exists(save_recording_path):
+                        return []
+                    recordings = glob.glob(os.path.join(save_recording_path, "*.[mM][pP]4")) + glob.glob(os.path.join(save_recording_path, "*.[wW][eE][bB][mM]"))
+                    recordings.sort(key=os.path.getctime)
+                    numbered_recordings = [(recording, f"{idx}. {os.path.basename(recording)}") for idx, recording in enumerate(recordings, start=1)]
+                    return numbered_recordings
+
+                recordings_gallery = gr.Gallery(label="Recordings", value=list_recordings(config['save_recording_path']), columns=3, height="auto", object_fit="contain")
+                refresh_button = gr.Button("🔄 Refresh Recordings", variant="secondary")
+                refresh_button.click(fn=list_recordings, inputs=save_recording_path, outputs=recordings_gallery)
+
+            with gr.TabItem("🧐 Deep Research", id=6):
+                research_task_input = gr.Textbox(label="Research Task", lines=5, value="Compose a report on the use of Reinforcement Learning for training Large Language Models, encompassing its origins, current advancements, and future prospects, substantiated with examples of relevant models and techniques. The report should reflect original insights and analysis, moving beyond mere summarization of existing literature.")
                 with gr.Row():
-                    with gr.Column(scale=1):
-                        extraction_url = gr.Textbox(
-                            label="抽出先URL",
-                            placeholder="https://example.com",
-                            lines=1
-                        )
-                        
-                        with gr.Accordion("抽出セレクター設定", open=True):
-                            selector_type = gr.Radio(
-                                ["シンプル", "詳細"],
-                                value="シンプル",
-                                label="セレクタータイプ"
-                            )
-                            
-                            simple_selectors = gr.Textbox(
-                                label="セレクター (カンマで区切る)",
-                                placeholder="h1, .main-content, #title",
-                                lines=2,
-                                visible=True
-                            )
-                            
-                            advanced_selectors = gr.Code(
-                                label="セレクター (JSON形式)",
-                                language="json",
-                                value='''{
-  "タイトル": {"selector": "h1", "type": "text"},
-  "本文": {"selector": ".content", "type": "html"},
-  "画像URL": {"selector": "img.main", "type": "attribute", "attribute": "src"}
-}''',
-                                visible=False
-                            )
-                        
-                        with gr.Row():
-                            use_extract_browser = gr.Checkbox(
-                                label="既存のブラウザを使用", 
-                                value=True
-                            )
-                            extract_headless = gr.Checkbox(
-                                label="ヘッドレスモード", 
-                                value=False
-                            )
-                            maintain_extract_session = gr.Checkbox(
-                                label="ブラウザセッションを維持", 
-                                value=True
-                            )
-                        
-                        extract_tab_strategy = gr.Radio(
-                            ["new_tab", "active_tab", "last_tab"], 
-                            label="タブ選択戦略", 
-                            value="new_tab"
-                        )
-                        
-                        with gr.Row():
-                            extract_button = gr.Button("データを抽出", variant="primary")
-                            save_format = gr.Dropdown(
-                                ["json", "csv"], 
-                                value="json", 
-                                label="保存形式"
-                            )
-                        
-                        save_path = gr.Textbox(
-                            label="保存先ファイルパス (空白の場合は自動生成)",
-                            placeholder="/path/to/save/extracted_data.json",
-                            lines=1
-                        )
-                        
-                        save_button = gr.Button("データを保存", variant="secondary")
-                        
-                    with gr.Column(scale=2):
-                        extraction_result = gr.JSON(
-                            label="抽出結果",
-                            elem_id="extraction_result"
-                        )
-                        extraction_status = gr.Markdown("結果はここに表示されます")
-                        
-                # セレクタータイプの切り替え
-                selector_type.change(
-                    fn=lambda type_val: (
-                        gr.update(visible=(type_val == "シンプル")), 
-                        gr.update(visible=(type_val == "詳細"))
-                    ),
-                    inputs=[selector_type],
-                    outputs=[simple_selectors, advanced_selectors]
-                )
-                
-                # データ抽出関数
-                async def run_extraction(url, selector_type, simple_selectors, advanced_selectors, 
-                                        use_own_browser, headless, maintain_session, tab_selection,
-                                        save_format):
-                    if not url:
-                        return None, "URLを入力してください"
-                    
-                    try:
-                        from src.modules.execution_debug_engine import ExecutionDebugEngine
-                        engine = ExecutionDebugEngine()
-                        
-                        if selector_type == "シンプル":
-                            selectors = [s.strip() for s in simple_selectors.split(',') if s.strip()]
-                            if not selectors:
-                                selectors = ["h1", "h2", "h3", "p"]
-                        else:
-                            try:
-                                selectors = json.loads(advanced_selectors)
-                            except json.JSONDecodeError:
-                                return None, "JSONセレクターの形式が正しくありません"
-                        
-                        params = {
-                            "url": url,
-                            "selectors": selectors
-                        }
-                        
-                        result = await engine.execute_extract_content(
-                            params,
-                            use_own_browser=use_own_browser,
-                            headless=headless,
-                            maintain_browser_session=maintain_session,
-                            tab_selection_strategy=tab_selection
-                        )
-                        
-                        if "error" in result:
-                            return result, f"抽出中にエラーが発生しました: {result['error']}"
-                            
-                        return result, f"✅ 抽出が完了しました。{len(result.get('content', {}))}項目のデータを取得しました。"
-                    
-                    except Exception as e:
-                        import traceback
-                        error_trace = traceback.format_exc()
-                        return None, f"エラーが発生しました: {str(e)}\n\n{error_trace}"
-                
-                # データ保存関数
-                async def save_extracted_data(result, save_path, save_format):
-                    if not result:
-                        return "抽出データがありません。先にデータを抽出してください。"
-                    
-                    try:
-                        from src.modules.execution_debug_engine import ExecutionDebugEngine
-                        engine = ExecutionDebugEngine()
-                        
-                        engine.last_extracted_content = result
-                        
-                        save_result = await engine.save_extracted_content(
-                            file_path=save_path if save_path else None,
-                            format_type=save_format
-                        )
-                        
-                        if save_result.get("success"):
-                            return f"✅ {save_result.get('message')}"
-                        else:
-                            return f"❌ {save_result.get('message')}"
-                    
-                    except Exception as e:
-                        import traceback
-                        error_trace = traceback.format_exc()
-                        return f"❌ 保存中にエラーが発生しました: {str(e)}\n\n{error_trace}"
-                
-                # ボタンイベントの接続
-                extract_button.click(
-                    fn=run_extraction,
-                    inputs=[
-                        extraction_url, 
-                        selector_type, 
-                        simple_selectors, 
-                        advanced_selectors,
-                        use_extract_browser,
-                        extract_headless,
-                        maintain_extract_session,
-                        extract_tab_strategy,
-                        save_format
-                    ],
-                    outputs=[extraction_result, extraction_status]
-                )
-                
-                save_button.click(
-                    fn=save_extracted_data,
-                    inputs=[extraction_result, save_path, save_format],
-                    outputs=[extraction_status]
-                )
+                    max_search_iteration_input = gr.Number(label="Max Search Iteration", value=3, precision=0)
+                    max_query_per_iter_input = gr.Number(label="Max Query per Iteration", value=1, precision=0)
+                with gr.Row():
+                    research_button = gr.Button("▶️ Run Deep Research", variant="primary", scale=2)
+                    stop_research_button = gr.Button("⏹️ Stop", variant="stop", scale=1)
+                markdown_output_display = gr.Markdown(label="Research Report")
+                markdown_download = gr.File(label="Download Research Report")
 
         llm_provider.change(lambda provider, api_key, base_url: update_model_dropdown(provider, api_key, base_url), inputs=[llm_provider, llm_api_key, llm_base_url], outputs=llm_model_name)
         enable_recording.change(lambda enabled: gr.update(interactive=enabled), inputs=enable_recording, outputs=save_recording_path)
@@ -1027,14 +988,6 @@ def create_ui(config, theme_name="Ocean"):
                     window.commandSuggestLoaded = true;
                 }}, 1000);
             }});
-            </script>
-            
-            <div style="margin: 10px 0; text-align: center;">
-                <button onclick="console.log('デバッグボタンがクリックされました'); console.log('window.embeddedCommandsの状態:', window.embeddedCommands ? ('存在します(' + window.embeddedCommands.length + '件)') : '存在しません'); console.log('window.CommandSuggestの状態:', window.CommandSuggest ? '初期化済み' : '未初期化'); window.CommandSuggest && window.CommandSuggest.showDebugInfo(); return false;" 
-                        style="padding: 8px 12px; background: #0078d7; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                    コマンドサジェスト詳細デバッグ
-                </button>
-            </div>
             """
             
             # 結合したHTMLを埋め込み
