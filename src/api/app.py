@@ -40,7 +40,7 @@ def create_fastapi_app(demo, args):
     app = FastAPI()
     
     # CORS設定（環境変数 ALLOWED_ORIGINS を利用、デフォルトは http://localhost:7788 ）
-    allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:7788").split(",")
+    allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://127.0.0.1:7788").split(",")
     app.add_middleware(
         CORSMiddleware,
         allow_origins=allowed_origins,
