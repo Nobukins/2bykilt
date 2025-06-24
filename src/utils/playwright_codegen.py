@@ -190,9 +190,9 @@ def convert_to_action_format(script_content):
     
     template = """async def run_actions(page, query=None):
     # Auto-generated from playwright codegen
-    """
+"""
     for line in action_lines:
-        template +=     f"{line}\n"
+        template +=f"{line}\n"
     template += "    await page.wait_for_timeout(3000)\n"
     return template
 
