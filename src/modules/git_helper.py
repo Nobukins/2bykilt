@@ -21,7 +21,7 @@ def should_update_repository(repo_dir, update_interval=3600):
     if not os.path.exists(last_update_file):
         return True
         
-    with open(last_update_file) as f:
+    with open(last_update_file, encoding='utf-8') as f:
         try:
             last_update = float(f.read().strip())
             return (time.time() - last_update) > update_interval
@@ -31,7 +31,7 @@ def should_update_repository(repo_dir, update_interval=3600):
 def update_last_pull_time(repo_dir):
     """Update the timestamp of the last pull"""
     last_update_file = os.path.join(repo_dir, ".last_update")
-    with open(last_update_file, "w") as f:
+    with open(last_update_file, "w", encoding="utf-8") as f:
         f.write(str(time.time()))
 
 def clone_or_pull_repository(repo_url, target_dir, update_interval=3600):

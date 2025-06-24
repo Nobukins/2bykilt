@@ -69,7 +69,7 @@ class DebugPanel:
         
         full_path = f"logs/browser_diagnostics/{filename}"
         try:
-            with open(full_path, 'r') as f:
+            with open(full_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             return data
         except Exception as e:

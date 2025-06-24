@@ -37,7 +37,7 @@ class BrowserDiagnostic:
         os.makedirs("logs", exist_ok=True)
         filename = f"logs/browser_state_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         
-        with open(filename, "w") as f:
+        with open(filename, "w", encoding="utf-8") as f:
             json.dump(diagnostics, f, indent=2)
         
         logger.info(f"ブラウザ状態診断情報を保存しました: {filename}")

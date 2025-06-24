@@ -266,7 +266,7 @@ async def run_script(
                 # Create pytest.ini if needed
                 pytest_ini_path = os.path.join(script_dir, 'pytest.ini')
                 if not os.path.exists(pytest_ini_path):
-                    with open(pytest_ini_path, 'w') as f:
+                    with open(pytest_ini_path, 'w', encoding='utf-8') as f:
                         f.write('''[pytest]
 asyncio_mode = auto
 asyncio_default_fixture_loop_scope = function
@@ -276,7 +276,7 @@ markers =
 ''')
                 
                 # Save the generated script
-                with open(script_path, 'w') as f:
+                with open(script_path, 'w', encoding='utf-8') as f:
                     f.write(script_content)
                     
                 logger.info(f"Generated browser control script at {script_path}")

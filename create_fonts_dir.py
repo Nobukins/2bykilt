@@ -25,7 +25,7 @@ def create_font_directories():
             placeholder_path = os.path.join(fonts_dir, family, f"{family}-{weight}.woff2")
             
             # Create an empty file (or copy a default font if available)
-            with open(placeholder_path, 'wb') as f:
+            with open(placeholder_path, 'wb', encoding='utf-8') as f:
                 f.write(b'')  # Empty file as placeholder
                 
             print(f"Created placeholder font: {placeholder_path}")
