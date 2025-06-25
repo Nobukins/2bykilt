@@ -210,7 +210,7 @@ def handle_api_key_error(provider: str, env_var: str):
 def encode_image(img_path):
     if not img_path:
         return None
-    with open(img_path, "rb", encoding="utf-8") as fin:
+    with open(img_path, "rb") as fin:
         image_data = base64.b64encode(fin.read()).decode("utf-8")
     return image_data
 

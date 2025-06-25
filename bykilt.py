@@ -1046,7 +1046,7 @@ def main():
             font_path = os.path.join(family_dir, f"{family}-{weight}.woff2")
             if not os.path.exists(font_path):
                 # Create an empty file as placeholder
-                with open(font_path, 'wb', encoding='utf-8') as f:
+                with open(font_path, 'wb') as f:
                     pass
     
     # GradioとFastAPIを統合 - モジュール化版

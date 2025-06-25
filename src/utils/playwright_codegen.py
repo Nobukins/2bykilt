@@ -189,7 +189,9 @@ def convert_to_action_format(script_content):
             action_lines.append(line)
     
     template = """async def run_actions(page, query=None):
+\"\"\"
     # Auto-generated from playwright codegen
+\"\"\"
 """
     for line in action_lines:
         template +=f"{line}\n"
