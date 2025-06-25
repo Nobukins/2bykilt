@@ -243,7 +243,7 @@ class InstructionLoader:
                 )
             
             logger.info(f"Reading local file: {self.local_path}")
-            with open(self.local_path, 'r') as file:
+            with open(self.local_path, 'r', encoding='utf-8') as file:
                 content = file.read()
             
             instructions = self._parse_content(content)
@@ -363,7 +363,7 @@ class InstructionLoader:
 def load_yaml_from_file(file_path: str) -> Union[Dict[str, Any], List[Dict[str, Any]], None]:
     """Utility function to load YAML from a file with proper error handling."""
     try:
-        with open(file_path, 'r') as file:
+        with open(file_path, 'r', encoding='utf-8') as file:
             content = file.read()
             return yaml.safe_load(content)
     except FileNotFoundError:

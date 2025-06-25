@@ -346,7 +346,7 @@ async def generate_final_report(task, history_infos, save_dir, llm, error_msg=No
         history_infos_ = json.dumps(history_infos, indent=4)
         record_json_path = os.path.join(save_dir, "record_infos.json")
         logger.info(f"save All recorded information at {record_json_path}")
-        with open(record_json_path, "w") as fw:
+        with open(record_json_path, "w", encoding="utf-8") as fw:
             json.dump(history_infos, fw, indent=4)
         report_prompt = f"User Instruction:{task} \n Search Information:\n {history_infos_}"
         report_messages = [SystemMessage(content=writer_system_prompt),

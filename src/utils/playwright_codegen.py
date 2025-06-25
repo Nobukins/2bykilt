@@ -82,7 +82,7 @@ def run_normal_codegen(url):
         stdout, stderr = process.communicate(timeout=300)
         
         if process.returncode == 0 and os.path.exists(temp_path):
-            with open(temp_path, 'r') as f:
+            with open(temp_path, 'r', encoding='utf-8') as f:
                 script_content = f.read()
             script_content = convert_to_action_format(script_content)
             os.unlink(temp_path)
@@ -138,7 +138,7 @@ def run_edge_codegen(url):
         
         # 結果確認
         if process.returncode == 0 and os.path.exists(temp_path) and os.path.getsize(temp_path) > 0:
-            with open(temp_path, 'r') as f:
+            with open(temp_path, 'r', encoding='utf-8') as f:
                 script_content = f.read()
             script_content = convert_to_action_format(script_content)
             os.unlink(temp_path)
@@ -154,7 +154,7 @@ def run_edge_codegen(url):
                     return False, "操作記録ファイルが空です。ブラウザで何か操作を行ってください。"
                 else:
                     # ファイルは存在するが、他の理由でエラーが起きた場合
-                    with open(temp_path, 'r') as f:
+                    with open(temp_path, 'r', encoding='utf-8') as f:
                         script_content = f.read()
                     script_content = convert_to_action_format(script_content)
                     os.unlink(temp_path)
@@ -189,10 +189,12 @@ def convert_to_action_format(script_content):
             action_lines.append(line)
     
     template = """async def run_actions(page, query=None):
-    \"\"\"Auto-generated from playwright codegen\"\"\"
-    """
+\"\"\"
+    # Auto-generated from playwright codegen
+\"\"\"
+"""
     for line in action_lines:
-        template += f"    {line}\n"
+        template +=f"{line}\n"
     template += "    await page.wait_for_timeout(3000)\n"
     return template
 
@@ -210,6 +212,7 @@ def save_as_action_file(script_content, file_name, action_name=None):
     """
     try:
         # Ensure file_name has .py extension
+        file_name_org = file_name
         if not file_name.endswith('.py'):
             file_name += '.py'
             
@@ -229,7 +232,7 @@ def save_as_action_file(script_content, file_name, action_name=None):
         file_path = actions_dir / file_name
         
         # Save the script content to the file
-        with open(file_path, 'w') as f:
+        with open(file_path, 'w', encoding='utf-8') as f:
             f.write(script_content)
             
         # Update llms.txt
@@ -237,7 +240,7 @@ def save_as_action_file(script_content, file_name, action_name=None):
         new_entry = f"""
   - name: {action_name}
     type: action_runner_template
-    action_script: actions/{file_name}
+    action_script: {file_name_org}
     params:
       - name: query
         required: true
@@ -247,7 +250,7 @@ def save_as_action_file(script_content, file_name, action_name=None):
 """
         if llms_path.exists():
             # Read existing content
-            with open(llms_path, 'r') as f:
+            with open(llms_path, 'r', encoding='utf-8') as f:
                 content = f.read()
                 
             # Check if entry already exists
@@ -255,11 +258,11 @@ def save_as_action_file(script_content, file_name, action_name=None):
                 return True, f"Action file saved but entry already exists in llms.txt"
                 
             # Append new entry to llms.txt
-            with open(llms_path, 'a') as f:
+            with open(llms_path, 'a', encoding='utf-8') as f:
                 f.write(new_entry)
         else:
             # Create llms.txt if it doesn't exist
-            with open(llms_path, 'w') as f:
+            with open(llms_path, 'w', encoding='utf-8') as f:
                 f.write(f"actions:{new_entry}")
                 
         return True, f"Successfully saved action file and added to llms.txt: {action_name}"

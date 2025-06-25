@@ -27,7 +27,7 @@ def fetch_llms_txt(prompt: str) -> str:
         return response.text
     elif os.path.exists('llms.txt'):
         logger.info("Fetching llms.txt from local file.")
-        with open('llms.txt', 'r') as file:
+        with open('llms.txt', 'r', encoding='utf-8') as file:
             return file.read()
     else:
         logger.error("llms.txt not found locally and no URL provided in prompt.")

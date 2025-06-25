@@ -266,7 +266,7 @@ class CustomAgent(Agent):
     def _extract_playwright_commands(self, script_path: str) -> List[str]:
         """Extract Playwright commands from a pytest script"""
         try:
-            with open(script_path, 'r') as file:
+            with open(script_path, 'r', encoding='utf-8') as file:
                 tree = ast.parse(file.read())
             
             commands = []
@@ -355,7 +355,7 @@ class CustomAgent(Agent):
     def _get_action_slowmo(self, action_type: str) -> int:
         """Get slowmo value for action type from llms.txt"""
         try:
-            with open('llms.txt', 'r') as f:
+            with open('llms.txt', 'r', encoding='utf-8') as f:
                 config = yaml.safe_load(f)
                 for action in config.get('actions', []):
                     if action.get('name') == action_type:
@@ -429,7 +429,7 @@ class CustomAgent(Agent):
     def _load_script_context(self) -> dict:
         """Load script context from llms.txt"""
         try:
-            with open('llms.txt', 'r') as f:
+            with open('llms.txt', 'r', encoding='utf-8') as f:
                 config = yaml.safe_load(f)
                 script_name = self.task.split("pytest")[-1].strip().split()[0].split('/')[-1]
                 for action in config.get('actions', []):

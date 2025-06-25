@@ -87,7 +87,7 @@ def create_action_template(action_name):
     await page.wait_for_timeout(5000)
 '''
     
-    with open(file_path, "w") as f:
+    with open(file_path, "w", encoding="utf-8") as f:
         f.write(template)
     
     print(f"✅ テンプレートファイルを作成しました: {file_path}")

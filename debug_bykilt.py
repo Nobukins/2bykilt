@@ -156,7 +156,7 @@ async def test_llm_response(json_file_path, use_own_browser=False, headless=Fals
     
     try:
         # JSONファイルを読み込み
-        with open(json_file_path, 'r') as f:
+        with open(json_file_path, 'r', encoding='utf-8') as f:
             content = f.read()
             # JSONをパース
             try:
@@ -679,7 +679,7 @@ def list_samples():
     samples_dir = Path("external/samples")
     if samples_dir.exists():
         for sample_file in samples_dir.glob("*.json"):
-            with open(sample_file, "r") as f:
+            with open(sample_file, "r", encoding="utf-8") as f:
                 try:
                     data = json.load(f)
                     script_name = data.get("script_name", "unknown")
