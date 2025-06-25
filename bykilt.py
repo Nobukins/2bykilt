@@ -13,21 +13,289 @@ import json  # Added to fix missing import
 import gradio as gr
 from gradio.themes import Citrus, Default, Glass, Monochrome, Ocean, Origin, Soft, Base
 
+# LLM機能の有効/無効を制御
+ENABLE_LLM = os.getenv("ENABLE_LLM", "false").lower() == "true"
+
 from src.utils import utils
 from src.utils.default_config_settings import default_config, load_config_from_file, save_config_to_file
 from src.utils.default_config_settings import save_current_config, update_ui_from_config
 from src.utils.utils import update_model_dropdown, get_latest_files
 
-# Import the new modules
+# 基本的なブラウザ関連モジュール（LLM非依存）
 from src.script.script_manager import run_script
-from src.config.llms_parser import pre_evaluate_prompt, extract_params, resolve_sensitive_env_variables
-from src.agent.agent_manager import stop_agent, stop_research_agent, run_org_agent, run_custom_agent
-from src.agent.agent_manager import run_deep_search, get_globals, run_browser_agent
-from src.ui.stream_manager import run_with_stream
 from src.browser.browser_manager import close_global_browser, prepare_recording_path, initialize_browser
 from src.browser.browser_config import BrowserConfig
 
-# Import the new modules for run_browser_agent
+# 常に利用可能なモジュール
+from src.config.standalone_prompt_evaluator import (
+    pre_evaluate_prompt_standalone, 
+    extract_params_standalone, 
+    resolve_sensitive_env_variables_standalone
+)
+
+# 条件付きLLM関連インポート
+if ENABLE_LLM:
+    try:
+        from src.config.llms_parser import pre_evaluate_prompt, extract_params, resolve_sensitive_env_variables
+        from src.agent.agent_manager import stop_agent, stop_research_agent, run_org_agent, run_custom_agent
+        from src.agent.agent_manager import run_deep_search, get_globals, run_browser_agent
+        from src.ui.stream_manager import run_with_stream
+        LLM_MODULES_AVAILABLE = True
+        print("✅ LLM modules loaded successfully")
+    except ImportError as e:
+        print(f"⚠️ Warning: LLM modules failed to load: {e}")
+        LLM_MODULES_AVAILABLE = False
+        # LLM無効時のダミー関数を定義
+        def pre_evaluate_prompt(prompt): return pre_evaluate_prompt_standalone(prompt)
+        def extract_params(prompt, params): return extract_params_standalone(prompt, params)
+        def resolve_sensitive_env_variables(text): return resolve_sensitive_env_variables_standalone(text)
+        def stop_agent(): return "LLM機能が無効です"
+        def stop_research_agent(): return "LLM機能が無効です"
+        async def run_org_agent(*args, **kwargs): return "LLM機能が無効です", "", "", "", None, None
+        async def run_custom_agent(*args, **kwargs): return "LLM機能が無効です", "", "", "", None, None
+        async def run_deep_search(*args, **kwargs): return "LLM機能が無効です", None, gr.update(), gr.update()
+        def get_globals(): return {}
+        async def run_browser_agent(*args, **kwargs): return "LLM機能が無効です"
+        async def run_with_stream(*args, **kwargs): 
+            # Extract task from args (task is the 18th parameter)
+            task = args[17] if len(args) > 17 else ""
+            
+            # Check if this is a pre-registered command
+            evaluation_result = pre_evaluate_prompt_standalone(task)
+            if evaluation_result and evaluation_result.get('is_command'):
+                # This is a pre-registered command, try to execute browser automation
+                try:
+                    # Extract browser parameters from args
+                    use_own_browser = args[7] if len(args) > 7 else False
+                    headless = args[9] if len(args) > 9 else True
+                    
+                    # Get the action definition and parameters
+                    action_name = evaluation_result.get('command_name', '').lstrip('@')
+                    action_def = evaluation_result.get('action_def', {})
+                    action_params = evaluation_result.get('params', {})
+                    action_type = action_def.get('type', '')
+                    
+                    if not action_def:
+                        return f"❌ Pre-registered command '{action_name}' not found", "", "", "", "", None, None, None, gr.update(), gr.update()
+                    
+                    # Handle different action types
+                    if action_type == 'browser-control':
+                        from src.modules.direct_browser_control import execute_direct_browser_control
+                        
+                        execution_params = {
+                            'use_own_browser': use_own_browser,
+                            'headless': headless,
+                            **action_params
+                        }
+                        
+                        result = await execute_direct_browser_control(action_def, **execution_params)
+                        
+                        if result:
+                            return f"✅ Browser control command '{action_name}' executed successfully", "", "", "", "", None, None, None, gr.update(), gr.update()
+                        else:
+                            return f"❌ Browser control command '{action_name}' execution failed", "", "", "", "", None, None, None, gr.update(), gr.update()
+                    
+                    elif action_type == 'script':
+                        # Handle script execution
+                        command_template = action_def.get('command', '')
+                        if not command_template:
+                            return f"❌ Script command '{action_name}' has no command template", "", "", "", "", None, None, None, gr.update(), gr.update()
+                        
+                        # Replace parameters in command template
+                        command = command_template
+                        for param_name, param_value in action_params.items():
+                            placeholder = f"${{params.{param_name}}}"
+                            command = command.replace(placeholder, str(param_value))
+                        
+                        # Execute the script command
+                        try:
+                            import subprocess
+                            import asyncio
+                            import os
+                            
+                            # Change to the project directory
+                            project_dir = os.path.dirname(os.path.abspath(__file__))
+                            
+                            # Execute the command asynchronously
+                            process = await asyncio.create_subprocess_shell(
+                                command,
+                                cwd=project_dir,
+                                stdout=asyncio.subprocess.PIPE,
+                                stderr=asyncio.subprocess.PIPE
+                            )
+                            
+                            stdout, stderr = await process.communicate()
+                            
+                            stdout_text = stdout.decode('utf-8') if stdout else ""
+                            stderr_text = stderr.decode('utf-8') if stderr else ""
+                            
+                            if process.returncode == 0:
+                                result_message = f"✅ Script command '{action_name}' executed successfully\n\nCommand: {command}"
+                                if stdout_text:
+                                    result_message += f"\n\nOutput:\n{stdout_text}"
+                            else:
+                                result_message = f"❌ Script command '{action_name}' execution failed (exit code: {process.returncode})\n\nCommand: {command}"
+                                if stderr_text:
+                                    result_message += f"\n\nError:\n{stderr_text}"
+                                if stdout_text:
+                                    result_message += f"\n\nOutput:\n{stdout_text}"
+                            
+                            return result_message, "", "", "", "", None, None, None, gr.update(), gr.update()
+                            
+                        except Exception as e:
+                            return f"❌ Error executing script command '{action_name}': {str(e)}\n\nCommand: {command}", "", "", "", "", None, None, None, gr.update(), gr.update()
+                    
+                    elif action_type in ['action_runner_template', 'git-script']:
+                        # Use the script_manager for these types
+                        try:
+                            from src.script.script_manager import run_script
+                            
+                            script_output, script_path = await run_script(action_def, action_params, headless=headless)
+                            
+                            if script_output and "successfully" in script_output.lower():
+                                return f"✅ {action_type} command '{action_name}' executed successfully\n\n{script_output}", "", "", "", "", None, None, None, gr.update(), gr.update()
+                            else:
+                                return f"❌ {action_type} command '{action_name}' execution failed\n\n{script_output}", "", "", "", "", None, None, None, gr.update(), gr.update()
+                        except Exception as e:
+                            return f"❌ Error executing {action_type} command '{action_name}': {str(e)}", "", "", "", "", None, None, None, gr.update(), gr.update()
+                    
+                    else:
+                        return f"❌ Action type '{action_type}' is not supported in minimal mode. Supported types: browser-control, script, action_runner_template, git-script", "", "", "", "", None, None, None, gr.update(), gr.update()
+                    
+                except Exception as e:
+                    import traceback
+                    error_detail = traceback.format_exc()
+                    return f"❌ Error executing pre-registered command: {str(e)}\n\nDetails:\n{error_detail}", "", "", "", "", None, None, None, gr.update(), gr.update()
+            else:
+                return "LLM機能が無効です。事前登録されたコマンド（@で始まる）のみが利用可能です。", "", "", "", "", None, None, None, gr.update(), gr.update()
+else:
+    LLM_MODULES_AVAILABLE = False
+    print("ℹ️ LLM functionality is disabled (ENABLE_LLM=false)")
+    # LLM無効時のダミー関数を定義（standaloneを使用）
+    def pre_evaluate_prompt(prompt): return pre_evaluate_prompt_standalone(prompt)
+    def extract_params(prompt, params): return extract_params_standalone(prompt, params)
+    def resolve_sensitive_env_variables(text): return resolve_sensitive_env_variables_standalone(text)
+    def stop_agent(): return "LLM機能が無効です"
+    def stop_research_agent(): return "LLM機能が無効です"
+    async def run_org_agent(*args, **kwargs): return "LLM機能が無効です", "", "", "", None, None
+    async def run_custom_agent(*args, **kwargs): return "LLM機能が無効です", "", "", "", None, None
+    async def run_deep_search(*args, **kwargs): return "LLM機能が無効です", None, gr.update(), gr.update()
+    def get_globals(): return {}
+    async def run_browser_agent(*args, **kwargs): return "LLM機能が無効です"
+    async def run_with_stream(*args, **kwargs): 
+        # Extract task from args (task is the 18th parameter)
+        task = args[17] if len(args) > 17 else ""
+        
+        # Check if this is a pre-registered command
+        evaluation_result = pre_evaluate_prompt_standalone(task)
+        if evaluation_result and evaluation_result.get('is_command'):
+            # This is a pre-registered command, try to execute browser automation
+            try:
+                # Extract browser parameters from args
+                use_own_browser = args[7] if len(args) > 7 else False
+                headless = args[9] if len(args) > 9 else True
+                
+                # Get the action definition and parameters
+                action_name = evaluation_result.get('command_name', '').lstrip('@')
+                action_def = evaluation_result.get('action_def', {})
+                action_params = evaluation_result.get('params', {})
+                action_type = action_def.get('type', '')
+                
+                if not action_def:
+                    return f"❌ Pre-registered command '{action_name}' not found", "", "", "", "", None, None, None, gr.update(), gr.update()
+                
+                # Handle different action types
+                if action_type == 'browser-control':
+                    from src.modules.direct_browser_control import execute_direct_browser_control
+                    
+                    execution_params = {
+                        'use_own_browser': use_own_browser,
+                        'headless': headless,
+                        **action_params
+                    }
+                    
+                    result = await execute_direct_browser_control(action_def, **execution_params)
+                    
+                    if result:
+                        return f"✅ Browser control command '{action_name}' executed successfully", "", "", "", "", None, None, None, gr.update(), gr.update()
+                    else:
+                        return f"❌ Browser control command '{action_name}' execution failed", "", "", "", "", None, None, None, gr.update(), gr.update()
+                
+                elif action_type == 'script':
+                    # Handle script execution
+                    command_template = action_def.get('command', '')
+                    if not command_template:
+                        return f"❌ Script command '{action_name}' has no command template", "", "", "", "", None, None, None, gr.update(), gr.update()
+                    
+                    # Replace parameters in command template
+                    command = command_template
+                    for param_name, param_value in action_params.items():
+                        placeholder = f"${{params.{param_name}}}"
+                        command = command.replace(placeholder, str(param_value))
+                    
+                    # Execute the script command
+                    try:
+                        import subprocess
+                        import asyncio
+                        import os
+                        
+                        # Change to the project directory
+                        project_dir = os.path.dirname(os.path.abspath(__file__))
+                        
+                        # Execute the command asynchronously
+                        process = await asyncio.create_subprocess_shell(
+                            command,
+                            cwd=project_dir,
+                            stdout=asyncio.subprocess.PIPE,
+                            stderr=asyncio.subprocess.PIPE
+                        )
+                        
+                        stdout, stderr = await process.communicate()
+                        
+                        stdout_text = stdout.decode('utf-8') if stdout else ""
+                        stderr_text = stderr.decode('utf-8') if stderr else ""
+                        
+                        if process.returncode == 0:
+                            result_message = f"✅ Script command '{action_name}' executed successfully\n\nCommand: {command}"
+                            if stdout_text:
+                                result_message += f"\n\nOutput:\n{stdout_text}"
+                        else:
+                            result_message = f"❌ Script command '{action_name}' execution failed (exit code: {process.returncode})\n\nCommand: {command}"
+                            if stderr_text:
+                                result_message += f"\n\nError:\n{stderr_text}"
+                            if stdout_text:
+                                result_message += f"\n\nOutput:\n{stdout_text}"
+                        
+                        return result_message, "", "", "", "", None, None, None, gr.update(), gr.update()
+                        
+                    except Exception as e:
+                        return f"❌ Error executing script command '{action_name}': {str(e)}\n\nCommand: {command}", "", "", "", "", None, None, None, gr.update(), gr.update()
+                
+                elif action_type in ['action_runner_template', 'git-script']:
+                    # Use the script_manager for these types
+                    try:
+                        from src.script.script_manager import run_script
+                        
+                        script_output, script_path = await run_script(action_def, action_params, headless=headless)
+                        
+                        if script_output and "successfully" in script_output.lower():
+                            return f"✅ {action_type} command '{action_name}' executed successfully\n\n{script_output}", "", "", "", "", None, None, None, gr.update(), gr.update()
+                        else:
+                            return f"❌ {action_type} command '{action_name}' execution failed\n\n{script_output}", "", "", "", "", None, None, None, gr.update(), gr.update()
+                    except Exception as e:
+                        return f"❌ Error executing {action_type} command '{action_name}': {str(e)}", "", "", "", "", None, None, None, gr.update(), gr.update()
+                
+                else:
+                    return f"❌ Action type '{action_type}' is not supported in minimal mode. Supported types: browser-control, script, action_runner_template, git-script", "", "", "", "", None, None, None, gr.update(), gr.update()
+                
+            except Exception as e:
+                import traceback
+                error_detail = traceback.format_exc()
+                return f"❌ Error executing pre-registered command: {str(e)}\n\nDetails:\n{error_detail}", "", "", "", "", None, None, None, gr.update(), gr.update()
+        else:
+            return "LLM機能が無効です。事前登録されたコマンド（@で始まる）のみが利用可能です。", "", "", "", "", None, None, None, gr.update(), gr.update()
+
+# ブラウザ自動化関連モジュール（常に利用可能）
 from src.config.action_translator import ActionTranslator
 from src.utils.debug_utils import DebugUtils
 from src.browser.browser_debug_manager import BrowserDebugManager
@@ -36,7 +304,33 @@ from src.utils.playwright_codegen import run_playwright_codegen, save_as_action_
 from src.utils.log_ui import create_log_tab  # Import log UI integration
 
 import yaml  # 必要であればインストール: pip install pyyaml
-import os
+
+# load_actions_config関数の定義（LLM非依存）
+def load_actions_config():
+    """Load actions configuration from llms.txt file."""
+    try:
+        config_path = os.path.join(os.path.dirname(__file__), 'llms.txt')
+        if not os.path.exists(config_path):
+            print(f"⚠️ Actions config file not found at {config_path}")
+            return {}
+            
+        with open(config_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+        
+        # Parse YAML structure
+        try:
+            actions_config = yaml.safe_load(content)
+            if isinstance(actions_config, dict) and 'actions' in actions_config:
+                return actions_config
+            else:
+                print("⚠️ Invalid actions config structure")
+                return {}
+        except yaml.YAMLError as e:
+            print(f"⚠️ YAML parsing error: {e}")
+            return {}
+    except Exception as e:
+        print(f"⚠️ Error loading actions config: {e}")
+        return {}
 
 # Functions to load and save llms.txt for UI editing
 def load_llms_file():
@@ -81,6 +375,54 @@ async def run_browser_agent(task, add_infos, llm_provider, llm_model_name, llm_n
     """
     Run the browser agent using JSON-based execution.
     """
+    # LLM機能が無効の場合、ブラウザ自動化のみで処理
+    if not ENABLE_LLM or not LLM_MODULES_AVAILABLE:
+        browser_manager = BrowserDebugManager()
+        debug_utils = DebugUtils(browser_manager=browser_manager)
+        
+        try:
+            # ブラウザセッションを初期化
+            browser_result = await browser_manager.initialize_with_session(
+                session_id=None,
+                use_own_browser=use_own_browser,
+                headless=headless
+            )
+            
+            if browser_result.get("status") != "success":
+                return {
+                    "status": "error", 
+                    "message": "ブラウザの初期化に失敗しました", 
+                    "final_result": "",
+                    "errors": "ブラウザの初期化に失敗しました"
+                }
+            
+            # 基本的なブラウザ操作の実行
+            # URLの場合は直接ナビゲート
+            if task.startswith("http"):
+                result = await debug_utils.execute_goto_url(task, use_own_browser, headless)
+                return {
+                    "status": "success",
+                    "message": f"URLに移動しました: {task}",
+                    "final_result": f"URLに移動: {task}",
+                    "errors": ""
+                }
+            else:
+                return {
+                    "status": "info",
+                    "message": "LLM機能が無効のため、自然言語による指示は処理できません。URLまたは具体的なコマンドを入力してください。",
+                    "final_result": "LLM機能が無効です",
+                    "errors": ""
+                }
+                
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": f"実行エラー: {str(e)}",
+                "final_result": "",
+                "errors": str(e)
+            }
+    
+    # LLM機能が有効な場合の処理（従来通り）
     browser_manager = BrowserDebugManager()
     debug_utils = DebugUtils(browser_manager=browser_manager)
     
@@ -268,25 +610,91 @@ def create_ui(config, theme_name="Ocean"):
                         tool_calling_method = gr.Dropdown(label="Tool Calling Method", value=config['tool_calling_method'], interactive=True, allow_custom_value=True, choices=["auto", "json_schema", "function_calling"], info="Tool Calls Function Name", visible=False)
 
             with gr.TabItem("🔧 LLM Configuration", id=2):
-                with gr.Group():
-                    llm_provider = gr.Dropdown(choices=[provider for provider, model in utils.model_names.items()], label="LLM Provider", value=config['llm_provider'], info="Select your preferred language model provider")
-                    llm_model_name = gr.Dropdown(label="Model Name", choices=utils.model_names['openai'], value=config['llm_model_name'], interactive=True, allow_custom_value=True, info="Select a model from the dropdown or type a custom model name")
-                    llm_num_ctx = gr.Slider(minimum=2**8, maximum=2**16, value=config['llm_num_ctx'], step=1, label="Max Context Length", info="Controls max context length model needs to handle (less = faster)", visible=config['llm_provider'] == "ollama")
-                    llm_temperature = gr.Slider(minimum=0.0, maximum=2.0, value=config['llm_temperature'], step=0.1, label="Temperature", info="Controls randomness in model outputs")
-                    with gr.Row():
-                        llm_base_url = gr.Textbox(label="Base URL", value=config['llm_base_url'], info="API endpoint URL (if required)")
-                        llm_api_key = gr.Textbox(label="API Key", type="password", value=config['llm_api_key'], info="Your API key (leave blank to use .env)")
-
-                    llm_provider.change(fn=lambda provider: gr.update(visible=provider == "ollama"), inputs=llm_provider, outputs=llm_num_ctx)
-                    
-                    with gr.Row():
-                        dev_mode = gr.Checkbox(
-                            label="Dev Mode",
-                            value=config['dev_mode'],
-                            info="Use LM Studio compatible endpoints"
+                # LLM機能の状態表示
+                if not ENABLE_LLM or not LLM_MODULES_AVAILABLE:
+                    with gr.Group():
+                        gr.Markdown("### ⚠️ LLM機能が無効化されています")
+                        gr.Markdown("""
+                        **現在の状態**: LLM機能は無効化されています  
+                        **利用可能な機能**: ブラウザ自動化、Playwright Codegen  
+                        **LLM機能を有効化するには**: 
+                        1. 環境変数 `ENABLE_LLM=true` を設定
+                        2. LLM関連パッケージをインストール: `pip install -r requirements.txt`
+                        3. アプリケーションを再起動
+                        """)
+                        
+                        # LLM無効時でも基本設定は表示（ただし無効化）
+                        llm_provider = gr.Dropdown(
+                            choices=["LLM無効"], 
+                            label="LLM Provider", 
+                            value="LLM無効", 
+                            interactive=False,
+                            info="LLM機能が無効化されています"
                         )
+                        llm_model_name = gr.Dropdown(
+                            choices=["LLM無効"], 
+                            label="Model Name", 
+                            value="LLM無効", 
+                            interactive=False,
+                            info="LLM機能が無効化されています"
+                        )
+                        llm_num_ctx = gr.Slider(
+                            minimum=2**8, maximum=2**16, value=4096, step=1, 
+                            label="Max Context Length", interactive=False, visible=False
+                        )
+                        llm_temperature = gr.Slider(
+                            minimum=0.0, maximum=2.0, value=0.0, step=0.1, 
+                            label="Temperature", interactive=False
+                        )
+                        with gr.Row():
+                            llm_base_url = gr.Textbox(
+                                label="Base URL", value="", interactive=False,
+                                info="LLM機能が無効化されています"
+                            )
+                            llm_api_key = gr.Textbox(
+                                label="API Key", type="password", value="", interactive=False,
+                                info="LLM機能が無効化されています"
+                            )
+                        dev_mode = gr.Checkbox(
+                            label="Dev Mode", value=False, interactive=False,
+                            info="LLM機能が無効化されています"
+                        )
+                else:
+                    # LLM有効時の通常UI
+                    with gr.Group():
+                        llm_provider = gr.Dropdown(choices=[provider for provider, model in utils.model_names.items()], label="LLM Provider", value=config['llm_provider'], info="Select your preferred language model provider")
+                        llm_model_name = gr.Dropdown(label="Model Name", choices=utils.model_names['openai'], value=config['llm_model_name'], interactive=True, allow_custom_value=True, info="Select a model from the dropdown or type a custom model name")
+                        llm_num_ctx = gr.Slider(minimum=2**8, maximum=2**16, value=config['llm_num_ctx'], step=1, label="Max Context Length", info="Controls max context length model needs to handle (less = faster)", visible=config['llm_provider'] == "ollama")
+                        llm_temperature = gr.Slider(minimum=0.0, maximum=2.0, value=config['llm_temperature'], step=0.1, label="Temperature", info="Controls randomness in model outputs")
+                        with gr.Row():
+                            llm_base_url = gr.Textbox(label="Base URL", value=config['llm_base_url'], info="API endpoint URL (if required)")
+                            llm_api_key = gr.Textbox(label="API Key", type="password", value=config['llm_api_key'], info="Your API key (leave blank to use .env)")
+
+                        llm_provider.change(fn=lambda provider: gr.update(visible=provider == "ollama"), inputs=llm_provider, outputs=llm_num_ctx)
+                        
+                        with gr.Row():
+                            dev_mode = gr.Checkbox(
+                                label="Dev Mode",
+                                value=config['dev_mode'],
+                                info="Use LM Studio compatible endpoints"
+                            )
 
             with gr.TabItem("🤖 Run Agent", id=4):
+                # LLM機能の状態に応じてタブの内容を変更
+                if not ENABLE_LLM or not LLM_MODULES_AVAILABLE:
+                    with gr.Group():
+                        gr.Markdown("### ℹ️ ブラウザ自動化モード")
+                        gr.Markdown("""
+                        **現在のモード**: LLM機能無効  
+                        **利用可能な機能**:
+                        - ブラウザ自動化とスクリプト実行
+                        - Playwright Codegen
+                        - JSON形式のアクション実行
+                        - 基本的なブラウザ操作
+                        
+                        **制限事項**: 自然言語による指示は利用できません
+                        """)
+                
                 # Add command helper integration
                 with gr.Accordion("📋 Available Commands", open=False):
                     commands_table = gr.DataFrame(
@@ -1058,10 +1466,104 @@ if __name__ == '__main__':
     
 async def on_run_agent_click(task, add_infos, llm_provider, llm_model_name, llm_num_ctx, llm_temperature, llm_base_url, llm_api_key, use_vision, use_own_browser, headless):
     try:
-        # bykilt.pyのコマンド処理箇所に追加
+        # まず、LLM有効/無効に関わらず事前登録コマンドをチェック
         print(f"🔎 入力コマンド解析: {task}")
-        action_name, params = pre_evaluate_prompt(task)
-        print(f"🔎 解析結果: アクション={action_name}, パラメータ={params}")
+        
+        # 統一されたプロンプト評価を使用
+        if ENABLE_LLM and LLM_MODULES_AVAILABLE:
+            action_result = pre_evaluate_prompt(task)  # LLM版とstandalone版の統合済み
+        else:
+            action_result = pre_evaluate_prompt_standalone(task)  # standalone版
+        
+        # 事前登録されたコマンドが見つかった場合
+        if action_result:
+            print(f"✅ 事前登録コマンドを発見: {action_result.get('name')}")
+            
+            # パラメータを抽出
+            if ENABLE_LLM and LLM_MODULES_AVAILABLE:
+                params = extract_params(task, action_result.get('params', ''))
+            else:
+                params = extract_params_standalone(task, action_result.get('params', ''))
+            
+            print(f"🔎 抽出されたパラメータ: {params}")
+            
+            # ブラウザ自動化を実行（LLM非依存）
+            try:
+                browser_manager = BrowserDebugManager()
+                debug_utils = DebugUtils(browser_manager=browser_manager)
+                
+                # ブラウザセッションを初期化
+                browser_result = await browser_manager.initialize_with_session(
+                    session_id=None,
+                    use_own_browser=use_own_browser,
+                    headless=headless
+                )
+                
+                if browser_result.get("status") == "success":
+                    # 実際のスクリプト実行
+                    script_output, script_path = await run_script(
+                        action_result, params, headless=headless, 
+                        save_recording_path=None
+                    )
+                    
+                    message = f"### ✅ 事前登録コマンド実行完了\n\n"
+                    message += f"**コマンド**: {action_result.get('name')}\n\n"
+                    message += f"**パラメータ**: {params}\n\n"
+                    message += f"**実行結果**: {script_output}\n\n"
+                    message += f"**スクリプトパス**: {script_path}\n\n"
+                    
+                    return message, "", gr.update(value="実行", interactive=True), gr.update(interactive=True)
+                else:
+                    error_msg = f"### ❌ ブラウザ初期化エラー\n\n{browser_result.get('message', '不明なエラー')}"
+                    return error_msg, "", gr.update(value="実行", interactive=True), gr.update(interactive=True)
+                    
+            except Exception as e:
+                error_msg = f"### ❌ コマンド実行エラー\n\n```\n{str(e)}\n```"
+                return error_msg, "", gr.update(value="実行", interactive=True), gr.update(interactive=True)
+        
+        # 事前登録コマンドでない場合の処理
+        if not ENABLE_LLM or not LLM_MODULES_AVAILABLE:
+            # LLM無効時の処理
+            print(f"🔎 ブラウザ自動化モード - 入力: {task}")
+            
+            # URLの場合は直接ナビゲート
+            if task.startswith("http"):
+                try:
+                    browser_manager = BrowserDebugManager()
+                    debug_utils = DebugUtils(browser_manager=browser_manager)
+                    
+                    result = await debug_utils.execute_goto_url(task, use_own_browser, headless)
+                    message = f"### ブラウザ自動化実行結果\n\n"
+                    message += f"**操作**: URLに移動\n\n"
+                    message += f"**URL**: {task}\n\n"
+                    message += f"**状態**: 完了\n\n"
+                    
+                    return message, "", gr.update(value="実行", interactive=True), gr.update(interactive=True)
+                except Exception as e:
+                    error_msg = f"### ブラウザ自動化エラー\n\nURL移動中にエラーが発生しました: {str(e)}"
+                    return error_msg, "", gr.update(value="実行", interactive=True), gr.update(interactive=True)
+            else:
+                # LLM機能が必要な処理の場合
+                info_msg = f"""### ⚠️ LLM機能が無効です
+
+**現在のモード**: ブラウザ自動化のみ  
+**入力された指示**: {task}
+
+**利用可能な操作**:
+- 事前登録されたコマンド (例: @search-linkedin query=test)
+- URLの直接入力 (例: https://www.google.com)
+- Playwright Codegenで生成されたスクリプトの実行
+- JSON形式のアクション実行
+
+**LLM機能を有効にするには**:
+1. 環境変数を設定: `ENABLE_LLM=true`
+2. LLM関連パッケージをインストール: `pip install -r requirements.txt`
+3. アプリケーションを再起動
+"""
+                return info_msg, "", gr.update(value="実行", interactive=True), gr.update(interactive=True)
+        
+        # LLM機能が有効な場合の処理（従来通り）
+        print(f"🔎 LLM処理へ移行")
 
         # CommandDispatcherを使用してコマンド実行
         from src.agent.agent_manager import run_command

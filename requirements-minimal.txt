@@ -1,0 +1,43 @@
+# 軽量版requirements.txt - LLM機能なしでブラウザ自動化のみ
+# 基本的なWebブラウザ自動化とPlaywright Codegenが利用可能
+
+# Core browser automation
+playwright>=1.35.0
+pyperclip==1.9.0
+psutil>=5.9.0
+
+# UI Framework
+gradio>=5.10.0
+
+# Basic utilities
+aiofiles>=23.2.0
+aiohttp>=3.11.0
+requests>=2.28.0
+python-dotenv>=0.19.0
+pillow>=11.0.0
+click>=8.1.0
+
+# Data processing
+pandas>=2.2.0
+PyYAML>=6.0.0
+jsonschema>=4.0.0
+json-repair
+
+# Development tools
+pytest>=7.0.0
+pytest-playwright>=0.4.0
+pytest-asyncio>=0.18.0
+
+# Async support
+nest_asyncio>=1.5.6
+
+# Platform-specific (macOS)
+pyobjc-core==11.0; sys_platform == 'darwin'
+pyobjc-framework-Cocoa==11.0; sys_platform == 'darwin'
+pyobjc-framework-Quartz==11.0; sys_platform == 'darwin'
+
+# Installation notes:
+# Run: pip install -r requirements-minimal.txt --upgrade
+# After installing playwright, run: playwright install
+# This minimal version excludes all LLM providers and related dependencies
+# For full LLM functionality, use requirements.txt instead
