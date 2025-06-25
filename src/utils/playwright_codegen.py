@@ -212,8 +212,8 @@ def save_as_action_file(script_content, file_name, action_name=None):
     """
     try:
         # Ensure file_name has .py extension
+        file_name_org = file_name
         if not file_name.endswith('.py'):
-            file_name_org = file_name
             file_name += '.py'
             
         # Default action_name to file_name without extension if not provided
