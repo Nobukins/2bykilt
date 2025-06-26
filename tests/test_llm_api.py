@@ -3,10 +3,51 @@ import pdb
 from dataclasses import dataclass
 
 from dotenv import load_dotenv
-from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_ollama import ChatOllama
 
 load_dotenv()
+
+# LLM機能の有効/無効を制御
+ENABLE_LLM = os.getenv("ENABLE_LLM", "false").lower() == "true"
+
+# 条件付きLLMインポート
+if ENABLE_LLM:
+    try:
+        from langchain_core.messages import HumanMessage, SystemMessage
+        from langchain_ollama import ChatOllama
+        LLM_TEST_AVAILABLE = True
+        print("✅ LLM test modules loaded successfully")
+    except ImportError as e:
+        print(f"⚠️ Warning: LLM test modules failed to load: {e}")
+        LLM_TEST_AVAILABLE = False
+        
+        # ダミークラスを定義
+        class HumanMessage:
+            def __init__(self, content):
+                self.content = content
+        class SystemMessage:
+            def __init__(self, content):
+                self.content = content
+        class ChatOllama:
+            def __init__(self, **kwargs):
+                pass
+            def invoke(self, messages):
+                return type('MockResponse', (), {'content': 'LLM disabled - test skipped'})()
+else:
+    LLM_TEST_AVAILABLE = False
+    print("ℹ️ LLM test functionality is disabled (ENABLE_LLM=false)")
+    
+    # ダミークラスを定義
+    class HumanMessage:
+        def __init__(self, content):
+            self.content = content
+    class SystemMessage:
+        def __init__(self, content):
+            self.content = content
+    class ChatOllama:
+        def __init__(self, **kwargs):
+            pass
+        def invoke(self, messages):
+            return type('MockResponse', (), {'content': 'LLM disabled - test skipped'})()
 
 import sys
 
@@ -48,6 +89,11 @@ def get_env_value(key, provider):
     return ""
 
 def test_llm(config, query, image_path=None, system_message=None):
+    # LLM機能が無効な場合はテストをスキップ
+    if not ENABLE_LLM or not LLM_TEST_AVAILABLE:
+        print("⚠️ LLM test skipped - LLM functionality is disabled")
+        return "LLM test skipped - functionality disabled"
+    
     from src.utils import utils
 
     # Special handling for Ollama-based models

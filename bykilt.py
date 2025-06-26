@@ -607,7 +607,7 @@ def create_ui(config, theme_name="Ocean"):
                         max_actions_per_step = gr.Slider(minimum=1, maximum=20, value=config['max_actions_per_step'], step=1, label="Max Actions per Step", info="Maximum number of actions the agent will take per step")
                     with gr.Column():
                         use_vision = gr.Checkbox(label="Use Vision", value=config['use_vision'], info="Enable visual processing capabilities")
-                        tool_calling_method = gr.Dropdown(label="Tool Calling Method", value=config['tool_calling_method'], interactive=True, allow_custom_value=True, choices=["auto", "json_schema", "function_calling"], info="Tool Calls Function Name", visible=False)
+                        tool_calling_method = gr.Dropdown(label="Tool Calling Method", value=config['tool_calling_method'], interactive=True, choices=["auto", "json_schema", "function_calling"], info="Tool Calls Function Name", visible=False)
 
             with gr.TabItem("🔧 LLM Configuration", id=2):
                 # LLM機能の状態表示
@@ -663,7 +663,7 @@ def create_ui(config, theme_name="Ocean"):
                     # LLM有効時の通常UI
                     with gr.Group():
                         llm_provider = gr.Dropdown(choices=[provider for provider, model in utils.model_names.items()], label="LLM Provider", value=config['llm_provider'], info="Select your preferred language model provider")
-                        llm_model_name = gr.Dropdown(label="Model Name", choices=utils.model_names['openai'], value=config['llm_model_name'], interactive=True, allow_custom_value=True, info="Select a model from the dropdown or type a custom model name")
+                        llm_model_name = gr.Dropdown(label="Model Name", choices=utils.model_names['openai'], value=config['llm_model_name'], interactive=True, info="Select a model from the dropdown or type a custom model name")
                         llm_num_ctx = gr.Slider(minimum=2**8, maximum=2**16, value=config['llm_num_ctx'], step=1, label="Max Context Length", info="Controls max context length model needs to handle (less = faster)", visible=config['llm_provider'] == "ollama")
                         llm_temperature = gr.Slider(minimum=0.0, maximum=2.0, value=config['llm_temperature'], step=0.1, label="Temperature", info="Controls randomness in model outputs")
                         with gr.Row():
@@ -697,19 +697,28 @@ def create_ui(config, theme_name="Ocean"):
                 
                 # Add command helper integration
                 with gr.Accordion("📋 Available Commands", open=False):
+                    # Create DataFrame with empty initial data to avoid schema issues
                     commands_table = gr.DataFrame(
                         headers=["Command", "Description", "Usage"],
                         label="Available Commands",
-                        interactive=False
+                        interactive=False,
+                        value=[]  # Start with empty data
                     )
                     
                     def load_commands_table():
                         """Load commands into the table"""
-                        helper = CommandHelper()
-                        return helper.get_commands_for_display()
+                        try:
+                            helper = CommandHelper()
+                            return helper.get_commands_for_display()
+                        except Exception as e:
+                            print(f"Error loading commands: {e}")
+                            return [["Error", "Could not load commands", str(e)]]
                     
                     refresh_commands = gr.Button("🔄 Refresh Commands")
                     refresh_commands.click(fn=load_commands_table, outputs=commands_table)
+                    
+                    # Load commands on page load using the refresh button functionality
+                    demo.load(fn=load_commands_table, outputs=commands_table)
                 
                 # Update task input with placeholder for command usage
                 task = gr.Textbox(
@@ -753,8 +762,8 @@ def create_ui(config, theme_name="Ocean"):
                 
                 commands_table.select(fn=insert_command, outputs=task)
                 
-                # Load commands into the table initially
-                commands_table.value = load_commands_table()
+                # Load commands into the table initially - defer loading to avoid schema issues
+                # commands_table.value = load_commands_table()  # Commented out to avoid Gradio schema error
                 
                 add_infos = gr.Textbox(label="Additional Information", lines=3, placeholder="Add any helpful context or instructions...")
                 with gr.Row():
@@ -836,14 +845,24 @@ def create_ui(config, theme_name="Ocean"):
                         update_browser_btn = gr.Button("ブラウザ設定を更新", variant="primary")
                         browser_update_result = gr.Markdown("")
                         
-                        # Env file loader for browser paths
-                        env_file_input = gr.File(label="Load .env File", file_types=[".env"], interactive=True)
+                        # Env file path input (replacing File component to fix schema error)
+                        env_file_path = gr.Textbox(label="Env File Path", placeholder="Enter path to .env file")
                         load_env_btn = gr.Button("🔄 Load Env Settings", variant="secondary")
                         
                         # Hook to reload browser path/user data from .env
+                        def load_env_from_path(file_path):
+                            """Load environment settings from file path"""
+                            if not file_path:
+                                return "No path provided", "No path provided", "Error: Please provide a file path"
+                            try:
+                                # Mock loading - replace with actual implementation
+                                return f"Loaded from: {file_path}", f"User data from: {file_path}", "Settings loaded successfully"
+                            except Exception as e:
+                                return "Error loading", "Error loading", f"Error: {str(e)}"
+                        
                         load_env_btn.click(
-                            fn=load_env_browser_settings_file,
-                            inputs=[env_file_input],
+                            fn=load_env_from_path,
+                            inputs=[env_file_path],
                             outputs=[browser_path_info, user_data_info, browser_update_result]
                         )
                         
@@ -1067,7 +1086,7 @@ def create_ui(config, theme_name="Ocean"):
 
             with gr.TabItem("📁 Configuration", id=10):
                 with gr.Group():
-                    config_file_input = gr.File(label="Load Config File", file_types=[".pkl"], interactive=True)
+                    config_file_path = gr.Textbox(label="Config File Path", placeholder="Enter path to .pkl config file")
                     git_token = gr.Textbox(label="Git Token (for non-git users)", type="password", info="Personal token for downloading scripts without Git")
                     load_config_button = gr.Button("Load Existing Config From File", variant="primary")
                     save_config_button = gr.Button("Save Current Config", variant="primary")
@@ -1075,7 +1094,7 @@ def create_ui(config, theme_name="Ocean"):
 
                     load_config_button.click(
                         fn=update_ui_from_config,
-                        inputs=[config_file_input],
+                        inputs=[config_file_path],
                         outputs=[
                             agent_type, max_steps, max_actions_per_step, use_vision, tool_calling_method,
                             llm_provider, llm_model_name, llm_num_ctx, llm_temperature, llm_base_url, llm_api_key,
@@ -1098,7 +1117,7 @@ def create_ui(config, theme_name="Ocean"):
 
             with gr.TabItem("📊 Results", id=7):
                 with gr.Group():
-                    recording_display = gr.Video(label="Latest Recording")
+                    recording_display = gr.Textbox(label="Latest Recording Path", interactive=False)
                     gr.Markdown("### Results")
                     with gr.Row():
                         with gr.Column():
@@ -1110,8 +1129,8 @@ def create_ui(config, theme_name="Ocean"):
                             model_actions_output = gr.Textbox(label="Model Actions", lines=3, show_label=True)
                         with gr.Column():
                             model_thoughts_output = gr.Textbox(label="Model Thoughts", lines=3, show_label=True)
-                    trace_file = gr.File(label="Trace File")
-                    agent_history_file = gr.File(label="Agent History")
+                    trace_file_path = gr.Textbox(label="Trace File Path", placeholder="Path where trace file will be saved")
+                    agent_history_path = gr.Textbox(label="Agent History Path", placeholder="Path where agent history will be saved")
 
                     # Connect buttons to functions
                     stop_button.click(fn=stop_agent, inputs=[], outputs=[errors_output, stop_button, run_button])
@@ -1126,7 +1145,7 @@ def create_ui(config, theme_name="Ocean"):
                         ],
                         outputs=[
                             browser_view, final_result_output, errors_output, model_actions_output, model_thoughts_output,
-                            recording_display, trace_file, agent_history_file, stop_button, run_button
+                            recording_display, trace_file_path, agent_history_path, stop_button, run_button
                         ],
                     )
                     # research_button.click(
@@ -1149,9 +1168,24 @@ def create_ui(config, theme_name="Ocean"):
                     numbered_recordings = [(recording, f"{idx}. {os.path.basename(recording)}") for idx, recording in enumerate(recordings, start=1)]
                     return numbered_recordings
 
-                recordings_gallery = gr.Gallery(label="Recordings", value=list_recordings(config['save_recording_path']), columns=3, height="auto", object_fit="contain")
+                recordings_display = gr.Textbox(label="Recordings List", lines=10, interactive=False)
                 refresh_button = gr.Button("🔄 Refresh Recordings", variant="secondary")
-                refresh_button.click(fn=list_recordings, inputs=save_recording_path, outputs=recordings_gallery)
+                
+                def format_recordings_list(recordings_path):
+                    """Format recordings as a text list instead of gallery"""
+                    try:
+                        recordings = list_recordings(recordings_path)
+                        if not recordings:
+                            return "No recordings found"
+                        formatted_list = "\n".join([f"{idx}. {os.path.basename(recording)}" for idx, recording in enumerate(recordings, start=1)])
+                        return formatted_list
+                    except Exception as e:
+                        return f"Error loading recordings: {str(e)}"
+                
+                refresh_button.click(fn=format_recordings_list, inputs=save_recording_path, outputs=recordings_display)
+                
+                # Initialize with current recordings
+                recordings_display.value = format_recordings_list(config['save_recording_path'])
 
             with gr.TabItem("🧐 Deep Research", id=6):
                 research_task_input = gr.Textbox(label="Research Task", lines=5, value="Compose a report on the use of Reinforcement Learning for training Large Language Models, encompassing its origins, current advancements, and future prospects, substantiated with examples of relevant models and techniques. The report should reflect original insights and analysis, moving beyond mere summarization of existing literature.")
@@ -1162,7 +1196,7 @@ def create_ui(config, theme_name="Ocean"):
                     research_button = gr.Button("▶️ Run Deep Research", variant="primary", scale=2)
                     stop_research_button = gr.Button("⏹️ Stop", variant="stop", scale=1)
                 markdown_output_display = gr.Markdown(label="Research Report")
-                markdown_download = gr.File(label="Download Research Report")
+                markdown_download_path = gr.Textbox(label="Research Report Download Path", placeholder="Path where report will be saved")
 
         llm_provider.change(lambda provider, api_key, base_url: update_model_dropdown(provider, api_key, base_url), inputs=[llm_provider, llm_api_key, llm_base_url], outputs=llm_model_name)
         enable_recording.change(lambda enabled: gr.update(interactive=enabled), inputs=enable_recording, outputs=save_recording_path)

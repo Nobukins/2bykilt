@@ -9,32 +9,50 @@ import os
 import base64
 import io
 import platform
-from browser_use.agent.prompts import SystemPrompt, AgentMessagePrompt
-from browser_use.agent.service import Agent
-from browser_use.agent.views import (
-    ActionResult,
-    ActionModel,
-    AgentHistoryList,
-    AgentOutput,
-    AgentHistory,
-)
-from browser_use.browser.browser import Browser
-from browser_use.browser.context import BrowserContext
-from browser_use.browser.views import BrowserStateHistory
-from browser_use.controller.service import Controller
-from browser_use.telemetry.views import (
-    AgentEndTelemetryEvent,
-    AgentRunTelemetryEvent,
-    AgentStepTelemetryEvent,
-)
-from browser_use.utils import time_execution_async
-from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import (
-    BaseMessage,
-    HumanMessage,
-    AIMessage
-)
-from browser_use.agent.prompts import PlannerPrompt
+
+# LLM機能の有効/無効を制御
+ENABLE_LLM = os.getenv("ENABLE_LLM", "false").lower() == "true"
+
+# 条件付きLLMインポート
+if ENABLE_LLM:
+    try:
+        from browser_use.agent.prompts import SystemPrompt, AgentMessagePrompt, PlannerPrompt
+        from browser_use.agent.service import Agent
+        from browser_use.agent.views import (
+            ActionResult,
+            ActionModel,
+            AgentHistoryList,
+            AgentOutput,
+            AgentHistory,
+        )
+        from browser_use.browser.browser import Browser
+        from browser_use.browser.context import BrowserContext
+        from browser_use.browser.views import BrowserStateHistory
+        from browser_use.controller.service import Controller
+        from browser_use.telemetry.views import (
+            AgentEndTelemetryEvent,
+            AgentRunTelemetryEvent,
+            AgentStepTelemetryEvent,
+        )
+        from browser_use.utils import time_execution_async
+        from langchain_core.language_models.chat_models import BaseChatModel
+        from langchain_core.messages import (
+            BaseMessage,
+            HumanMessage,
+            AIMessage
+        )
+        LLM_AGENT_AVAILABLE = True
+    except ImportError as e:
+        print(f"⚠️ Warning: LLM agent modules failed to load: {e}")
+        LLM_AGENT_AVAILABLE = False
+        # ダミークラスを定義
+        class Agent: pass
+        class BaseChatModel: pass
+else:
+    LLM_AGENT_AVAILABLE = False
+    # ダミークラスを定義
+    class Agent: pass
+    class BaseChatModel: pass
 
 from json_repair import repair_json
 from src.utils.agent_state import AgentState

@@ -1,13 +1,31 @@
 import pdb
 from typing import List, Optional
+import os
 
-from browser_use.agent.prompts import SystemPrompt, AgentMessagePrompt
-from browser_use.agent.views import ActionResult, ActionModel
-from browser_use.browser.views import BrowserState
-from langchain_core.messages import HumanMessage, SystemMessage
-from datetime import datetime
+# LLM機能の有効/無効を制御
+ENABLE_LLM = os.getenv("ENABLE_LLM", "false").lower() == "true"
 
-from .custom_views import CustomAgentStepInfo
+# 条件付きLLMインポート
+if ENABLE_LLM:
+    try:
+        from browser_use.agent.prompts import SystemPrompt, AgentMessagePrompt
+        from browser_use.agent.views import ActionResult, ActionModel
+        from browser_use.browser.views import BrowserState
+        from langchain_core.messages import HumanMessage, SystemMessage
+        from datetime import datetime
+        from .custom_views import CustomAgentStepInfo
+        LLM_PROMPTS_AVAILABLE = True
+    except ImportError as e:
+        print(f"⚠️ Warning: LLM prompts modules failed to load: {e}")
+        LLM_PROMPTS_AVAILABLE = False
+        # ダミークラスを定義
+        class SystemPrompt: pass
+        class AgentMessagePrompt: pass
+else:
+    LLM_PROMPTS_AVAILABLE = False
+    # ダミークラスを定義
+    class SystemPrompt: pass
+    class AgentMessagePrompt: pass
 
 
 class CustomSystemPrompt(SystemPrompt):
