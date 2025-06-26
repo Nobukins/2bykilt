@@ -1,5 +1,64 @@
 # CHANGELOG
 
+## [2025-06-27] - Requirements完全版作成
+
+### 📦 Package Management Overhaul
+
+#### Complete Requirements Generation
+- **requirements.txt完全版**: フル機能版（全LLM機能含む）を現在のvenv環境から生成
+  - 186個のパッケージを包括的にカバー
+  - 全LLMプロバイダー（OpenAI, Anthropic, Google, Mistral, Ollama等）を含む
+  - 詳細なカテゴリ分類とコメント付き
+- **requirements-minimal.txt完全版**: venv312最小環境から実証済みパッケージリストを生成
+  - 85個の厳選パッケージ（LLM機能なし）
+  - Gradio互換性問題修正済みバージョン指定
+  - Python 3.12最小環境での動作保証
+
+#### Package Environment Optimization
+- **実証ベース**: 実際に動作している環境からの正確な抽出
+- **バージョン固定**: 安定動作確認済みの具体的バージョン指定
+- **依存関係完全性**: pip freezeによる完全な依存関係マッピング
+- **プラットフォーム対応**: macOS ARM64特有の依存関係も含む
+
+#### Documentation Enhancement
+- **包括的インストール手順**: 仮想環境作成から実行まで
+- **環境別ガイド**: 最小環境とフル環境の明確な使い分け
+- **トラブルシューティング**: 環境構築時の注意点と解決法
+- **容量比較**: 最小版500MB vs フル版2GB+の明確な違い
+
+### 🎯 Benefits Achieved
+
+#### Development Efficiency
+- **確実な再現性**: 同一環境の完全再現が可能
+- **選択的インストール**: 用途に応じた最適な環境構築
+- **依存関係透明性**: 全パッケージの目的と分類が明確
+
+#### Production Readiness
+- **軽量デプロイ**: LLM不要な用途での大幅な軽量化
+- **安定性保証**: 実証済みバージョンによる動作確定
+- **スケーラビリティ**: 環境要件に応じた柔軟な選択
+
+#### Quality Assurance
+- **互換性検証**: Python 3.12、macOS ARM64での動作確認
+- **エラー予防**: Gradio互換性問題などの既知問題を回避
+- **保守性向上**: 明確な分類による長期メンテナンス性
+
+### 📊 Package Statistics
+
+#### Full Version (requirements.txt)
+- **総パッケージ数**: 186個
+- **LLMプロバイダー**: 8つ（OpenAI, Anthropic, Google, Mistral, Ollama, Fireworks, AWS, DeepSeek）
+- **機能範囲**: フル機能（ブラウザ自動化 + 全LLM機能）
+- **インストール容量**: 約2GB+
+
+#### Minimal Version (requirements-minimal.txt)
+- **総パッケージ数**: 85個
+- **機能範囲**: ブラウザ自動化のみ（LLM機能なし）
+- **インストール容量**: 約500MB
+- **軽量化率**: 約75%削減
+
+---
+
 ## [2025-06-27] - Gradio互換性修正 & リポジトリクリーンアップ
 
 ### 🚨 Critical Fix
