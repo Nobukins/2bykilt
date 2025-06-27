@@ -18,6 +18,10 @@ gradio_client==1.5.3
 playwright==1.51.0
 pyperclip==1.9.0
 
+# Cross-platform Support (Windows対応)
+psutil==6.1.2
+colorama==0.4.6
+
 # HTTP & Network (最小環境最適化済み)
 aiohttp==3.11.14
 httpx==0.28.1

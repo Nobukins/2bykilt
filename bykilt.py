@@ -4,6 +4,8 @@ import os
 import glob
 import sys
 import time  # Added for restart logic
+import platform  # Added for cross-platform support
+from pathlib import Path  # Added for cross-platform path handling
 from dotenv import load_dotenv
 load_dotenv()
 import subprocess
@@ -116,10 +118,26 @@ if ENABLE_LLM:
                             # Change to the project directory
                             project_dir = os.path.dirname(os.path.abspath(__file__))
                             
+                            # Windows対応: 環境変数とPYTHONPATHを適切に設定
+                            env = os.environ.copy()
+                            env['PYTHONPATH'] = project_dir
+                            
+                            # Windows対応: コマンドを適切に構築
+                            if platform.system() == "Windows":
+                                # Windowsでは明示的にPythonパスを使用
+                                if command.startswith('python '):
+                                    command = command.replace('python ', f'"{sys.executable}" ', 1)
+                                # PowerShellでの実行を考慮
+                                shell_value = True
+                            else:
+                                shell_value = True
+                            
                             # Execute the command asynchronously
                             process = await asyncio.create_subprocess_shell(
                                 command,
                                 cwd=project_dir,
+                                env=env,
+                                shell=shell_value,
                                 stdout=asyncio.subprocess.PIPE,
                                 stderr=asyncio.subprocess.PIPE
                             )
@@ -242,10 +260,25 @@ else:
                         # Change to the project directory
                         project_dir = os.path.dirname(os.path.abspath(__file__))
                         
+                        # Windows対応: 環境変数とPYTHONPATHを適切に設定
+                        env = os.environ.copy()
+                        env['PYTHONPATH'] = project_dir
+                        
+                        # Windows対応: コマンドを適切に構築
+                        if platform.system() == "Windows":
+                            # Windowsでは明示的にPythonパスを使用
+                            if command.startswith('python '):
+                                command = command.replace('python ', f'"{sys.executable}" ', 1)
+                            shell_value = True
+                        else:
+                            shell_value = True
+                        
                         # Execute the command asynchronously
                         process = await asyncio.create_subprocess_shell(
                             command,
                             cwd=project_dir,
+                            env=env,
+                            shell=shell_value,
                             stdout=asyncio.subprocess.PIPE,
                             stderr=asyncio.subprocess.PIPE
                         )
@@ -515,15 +548,37 @@ async def show_restart_dialog():
             if sys.platform == 'darwin':  # macOS
                 subprocess.run(['killall', 'Google Chrome'], stderr=subprocess.DEVNULL)
             elif sys.platform == 'win32':  # Windows
-                subprocess.run(['taskkill', '/F', '/IM', 'chrome.exe'], stderr=subprocess.DEVNULL)
+                # Windowsでより確実にChromeプロセスを終了
+                try:
+                    subprocess.run(['taskkill', '/F', '/IM', 'chrome.exe'], stderr=subprocess.DEVNULL, check=False)
+                    subprocess.run(['taskkill', '/F', '/IM', 'msedge.exe'], stderr=subprocess.DEVNULL, check=False)  # Edge対応
+                except Exception:
+                    pass
             else:  # Linux and others
                 subprocess.run(['killall', 'chrome'], stderr=subprocess.DEVNULL)
             
             # Wait for Chrome to completely close
-            time.sleep(2)
+            time.sleep(3)  # Windows環境では少し長めに待機
             
-            # Start Chrome with debugging port
-            chrome_path = os.getenv("CHROME_PATH", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
+            # Start Chrome with debugging port - Windows対応
+            if sys.platform == 'win32':
+                # Windows用のChrome実行可能ファイルパス
+                default_chrome_paths = [
+                    r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+                    r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+                    os.path.expanduser(r"~\AppData\Local\Google\Chrome\Application\chrome.exe")
+                ]
+                chrome_path = os.getenv("CHROME_PATH")
+                if not chrome_path or not os.path.exists(chrome_path):
+                    for path in default_chrome_paths:
+                        if os.path.exists(path):
+                            chrome_path = path
+                            break
+                    else:
+                        chrome_path = "chrome"  # システムPATHに依存
+            else:
+                chrome_path = os.getenv("CHROME_PATH", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
+            
             chrome_debugging_port = os.getenv("CHROME_DEBUGGING_PORT", "9222")
             chrome_user_data = os.getenv("CHROME_USER_DATA", "")
             
@@ -537,8 +592,13 @@ async def show_restart_dialog():
             if chrome_user_data and chrome_user_data.strip():
                 cmd_args.append(f"--user-data-dir={chrome_user_data}")
             
-            # Start Chrome process
-            subprocess.Popen(cmd_args)
+            # Windows対応: プロセス起動の改善
+            if sys.platform == 'win32':
+                # Windowsでは shell=True で実行
+                subprocess.Popen(cmd_args, shell=False, creationflags=subprocess.CREATE_NO_WINDOW)
+            else:
+                subprocess.Popen(cmd_args)
+            
             return "Chromeを再起動しました"
         except Exception as e:
             return f"再起動中にエラーが発生しました: {str(e)}"

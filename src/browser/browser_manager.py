@@ -1,9 +1,13 @@
 import os
 import logging
+import platform
+import sys
 from typing import Dict, Optional, Any
+from pathlib import Path
 
 from src.utils.globals_manager import get_globals
 from src.browser.browser_config import BrowserConfig
+from src.browser.browser_debug_manager import BrowserDebugManager
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -30,8 +34,18 @@ def get_browser_configs(
     window_h: int,
     browser_type: str = "chrome"  # Add browser_type parameter with default
 ) -> Dict[str, Any]:
-    """Generate browser configuration based on parameters"""
+    """Generate browser configuration based on parameters (Windows対応済み)"""
     extra_chromium_args = [f"--window-size={window_w},{window_h}"]
+    
+    # Windows対応のブラウザ引数追加
+    if platform.system() == "Windows":
+        extra_chromium_args.extend([
+            "--disable-background-timer-throttling",
+            "--disable-backgrounding-occluded-windows",
+            "--disable-renderer-backgrounding",
+            "--no-first-run",
+            "--no-default-browser-check"
+        ])
     
     browser_path = None
     browser_user_data = None
@@ -46,17 +60,50 @@ def get_browser_configs(
             browser_path = os.getenv("CHROME_PATH", "")
             browser_user_data = os.getenv("CHROME_USER_DATA", None)
             logger.info(f"Using Chrome browser: {browser_path}")
+        
+        # Windows環境でのデフォルトブラウザパス検出
+        if (not browser_path or browser_path == "") and platform.system() == "Windows":
+            browser_path = _find_browser_path_windows(browser_type)
             
         if browser_path == "":
             browser_path = None
             
         if browser_user_data:
+            # Windows対応のパス処理
+            if platform.system() == "Windows":
+                browser_user_data = str(Path(browser_user_data).resolve())
             extra_chromium_args += [f"--user-data-dir={browser_user_data}"]
     
     return {
         "browser_path": browser_path,  # Changed from chrome_path
         "extra_chromium_args": extra_chromium_args
     }
+
+def _find_browser_path_windows(browser_type: str = "chrome") -> Optional[str]:
+    """Windows環境でブラウザの実行可能ファイルパスを検出"""
+    if browser_type == "edge":
+        edge_paths = [
+            r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+            r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+            os.path.expanduser(r"~\AppData\Local\Microsoft\Edge\Application\msedge.exe")
+        ]
+        for path in edge_paths:
+            if os.path.exists(path):
+                logger.info(f"Found Edge at: {path}")
+                return path
+    else:  # Chrome
+        chrome_paths = [
+            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+            r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+            os.path.expanduser(r"~\AppData\Local\Google\Chrome\Application\chrome.exe")
+        ]
+        for path in chrome_paths:
+            if os.path.exists(path):
+                logger.info(f"Found Chrome at: {path}")
+                return path
+    
+    logger.warning(f"Could not find {browser_type} browser in standard Windows locations")
+    return None
 
 async def initialize_browser(use_own_browser=False, headless=False, browser_type=None, auto_fallback=True):
     """ブラウザを初期化し、失敗時には代替ブラウザにフォールバック"""
@@ -118,12 +165,29 @@ async def initialize_browser(use_own_browser=False, headless=False, browser_type
     return {"status": "error", "message": f"すべてのブラウザ初期化試行が失敗しました"}
 
 def prepare_recording_path(enable_recording: bool, save_recording_path: Optional[str]) -> Optional[str]:
-    """Prepare recording path based on settings"""
+    """Prepare recording path based on settings (Windows対応済み)"""
     if not enable_recording:
         return None
         
     if save_recording_path:
-        os.makedirs(save_recording_path, exist_ok=True)
-        return save_recording_path
+        # Windows対応: pathlibを使用してパス処理を統一
+        recording_path = Path(save_recording_path).resolve()
+        
+        try:
+            recording_path.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Recording directory prepared: {recording_path}")
+            return str(recording_path)
+        except PermissionError as e:
+            logger.error(f"Permission denied creating recording directory: {e}")
+            # Windows環境でのフォールバック: temp/recordingsを使用
+            if platform.system() == "Windows":
+                fallback_path = Path.cwd() / "tmp" / "record_videos"
+                fallback_path.mkdir(parents=True, exist_ok=True)
+                logger.info(f"Using fallback recording directory: {fallback_path}")
+                return str(fallback_path)
+            return None
+        except Exception as e:
+            logger.error(f"Failed to create recording directory: {e}")
+            return None
         
     return None

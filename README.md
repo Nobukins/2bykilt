@@ -13,6 +13,32 @@
 
 ## 🚀 クイックスタート
 
+### 🪟 Windows環境セットアップ
+Windows 10/11での推奨インストール手順：
+
+```powershell
+# 1. Python 3.12+インストール確認
+python --version
+
+# 2. プロジェクトクローン
+git clone https://github.com/Nobukins/2bykilt.git
+cd 2bykilt
+
+# 3. 仮想環境作成・有効化
+python -m venv .venv
+.venv\Scripts\activate
+
+# 4. 軽量インストール（推奨）
+pip install -r requirements-minimal.txt
+playwright install chromium
+
+# 5. 起動
+$env:ENABLE_LLM = "false"
+python bykilt.py
+
+# 詳細なWindows設定: WINDOWS_SETUP_GUIDE.md を参照
+```
+
 ### 🔧 軽量インストール（推奨）
 LLM機能なしでブラウザ自動化のみを利用：
 
