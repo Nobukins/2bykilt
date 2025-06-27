@@ -246,7 +246,7 @@ def save_as_action_file(script_content, file_name, action_name=None):
         required: true
         type: string
         description: "検索クエリ"
-    command: python ./tmp/myscript/action_runner.py --action ${{action_script}} --query "${{params.query}}" --slowmo 1500 --countdown 3
+    command: python ./tmp/myscript/action_runner_launcher.py --action ${{action_script}} --query "${{params.query}}" --slowmo 1500 --countdown 3
 """
         if llms_path.exists():
             # Read existing content
