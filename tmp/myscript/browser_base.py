@@ -8,9 +8,20 @@ from playwright.async_api import async_playwright
 class BrowserAutomationBase:
     """ブラウザ自動化の共通機能を提供するベースクラス（Windows対応済み）"""
     
-    def __init__(self, headless=False, slowmo=0, recording_dir="./tmp/record_videos"):
+    def __init__(self, headless=False, slowmo=0, recording_dir=None):
         self.headless = headless
         self.slowmo = slowmo
+        
+        # Windows対応: 録画ディレクトリのプラットフォーム別設定
+        if recording_dir is None:
+            # 環境変数RECORDING_PATHを優先的に使用
+            recording_dir = os.getenv('RECORDING_PATH')
+            if not recording_dir:
+                if platform.system() == "Windows":
+                    recording_dir = str(Path.cwd() / "tmp" / "record_videos")
+                else:
+                    recording_dir = "./tmp/record_videos"
+        
         # Windows対応: pathlib使用による汎用パス処理
         self.recording_dir = Path(recording_dir).resolve()
         self.browser = None
@@ -64,7 +75,7 @@ class BrowserAutomationBase:
             return self.page
             
         except Exception as e:
-            print(f"❌ Browser setup failed: {e}")
+            print(f"[Browser setup failed] {e}")
             print(f"Platform: {platform.system()}")
             print(f"Python: {sys.version}")
             await self.cleanup()
@@ -106,13 +117,25 @@ class BrowserAutomationBase:
         return base_args
     
     async def _setup_error_handlers(self):
-        """エラーハンドリングの設定"""
+        """エラーハンドリングの設定（Windows対応・TypeErrorを回避）"""
         if not self.page:
             return
         
-        # コンソールエラーのキャッチ
-        self.page.on("console", lambda msg: print(f"🔍 Console: {msg.text}"))
-        self.page.on("pageerror", lambda error: print(f"❌ Page Error: {error}"))
+        # コンソールエラーのキャッチ（絵文字削除でcp932対応）
+        def safe_console_handler(msg):
+            try:
+                print(f"[Console] {msg.text}")
+            except Exception as e:
+                print(f"[Console] <message display error: {e}>")
+        
+        def safe_error_handler(error):
+            try:
+                print(f"[Page Error] {error}")
+            except Exception as e:
+                print(f"[Page Error] <error display failed: {e}>")
+        
+        self.page.on("console", safe_console_handler)
+        self.page.on("pageerror", safe_error_handler)
         
         # Windows環境でのタイムアウト延長
         if self.is_windows:
@@ -147,7 +170,7 @@ class BrowserAutomationBase:
                     font-family: Arial, sans-serif !important;
                     box-shadow: 0 2px 10px rgba(0,0,0,0.3) !important;
                 `;
-                overlay.textContent = '🤖 自動操作中 - テスト実行中です';
+                overlay.textContent = '[自動操作中] テスト実行中です';
                 
                 // bodyが存在しない場合の対策
                 if (document.body) {
@@ -166,7 +189,7 @@ class BrowserAutomationBase:
                 await self.page.wait_for_timeout(500)
                 
         except Exception as e:
-            print(f"⚠️ Warning: Could not show automation indicator: {e}")
+            print(f"[Warning] Could not show automation indicator: {e}")
     
     async def show_countdown_overlay(self, seconds=5):
         """ブラウザを閉じる前にカウントダウンオーバーレイを表示（Windows対応済み）"""
@@ -243,7 +266,7 @@ class BrowserAutomationBase:
                     await self.page.wait_for_timeout(1000)
                     
                 except Exception as e:
-                    print(f"⚠️ Countdown display error: {e}")
+                    print(f"[Warning] Countdown display error: {e}")
                     continue
             
             # 終了メッセージ
@@ -251,7 +274,7 @@ class BrowserAutomationBase:
                 const counterDisplay = document.querySelector('#countdown-overlay > div:first-child');
                 const statusText = document.querySelector('#countdown-overlay > div:last-child');
                 if (counterDisplay) {
-                    counterDisplay.textContent = '✅';
+                    counterDisplay.textContent = '[OK]';
                     counterDisplay.style.color = '#4CAF50';
                 }
                 if (statusText) {
@@ -262,7 +285,7 @@ class BrowserAutomationBase:
             await self.page.wait_for_timeout(1500)
             
         except Exception as e:
-            print(f"⚠️ Warning: Could not show countdown overlay: {e}")
+            print(f"[Warning] Could not show countdown overlay: {e}")
             # フォールバック: シンプルなアラート
             try:
                 await self.page.evaluate(f"alert('操作完了 - {seconds}秒後にブラウザを閉じます')")
@@ -271,8 +294,28 @@ class BrowserAutomationBase:
                 pass
     
     async def cleanup(self):
-        """リソースの解放"""
-        if self.context:
-            await self.context.close()
-        if self.browser:
-            await self.browser.close()
+        """リソースの解放（録画完了待機付き）"""
+        try:
+            # 録画完了のための待機
+            if self.context and self.page:
+                print("[Info] Waiting for recording to complete...")
+                await self.page.wait_for_timeout(1000)
+            
+            if self.context:
+                await self.context.close()
+                
+            if self.browser:
+                await self.browser.close()
+                
+            if self.playwright_instance:
+                await self.playwright_instance.stop()
+                
+            print(f"[Info] Browser cleanup completed. Recording dir: {self.recording_dir}")
+            
+        except Exception as e:
+            print(f"[Warning] Error during cleanup: {e}")
+            # 強制的にリソースをクリア
+            self.context = None
+            self.browser = None
+            self.page = None
+            self.playwright_instance = None

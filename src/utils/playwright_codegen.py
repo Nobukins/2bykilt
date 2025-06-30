@@ -75,11 +75,28 @@ def run_normal_codegen(url):
         fd, temp_path = tempfile.mkstemp(suffix='.py')
         os.close(fd)
         
-        cmd = ["playwright", "codegen", url, "--target", "python", "-o", temp_path]
+        # コマンドを構築（仮想環境対応でpython -m playwrightを使用）
+        import sys
+        cmd = [sys.executable, "-m", "playwright", "codegen", url, "--target", "python", "-o", temp_path]
         logger.info(f"実行するコマンド: {' '.join(cmd)}")
         
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = process.communicate(timeout=300)
+        
+        # Windows対応: エンコーディングの自動検出とフォールバック
+        def safe_decode(data):
+            if not data:
+                return ""
+            
+            # 複数のエンコーディングを試行
+            encodings = ['utf-8', 'cp932', 'shift_jis', 'latin1']
+            for encoding in encodings:
+                try:
+                    return data.decode(encoding)
+                except UnicodeDecodeError:
+                    continue
+            # すべて失敗した場合はエラーを無視してデコード
+            return data.decode('utf-8', errors='replace')
         
         if process.returncode == 0 and os.path.exists(temp_path):
             with open(temp_path, 'r', encoding='utf-8') as f:
@@ -88,7 +105,7 @@ def run_normal_codegen(url):
             os.unlink(temp_path)
             return True, script_content
         else:
-            error_msg = stderr.decode('utf-8') if stderr else "不明なエラー"
+            error_msg = safe_decode(stderr) if stderr else "不明なエラー"
             return False, f"Playwright codegen実行エラー: {error_msg}"
     except subprocess.TimeoutExpired:
         process.kill()
@@ -110,9 +127,10 @@ def run_edge_codegen(url):
         browser_paths = detect_browser_paths()
         user_data_dir = browser_paths.get("edge_user_data", "")
         
-        # コマンドを構築
+        # コマンドを構築（仮想環境対応でpython -m playwrightを使用）
+        import sys
         cmd = [
-            "playwright", "codegen",
+            sys.executable, "-m", "playwright", "codegen",
             url,
             "--target", "python",
             "-o", temp_path,
@@ -136,6 +154,21 @@ def run_edge_codegen(url):
         # ユーザーが操作を終えるのを待つ
         stdout, stderr = process.communicate(timeout=600)  # 10分のタイムアウト
         
+        # Windows対応: エンコーディングの自動検出とフォールバック
+        def safe_decode(data):
+            if not data:
+                return ""
+            
+            # 複数のエンコーディングを試行
+            encodings = ['utf-8', 'cp932', 'shift_jis', 'latin1']
+            for encoding in encodings:
+                try:
+                    return data.decode(encoding)
+                except UnicodeDecodeError:
+                    continue
+            # すべて失敗した場合はエラーを無視してデコード
+            return data.decode('utf-8', errors='replace')
+        
         # 結果確認
         if process.returncode == 0 and os.path.exists(temp_path) and os.path.getsize(temp_path) > 0:
             with open(temp_path, 'r', encoding='utf-8') as f:
@@ -146,8 +179,8 @@ def run_edge_codegen(url):
         else:
             # エラー内容を詳細に表示
             logger.error(f"Playwright codegen終了コード: {process.returncode}")
-            logger.error(f"標準出力: {stdout.decode('utf-8', errors='replace')}")
-            logger.error(f"標準エラー: {stderr.decode('utf-8', errors='replace')}")
+            logger.error(f"標準出力: {safe_decode(stdout)}")
+            logger.error(f"標準エラー: {safe_decode(stderr)}")
             
             if os.path.exists(temp_path):
                 if os.path.getsize(temp_path) == 0:
@@ -160,7 +193,7 @@ def run_edge_codegen(url):
                     os.unlink(temp_path)
                     return True, script_content
             
-            error_msg = stderr.decode('utf-8', errors='replace') if stderr else "不明なエラー"
+            error_msg = safe_decode(stderr) if stderr else "不明なエラー"
             return False, f"Playwright codegen実行エラー: {error_msg}"
             
     except subprocess.TimeoutExpired:

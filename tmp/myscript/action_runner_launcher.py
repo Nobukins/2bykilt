@@ -38,7 +38,7 @@ def setup_windows_environment():
     if 'CONDA_DEFAULT_ENV' in os.environ:
         env['CONDA_DEFAULT_ENV'] = os.environ['CONDA_DEFAULT_ENV']
     
-    print(f"🔧 Windows Environment Setup:")
+    print(f"[Windows Environment Setup]")
     print(f"   Python: {sys.executable}")
     print(f"   PYTHONPATH: {env['PYTHONPATH']}")
     print(f"   Working Dir: {script_dir}")
@@ -56,7 +56,7 @@ def main():
     # コマンド構築
     cmd = [sys.executable, str(action_runner_path)] + sys.argv[1:]
     
-    print(f"🚀 Executing: {' '.join(cmd)}")
+    print(f"[Executing]: {' '.join(cmd)}")
     
     try:
         # subprocess で実行

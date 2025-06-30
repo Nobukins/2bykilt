@@ -8,7 +8,7 @@ actions:
         required: true
         type: string
         description: "検索クエリ"
-    command: pytest ./tmp/myscript/search_script.py --query ${params.query}
+    command: python -m pytest ./tmp/myscript/search_script.py --query ${params.query}
     slowmo: 2500
 
   - name: action-runner-nogtips
@@ -79,7 +79,7 @@ actions:
         required: true
         type: string
         description: "Search query to execute"
-    command: pytest ${script_path} --query ${params.query}
+    command: python -m pytest ${script_path} --query ${params.query}
     timeout: 120
     slowmo: 1000
 
@@ -136,4 +136,3 @@ actions:
       - action: fill_form
         selector: "#search-2 > form > label > input"
         value: "${params.query}"
-        

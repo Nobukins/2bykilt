@@ -215,7 +215,23 @@ async def process_execution(command_parts, env=None, cwd=None):
             line = await stream.readline()
             if not line:
                 break
-            line_str = line.decode('utf-8').rstrip()
+            
+            # Windows対応: エンコーディングの自動検出とフォールバック
+            def safe_decode_line(data):
+                if not data:
+                    return ""
+                
+                # 複数のエンコーディングを試行
+                encodings = ['utf-8', 'cp932', 'shift_jis', 'latin1']
+                for encoding in encodings:
+                    try:
+                        return data.decode(encoding).rstrip()
+                    except UnicodeDecodeError:
+                        continue
+                # すべて失敗した場合はエラーを無視してデコード
+                return data.decode('utf-8', errors='replace').rstrip()
+            
+            line_str = safe_decode_line(line)
             if line_str:
                 if is_error:
                     logger.error(f"SUBPROCESS ERROR: {line_str}")
@@ -321,6 +337,11 @@ markers =
                 
                 # Parse command into parts for subprocess
                 command_parts = command_template.split()
+                
+                # Replace 'python' with current Python executable to ensure virtual environment compatibility
+                if command_parts and command_parts[0] == 'python':
+                    import sys
+                    command_parts[0] = sys.executable
                 
                 # Add slowmo parameter if specified
                 slowmo = script_info.get('slowmo')
@@ -430,7 +451,7 @@ markers =
                     return error_msg, None
                 
                 # Get command template
-                command_template = script_info.get('command', f'pytest {script_path}')
+                command_template = script_info.get('command', f'python -m pytest {script_path}')
                 command_parts = []
                 
                 # Parse the command template
@@ -535,6 +556,11 @@ markers =
                 # Split into parts for subprocess execution
                 command_parts = command_template.split()
                 
+                # Replace 'python' with current Python executable to ensure virtual environment compatibility
+                if command_parts and command_parts[0] == 'python':
+                    import sys
+                    command_parts[0] = sys.executable
+                
                 # Add slowmo parameter if specified and not already in command
                 slowmo = script_info.get('slowmo')
                 if slowmo is not None and '--slowmo' not in command_template:
@@ -597,7 +623,8 @@ markers =
             return error_msg, None
         
         # Build pytest command with appropriate parameters
-        command = ['pytest', script_path]
+        # Use python -m pytest for better compatibility across platforms
+        command = ['python', '-m', 'pytest', script_path]
         if not headless:
             command.append('--headed')
         
@@ -641,7 +668,23 @@ markers =
             line = await process.stdout.readline()
             if not line:
                 break
-            line_str = line.decode('utf-8').strip()
+            
+            # Windows対応: エンコーディングの自動検出とフォールバック
+            def safe_decode_line(data):
+                if not data:
+                    return ""
+                
+                # 複数のエンコーディングを試行
+                encodings = ['utf-8', 'cp932', 'shift_jis', 'latin1']
+                for encoding in encodings:
+                    try:
+                        return data.decode(encoding).strip()
+                    except UnicodeDecodeError:
+                        continue
+                # すべて失敗した場合はエラーを無視してデコード
+                return data.decode('utf-8', errors='replace').strip()
+            
+            line_str = safe_decode_line(line)
             if line_str:
                 logger.info(f"SCRIPT: {line_str}")
                 output_lines.append(line_str)
@@ -649,15 +692,30 @@ markers =
         # Get any remaining stdout/stderr
         stdout, stderr = await process.communicate()
         
+        # Windows対応: エンコーディングの自動検出とフォールバック
+        def safe_decode_output(data):
+            if not data:
+                return ""
+            
+            # 複数のエンコーディングを試行
+            encodings = ['utf-8', 'cp932', 'shift_jis', 'latin1']
+            for encoding in encodings:
+                try:
+                    return data.decode(encoding)
+                except UnicodeDecodeError:
+                    continue
+            # すべて失敗した場合はエラーを無視してデコード
+            return data.decode('utf-8', errors='replace')
+        
         # Log any remaining output
         if stdout:
-            for line in stdout.decode('utf-8').splitlines():
+            for line in safe_decode_output(stdout).splitlines():
                 if line.strip() and line.strip() not in output_lines:
                     logger.info(f"SCRIPT: {line.strip()}")
                     output_lines.append(line.strip())
         
         if stderr:
-            for line in stderr.decode('utf-8').splitlines():
+            for line in safe_decode_output(stderr).splitlines():
                 if line.strip():
                     logger.error(f"SCRIPT ERROR: {line.strip()}")
         

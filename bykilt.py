@@ -6,6 +6,7 @@ import sys
 import time  # Added for restart logic
 import platform  # Added for cross-platform support
 from pathlib import Path  # Added for cross-platform path handling
+from datetime import datetime  # Added for timestamp formatting
 from dotenv import load_dotenv
 load_dotenv()
 import subprocess
@@ -144,24 +145,44 @@ if ENABLE_LLM:
                             
                             stdout, stderr = await process.communicate()
                             
-                            stdout_text = stdout.decode('utf-8') if stdout else ""
-                            stderr_text = stderr.decode('utf-8') if stderr else ""
+                            # Windows対応: エンコーディングの自動検出とフォールバック
+                            def safe_decode(data):
+                                if not data:
+                                    return ""
+                                
+                                # 複数のエンコーディングを試行
+                                encodings = ['utf-8', 'cp932', 'shift_jis', 'latin1']
+                                for encoding in encodings:
+                                    try:
+                                        return data.decode(encoding)
+                                    except UnicodeDecodeError:
+                                        continue
+                                # すべて失敗した場合はエラーを無視してデコード
+                                return data.decode('utf-8', errors='replace')
+                            
+                            stdout_text = safe_decode(stdout)
+                            stderr_text = safe_decode(stderr)
                             
                             if process.returncode == 0:
                                 result_message = f"✅ Script command '{action_name}' executed successfully\n\nCommand: {command}"
                                 if stdout_text:
                                     result_message += f"\n\nOutput:\n{stdout_text}"
+                                logger.info(f"Script command '{action_name}' executed successfully")
                             else:
                                 result_message = f"❌ Script command '{action_name}' execution failed (exit code: {process.returncode})\n\nCommand: {command}"
                                 if stderr_text:
                                     result_message += f"\n\nError:\n{stderr_text}"
+                                    logger.error(f"Script command '{action_name}' failed with stderr: {stderr_text}")
                                 if stdout_text:
                                     result_message += f"\n\nOutput:\n{stdout_text}"
+                                logger.error(f"Script command '{action_name}' failed (exit code: {process.returncode})")
                             
                             return result_message, "", "", "", "", None, None, None, gr.update(), gr.update()
                             
                         except Exception as e:
-                            return f"❌ Error executing script command '{action_name}': {str(e)}\n\nCommand: {command}", "", "", "", "", None, None, None, gr.update(), gr.update()
+                            error_msg = f"❌ Error executing script command '{action_name}': {str(e)}\n\nCommand: {command}"
+                            logger.error(f"Exception in script command '{action_name}': {str(e)}")
+                            return error_msg, "", "", "", "", None, None, None, gr.update(), gr.update()
                     
                     elif action_type in ['action_runner_template', 'git-script']:
                         # Use the script_manager for these types
@@ -285,24 +306,44 @@ else:
                         
                         stdout, stderr = await process.communicate()
                         
-                        stdout_text = stdout.decode('utf-8') if stdout else ""
-                        stderr_text = stderr.decode('utf-8') if stderr else ""
+                        # Windows対応: エンコーディングの自動検出とフォールバック
+                        def safe_decode(data):
+                            if not data:
+                                return ""
+                            
+                            # 複数のエンコーディングを試行
+                            encodings = ['utf-8', 'cp932', 'shift_jis', 'latin1']
+                            for encoding in encodings:
+                                try:
+                                    return data.decode(encoding)
+                                except UnicodeDecodeError:
+                                    continue
+                            # すべて失敗した場合はエラーを無視してデコード
+                            return data.decode('utf-8', errors='replace')
+                        
+                        stdout_text = safe_decode(stdout)
+                        stderr_text = safe_decode(stderr)
                         
                         if process.returncode == 0:
                             result_message = f"✅ Script command '{action_name}' executed successfully\n\nCommand: {command}"
                             if stdout_text:
                                 result_message += f"\n\nOutput:\n{stdout_text}"
+                            logger.info(f"Script command '{action_name}' executed successfully")
                         else:
                             result_message = f"❌ Script command '{action_name}' execution failed (exit code: {process.returncode})\n\nCommand: {command}"
                             if stderr_text:
                                 result_message += f"\n\nError:\n{stderr_text}"
+                                logger.error(f"Script command '{action_name}' failed with stderr: {stderr_text}")
                             if stdout_text:
                                 result_message += f"\n\nOutput:\n{stdout_text}"
+                            logger.error(f"Script command '{action_name}' failed (exit code: {process.returncode})")
                         
                         return result_message, "", "", "", "", None, None, None, gr.update(), gr.update()
                         
                     except Exception as e:
-                        return f"❌ Error executing script command '{action_name}': {str(e)}\n\nCommand: {command}", "", "", "", "", None, None, None, gr.update(), gr.update()
+                        error_msg = f"❌ Error executing script command '{action_name}': {str(e)}\n\nCommand: {command}"
+                        logger.error(f"Exception in script command '{action_name}': {str(e)}")
+                        return error_msg, "", "", "", "", None, None, None, gr.update(), gr.update()
                 
                 elif action_type in ['action_runner_template', 'git-script']:
                     # Use the script_manager for these types
@@ -650,9 +691,24 @@ def create_ui(config, theme_name="Ocean"):
         maintain_browser_session = gr.Checkbox(label="ブラウザセッションを維持", value=config.get('maintain_browser_session', False), visible=False)
         tab_selection_strategy = gr.Radio(["new_tab", "reuse_tab"], label="タブ選択戦略", 
                                            value=config.get('tab_selection_strategy', "new_tab"), visible=False)
-        save_recording_path = gr.Textbox(label="録画保存パス", value=config.get('save_recording_path', './tmp/record_videos'), visible=False)
-        save_trace_path = gr.Textbox(label="トレース保存パス", value=config.get('save_trace_path', './tmp/traces'), visible=False)
-        save_agent_history_path = gr.Textbox(label="エージェント履歴パス", value=config.get('save_agent_history_path', './tmp/agent_history'), visible=False)
+        # Windows対応: 録画保存パスを環境変数と設定から取得
+        default_recording_path = os.getenv('RECORDING_PATH')
+        if not default_recording_path:
+            if platform.system() == "Windows":
+                default_recording_path = str(Path.home() / "Documents" / "2bykilt" / "recordings")
+            else:
+                default_recording_path = './tmp/record_videos'
+        
+        save_recording_path = gr.Textbox(label="録画保存パス", value=config.get('save_recording_path', default_recording_path), visible=False)
+        # Windows対応: トレースと履歴パスを設定
+        default_trace_path = './tmp/traces'
+        default_history_path = './tmp/agent_history'
+        if platform.system() == "Windows":
+            default_trace_path = str(Path.cwd() / "tmp" / "traces")
+            default_history_path = str(Path.cwd() / "tmp" / "agent_history")
+        
+        save_trace_path = gr.Textbox(label="トレース保存パス", value=config.get('save_trace_path', default_trace_path), visible=False)
+        save_agent_history_path = gr.Textbox(label="エージェント履歴パス", value=config.get('save_agent_history_path', default_history_path), visible=False)
 
         with gr.Row():
             gr.Markdown("# 🪄🌐 2Bykilt\n### Enhanced Browser Control with AI and human, because for you", elem_classes=["header-text"])
@@ -777,8 +833,18 @@ def create_ui(config, theme_name="Ocean"):
                     refresh_commands = gr.Button("🔄 Refresh Commands")
                     refresh_commands.click(fn=load_commands_table, outputs=commands_table)
                     
-                    # Load commands on page load using the refresh button functionality
-                    demo.load(fn=load_commands_table, outputs=commands_table)
+                    # Load commands on page load using the refresh button functionality - temporarily disabled
+                    # demo.load(fn=load_commands_table, outputs=commands_table)
+                    
+                    # Initialize recordings list on app start - add this after Recordings tab is defined
+                    def initialize_recordings_on_load():
+                        try:
+                            recordings_path = config.get('save_recording_path', default_recording_path)
+                            return update_recordings_list(recordings_path)
+                        except Exception:
+                            return gr.update(choices=[], value=None), None, "Ready to load recordings"
+                    
+                    # Load recordings when refresh button is clicked (defined later in Recordings tab)
                 
                 # Update task input with placeholder for command usage
                 task = gr.Textbox(
@@ -887,11 +953,11 @@ def create_ui(config, theme_name="Ocean"):
                                                            label="タブ選択戦略",
                                                            value=config.get('tab_selection_strategy', "new_tab"))
                         save_recording_path = gr.Textbox(label="録画保存パス", 
-                                                         value=config.get('save_recording_path', './tmp/record_videos'))
+                                                         value=config.get('save_recording_path', default_recording_path))
                         save_trace_path = gr.Textbox(label="トレース保存パス", 
-                                                     value=config.get('save_trace_path', './tmp/traces'))
+                                                     value=config.get('save_trace_path', default_trace_path))
                         save_agent_history_path = gr.Textbox(label="エージェント履歴パス", 
-                                                             value=config.get('save_agent_history_path', './tmp/agent_history'))
+                                                             value=config.get('save_agent_history_path', default_history_path))
                         
                         browser_path_info = gr.Markdown(
                             value=f"**現在のブラウザパス**: {browser_config.get_browser_settings()['path']}", 
@@ -1220,32 +1286,187 @@ def create_ui(config, theme_name="Ocean"):
                     # stop_research_button.click(fn=stop_research_agent, inputs=[], outputs=[stop_research_button, research_button])
 
             with gr.TabItem("🎥 Recordings", id=8):
-                def list_recordings(save_recording_path):
-                    if not os.path.exists(save_recording_path):
-                        return []
-                    recordings = glob.glob(os.path.join(save_recording_path, "*.[mM][pP]4")) + glob.glob(os.path.join(save_recording_path, "*.[wW][eE][bB][mM]"))
-                    recordings.sort(key=os.path.getctime)
-                    numbered_recordings = [(recording, f"{idx}. {os.path.basename(recording)}") for idx, recording in enumerate(recordings, start=1)]
-                    return numbered_recordings
-
-                recordings_display = gr.Textbox(label="Recordings List", lines=10, interactive=False)
-                refresh_button = gr.Button("🔄 Refresh Recordings", variant="secondary")
+                gr.Markdown("### 🎥 Browser Recording Playback")
+                gr.Markdown("Select and play browser automation recordings")
                 
-                def format_recordings_list(recordings_path):
-                    """Format recordings as a text list instead of gallery"""
+                # Common recording functions
+                def list_recordings(save_recording_path):
+                    if not save_recording_path or not os.path.exists(save_recording_path):
+                        return []
+                    
+                    # Windows対応: pathlibを使用してファイル検索を改善
+                    recording_path = Path(save_recording_path)
+                    recordings = []
+                    
+                    # MP4とWEBMファイルを検索（大文字小文字を含む）
+                    for ext in ['mp4', 'MP4', 'webm', 'WEBM']:
+                        recordings.extend(recording_path.glob(f'*.{ext}'))
+                    
+                    # パスを文字列に変換してソート（最新順）
+                    recordings = [str(p) for p in recordings]
+                    recordings.sort(key=os.path.getmtime, reverse=True)
+                    return recordings
+
+                def update_recordings_list(recordings_path):
+                    """Update the recordings dropdown and video player"""
                     try:
+                        if recordings_path:
+                            Path(recordings_path).mkdir(parents=True, exist_ok=True)
+                        
                         recordings = list_recordings(recordings_path)
                         if not recordings:
-                            return "No recordings found"
-                        formatted_list = "\n".join([f"{idx}. {os.path.basename(recording)}" for idx, recording in enumerate(recordings, start=1)])
-                        return formatted_list
+                            return gr.update(choices=[], value=None), None, f"No recordings found in: {recordings_path}"
+                        
+                        # Create display names with timestamps
+                        display_choices = []
+                        for recording in recordings:
+                            filename = os.path.basename(recording)
+                            try:
+                                mtime = os.path.getmtime(recording)
+                                timestamp = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
+                                display_name = f"{filename} ({timestamp})"
+                            except:
+                                display_name = filename
+                            display_choices.append((display_name, recording))
+                        
+                        latest_recording = recordings[0] if recordings else None
+                        status_msg = f"Found {len(recordings)} recording(s)"
+                        
+                        return gr.update(choices=display_choices, value=latest_recording), latest_recording, status_msg
                     except Exception as e:
-                        return f"Error loading recordings: {str(e)}"
+                        error_msg = f"Error loading recordings: {str(e)}"
+                        return gr.update(choices=[], value=None), None, error_msg
+
+                def get_recordings_simple():
+                    """Simple recording list function for LLM-disabled mode"""
+                    try:
+                        recordings_path = default_recording_path
+                        if not recordings_path or not os.path.exists(recordings_path):
+                            return gr.update(choices=[]), "Recording directory not found"
+                        
+                        recordings = []
+                        for ext in ['mp4', 'webm', 'MP4', 'WEBM']:
+                            recordings.extend(Path(recordings_path).glob(f'*.{ext}'))
+                        
+                        if not recordings:
+                            return gr.update(choices=[]), "No recordings found"
+                        
+                        # Create choices list with full paths as values
+                        choices = [(p.name, str(p)) for p in recordings]
+                        
+                        return gr.update(choices=choices), f"Found {len(recordings)} recording(s)"
+                    except Exception as e:
+                        return gr.update(choices=[]), f"Error: {str(e)}"
+
+                def on_recording_select_html(selected_path):
+                    """HTML-based recording display for LLM-disabled mode"""
+                    if selected_path and os.path.exists(selected_path):
+                        filename = os.path.basename(selected_path)
+                        file_size = os.path.getsize(selected_path) / 1024 / 1024
+                        html_content = f"""
+                        <div style="text-align: center; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+                            <h3>📹 Selected Recording: {filename}</h3>
+                            <p><strong>File Path:</strong> {selected_path}</p>
+                            <p><strong>File Size:</strong> {file_size:.2f} MB</p>
+                            <p><em>To view the recording, please download the file and open it in your media player.</em></p>
+                            <div style="margin-top: 15px;">
+                                <button onclick="navigator.clipboard.writeText('{selected_path}')" 
+                                        style="padding: 10px 20px; margin: 5px; font-size: 14px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                                    � Copy Path
+                                </button>
+                                <p style="margin-top: 10px; font-size: 12px; color: #666;">
+                                    💡 Tip: Copy the path and open it in Windows Explorer or your preferred media player
+                                </p>
+                            </div>
+                        </div>
+                        """
+                        return html_content
+                    return "<p>No recording selected</p>"
+
+                def on_recording_select_video(selected_recording):
+                    """Video-based recording display for LLM-enabled mode"""
+                    if selected_recording and os.path.exists(selected_recording):
+                        return selected_recording
+                    return None
+
+                # Conditional UI based on LLM availability
+                if ENABLE_LLM and LLM_MODULES_AVAILABLE:
+                    # LLM有効時: 元の動画再生可能なUI
+                    with gr.Row():
+                        with gr.Column(scale=3):
+                            recordings_dropdown = gr.Dropdown(
+                                label="Select Recording", 
+                                choices=[], 
+                                interactive=True,
+                                info="Choose a recording to play"
+                            )
+                            refresh_button = gr.Button("🔄 Refresh Recordings", variant="secondary")
+                            status_display = gr.Textbox(label="Status", interactive=False, lines=1)
+                        
+                        with gr.Column(scale=1):
+                            gr.Markdown("**Controls:**")
+                            gr.Markdown("- Select recording from dropdown")
+                            gr.Markdown("- Use video controls to play/pause")
+                            gr.Markdown("- Right-click for more options")
+
+                    # Video Player for LLM-enabled mode
+                    try:
+                        video_player = gr.Video(
+                            label="Recording Player",
+                            height=500,
+                            show_label=True
+                        )
+                        
+                        # Event handlers for LLM-enabled mode
+                        recordings_dropdown.change(
+                            fn=on_recording_select_video,
+                            inputs=[recordings_dropdown],
+                            outputs=[video_player]
+                        )
+
+                        refresh_button.click(
+                            fn=update_recordings_list,
+                            inputs=[save_recording_path],
+                            outputs=[recordings_dropdown, video_player, status_display]
+                        )
+                        
+                        gr.Markdown("🎬 **LLM Mode**: Full video playback enabled")
+                        
+                    except Exception as e:
+                        # Fallback to HTML mode if Video component fails
+                        gr.Markdown("⚠️ **Video component unavailable, using fallback mode**")
+                        video_display = gr.HTML(value="<p>Select a recording to view</p>")
+                        
+                        recordings_dropdown.change(
+                            fn=on_recording_select_html,
+                            inputs=[recordings_dropdown],
+                            outputs=[video_display]
+                        )
+
+                        refresh_button.click(
+                            fn=get_recordings_simple,
+                            outputs=[recordings_dropdown, status_display]
+                        )
                 
-                refresh_button.click(fn=format_recordings_list, inputs=save_recording_path, outputs=recordings_display)
-                
-                # Initialize with current recordings
-                recordings_display.value = format_recordings_list(config['save_recording_path'])
+                else:
+                    # LLM無効時: HTML表示方式
+                    recordings_dropdown = gr.Dropdown(
+                        label="Select Recording", 
+                        choices=[], 
+                        interactive=True
+                    )
+                    
+                    refresh_button = gr.Button("🔄 Refresh Recordings")
+                    status_display = gr.Textbox(label="Status", value="Click refresh to load recordings", interactive=False)
+                    
+                    # HTML-based video display
+                    video_display = gr.HTML(value="<p>Select a recording to view</p>")
+
+                    # Event handlers for LLM-disabled mode
+                    refresh_button.click(fn=get_recordings_simple, outputs=[recordings_dropdown, status_display])
+                    recordings_dropdown.change(fn=on_recording_select_html, inputs=[recordings_dropdown], outputs=[video_display])
+                    
+                    gr.Markdown("📁 **Minimal Mode**: Recording file management (LLM disabled)")
 
             with gr.TabItem("🧐 Deep Research", id=6):
                 research_task_input = gr.Textbox(label="Research Task", lines=5, value="Compose a report on the use of Reinforcement Learning for training Large Language Models, encompassing its origins, current advancements, and future prospects, substantiated with examples of relevant models and techniques. The report should reflect original insights and analysis, moving beyond mere summarization of existing literature.")
@@ -1594,10 +1815,21 @@ async def on_run_agent_click(task, add_infos, llm_provider, llm_model_name, llm_
                 )
                 
                 if browser_result.get("status") == "success":
+                    # 録画パスを設定（環境変数または設定から取得）
+                    recording_path = os.getenv('RECORDING_PATH')
+                    if not recording_path:
+                        if platform.system() == "Windows":
+                            recording_path = str(Path.cwd() / "tmp" / "record_videos")
+                        else:
+                            recording_path = './tmp/record_videos'
+                    
+                    # 録画ディレクトリを作成
+                    Path(recording_path).mkdir(parents=True, exist_ok=True)
+                    
                     # 実際のスクリプト実行
                     script_output, script_path = await run_script(
                         action_result, params, headless=headless, 
-                        save_recording_path=None
+                        save_recording_path=recording_path
                     )
                     
                     message = f"### ✅ 事前登録コマンド実行完了\n\n"

@@ -19,7 +19,7 @@ playwright==1.51.0
 pyperclip==1.9.0
 
 # Cross-platform Support (Windows対応)
-psutil==6.1.2
+psutil==7.0.0
 colorama==0.4.6
 
 # HTTP & Network (最小環境最適化済み)
@@ -54,7 +54,6 @@ pytest-playwright==0.7.0
 pytest-base-url==2.1.0
 
 # System Monitoring & Process Management
-psutil==7.0.0
 pystray==0.19.5
 
 # Text Processing
