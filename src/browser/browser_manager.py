@@ -9,6 +9,26 @@ from src.utils.globals_manager import get_globals
 from src.browser.browser_config import BrowserConfig
 from src.browser.browser_debug_manager import BrowserDebugManager
 
+# 録画パスユーティリティのインポート（フォールバック付き）
+try:
+    from src.utils.recording_path_utils import get_recording_path
+except ImportError:
+    # フォールバック: 基本的な録画パス設定
+    def get_recording_path(fallback_relative_path="./tmp/record_videos"):
+        import platform
+        recording_dir = os.environ.get("RECORDING_PATH", "").strip()
+        if not recording_dir:
+            if platform.system() == "Windows":
+                recording_dir = os.path.join(os.path.expanduser("~"), "Documents", "2bykilt", "recordings")
+            else:
+                recording_dir = fallback_relative_path
+        try:
+            os.makedirs(recording_dir, exist_ok=True)
+            return recording_dir
+        except Exception:
+            import tempfile
+            return tempfile.gettempdir()
+
 # Configure logging
 logger = logging.getLogger(__name__)
 
@@ -32,9 +52,26 @@ def get_browser_configs(
     use_own_browser: bool, 
     window_w: int, 
     window_h: int,
-    browser_type: str = "chrome"  # Add browser_type parameter with default
+    browser_type: str = None  # Allow None to use current browser from config
 ) -> Dict[str, Any]:
-    """Generate browser configuration based on parameters (Windows対応済み)"""
+    """Generate browser configuration based on parameters with improved browser selection."""
+    
+    # ブラウザタイプの決定（UIで選択されたブラウザを優先）
+    if browser_type is None:
+        browser_type = browser_config.get_current_browser()
+        logger.info(f"🔍 UIで選択されたブラウザタイプを使用: {browser_type}")
+    
+    # ブラウザが利用可能かチェック
+    if not browser_config.is_browser_available(browser_type):
+        logger.warning(f"⚠️ 指定されたブラウザ {browser_type} が利用できません")
+        available_browsers = browser_config.get_available_browsers()
+        if available_browsers:
+            browser_type = available_browsers[0]
+            logger.info(f"🔄 利用可能なブラウザ {browser_type} にフォールバック")
+        else:
+            logger.warning("⚠️ 利用可能なブラウザが見つかりません。デフォルトを使用")
+            browser_type = "chrome"
+    
     extra_chromium_args = [f"--window-size={window_w},{window_h}"]
     
     # Windows対応のブラウザ引数追加
@@ -51,17 +88,14 @@ def get_browser_configs(
     browser_user_data = None
     
     if use_own_browser:
-        # Use correct environment variables based on browser type
-        if browser_type == "edge":
-            browser_path = os.getenv("EDGE_PATH", "")
-            browser_user_data = os.getenv("EDGE_USER_DATA", None)
-            logger.info(f"Using Edge browser: {browser_path}")
-        else:  # Default to Chrome
-            browser_path = os.getenv("CHROME_PATH", "")
-            browser_user_data = os.getenv("CHROME_USER_DATA", None)
-            logger.info(f"Using Chrome browser: {browser_path}")
+        # BrowserConfigから設定を取得
+        settings = browser_config.get_browser_settings(browser_type)
+        browser_path = settings.get("path", "")
+        browser_user_data = settings.get("user_data", None)
         
-        # Windows環境でのデフォルトブラウザパス検出
+        logger.info(f"Using {browser_type} browser: {browser_path}")
+        
+        # Windows環境でのデフォルトブラウザパス検出（フォールバック）
         if (not browser_path or browser_path == "") and platform.system() == "Windows":
             browser_path = _find_browser_path_windows(browser_type)
             
@@ -75,7 +109,8 @@ def get_browser_configs(
             extra_chromium_args += [f"--user-data-dir={browser_user_data}"]
     
     return {
-        "browser_path": browser_path,  # Changed from chrome_path
+        "browser_path": browser_path,
+        "browser_type": browser_type,  # Add browser_type to return
         "extra_chromium_args": extra_chromium_args
     }
 
@@ -107,16 +142,25 @@ def _find_browser_path_windows(browser_type: str = "chrome") -> Optional[str]:
 
 async def initialize_browser(use_own_browser=False, headless=False, browser_type=None, auto_fallback=True):
     """ブラウザを初期化し、失敗時には代替ブラウザにフォールバック"""
+    logger.debug(f"🔍 browser_manager.initialize_browser 呼び出し - use_own_browser: {use_own_browser}, headless: {headless}, browser_type: {browser_type}, auto_fallback: {auto_fallback}")
+    
     browser_debug_manager = BrowserDebugManager()
     
-    # 使用するブラウザタイプを決定
+    # 使用するブラウザタイプを決定（優先順位: 引数 > config設定 > デフォルト）
     if browser_type is None:
         browser_type = browser_config.config.get("current_browser", "chrome")
+    else:
+        # 引数で指定された場合は、configも更新
+        logger.debug(f"🔍 引数でブラウザタイプが指定されました: {browser_type}")
+        browser_config.set_current_browser(browser_type)
     
     logger.info(f"🔄 ブラウザ初期化開始: {browser_type.upper()}")
+    logger.debug(f"🔍 決定されたブラウザタイプ: {browser_type}")
+    logger.debug(f"🔍 browser_config.config: {browser_config.config}")
     
     try:
         # 指定されたブラウザタイプで初期化
+        logger.debug(f"🔍 browser_debug_manager.initialize_custom_browser を呼び出し中...")
         result = await browser_debug_manager.initialize_custom_browser(
             use_own_browser=use_own_browser, 
             headless=headless,
@@ -125,14 +169,20 @@ async def initialize_browser(use_own_browser=False, headless=False, browser_type
         
         if result.get("status") == "success":
             logger.info(f"✅ {browser_type.upper()} の初期化に成功しました")
+            logger.debug(f"🔍 成功したブラウザタイプ: {browser_type}")
             return result
         
         logger.error(f"❌ {browser_type.upper()} の初期化に失敗しました: {result.get('message', 'Unknown error')}")
+        logger.debug(f"🔍 失敗の詳細 - browser_type: {browser_type}, auto_fallback: {auto_fallback}")
         
         # 自動フォールバックが有効なら代替ブラウザを試す
         if auto_fallback:
             fallback_type = "chrome" if browser_type == "edge" else "edge"
-            logger.warning(f"⚠️ {fallback_type.upper()} へのフォールバックを試みます")
+            logger.warning(f"⚠️ フォールバック実行: {browser_type} -> {fallback_type}")
+            logger.debug(f"🔍 フォールバック条件分岐:")
+            logger.debug(f"  - 元のブラウザタイプ: {browser_type}")
+            logger.debug(f"  - フォールバック先: {fallback_type}")
+            logger.debug(f"  - auto_fallback: {auto_fallback}")
             
             from src.browser.browser_diagnostic import BrowserDiagnostic
             BrowserDiagnostic.diagnose_browser_startup_issues(
@@ -142,52 +192,85 @@ async def initialize_browser(use_own_browser=False, headless=False, browser_type
                 attempt_repair=False  # 診断のみ
             )
             
+            # 元のブラウザ設定を保存
+            original_browser = browser_config.config.get("current_browser")
+            
             # 代替ブラウザでの初期化を試みる（再帰呼び出し、無限ループ防止のためauto_fallback=False）
-            return await initialize_browser(
+            logger.debug(f"🔍 フォールバック実行中: {fallback_type} で再試行...")
+            fallback_result = await initialize_browser(
                 use_own_browser=use_own_browser,
                 headless=headless,
                 browser_type=fallback_type,
                 auto_fallback=False
             )
+            
+            # フォールバック結果にオリジナルの選択を記録
+            if isinstance(fallback_result, dict):
+                fallback_result["original_browser_choice"] = original_browser
+                fallback_result["fallback_used"] = True
+                fallback_result["fallback_from"] = browser_type
+                fallback_result["fallback_to"] = fallback_type
+                logger.warning(f"⚠️ フォールバック完了: {browser_type} -> {fallback_type} (元の選択: {original_browser})")
+            
+            return fallback_result
+        else:
+            logger.debug(f"🔍 auto_fallback=False のため、フォールバックをスキップ")
     except Exception as e:
         logger.error(f"❌ ブラウザ初期化中の予期せぬエラー: {e}")
+        logger.debug(f"🔍 例外の詳細:")
+        logger.debug(f"  - browser_type: {browser_type}")
+        logger.debug(f"  - auto_fallback: {auto_fallback}")
+        logger.debug(f"  - 例外タイプ: {type(e).__name__}")
+        import traceback
+        logger.debug(f"  - スタックトレース: {traceback.format_exc()}")
+        
         if auto_fallback:
             fallback_type = "chrome" if browser_type == "edge" else "edge"
-            logger.warning(f"⚠️ 例外発生のため {fallback_type.upper()} へのフォールバックを試みます")
+            logger.warning(f"⚠️ 例外によるフォールバック実行: {browser_type} -> {fallback_type}")
+            logger.debug(f"🔍 例外フォールバック条件分岐:")
+            logger.debug(f"  - 元のブラウザタイプ: {browser_type}")
+            logger.debug(f"  - フォールバック先: {fallback_type}")
+            logger.debug(f"  - auto_fallback: {auto_fallback}")
+            
             return await initialize_browser(
                 use_own_browser=use_own_browser,
                 headless=headless,
                 browser_type=fallback_type,
                 auto_fallback=False
             )
+        else:
+            logger.debug(f"🔍 auto_fallback=False のため、例外フォールバックをスキップ")
     
     # すべて失敗した場合
     return {"status": "error", "message": f"すべてのブラウザ初期化試行が失敗しました"}
 
 def prepare_recording_path(enable_recording: bool, save_recording_path: Optional[str]) -> Optional[str]:
-    """Prepare recording path based on settings (Windows対応済み)"""
+    """Prepare recording path based on settings (Windows対応済み・改良版)"""
     if not enable_recording:
         return None
         
-    if save_recording_path:
-        # Windows対応: pathlibを使用してパス処理を統一
-        recording_path = Path(save_recording_path).resolve()
-        
+    if save_recording_path and save_recording_path.strip():
+        # 明示的にパスが指定されている場合
         try:
+            # Windows対応: pathlibを使用してパス処理を統一
+            recording_path = Path(save_recording_path).resolve()
             recording_path.mkdir(parents=True, exist_ok=True)
             logger.info(f"Recording directory prepared: {recording_path}")
             return str(recording_path)
         except PermissionError as e:
             logger.error(f"Permission denied creating recording directory: {e}")
-            # Windows環境でのフォールバック: temp/recordingsを使用
-            if platform.system() == "Windows":
-                fallback_path = Path.cwd() / "tmp" / "record_videos"
-                fallback_path.mkdir(parents=True, exist_ok=True)
-                logger.info(f"Using fallback recording directory: {fallback_path}")
-                return str(fallback_path)
-            return None
         except Exception as e:
             logger.error(f"Failed to create recording directory: {e}")
-            return None
-        
-    return None
+    
+    # フォールバック: 自動的にプラットフォーム適応のパスを使用
+    try:
+        recording_path = get_recording_path("./tmp/record_videos")
+        logger.info(f"Using automatic recording path: {recording_path}")
+        return recording_path
+    except Exception as e:
+        logger.error(f"Failed to prepare automatic recording path: {e}")
+        # 最終フォールバック: 一時ディレクトリ
+        import tempfile
+        temp_path = tempfile.gettempdir()
+        logger.warning(f"Using system temporary directory as final fallback: {temp_path}")
+        return temp_path

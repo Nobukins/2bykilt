@@ -8,9 +8,10 @@ from playwright.async_api import async_playwright
 class BrowserAutomationBase:
     """ブラウザ自動化の共通機能を提供するベースクラス（Windows対応済み）"""
     
-    def __init__(self, headless=False, slowmo=0, recording_dir=None):
+    def __init__(self, headless=False, slowmo=0, recording_dir=None, browser_type="chromium"):
         self.headless = headless
         self.slowmo = slowmo
+        self.browser_type = browser_type  # "chromium", "chrome", "firefox", "webkit"
         
         # Windows対応: 録画ディレクトリのプラットフォーム別設定
         if recording_dir is None:
@@ -43,14 +44,62 @@ class BrowserAutomationBase:
             # Playwright起動
             self.playwright_instance = await async_playwright().start()
             
-            # Windows固有のブラウザ設定
+            # ブラウザタイプに応じた起動
             browser_args = self._get_browser_args()
             
-            self.browser = await self.playwright_instance.chromium.launch(
-                headless=self.headless, 
-                slow_mo=self.slowmo, 
-                args=browser_args
-            )
+            # ブラウザの選択
+            launch_options = {
+                'headless': self.headless,
+                'slow_mo': self.slowmo,
+                'args': browser_args
+            }
+            
+            if self.browser_type == "chrome":
+                # Chrome用の実行ファイルパスを環境変数から取得
+                chrome_path = os.environ.get('PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH')
+                if chrome_path and os.path.exists(chrome_path):
+                    launch_options['executable_path'] = chrome_path
+                    print(f"🔍 Using Chrome executable: {chrome_path}")
+                else:
+                    launch_options['channel'] = "chrome"  # Google Chrome を使用
+                
+                self.browser = await self.playwright_instance.chromium.launch(**launch_options)
+                
+            elif self.browser_type == "msedge" or self.browser_type == "edge":
+                # Edge用の実行ファイルパスを環境変数から取得
+                edge_path = os.environ.get('PLAYWRIGHT_EDGE_EXECUTABLE_PATH')
+                if edge_path and os.path.exists(edge_path):
+                    launch_options['executable_path'] = edge_path
+                    print(f"🔍 Using Edge executable: {edge_path}")
+                else:
+                    launch_options['channel'] = "msedge"  # Microsoft Edge を使用
+                
+                # Edge用のメモリー最適化設定
+                launch_options['args'].extend([
+                    '--memory-pressure-off',
+                    '--max_old_space_size=4096',
+                    '--disable-extensions',
+                    '--disable-plugins'
+                ])
+                
+                self.browser = await self.playwright_instance.chromium.launch(**launch_options)
+                
+            elif self.browser_type == "firefox":
+                self.browser = await self.playwright_instance.firefox.launch(
+                    headless=self.headless, 
+                    slow_mo=self.slowmo, 
+                    args=browser_args
+                )
+            elif self.browser_type == "webkit":
+                self.browser = await self.playwright_instance.webkit.launch(
+                    headless=self.headless, 
+                    slow_mo=self.slowmo
+                    # WebKitは一部のargsをサポートしていない
+                )
+            else:  # デフォルトは chromium
+                self.browser = await self.playwright_instance.chromium.launch(**launch_options)
+            
+            print(f"[Browser Info] Type: {self.browser_type}, Headless: {self.headless}, SlowMo: {self.slowmo}ms")
             
             # コンテキスト作成（録画ディレクトリはWindowsパス対応）
             context_options = {
@@ -82,28 +131,41 @@ class BrowserAutomationBase:
             raise
     
     def _get_browser_args(self):
-        """プラットフォーム別ブラウザ引数を取得"""
+        """プラットフォーム別およびブラウザ別引数を取得"""
+        # 基本的な引数
         base_args = [
             '--no-sandbox',
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-zygote',
-            '--single-process',
             '--window-position=50,50',
             '--window-size=1280,720'
         ]
         
-        if self.is_windows:
-            # Windows固有の引数
-            windows_args = [
+        # ブラウザタイプ別の設定
+        if self.browser_type in ["chrome", "msedge", "edge"]:
+            # Chrome/Edgeの場合はsingle-processを避ける
+            chrome_edge_args = [
                 '--disable-background-timer-throttling',
                 '--disable-backgrounding-occluded-windows',
                 '--disable-renderer-backgrounding',
-                '--disable-web-security',
-                '--allow-running-insecure-content',
                 '--no-first-run',
                 '--no-default-browser-check'
+            ]
+            base_args.extend(chrome_edge_args)
+        else:
+            # chromiumの場合は従来通り
+            chromium_args = [
+                '--disable-accelerated-2d-canvas',
+                '--no-zygote',
+                '--single-process'
+            ]
+            base_args.extend(chromium_args)
+        
+        if self.is_windows:
+            # Windows固有の引数
+            windows_args = [
+                '--disable-web-security',
+                '--allow-running-insecure-content'
             ]
             base_args.extend(windows_args)
         elif self.is_linux:

@@ -8,7 +8,7 @@ import platform  # Added for cross-platform support
 from pathlib import Path  # Added for cross-platform path handling
 from datetime import datetime  # Added for timestamp formatting
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv(override=True)  # 既存のシステム環境変数を.envファイルの設定で上書き
 import subprocess
 import asyncio
 import json  # Added to fix missing import
@@ -60,18 +60,17 @@ if ENABLE_LLM:
         def get_globals(): return {}
         async def run_browser_agent(*args, **kwargs): return "LLM機能が無効です"
         async def run_with_stream(*args, **kwargs): 
-            # Extract task from args (task is the 18th parameter)
-            task = args[17] if len(args) > 17 else ""
+            # Extract parameters from args
+            task = args[17] if len(args) > 17 else ""  # task is the 18th parameter (0-indexed)
+            use_own_browser = args[7] if len(args) > 7 else False  # use_own_browser is the 8th parameter
+            headless = args[9] if len(args) > 9 else True  # headless is the 10th parameter
+            browser_type = args[26] if len(args) > 26 else None  # browser_type is the 27th parameter (last added)
             
             # Check if this is a pre-registered command
             evaluation_result = pre_evaluate_prompt_standalone(task)
             if evaluation_result and evaluation_result.get('is_command'):
                 # This is a pre-registered command, try to execute browser automation
                 try:
-                    # Extract browser parameters from args
-                    use_own_browser = args[7] if len(args) > 7 else False
-                    headless = args[9] if len(args) > 9 else True
-                    
                     # Get the action definition and parameters
                     action_name = evaluation_result.get('command_name', '').lstrip('@')
                     action_def = evaluation_result.get('action_def', {})
@@ -253,6 +252,10 @@ else:
                         **action_params
                     }
                     
+                    # Add browser_type if available
+                    if len(args) > 26 and args[26] is not None:
+                        execution_params['browser_type'] = args[26]
+                    
                     result = await execute_direct_browser_control(action_def, **execution_params)
                     
                     if result:
@@ -350,7 +353,9 @@ else:
                     try:
                         from src.script.script_manager import run_script
                         
-                        script_output, script_path = await run_script(action_def, action_params, headless=headless)
+                        # Pass browser_type to script_manager
+                        browser_type_arg = args[26] if len(args) > 26 else None
+                        script_output, script_path = await run_script(action_def, action_params, headless=headless, browser_type=browser_type_arg)
                         
                         if script_output and "successfully" in script_output.lower():
                             return f"✅ {action_type} command '{action_name}' executed successfully\n\n{script_output}", "", "", "", "", None, None, None, gr.update(), gr.update()
@@ -657,7 +662,7 @@ def load_env_browser_settings_file(env_file):
     if not env_file:
         return ("", "", "❌ No env file selected")
     # Load environment vars from file path
-    load_dotenv(env_file.name)
+    load_dotenv(env_file.name, override=True)
     path = os.getenv('CHROME_PATH', '')
     user_data = os.getenv('CHROME_USER_DATA', '')
     return (
@@ -995,12 +1000,23 @@ def create_ui(config, theme_name="Ocean"):
                         def update_browser_settings(browser_selection, disable_security_flag):
                             """Update browser settings and return results."""
                             try:
+                                logger.debug(f"🔍 update_browser_settings 呼び出し:")
+                                logger.debug(f"  - browser_selection: {browser_selection}")
+                                logger.debug(f"  - disable_security_flag: {disable_security_flag}")
+                                logger.debug(f"  - 変更前のbrowser_config.config: {browser_config.config}")
+                                
                                 browser_config.set_current_browser(browser_selection)
+                                
+                                logger.debug(f"  - 変更後のbrowser_config.config: {browser_config.config}")
+                                
                                 settings = browser_config.get_browser_settings()
                                 settings["disable_security"] = disable_security_flag
                                 
                                 browser_path = f"**現在のブラウザパス**: {settings['path']}"
                                 user_data = f"**ユーザーデータパス**: {settings['user_data']}"
+                                
+                                logger.info(f"✅ ブラウザ設定を {browser_selection.upper()} に更新しました")
+                                logger.debug(f"🔍 更新された設定: {settings}")
                                 
                                 return (
                                     browser_path,
@@ -1008,6 +1024,9 @@ def create_ui(config, theme_name="Ocean"):
                                     f"✅ ブラウザ設定を {browser_selection.upper()} に更新しました"
                                 )
                             except Exception as e:
+                                logger.error(f"❌ update_browser_settings エラー: {e}")
+                                import traceback
+                                logger.debug(f"🔍 スタックトレース: {traceback.format_exc()}")
                                 return (
                                     browser_path_info.value,
                                     user_data_info.value,
@@ -1267,7 +1286,7 @@ def create_ui(config, theme_name="Ocean"):
                             use_own_browser, keep_browser_open, headless, disable_security, window_w, window_h,
                             save_recording_path, save_agent_history_path, save_trace_path, enable_recording, task, add_infos,
                             max_steps, use_vision, max_actions_per_step, tool_calling_method, dev_mode, maintain_browser_session,
-                            tab_selection_strategy  # Add tab selection strategy parameter
+                            tab_selection_strategy, browser_type  # Add browser_type parameter
                         ],
                         outputs=[
                             browser_view, final_result_output, errors_output, model_actions_output, model_thoughts_output,

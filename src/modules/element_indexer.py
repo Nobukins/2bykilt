@@ -122,8 +122,18 @@ def interact_with_indexed_element(page, index, action, value=None):
 
 # Example usage
 def main():
+    import os
+    from dotenv import load_dotenv
+    load_dotenv(override=True)
+    
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
+        # 環境変数からChromeパスを取得
+        chrome_path = os.environ.get('CHROME_PATH', '')
+        launch_options = {"headless": False}
+        if chrome_path and os.path.exists(chrome_path):
+            launch_options["executable_path"] = chrome_path
+            
+        browser = p.chromium.launch(**launch_options)
         page = browser.new_page()
         page.goto("https://example.com")
         

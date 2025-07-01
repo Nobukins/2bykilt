@@ -59,7 +59,7 @@ def generate_browser_script(script_info: Dict[str, Any], params: Dict[str, str])
     flow = script_info.get('flow', [])
     script_content = '''
 import pytest
-from playwright.sync_api import expect, Page
+from playwright.sync_api import expect, Page, Browser
 import json
 import os
 
@@ -76,6 +76,35 @@ def browser_context_args(browser_context_args):
         context_args["record_video_dir"] = recording_path
         
     return context_args
+
+@pytest.fixture(scope="module")
+def browser_type_launch_args(browser_type_launch_args):
+    """Configure browser launch arguments based on environment variables"""
+    launch_args = {**browser_type_launch_args}
+    
+    # Check browser type from environment (with override support)
+    browser_type = os.environ.get('BYKILT_OVERRIDE_BROWSER_TYPE') or os.environ.get('BYKILT_BROWSER_TYPE', 'chrome')
+    print(f"🔍 Browser type: {browser_type}")
+    
+    # Check for browser executable path from environment
+    browser_executable = None
+    if browser_type == 'chrome':
+        browser_executable = os.environ.get('PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH')
+        if browser_executable:
+            launch_args["executable_path"] = browser_executable
+            launch_args["channel"] = "chrome"
+    elif browser_type == 'edge':
+        browser_executable = os.environ.get('PLAYWRIGHT_EDGE_EXECUTABLE_PATH')
+        if browser_executable:
+            launch_args["executable_path"] = browser_executable
+        launch_args["channel"] = "msedge"  # Use Microsoft Edge
+    
+    if browser_executable and os.path.exists(browser_executable):
+        print(f"🎯 Using custom browser: {browser_executable}")
+    
+    print(f"🔍 Browser executable: {browser_executable}")
+    
+    return launch_args
 
 @pytest.mark.browser_control
 def test_browser_control(page: Page):
@@ -249,7 +278,8 @@ async def run_script(
     script_info: Dict[str, Any], 
     params: Dict[str, str], 
     headless: bool = False, 
-    save_recording_path: Optional[str] = None
+    save_recording_path: Optional[str] = None,
+    browser_type: Optional[str] = None
 ) -> Tuple[str, Optional[str]]:
     """
     Run a browser automation script
@@ -259,11 +289,17 @@ async def run_script(
         params: Dictionary of parameters for the script
         headless: Boolean indicating if browser should run in headless mode
         save_recording_path: Path to save browser recordings
+        browser_type: Browser type to use (chrome/edge), overrides config if provided
         
     Returns:
         tuple: (execution message, script path)
     """
     try:
+        # Set browser type in environment if provided
+        if browser_type:
+            os.environ['BYKILT_OVERRIDE_BROWSER_TYPE'] = browser_type
+            logger.info(f"🔍 Override browser type set to: {browser_type}")
+        
         if 'type' in script_info:
             script_type = script_info['type']
             
@@ -296,6 +332,125 @@ markers =
                     f.write(script_content)
                     
                 logger.info(f"Generated browser control script at {script_path}")
+                
+                # Build pytest command with appropriate parameters
+                # Use python -m pytest for better compatibility across platforms
+                command = ['python', '-m', 'pytest', script_path]
+                
+                # Add slowmo parameter if specified
+                slowmo = script_info.get('slowmo')
+                if slowmo is not None:
+                    try:
+                        slowmo_ms = int(slowmo)
+                        command.extend(['--slowmo', str(slowmo_ms)])
+                        logger.info(f"Slow motion enabled with {slowmo_ms}ms delay")
+                    except ValueError:
+                        logger.warning(f"Invalid slowmo value: {slowmo}, ignoring")
+                
+                # Add headless mode parameter
+                if headless:
+                    command.append('--headless')
+                else:
+                    command.append('--headed')
+                
+                # Set up environment variables including browser configuration
+                env = os.environ.copy()
+                
+                # Get browser configuration from BrowserConfig
+                try:
+                    from src.browser.browser_config import browser_config
+                    
+                    # Check for browser type override from environment (browser-control)
+                    override_browser = os.environ.get('BYKILT_OVERRIDE_BROWSER_TYPE')
+                    if browser_type:
+                        current_browser = browser_type
+                        env['BYKILT_OVERRIDE_BROWSER_TYPE'] = browser_type
+                        logger.info(f"🎯 Using browser type from parameter: {browser_type}")
+                    elif override_browser:
+                        current_browser = override_browser
+                        logger.info(f"🎯 Using override browser type: {override_browser}")
+                    else:
+                        current_browser = browser_config.get_current_browser()
+                        logger.info(f"🔍 Using current browser from config: {current_browser}")
+                    
+                    browser_settings = browser_config.get_browser_settings(current_browser)
+                    
+                    # Set browser-specific environment variables for Playwright
+                    env['BYKILT_BROWSER_TYPE'] = current_browser
+                    logger.info(f"🎯 Browser type set to: {current_browser}")
+                    
+                    # Set browser executable path if available for Chrome/Edge
+                    browser_path = browser_settings.get("path")
+                    if current_browser == "chrome" and browser_path and os.path.exists(browser_path):
+                        env['PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'] = browser_path
+                        logger.info(f"🎯 Chrome executable path set to: {browser_path}")
+                        command.extend(['--browser-type', 'chrome'])
+                        logger.info(f"🔍 Using Chrome browser at {browser_path}")
+                    elif current_browser == "edge" and browser_path and os.path.exists(browser_path):
+                        env['PLAYWRIGHT_EDGE_EXECUTABLE_PATH'] = browser_path
+                        logger.info(f"🎯 Edge executable path set to: {browser_path}")
+                        command.extend(['--browser-type', 'msedge'])
+                        logger.info(f"🔍 Using Edge browser at {browser_path}")
+                    elif current_browser in ["chrome", "edge", "chromium"]:
+                        if current_browser == "chrome":
+                            command.extend(['--browser-type', 'chrome'])
+                        elif current_browser == "edge":
+                            command.extend(['--browser-type', 'msedge'])
+                        else:
+                            command.extend(['--browser-type', 'chromium'])
+                        logger.info(f"🔍 Using default {current_browser} browser")
+                    elif current_browser in ["firefox", "webkit"]:
+                        command.extend(['--browser-type', current_browser])
+                        logger.info(f"🔍 Using {current_browser} browser")
+                        
+                except Exception as e:
+                    logger.warning(f"⚠️ Could not load browser configuration: {e}")
+                    logger.info("Using default Playwright browser settings")
+                    # フォールバック: 環境変数から直接設定
+                    if browser_type:
+                        env['BYKILT_BROWSER_TYPE'] = browser_type
+                        command.extend(['--browser-type', 'chromium'])
+                        logger.info(f"🔍 Using chromium browser type for better compatibility")
+                
+                # Add recording configuration if enabled
+                if save_recording_path:
+                    os.makedirs(save_recording_path, exist_ok=True)
+                    env['RECORDING_PATH'] = save_recording_path
+                    logger.info(f"Recording enabled, saving to: {save_recording_path}")
+                
+                # Execute the pytest command
+                process = await asyncio.create_subprocess_exec(
+                    *command,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    env=env,
+                    cwd=script_dir
+                )
+                
+                stdout, stderr = await process.communicate()
+                
+                # Process output
+                output_lines = []
+                if stdout:
+                    for line in stdout.decode('utf-8').splitlines():
+                        if line.strip():
+                            logger.info(f"PYTEST: {line.strip()}")
+                            output_lines.append(line.strip())
+                
+                if stderr:
+                    for line in stderr.decode('utf-8').splitlines():
+                        if line.strip():
+                            logger.error(f"PYTEST ERROR: {line.strip()}")
+                
+                # Check return code and return results
+                if process.returncode != 0:
+                    error_msg = f"Browser control script execution failed with exit code {process.returncode}"
+                    logger.error(error_msg)
+                    return error_msg, script_path
+                else:
+                    success_msg = "Script executed successfully"
+                    logger.info(success_msg)
+                    return success_msg, script_path
             elif script_type == 'git-script':
                 # Handle git-script type
                 if 'git' not in script_info or 'script_path' not in script_info:
@@ -313,6 +468,9 @@ markers =
                 # Clone repository
                 repo_dir = await clone_git_repo(git_url, version, repo_dir)
                 full_script_path = os.path.join(repo_dir, script_path)
+                
+                # Apply Chrome executable path patch to the script
+                await patch_search_script_for_chrome(full_script_path)
                 
                 if not os.path.exists(full_script_path):
                     raise FileNotFoundError(f"Script not found at path: {full_script_path}")
@@ -358,8 +516,48 @@ markers =
                 if not headless and '--headed' not in command_template:
                     command_parts.append('--headed')
                 
-                # Set up environment variables
+                # Set up environment variables including browser configuration
                 env = os.environ.copy()
+                
+                # Get browser configuration from BrowserConfig
+                try:
+                    from src.browser.browser_config import browser_config
+                    
+                    # Check for browser type override from environment (git-script)
+                    override_browser = os.environ.get('BYKILT_OVERRIDE_BROWSER_TYPE')
+                    if override_browser:
+                        current_browser = override_browser
+                        logger.info(f"🎯 Using override browser type: {override_browser}")
+                    else:
+                        current_browser = browser_config.get_current_browser()
+                        logger.info(f"🔍 Using current browser from config: {current_browser}")
+                    
+                    browser_settings = browser_config.get_browser_settings(current_browser)
+                    
+                    # Set browser-specific environment variables for Playwright
+                    env['BYKILT_BROWSER_TYPE'] = current_browser
+                    logger.info(f"🎯 Browser type set to: {current_browser}")
+                    
+                    # Set browser executable path if available
+                    browser_path = browser_settings.get("path")
+                    if browser_path and os.path.exists(browser_path):
+                        # Set appropriate environment variable based on browser type
+                        if current_browser == 'chrome':
+                            env['PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'] = browser_path
+                        elif current_browser == 'edge':
+                            env['PLAYWRIGHT_EDGE_EXECUTABLE_PATH'] = browser_path
+                        else:
+                            env['PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'] = browser_path  # fallback for chromium
+                        logger.info(f"🎯 Browser executable path set to: {browser_path}")
+                    else:
+                        logger.warning(f"⚠️ Browser path not found or invalid: {browser_path}")
+                    
+                    logger.info(f"🔍 Git-script will use browser: {current_browser} at {browser_path}")
+                    
+                except Exception as e:
+                    logger.warning(f"⚠️ Could not load browser configuration: {e}")
+                    logger.info("Using default Playwright browser settings")
+                
                 if save_recording_path:
                     os.makedirs(save_recording_path, exist_ok=True)
                     env['RECORDING_PATH'] = save_recording_path
@@ -544,14 +742,26 @@ markers =
                 # Replace action_script placeholder
                 command_template = command_template.replace('${action_script}', action_script)
                 
-                # Replace parameter placeholders (${params.name} format)
-                for param_name, param_value in params.items():
-                    placeholder = f"${{params.{param_name}}}"
-                    if placeholder in command_template:
-                        # Quote values with spaces or special characters
-                        if ' ' in str(param_value) or any(c in str(param_value) for c in '!@#$%^&*()'):
-                            param_value = f'"{param_value}"'
-                        command_template = command_template.replace(placeholder, str(param_value))
+                # Replace parameter placeholders (${params.name} and ${params.name|default} format)
+                import re
+                
+                # Pattern to match ${params.name|default} or ${params.name}
+                param_pattern = r'\$\{params\.([^}|]+)(?:\|([^}]*))?\}'
+                
+                def replace_param(match):
+                    param_name = match.group(1)
+                    default_value = match.group(2) if match.group(2) is not None else ""
+                    
+                    # Use parameter value if provided, otherwise use default
+                    if param_name in params and params[param_name]:
+                        param_value = str(params[param_name])
+                    else:
+                        param_value = default_value
+                    
+                    # Return parameter value without additional quoting since we split the command later
+                    return param_value
+                
+                command_template = re.sub(param_pattern, replace_param, command_template)
                 
                 # Split into parts for subprocess execution
                 command_parts = command_template.split()
@@ -571,8 +781,37 @@ markers =
                     except ValueError:
                         logger.warning(f"Invalid slowmo value: {slowmo}, ignoring")
                 
-                # Set up environment variables
+                # Set up environment variables including browser configuration
                 env = os.environ.copy()
+                
+                # Get browser configuration from BrowserConfig
+                try:
+                    from src.browser.browser_config import browser_config
+                    
+                    # Check for browser type override from environment (action_runner_template)
+                    override_browser = os.environ.get('BYKILT_OVERRIDE_BROWSER_TYPE')
+                    if override_browser:
+                        current_browser = override_browser
+                        logger.info(f"🎯 Using override browser type: {override_browser}")
+                    else:
+                        current_browser = browser_config.get_current_browser()
+                        logger.info(f"🔍 Using current browser from config: {current_browser}")
+                    
+                    browser_settings = browser_config.get_browser_settings(current_browser)
+                    
+                    # Set browser-specific environment variables for Playwright
+                    # Note: Avoid setting PLAYWRIGHT_BROWSERS_PATH or PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+                    # for better compatibility with Playwright's automatic browser discovery
+                    
+                    # Add browser type for reference only
+                    env['BYKILT_BROWSER_TYPE'] = current_browser
+                    logger.info(f"🎯 Browser type set to: {current_browser}")
+                    logger.info(f"🔍 Using default Playwright browser discovery for action_runner")
+                    
+                except Exception as e:
+                    logger.warning(f"⚠️ Could not load browser configuration: {e}")
+                    logger.info("Using default Playwright browser settings")
+                
                 if save_recording_path:
                     os.makedirs(save_recording_path, exist_ok=True)
                     env['RECORDING_PATH'] = save_recording_path
@@ -734,3 +973,104 @@ markers =
         error_msg = f"Error running script: {str(e)}\n{traceback.format_exc()}"
         logger.error(error_msg)
         return error_msg, None
+    finally:
+        # Clean up browser type override environment variable
+        if 'BYKILT_OVERRIDE_BROWSER_TYPE' in os.environ:
+            del os.environ['BYKILT_OVERRIDE_BROWSER_TYPE']
+
+async def patch_search_script_for_chrome(script_path: str) -> None:
+    """
+    Patch the search_script.py file to use Chrome executable path from environment variables
+    """
+    try:
+        if not script_path.endswith('search_script.py'):
+            return  # Only patch search_script.py
+            
+        with open(script_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Check if already patched
+        if "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" in content or "PLAYWRIGHT_EDGE_EXECUTABLE_PATH" in content:
+            logger.info(f"Script {script_path} already patched for browser support")
+            return
+            
+        # Find the chromium.launch call and replace it
+        old_pattern = '''    async with async_playwright() as p:
+        browser = await p.chromium.launch(
+            headless=False, 
+            slow_mo=slowmo, 
+            args=[
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--no-zygote',
+                '--single-process',
+                '--window-position=50,50',  # ウィンドウの位置を指定
+                '--window-size=1280,720'    # ウィンドウのサイズを指定
+            ]
+        )'''
+        
+        new_pattern = '''    # Debug: 環境変数を確認
+    print(f"🔍 PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: {os.environ.get('PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH')}")
+    print(f"🔍 PLAYWRIGHT_EDGE_EXECUTABLE_PATH: {os.environ.get('PLAYWRIGHT_EDGE_EXECUTABLE_PATH')}")
+    print(f"🔍 BYKILT_BROWSER_TYPE: {os.environ.get('BYKILT_BROWSER_TYPE')}")
+    
+    async with async_playwright() as p:
+        # Get browser type and executable path from environment
+        browser_type = os.environ.get("BYKILT_BROWSER_TYPE", "chrome")
+        
+        # Get the appropriate executable path based on browser type
+        if browser_type == "edge":
+            browser_executable = os.environ.get("PLAYWRIGHT_EDGE_EXECUTABLE_PATH")
+            playwright_browser = p.chromium  # Edge uses Chromium engine
+        else:  # chrome or chromium
+            browser_executable = os.environ.get("PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH")
+            playwright_browser = p.chromium
+            
+        launch_options = {
+            'headless': False, 
+            'slow_mo': slowmo, 
+            'args': [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--no-zygote',
+                '--single-process',
+                '--window-position=50,50',  # ウィンドウの位置を指定
+                '--window-size=1280,720'    # ウィンドウのサイズを指定
+            ]
+        }
+        
+        # Add memory optimization for Edge to prevent crashes
+        if browser_type == "edge":
+            launch_options['args'].extend([
+                '--memory-pressure-off',
+                '--max_old_space_size=4096',
+                '--disable-extensions',
+                '--disable-plugins',
+                '--disable-images'
+            ])
+        
+        # Add executable_path if browser path is provided
+        if browser_executable:
+            launch_options['executable_path'] = browser_executable
+            print(f"🔍 Using {browser_type} executable: {browser_executable}")
+        else:
+            print(f"⚠️ No {browser_type} executable specified, using default Chromium")
+            
+        browser = await playwright_browser.launch(**launch_options)'''
+        
+        if old_pattern in content:
+            content = content.replace(old_pattern, new_pattern)
+            
+            with open(script_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+                
+            logger.info(f"✅ Successfully patched {script_path} for Chrome support")
+        else:
+            logger.warning(f"Could not find expected pattern in {script_path} to patch")
+            
+    except Exception as e:
+        logger.error(f"Failed to patch {script_path}: {e}")

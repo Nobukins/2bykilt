@@ -17,10 +17,11 @@ actions:
     description: "保存済みのブラウザ操作魔法を唱える"
     params:
       - name: query
-        required: true
+        required: false
         type: string
         description: "検索クエリ"
-    command: python ./tmp/myscript/action_runner.py --action ${action_script} --query "${params.query}" --slowmo 2500 --countdown 3
+        default: "LLMs.txt"
+    command: python ./tmp/myscript/unified_action_launcher.py --action ${action_script} --query ${params.query|LLMs.txt} --slowmo 2500 --countdown 3
 
   - name: phrase-search
     type: browser-control

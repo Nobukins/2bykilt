@@ -59,6 +59,14 @@ async def execute_direct_browser_control(action: Dict[str, Any], **params) -> bo
         flow = action.get('flow', [])
         use_own_browser = params.get('use_own_browser', False)
         headless = params.get('headless', False)
+        browser_type = params.get('browser_type')
+        
+        # Get browser type from config if not provided
+        if not browser_type:
+            from src.browser.browser_config import BrowserConfig
+            browser_config = BrowserConfig()
+            browser_type = browser_config.get_current_browser()
+            logger.info(f"🔍 Using browser type from config: {browser_type}")
         
         # Convert flow to command format
         commands = await convert_flow_to_commands(flow, params)
@@ -69,8 +77,10 @@ async def execute_direct_browser_control(action: Dict[str, Any], **params) -> bo
         debug_utils = DebugUtils()
         debug_utils.browser_manager = browser_manager
         
-        # Execute commands
-        await execute_commands(commands, browser_manager, use_own_browser, headless)
+        # For browser-control, always use Playwright-managed browser (not CDP)
+        # This ensures reliable execution without external browser dependencies
+        logger.info(f"🔍 Executing browser-control with use_own_browser=False, browser_type={browser_type}")
+        await execute_commands(commands, browser_manager, use_own_browser=False, headless=headless, browser_type=browser_type)
         
         logger.info(f"Successfully executed direct browser control for action: {action['name']}")
         return True
@@ -80,22 +90,27 @@ async def execute_direct_browser_control(action: Dict[str, Any], **params) -> bo
         logger.error(traceback.format_exc())
         return False
 
-async def execute_commands(commands, browser_manager, use_own_browser=False, headless=False):
+async def execute_commands(commands, browser_manager, use_own_browser=False, headless=False, browser_type=None):
     """Execute a list of commands in the browser using BrowserDebugManager"""
     logger.info("\nExecuting commands:")
     for i, cmd in enumerate(commands, 1):
         logger.info(f" {i}. {cmd['action']}: {cmd.get('args', [])}")
 
     try:
-        browser_data = await browser_manager.initialize_custom_browser(use_own_browser, headless)
-        browser = browser_data["browser"]
+        browser_data = await browser_manager.initialize_browser(use_own_browser, headless, browser_type)
+        logger.info(f"🔍 Browser initialization result: {browser_data}")
         
-        # Use the default context for CDP browsers
-        if browser_data.get("is_cdp", False):
-            context = browser.contexts[0] if browser.contexts else await browser.new_context()
-            logger.info("Using existing Chrome window to create a new tab")
-        else:
-            context = browser_data.get("context") or await browser.new_context()
+        # Check if browser initialization was successful
+        if browser_data.get("status") != "success":
+            logger.error(f"Browser initialization failed: {browser_data.get('message', 'Unknown error')}")
+            raise Exception(f"Browser initialization failed: {browser_data.get('message', 'Unknown error')}")
+        
+        browser = browser_data["browser"]
+        logger.info(f"🔍 Browser object type: {type(browser)}")
+        
+        # For Playwright-managed browsers, always use the context directly
+        context = browser_data.get("context") or await browser.new_context()
+        logger.info(f"🔍 Using Playwright-managed browser context")
         
         # Create a new tab in the context
         page = await context.new_page()
@@ -119,14 +134,21 @@ async def execute_commands(commands, browser_manager, use_own_browser=False, hea
                     # Continue execution even if networkidle isn't reached
                 logger.info(f"Navigated to: {args[0]}")
             elif action == "wait_for_navigation":
-                await page.wait_for_load_state("networkidle")
-                logger.info("Navigation completed")
+                try:
+                    await page.wait_for_load_state("networkidle", timeout=15000)
+                    logger.info("Navigation completed")
+                except Exception as e:
+                    logger.warning(f"Navigation wait timed out, continuing: {e}")
             elif action == "input_text" and len(args) >= 2:
                 selector, value = args[0], args[1]
+                # Wait for element to be available before filling
+                await page.wait_for_selector(selector, timeout=10000)
                 await page.fill(selector, value)
                 logger.info(f"Filled form field '{selector}' with '{value}'")
             elif action == "click_element" and args:
                 selector = args[0]
+                # Wait for element to be available and clickable before clicking
+                await page.wait_for_selector(selector, timeout=10000)
                 await page.click(selector)
                 logger.info(f"Clicked element '{selector}'")
             elif action == "keyboard_press" and args:
@@ -149,8 +171,8 @@ async def execute_commands(commands, browser_manager, use_own_browser=False, hea
         # Close only the tab, keeping the browser open
         await page.close()
         
-        # Only stop playwright if this was not a CDP connection
-        if not browser_data.get("is_cdp", False):
+        # Only stop playwright if this was not a CDP connection and playwright instance exists
+        if not browser_data.get("is_cdp", False) and "playwright" in browser_data:
             await browser_data["playwright"].stop()
 
     except Exception as e:
