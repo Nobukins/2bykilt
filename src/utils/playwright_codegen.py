@@ -109,15 +109,29 @@ def run_normal_codegen(url):
             # すべて失敗した場合はエラーを無視してデコード
             return data.decode('utf-8', errors='replace')
         
-        if process.returncode == 0 and os.path.exists(temp_path):
+        if os.path.exists(temp_path) and os.path.getsize(temp_path) > 0:
             with open(temp_path, 'r', encoding='utf-8') as f:
                 script_content = f.read()
-            script_content = convert_to_action_format(script_content)
-            os.unlink(temp_path)
-            return True, script_content
-        else:
-            error_msg = safe_decode(stderr) if stderr else "不明なエラー"
-            return False, f"Playwright codegen実行エラー: {error_msg}"
+                
+            # Target page, context or browser has been closed エラーの修正
+            if "Error: Target page, context or browser has been closed" in safe_decode(stderr):
+                logger.warning("ブラウザ/ページクローズエラーを検出 - スクリプト修正を試行")
+                
+                # スクリプト内でnavigationエラーをチェック
+                if "page.goto" in script_content:
+                    logger.info("スクリプト内のナビゲーションコードを検出 - 修正処理")
+                    # スクリプトの内容自体は有効
+                    script_content = convert_to_action_format(script_content)
+                    os.unlink(temp_path)
+                    return True, script_content
+            
+            if process.returncode == 0 or "page.goto" in script_content:
+                script_content = convert_to_action_format(script_content)
+                os.unlink(temp_path)
+                return True, script_content
+                
+        error_msg = safe_decode(stderr) if stderr else "不明なエラー"
+        return False, f"Playwright codegen実行エラー: {error_msg}"
     except subprocess.TimeoutExpired:
         process.kill()
         return False, "Playwright codegenが5分後にタイムアウトしました"
@@ -211,6 +225,19 @@ def run_edge_codegen(url):
                     # ファイルは存在するが、他の理由でエラーが起きた場合
                     with open(temp_path, 'r', encoding='utf-8') as f:
                         script_content = f.read()
+                    
+                    # Target page, context or browser has been closed エラーの修正
+                    if "Error: Target page, context or browser has been closed" in safe_decode(stderr):
+                        logger.warning("ブラウザ/ページクローズエラーを検出 - スクリプト修正を試行")
+                        
+                        # スクリプト内でnavigationエラーをチェック
+                        if "page.goto" in script_content:
+                            logger.info("スクリプト内のナビゲーションコードを検出 - 修正不要")
+                            # スクリプトの内容自体は有効
+                            script_content = convert_to_action_format(script_content)
+                            os.unlink(temp_path)
+                            return True, script_content
+                    
                     script_content = convert_to_action_format(script_content)
                     os.unlink(temp_path)
                     return True, script_content
@@ -231,22 +258,87 @@ def convert_to_action_format(script_content):
     """
     Convert the playwright codegen output to action_runner_template format.
     """
-    lines = script_content.splitlines()
-    action_lines = []
-    for line in lines:
-        if line.startswith('from playwright') or line.startswith('import ') or line.startswith('#') or not line.strip():
-            continue
-        if 'playwright.sync_api' in line or '.launch(' in line or '.new_context(' in line or '.new_page(' in line or '.close(' in line:
-            continue
-        if '.goto(' in line or '.click(' in line or '.fill(' in line or '.check(' in line or '.press(' in line or '.wait_for' in line:
-            if not line.strip().startswith('await '):
-                line = re.sub(r'(\s*)(page\.\w+\()', r'\1await \2', line)
-            action_lines.append(line)
+    if not script_content or script_content.strip() == "":
+        logger.warning("空のスクリプトコンテンツが渡されました")
+        # 最小限のテンプレートを返す
+        return """async def run_actions(page, query=None):
+    \"\"\"
+    # Auto-generated from playwright codegen (minimal template)
+    \"\"\"
+    # 注: この操作は自動生成されましたが、コンテンツが空でした
+    # 下記に具体的な操作を記述してください
+    await page.goto("https://example.com")
     
-    template = """async def run_actions(page, query=None):
-\"\"\"
+    # 検索クエリを使用する例
+    if query:
+        await page.fill("input[name=q]", query)
+        await page.press("input[name=q]", "Enter")
+        
+    await page.wait_for_timeout(5000)  # 結果表示の時間
+"""
+    
+    try:
+        lines = script_content.splitlines()
+        action_lines = []
+        has_goto = False
+        
+        for line in lines:
+            if line.startswith('from playwright') or line.startswith('import ') or line.startswith('#') or not line.strip():
+                continue
+            if 'playwright.sync_api' in line or '.launch(' in line or '.new_context(' in line or '.new_page(' in line or '.close(' in line:
+                continue
+                
+            # 重要な操作をキャプチャ
+            if '.goto(' in line:
+                has_goto = True
+                
+            if '.goto(' in line or '.click(' in line or '.fill(' in line or '.check(' in line or '.press(' in line or '.wait_for' in line or '.select_option(' in line:
+                if not line.strip().startswith('await '):
+                    line = re.sub(r'(\s*)(page\.\w+\()', r'\1await \2', line)
+                action_lines.append(line)
+        
+        # goto操作がなければ追加する（エラー防止のため）
+        if not has_goto and action_lines:
+            action_lines.insert(0, '    # 注: 自動追加されたページアクセス')
+            action_lines.insert(1, '    await page.goto("https://example.com")')
+        
+        template = """async def run_actions(page, query=None):
+    \"\"\"
     # Auto-generated from playwright codegen
-\"\"\"
+    \"\"\"
+"""
+        
+        # スクリプトが空の場合のフォールバック
+        if not action_lines:
+            logger.warning("抽出された操作が見つかりませんでした - 基本テンプレートを生成します")
+            template += """    # 注: 操作が検出されませんでした。下記に具体的な操作を記述してください
+    await page.goto("https://example.com")
+    
+    # 検索クエリを使用する例
+    if query:
+        await page.fill("input[name=q]", query)
+        await page.press("input[name=q]", "Enter")
+"""
+        
+    except Exception as e:
+        logger.error(f"スクリプト変換エラー: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        
+        # エラー発生時はデフォルトテンプレートを返す
+        return """async def run_actions(page, query=None):
+    \"\"\"
+    # Error during conversion - default template provided
+    \"\"\"
+    # 変換エラーが発生しました。このテンプレートを編集して操作を記述してください
+    await page.goto("https://example.com")
+    
+    # 検索クエリを使用する例
+    if query:
+        await page.fill("input[name=q]", query)
+        await page.press("input[name=q]", "Enter")
+        
+    await page.wait_for_timeout(5000)  # 結果表示の時間
 """
     for line in action_lines:
         template +=f"{line}\n"

@@ -361,16 +361,38 @@ class BrowserAutomationBase:
             # 録画完了のための待機
             if self.context and self.page:
                 print("[Info] Waiting for recording to complete...")
-                await self.page.wait_for_timeout(1000)
+                try:
+                    await self.page.wait_for_timeout(1000)
+                except Exception as page_error:
+                    print(f"[Warning] Wait timeout error (safe to ignore): {page_error}")
             
+            # すべてのリソースを順番に解放し、各ステップでエラーハンドリングを行う
             if self.context:
-                await self.context.close()
+                try:
+                    await self.context.close()
+                    print("[Info] Context closed successfully")
+                except Exception as context_error:
+                    print(f"[Warning] Context close error: {context_error}")
+                finally:
+                    self.context = None
                 
             if self.browser:
-                await self.browser.close()
+                try:
+                    await self.browser.close()
+                    print("[Info] Browser closed successfully")
+                except Exception as browser_error:
+                    print(f"[Warning] Browser close error: {browser_error}")
+                finally:
+                    self.browser = None
                 
             if self.playwright_instance:
-                await self.playwright_instance.stop()
+                try:
+                    await self.playwright_instance.stop()
+                    print("[Info] Playwright instance stopped")
+                except Exception as playwright_error:
+                    print(f"[Warning] Playwright stop error: {playwright_error}")
+                finally:
+                    self.playwright_instance = None
                 
             print(f"[Info] Browser cleanup completed. Recording dir: {self.recording_dir}")
             
