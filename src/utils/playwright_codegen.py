@@ -77,7 +77,18 @@ def run_normal_codegen(url):
         
         # コマンドを構築（仮想環境対応でpython -m playwrightを使用）
         import sys
-        cmd = [sys.executable, "-m", "playwright", "codegen", url, "--target", "python", "-o", temp_path]
+        cmd = [sys.executable, "-m", "playwright", "codegen"]
+        
+        # Chrome実行ファイルパスが設定されている場合は使用
+        chrome_path = os.environ.get('CHROME_PATH')
+        if chrome_path and os.path.exists(chrome_path):
+            # Chromeチャネルを使用
+            cmd.extend(["--browser", "chromium", "--channel", "chrome"])
+            logger.info(f"✅ Using system Chrome via channel: {chrome_path}")
+        else:
+            logger.info("⚠️ Using Playwright built-in Chromium (may show Google API warnings)")
+        
+        cmd.extend([url, "--target", "python", "-o", temp_path])
         logger.info(f"実行するコマンド: {' '.join(cmd)}")
         
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -129,14 +140,25 @@ def run_edge_codegen(url):
         
         # コマンドを構築（仮想環境対応でpython -m playwrightを使用）
         import sys
-        cmd = [
-            sys.executable, "-m", "playwright", "codegen",
-            url,
-            "--target", "python",
-            "-o", temp_path,
-            "--browser", "chromium",  # chromiumを指定
-            "--channel", "msedge"     # チャネルとしてmsedgeを指定
-        ]
+        cmd = [sys.executable, "-m", "playwright", "codegen"]
+        
+        # Edge実行ファイルパスが設定されている場合は使用
+        edge_path = os.environ.get('EDGE_PATH')
+        if edge_path and os.path.exists(edge_path):
+            # Edge チャネルを使用
+            cmd.extend([
+                "--browser", "chromium",
+                "--channel", "msedge"
+            ])
+            logger.info(f"✅ Using system Edge via msedge channel: {edge_path}")
+        else:
+            # フォールバック: 内蔵Chromiumを使用
+            cmd.extend([
+                "--browser", "chromium"
+            ])
+            logger.info("⚠️ Using Playwright built-in Chromium (Edge not found)")
+        
+        cmd.extend([url, "--target", "python", "-o", temp_path])
         
         # 環境変数を設定
         env = os.environ.copy()

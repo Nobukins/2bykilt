@@ -1048,7 +1048,14 @@ def create_ui(config, theme_name="Ocean"):
             with gr.TabItem("🎭 Playwright Codegen", id=9):
                 with gr.Group():
                     gr.Markdown("### 🎮 ブラウザ操作スクリプト自動生成")
-                    gr.Markdown("URLを入力してPlaywright codegenを起動し、ブラウザ操作を記録。生成されたスクリプトはアクションファイルとして保存できます。")
+                    gr.Markdown("""
+URLを入力してPlaywright codegenを起動し、ブラウザ操作を記録。生成されたスクリプトはアクションファイルとして保存できます。
+
+**ブラウザ選択について:**
+- **Chrome**: システムにインストールされたGoogle Chromeを使用（プロファイル付き、API警告なし）
+- **Edge**: システムにインストールされたMicrosoft Edgeを使用（プロファイル付き）
+- ブラウザが見つからない場合: Playwright内蔵Chromium（プロファイルなし、Google API警告表示）
+                    """)
                     
                     with gr.Row():
                         url_input = gr.Textbox(
