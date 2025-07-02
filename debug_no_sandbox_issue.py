@@ -46,7 +46,7 @@ async def debug_browser_args():
         # launch_optionsを確認
         chrome_profile_mgr = ProfileManager(
             source_profile_dir=os.environ.get('CHROME_USER_DATA', 
-                                             '/Users/nobuaki/Library/Application Support/Google/Chrome')
+                                             '')
         )
         selenium_profile = chrome_profile_mgr.create_selenium_profile(temp_dir)
         

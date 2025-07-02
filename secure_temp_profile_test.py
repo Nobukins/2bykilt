@@ -41,10 +41,10 @@ def create_temp_browser_profile(browser_type):
     # 環境変数から設定を取得
     if browser_type == 'edge':
         browser_path = os.environ.get('EDGE_PATH', '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge')
-        original_profile = os.environ.get('EDGE_USER_DATA', '/Users/nobuaki/Library/Application Support/Microsoft Edge')
+        original_profile = os.environ.get('EDGE_USER_DATA', '')
     else:  # chrome
         browser_path = os.environ.get('CHROME_PATH', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
-        original_profile = os.environ.get('CHROME_USER_DATA', '/Users/nobuaki/Library/Application Support/Google/Chrome')
+        original_profile = os.environ.get('CHROME_USER_DATA', '')
     
     print(f"📍 Browser Path: {browser_path}")
     print(f"📍 Original Profile: {original_profile}")

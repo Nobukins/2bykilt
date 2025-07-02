@@ -11,8 +11,8 @@ def scan_profile_for_auth_files():
     """認証関連ファイルの詳細スキャン"""
     
     browsers = {
-        'Chrome': os.environ.get('CHROME_USER_DATA', '/Users/nobuaki/Library/Application Support/Google/Chrome'),
-        'Edge': os.environ.get('EDGE_USER_DATA', '/Users/nobuaki/Library/Application Support/Microsoft Edge')
+        'Chrome': os.environ.get('CHROME_USER_DATA', ''),
+        'Edge': os.environ.get('EDGE_USER_DATA', '')
     }
     
     for browser_name, profile_path in browsers.items():

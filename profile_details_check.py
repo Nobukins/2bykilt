@@ -11,8 +11,8 @@ def check_profile_details():
     """プロファイルファイルの詳細を確認"""
     
     browsers = {
-        'Edge': os.environ.get('EDGE_USER_DATA', '/Users/nobuaki/Library/Application Support/Microsoft Edge'),
-        'Chrome': os.environ.get('CHROME_USER_DATA', '/Users/nobuaki/Library/Application Support/Google/Chrome')
+        'Edge': os.environ.get('EDGE_USER_DATA', ''),
+        'Chrome': os.environ.get('CHROME_USER_DATA', '')
     }
     
     for browser_name, original_profile in browsers.items():

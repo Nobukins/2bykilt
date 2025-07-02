@@ -10,7 +10,7 @@ from pathlib import Path
 
 def analyze_chrome_auth_files():
     """Chrome認証ファイルの詳細解析"""
-    chrome_profile = os.environ.get('CHROME_USER_DATA', '/Users/nobuaki/Library/Application Support/Google/Chrome')
+    chrome_profile = os.environ.get('CHROME_USER_DATA', '')
     default_dir = os.path.join(chrome_profile, "Default")
     
     print(f"🔍 Chrome認証ファイル深度解析")

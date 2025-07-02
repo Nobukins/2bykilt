@@ -471,7 +471,7 @@ async def test_text_search(request) -> None:
             if browser_type == 'edge':
                 print(f"⚠️ Original Edge profile not found at: {original_edge_profile}")
                 # 新しい作法で空のテストプロファイルを作成
-                edge_user_data_base = os.environ.get('EDGE_USER_DATA', '/Users/nobuaki/Library/Application Support/Microsoft Edge')
+                edge_user_data_base = os.environ.get('EDGE_USER_DATA', '')
                 edge_test_profile = os.path.join(edge_user_data_base, "SeleniumProfile")
                 os.makedirs(os.path.join(edge_test_profile, "Default"), exist_ok=True)
                 edge_user_data = edge_test_profile
@@ -479,7 +479,7 @@ async def test_text_search(request) -> None:
             elif browser_type == 'chrome':
                 print(f"⚠️ Original Chrome profile not found at: {original_chrome_profile}")
                 # 新しい作法で空のテストプロファイルを作成
-                chrome_user_data_base = os.environ.get('CHROME_USER_DATA', '/Users/nobuaki/Library/Application Support/Google/Chrome')
+                chrome_user_data_base = os.environ.get('CHROME_USER_DATA', '')
                 chrome_test_profile = os.path.join(chrome_user_data_base, "SeleniumProfile")
                 os.makedirs(os.path.join(chrome_test_profile, "Default"), exist_ok=True)
                 chrome_user_data = chrome_test_profile
