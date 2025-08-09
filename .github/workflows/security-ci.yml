@@ -128,29 +128,29 @@ jobs:
         id: pip_audit
         run: |
           pip-audit -r requirements.txt -f json > pip-audit.json || true
-python - <<'PY'
-import json, sys
-try:
-    with open('pip-audit.json') as f:
-        data = json.load(f)
-    if isinstance(data, str):
-        # 文字列の場合はエラーにする
-        print("Error: pip-audit.json is not a valid JSON object or array")
-        sys.exit(1)
-except Exception as e:
-    print('Failed to parse pip-audit.json', e)
-    sys.exit(1)
-# 以降の処理も data の型によって分岐
-if isinstance(data, list):
-    max_sev = max((item.get("severity", 0) for item in data if isinstance(item, dict)), default=0)
-else:
-    max_sev = data.get("severity", 0) if isinstance(data, dict) else 0
+          python - <<'PY'
+          import json, sys
+          try:
+              with open('pip-audit.json') as f:
+                  data = json.load(f)
+              if isinstance(data, str):
+                  # 文字列の場合はエラーにする
+                  print("Error: pip-audit.json is not a valid JSON object or array")
+                  sys.exit(1)
+          except Exception as e:
+              print('Failed to parse pip-audit.json', e)
+              sys.exit(1)
+          # 以降の処理も data の型によって分岐
+          if isinstance(data, list):
+              max_sev = max((item.get("severity", 0) for item in data if isinstance(item, dict)), default=0)
+          else:
+              max_sev = data.get("severity", 0) if isinstance(data, dict) else 0
 
-print(f"MAX_SEVERITY={max_sev}")
-with open('pip-audit.max','w') as f:
-    f.write(str(max_sev))
-if max_sev >= 3:
-    sys.exit(1)
+          print(f"MAX_SEVERITY={max_sev}")
+          with open('pip-audit.max','w') as f:
+              f.write(str(max_sev))
+          if max_sev >= 3:
+              sys.exit(1)
           PY
       - name: Upload audit artifact
         uses: actions/upload-artifact@v4
