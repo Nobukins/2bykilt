@@ -168,6 +168,8 @@ jobs:
         with:
           config: .gitleaks.toml
           fail: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   container-scan:
     name: Container Build & Trivy Scan
