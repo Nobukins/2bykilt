@@ -1,4 +1,4 @@
-name: Security CI
+name: Security CI2
 
 on:
   pull_request:
