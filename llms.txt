@@ -137,3 +137,13 @@ actions:
       - action: fill_form
         selector: "#search-2 > form > label > input"
         value: "${params.query}"
+
+  - name: yahoo-topnews
+    type: action_runner_template
+    action_script: yahoo-top
+    params:
+      - name: query
+        required: true
+        type: string
+        description: "検索クエリ"
+    command: python ./tmp/myscript/unified_action_launcher.py --action ${action_script} --query "${params.query}" --slowmo 1500 --countdown 3
