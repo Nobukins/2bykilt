@@ -2,10 +2,10 @@ name: 🛡️ Security Analysis & Compliance Check
 
 on:
   pull_request:
-    branches: [ main, master, develop ]
+    branches: [ main ]
     types: [opened, synchronize, reopened]
   push:
-    branches: [ main, master, develop ]
+    branches: [ main, continuous-security ]
   workflow_dispatch:
   schedule:
     # 毎日深夜2時に定期実行（JST: 11時）
