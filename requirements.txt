@@ -84,6 +84,7 @@ pytest==8.3.5
 pytest-asyncio==0.25.3
 pytest-playwright==0.7.0
 pytest-base-url==2.1.0
+pytest-cov
 
 # System Monitoring & Process Management
 psutil==7.0.0

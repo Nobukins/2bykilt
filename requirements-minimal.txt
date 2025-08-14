@@ -52,6 +52,7 @@ pytest==8.3.5
 pytest-asyncio==1.0.0
 pytest-playwright==0.7.0
 pytest-base-url==2.1.0
+pytest-cov
 
 # System Monitoring & Process Management
 pystray==0.19.5
