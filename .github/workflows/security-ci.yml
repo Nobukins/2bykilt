@@ -213,11 +213,66 @@ jobs:
           path: artifacts
       - name: Extract metrics
         id: metrics
+        shell: bash
         run: |
-          COVERAGE=$(grep -Po 'line-rate="\K[0-9.]+' coverage.xml 2>/dev/null || echo 'N/A') || true
-          if [ -f artifacts/pip-audit/pip-audit.max ]; then MAX_AUDIT=$(cat artifacts/pip-audit/pip-audit.max); else MAX_AUDIT='N/A'; fi
-          echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
-          echo "pip_audit_max=$MAX_AUDIT" >> $GITHUB_OUTPUT
+          set -euo pipefail
+
+          # Locate coverage.xml from artifacts
+          COV_XML=""
+          if [ -f artifacts/coverage-xml/coverage.xml ]; then
+            COV_XML="artifacts/coverage-xml/coverage.xml"
+          elif [ -f coverage.xml ]; then
+            COV_XML="coverage.xml"
+          fi
+
+          if [ -n "${COV_XML}" ] && command -v python3 >/dev/null 2>&1; then
+            COVERAGE=$(python3 - "${COV_XML}" <<'PY'
+          import sys, xml.etree.ElementTree as ET
+          path = sys.argv[1]
+          try:
+              root = ET.parse(path).getroot()
+              # Prefer Cobertura-style line-rate if present
+              rate = root.attrib.get("line-rate")
+              if rate is not None:
+                  print(rate)
+                  sys.exit(0)
+
+              # Compute from lines-covered / lines-valid if available (coverage.py XML)
+              lines_covered = root.attrib.get("lines-covered")
+              lines_valid = root.attrib.get("lines-valid")
+              if lines_covered is not None and lines_valid is not None:
+                  valid = float(lines_valid)
+                  if valid > 0:
+                      print(str(float(lines_covered) / valid))
+                      sys.exit(0)
+
+              # Fallback for JaCoCo-style counters
+              covered = missed = 0
+              for c in root.findall(".//counter[@type='LINE']"):
+                  covered += int(c.attrib.get("covered", 0))
+                  missed += int(c.attrib.get("missed", 0))
+              total = covered + missed
+              if total > 0:
+                  print(str(covered / total))
+                  sys.exit(0)
+          except Exception:
+              pass
+          print("N/A")
+          PY
+            )
+          else
+            # Fallback (very best-effort)
+            COVERAGE=$(grep -Po 'line-rate="\K[0-9.]+' "${COV_XML:-/dev/null}" 2>/dev/null || echo 'N/A') || true
+          fi
+
+          if [ -f artifacts/pip-audit/pip-audit.max ]; then
+            MAX_AUDIT=$(cat artifacts/pip-audit/pip-audit.max)
+          else
+            MAX_AUDIT='N/A'
+          fi
+
+          echo "coverage=$COVERAGE" >> "$GITHUB_OUTPUT"
+          echo "pip_audit_max=$MAX_AUDIT" >> "$GITHUB_OUTPUT"
       - name: Create PR Comment
         uses: peter-evans/create-or-update-comment@v4
         with:
