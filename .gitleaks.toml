@@ -34,7 +34,7 @@ tags = ["api", "key"]
 id = "openai_style_key"
 description = "Keys starting with sk- typical for OpenAI style tokens"
 regex = '''sk-[A-Za-z0-9]{20,64}'''
-entropy = 0
+entropy = 3.5
 tags = ["ai", "openai", "key"]
 
 # AWS Access Key (デフォルトでも検出されるが明示)
