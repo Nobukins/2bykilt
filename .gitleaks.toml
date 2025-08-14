@@ -25,7 +25,7 @@ regexes = [
 [[rules]]
 id = "generic_api_key_assignment"
 description = "Generic API key assignment pattern (variable names containing api key/token)"
-regex = '''(?i)(api[_-]?key|api[_-]?token|service[_-]?key)\s*[:=]\s*['\"]?[A-Za-z0-9_\-]{20,}['\"]?'''
+regex = '''(?i)(api[_-]?key|api[_-]?token|service[_-]?key)\s*[:=]\s*['\"]?[A-Za-z0-9_\-]{32,}['\"]?'''
 entropy = 0
 tags = ["api", "key"]
 
