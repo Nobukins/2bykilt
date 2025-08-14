@@ -70,8 +70,9 @@ jobs:
           pip install pytest pytest-cov
       - name: Pytest
         run: |
-          echo "Run tests with config from tests/pytest.ini"
-          pytest -c tests/pytest.ini --ignore=tmp/myscript/
+          echo "Run tests with config from tests/pytest.ini and generate coverage.xml via coverage.py"
+          coverage run -m pytest -c tests/pytest.ini --ignore=tmp/myscript/
+          coverage xml -i -o coverage.xml
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
@@ -104,13 +105,7 @@ jobs:
         with:
           args: >-
             -Dsonar.python.coverage.reportPaths=coverage.xml
-      - name: Quality Gate Status
-        id: quality_gate
-        uses: SonarSource/sonarcloud-github-action@v2
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          args: sonar-quality-gate:check
+  # Note: Skip 'sonar-quality-gate:check' (unsupported arg). Use status checks from SonarCloud UI.
 
   sca:
     name: Dependency Audit (pip-audit)
