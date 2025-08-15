@@ -2,7 +2,7 @@ import pytest
 import pytest_asyncio
 
 # Register the asyncio plugin
-pytest_plugins = ["pytest_asyncio"]
+# pytest_plugins = ["pytest_asyncio"]
 
 def pytest_configure(config):
     """Configure pytest with asyncio markers"""

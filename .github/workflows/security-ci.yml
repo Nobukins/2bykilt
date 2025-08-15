@@ -106,6 +106,13 @@ jobs:
           args: >-
             -Dsonar.python.coverage.reportPaths=coverage.xml
   # Note: Skip 'sonar-quality-gate:check' (unsupported arg). Use status checks from SonarCloud UI.
+  #   - name: Quality Gate Status
+  #        id: quality_gate
+  #        uses: SonarSource/sonarcloud-github-action@v2
+  #        env:
+  #          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  #        with:
+  #          args: sonar-quality-gate:check
 
   sca:
     name: Dependency Audit (pip-audit)
@@ -273,6 +280,7 @@ jobs:
 
           echo "coverage=$COVERAGE" >> "$GITHUB_OUTPUT"
           echo "pip_audit_max=$MAX_AUDIT" >> "$GITHUB_OUTPUT"
+          
       - name: Create PR Comment
         uses: peter-evans/create-or-update-comment@v4
         with:
