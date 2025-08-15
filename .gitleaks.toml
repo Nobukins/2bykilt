@@ -1,0 +1,64 @@
+title = "2bykilt Gitleaks Config"
+description = "Custom rules & allowlists for secret scanning in 2bykilt repository"
+
+# NOTE:
+# - Gitleaks 8 には豊富なデフォルトルールがあるため、ここでは誤検知抑制と本プロジェクト特有で想定されるキー形式のみ最小限追加します。
+# - 追加したい場合は [[rules]] ブロックを追記してください。
+# - 誤検知は allowlist に追加し、実キーワードは伏字/マスキング推奨。
+
+[allowlist]
+description = "False positives and non-secret sample assets"
+paths = [
+	"tests/",              # テストコード内のダミー値
+	"external/samples/",   # サンプルワークフロー/生成例
+	"doc/",                # ドキュメント
+	"docs/",               # (将来) docs ディレクトリ
+	"tutorial/"            # チュートリアル出力
+]
+regexes = [
+	'''-----BEGIN PUBLIC KEY-----''',      # 公開鍵は秘密ではない
+	'''example(_|-)api(_|-)key''',          # 明示的なダミー
+	'''FAKE_API_KEY_[A-Z0-9]{8,}'''
+]
+
+# ルール追加例: 一般的な API Key 代入パターン
+[[rules]]
+id = "generic_api_key_assignment"
+description = "Generic API key assignment pattern (variable names containing api key/token)"
+regex = '''(?i)(api[_-]?key|api[_-]?token|service[_-]?key)\s*[:=]\s*['\"]?[A-Za-z0-9_\-]{32,}['\"]?'''
+entropy = 0
+tags = ["api", "key"]
+
+# OpenAI 等で利用される sk- 形式 (長さ揺れ対応)
+[[rules]]
+id = "openai_style_key"
+description = "Keys starting with sk- typical for OpenAI style tokens"
+regex = '''sk-[A-Za-z0-9]{20,64}'''
+entropy = 3.5
+tags = ["ai", "openai", "key"]
+
+# AWS Access Key (デフォルトでも検出されるが明示)
+[[rules]]
+id = "aws_access_key_id"
+description = "AWS Access Key ID pattern"
+regex = '''AKIA[0-9A-Z]{16}'''
+entropy = 0
+tags = ["aws", "key"]
+
+# 高エントロピー文字列を緩やかに検出したい場合に有効化 (デフォルトルールで十分ならコメントアウト)
+# [[rules]]
+# id = "high_entropy_generic"
+# description = "High entropy generic token"
+# regex = '''(?i)(token|secret|password|pass|pwd)\s*[:=]\s*['\"][A-Za-z0-9+/=_-]{32,}['\"]'''
+# entropy = 3.5
+# tags = ["generic", "entropy"]
+
+# 既知のダミー AWS キーなどを allowlist に追加したい場合 (例: ドキュメント用)
+[allowlist.commit]
+description = "Commit level allowlist (add specific SHAs if needed)"
+commits = [
+	# "abcdef1234567890abcdef1234567890abcdef12"  # 例: 誤検知を含む既存コミット SHA
+]
+
+# 将来的に誤検知が多いルールは disable = true を追加して局所的に無効化可能。
+
