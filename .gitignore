@@ -215,4 +215,4 @@ tmp/test_*
 
 # test_*
 
-.archive/
+.archive/*
