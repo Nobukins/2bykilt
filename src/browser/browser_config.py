@@ -11,7 +11,8 @@ class BrowserConfig:
     
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super(BrowserConfig, cls).__new__(cls)
+            # Use object.__new__ to avoid super() constraints when tests reset the singleton
+            cls._instance = object.__new__(cls)
             cls._instance._initialized = False
         return cls._instance
     
