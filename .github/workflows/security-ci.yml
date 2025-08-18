@@ -98,6 +98,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: coverage-xml
+      - name: Normalize coverage path
+        shell: bash
+        run: |
+          if [ -f coverage-xml/coverage.xml ]; then
+            cp coverage-xml/coverage.xml coverage.xml
+          fi
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2
         env:
