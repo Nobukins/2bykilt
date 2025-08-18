@@ -215,4 +215,8 @@ tmp/test_*
 
 # test_*
 
-.archive/**/*
+# Archive directory (keep local, do not track)
+.archive/
+
+# Recorded videos (artifacts)
+record_videos/
