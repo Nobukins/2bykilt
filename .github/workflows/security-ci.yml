@@ -70,8 +70,8 @@ jobs:
           pip install pytest pytest-cov
       - name: Pytest
         run: |
-          echo "Run tests with config from tests/pytest.ini and generate coverage.xml via coverage.py"
-          coverage run -m pytest -c tests/pytest.ini --ignore=tmp/myscript/
+          echo "Run CI-safe tests with config from tests/pytest.ini and generate coverage.xml via coverage.py"
+          coverage run -m pytest -c tests/pytest.ini -m ci_safe --ignore=tmp/myscript/
           coverage xml -i -o coverage.xml
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4

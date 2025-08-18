@@ -212,4 +212,5 @@ tmp/myscript/pytest.ini
 tmp/myscript/browser_control.py
 tmp/test_*
 
-test_*
+
+# test_*
