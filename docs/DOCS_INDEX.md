@@ -41,7 +41,6 @@ Find key guides, reports, and references after the docs/ consolidation.
 
 - [requirements-minimal-working.txt](./requirements-minimal-working.txt) — Minimal deps that pass locally
 - [requirements-full.txt](./requirements-full.txt) — Full environment
-- [temp_requirements.txt](./temp_requirements.txt) — Temporary consolidated requirements
 
 ## Archive and moved files
 
