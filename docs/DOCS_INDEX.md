@@ -28,7 +28,6 @@ Find key guides, reports, and references after the docs/ consolidation.
 ## Implementation and change logs
 
 - [CHANGELOG.md](./CHANGELOG.md) — Canonical changelog
-- [root-CHANGELOG.md](./root-CHANGELOG.md) — Migrated root copy for traceability
 - [IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md) / [FIX_SUMMARY.md](./FIX_SUMMARY.md) — Work summaries
 - [PR_MESSAGE.md](./PR_MESSAGE.md) / [COMMIT_MESSAGE.md](./COMMIT_MESSAGE.md) — Templates
 
@@ -43,8 +42,5 @@ Find key guides, reports, and references after the docs/ consolidation.
 - [requirements-full.txt](./requirements-full.txt) — Full environment
 
 ## Archive and moved files
-
-- Root-level documents migrated are prefixed with `root-*.md` to preserve originals when duplicates existed.
-- Root-level scripts and tests were moved to `.archive/` to keep `tests/` authoritative for pytest discovery.
 
 See also: [ARCHIVE_POLICY.md](./ARCHIVE_POLICY.md) for details.
