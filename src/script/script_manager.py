@@ -1327,10 +1327,17 @@ async def execute_git_script_new_method(
         else:
             actual_headless = headless
         
+        # Get command template and prepare for execution
+        command_template = script_info.get('command', '')
+        if not command_template:
+            raise ValueError("Command field is required for git-script type")
+        
         # Execute complete automation workflow
         result = await automator.execute_git_script_workflow(
             workspace_dir=workspace_dir,
-            test_url="https://example.com",  # Will be overridden by script
+            script_path=full_script_path,
+            command=command_template,
+            params=params,
             headless=actual_headless
         )
         
