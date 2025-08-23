@@ -74,12 +74,15 @@ class BrowserAutomationManager:
         
         try:
             # Execute based on action type
-            if action.get('type') == 'browser-control':
+            action_type = action.get('type')
+            if action_type == 'browser-control':
                 return self._execute_browser_control(action, **params)
-            elif 'script' in action:
+            elif action_type == 'git-script':
+                return self._execute_git_script(action, **params)
+            elif action_type in ['script', 'unlock-future', 'action_runner_template']:
                 return self._execute_script(action, **params)
             else:
-                logger.error(f"Unknown action type for '{name}'")
+                logger.error(f"Unknown action type for '{name}': {action_type}")
                 return False
         except Exception as e:
             logger.error(f"Error executing action '{name}': {e}")
@@ -110,7 +113,57 @@ class BrowserAutomationManager:
         
         return True
     
-    def _prepare_git_script(self, action):
+    def _execute_git_script(self, action: Dict[str, Any], **params) -> bool:
+        """Execute git-script type actions by integrating with script_manager"""
+        logger.info(f"git_script: start - Executing git-script action: {action['name']}")
+        
+        try:
+            # Import script_manager run_script function  
+            from src.script.script_manager import run_script
+            import asyncio
+            
+            # Extract git script information
+            script_info = {
+                'type': 'git-script',
+                'git': action.get('git'),
+                'script_path': action.get('script_path'),
+                'version': action.get('version', 'main'),
+                'command': action.get('command'),
+                'timeout': action.get('timeout', 120),
+                'slowmo': action.get('slowmo')
+            }
+            
+            # Validate required fields
+            if not script_info['git'] or not script_info['script_path']:
+                logger.error("git-script action requires 'git' and 'script_path' fields")
+                return False
+            
+            if not script_info['command']:
+                logger.error("git-script action requires 'command' field")
+                return False
+            
+            logger.info(f"git_script: cloning repository {script_info['git']}")
+            logger.info(f"git_script: executing script {script_info['script_path']}")
+            
+            # Run the git script using script_manager
+            try:
+                result, script_path = asyncio.run(run_script(script_info, params, headless=True))
+                
+                if "successfully" in result.lower():
+                    logger.info(f"git_script: completed successfully - {result}")
+                    return True
+                else:
+                    logger.error(f"git_script: failed - {result}")
+                    return False
+                    
+            except Exception as e:
+                logger.error(f"git_script: error during execution - {str(e)}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"git_script: failed to execute git-script action: {str(e)}")
+            return False
+    
         """Gitリポジトリからスクリプトを準備"""
         if "git" not in action:
             return False, None
@@ -134,63 +187,27 @@ class BrowserAutomationManager:
         return True, str(script_path)
     
     def _execute_script(self, action: Dict[str, Any], **params) -> bool:
-        """スクリプト実行（Gitリポジトリ対応）"""
-        if "git" in action:
-            # Gitリポジトリからスクリプトを取得
-            success, script_path = self._prepare_git_script(action)
-            if not success:
-                logger.warning(f"Gitリポジトリの準備に失敗しました: {action['git']}")
-                # フォールバックとしてLLMを使用
-                return self._fallback_to_llm(action["name"], **params)
+        """Execute script actions (non-git script types)"""
+        from src.script.script_manager import run_script
+        import asyncio
+        
+        action_type = action.get('type')
+        logger.info(f"Executing {action_type} action: {action['name']}")
+        
+        try:
+            # Run the script using script_manager
+            result, script_path = asyncio.run(run_script(action, params, headless=True))
             
-            # コマンド構築とパラメータ置換
-            command = action["command"]
-            
-            # ${script_path}を実際のパスで置換
-            command = command.replace("${script_path}", script_path)
-            
-            # コマンド内のパラメータを置換
-            for param_name, param_value in params.items():
-                placeholder = f"${{{param_name}}}"
-                if placeholder in command:
-                    command = command.replace(placeholder, str(param_value))
-            
-            # 環境変数の設定
-            env = os.environ.copy()
-            if "slowmo" in action:
-                env["SLOWMO"] = str(action["slowmo"])
-            
-            # コマンド実行
-            logger.info(f"コマンド実行: {command}")
-            try:
-                result = subprocess.run(
-                    command, 
-                    shell=True, 
-                    env=env, 
-                    timeout=action.get("timeout", 300),
-                    check=False
-                )
-                success = result.returncode == 0
-                if not success:
-                    logger.error(f"コマンド実行が失敗しました: コード {result.returncode}")
-                return success
-            except subprocess.TimeoutExpired:
-                logger.error(f"コマンド実行がタイムアウトしました")
+            if "successfully" in result.lower():
+                logger.info(f"Script execution completed successfully - {result}")
+                return True
+            else:
+                logger.error(f"Script execution failed - {result}")
                 return False
-            except Exception as e:
-                logger.error(f"コマンド実行エラー: {str(e)}")
-                return False
-        
-        # ...existing script execution code...
-        script = action.get('script')
-        command = action.get('command')
-        
-        logger.info(f"Executing script action: {action['name']} using {script}")
-        
-        # Implement script execution here
-        # This would run the specified script with parameters
-        
-        return True
+                
+        except Exception as e:
+            logger.error(f"Error executing {action_type} action: {str(e)}")
+            return False
     
     def _fallback_to_llm(self, action_name, **params):
         """LLMを使用したフォールバック処理"""

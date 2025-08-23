@@ -314,13 +314,20 @@ markers =
                 for param_name, param_value in params.items():
                     placeholder = f"${{params.{param_name}}}"
                     if placeholder in command_template:
-                        # Quote values with spaces or special characters
-                        if ' ' in str(param_value) or any(c in str(param_value) for c in '!@#$%^&*()'):
-                            param_value = f'"{param_value}"'
-                        command_template = command_template.replace(placeholder, str(param_value))
+                        # Quote parameter values if they contain spaces
+                        if ' ' in str(param_value):
+                            # Replace the placeholder with a quoted value
+                            command_template = command_template.replace(placeholder, f'"{param_value}"')
+                        else:
+                            command_template = command_template.replace(placeholder, str(param_value))
                 
-                # Parse command into parts for subprocess
-                command_parts = command_template.split()
+                # Parse command into parts for subprocess using shlex to handle quoted parameters
+                import shlex
+                try:
+                    command_parts = shlex.split(command_template)
+                except ValueError:
+                    # Fallback to simple split if shlex fails
+                    command_parts = command_template.split()
                 
                 # Add slowmo parameter if specified
                 slowmo = script_info.get('slowmo')
