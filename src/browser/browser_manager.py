@@ -9,25 +9,8 @@ from src.utils.globals_manager import get_globals
 from src.browser.browser_config import BrowserConfig
 from src.browser.browser_debug_manager import BrowserDebugManager
 
-# 録画パスユーティリティのインポート（フォールバック付き）
-try:
-    from src.utils.recording_path_utils import get_recording_path
-except ImportError:
-    # フォールバック: 基本的な録画パス設定
-    def get_recording_path(fallback_relative_path="./tmp/record_videos"):
-        import platform
-        recording_dir = os.environ.get("RECORDING_PATH", "").strip()
-        if not recording_dir:
-            if platform.system() == "Windows":
-                recording_dir = os.path.join(os.path.expanduser("~"), "Documents", "2bykilt", "recordings")
-            else:
-                recording_dir = fallback_relative_path
-        try:
-            os.makedirs(recording_dir, exist_ok=True)
-            return recording_dir
-        except Exception:
-            import tempfile
-            return tempfile.gettempdir()
+# 録画パスユーティリティのインポート
+from src.utils.recording_path_utils import get_recording_path
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -248,27 +231,16 @@ def prepare_recording_path(enable_recording: bool, save_recording_path: Optional
     """Prepare recording path based on settings (Windows対応済み・改良版)"""
     if not enable_recording:
         return None
-        
-    if save_recording_path and save_recording_path.strip():
-        # 明示的にパスが指定されている場合
-        try:
-            # Windows対応: pathlibを使用してパス処理を統一
-            recording_path = Path(save_recording_path).resolve()
-            recording_path.mkdir(parents=True, exist_ok=True)
-            logger.info(f"Recording directory prepared: {recording_path}")
-            return str(recording_path)
-        except PermissionError as e:
-            logger.error(f"Permission denied creating recording directory: {e}")
-        except Exception as e:
-            logger.error(f"Failed to create recording directory: {e}")
     
-    # フォールバック: 自動的にプラットフォーム適応のパスを使用
+    # 常に統一されたパス取得ユーティリティを使用してRECORDING_PATHを優先
     try:
-        recording_path = get_recording_path("./tmp/record_videos")
-        logger.info(f"Using automatic recording path: {recording_path}")
+        # save_recording_pathをフォールバックとして使用
+        fallback_path = save_recording_path if save_recording_path and save_recording_path.strip() else "./tmp/record_videos"
+        recording_path = get_recording_path(fallback_path)
+        logger.info(f"Using recording path: {recording_path}")
         return recording_path
     except Exception as e:
-        logger.error(f"Failed to prepare automatic recording path: {e}")
+        logger.error(f"Failed to prepare recording path: {e}")
         # 最終フォールバック: 一時ディレクトリ
         import tempfile
         temp_path = tempfile.gettempdir()

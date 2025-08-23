@@ -23,6 +23,7 @@ from src.utils import utils
 from src.utils.default_config_settings import default_config, load_config_from_file, save_config_to_file
 from src.utils.default_config_settings import save_current_config, update_ui_from_config
 from src.utils.utils import update_model_dropdown, get_latest_files
+from src.utils.recording_path_utils import get_recording_path
 
 # 基本的なブラウザ関連モジュール（LLM非依存）
 from src.script.script_manager import run_script
@@ -695,12 +696,7 @@ def create_ui(config, theme_name="Ocean"):
         tab_selection_strategy = gr.Radio(["new_tab", "reuse_tab"], label="タブ選択戦略", 
                                            value=config.get('tab_selection_strategy', "new_tab"), visible=False)
         # Windows対応: 録画保存パスを環境変数と設定から取得
-        default_recording_path = os.getenv('RECORDING_PATH')
-        if not default_recording_path:
-            if platform.system() == "Windows":
-                default_recording_path = str(Path.home() / "Documents" / "2bykilt" / "recordings")
-            else:
-                default_recording_path = './tmp/record_videos'
+        default_recording_path = get_recording_path("./tmp/record_videos")
         
         save_recording_path = gr.Textbox(label="録画保存パス", value=config.get('save_recording_path', default_recording_path), visible=False)
         # Windows対応: トレースと履歴パスを設定
@@ -1948,15 +1944,7 @@ async def on_run_agent_click(task, add_infos, llm_provider, llm_model_name, llm_
                 
                 if browser_result.get("status") == "success":
                     # 録画パスを設定（環境変数または設定から取得）
-                    recording_path = os.getenv('RECORDING_PATH')
-                    if not recording_path:
-                        if platform.system() == "Windows":
-                            recording_path = str(Path.cwd() / "tmp" / "record_videos")
-                        else:
-                            recording_path = './tmp/record_videos'
-                    
-                    # 録画ディレクトリを作成
-                    Path(recording_path).mkdir(parents=True, exist_ok=True)
+                    recording_path = get_recording_path("./tmp/record_videos")
                     
                     # 実際のスクリプト実行
                     script_output, script_path = await run_script(
