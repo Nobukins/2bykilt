@@ -114,3 +114,4 @@ if __name__ == "__main__":
         print("Usage: gen_mermaid.py [--legend] docs/roadmap/ISSUE_DEPENDENCIES.yml", file=sys.stderr)
         sys.exit(1)
     main()
+    
