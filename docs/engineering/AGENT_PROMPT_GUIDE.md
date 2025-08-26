@@ -1,6 +1,6 @@
 # Copilot Coding Agent Prompt Guide
 
-最終更新: 2025-01-27
+最終更新: 2025-08-26
 対象: GitHub Copilot Coding Agent による自動実装
 
 ## 概要

@@ -1,6 +1,6 @@
 # Task Dashboard (Draft)
 
-最終更新: 2025-01-27
+最終更新: 2025-08-26
 Roadmap Commit: (to be set)
 Dependencies Commit: (to be set)
 

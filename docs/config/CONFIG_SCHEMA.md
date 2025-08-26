@@ -1,6 +1,6 @@
 # Configuration Schema & Versioning
 
-最終更新: 2025-01-27
+最終更新: 2025-08-26
 
 ## 概要
 

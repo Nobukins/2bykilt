@@ -1,6 +1,6 @@
 # 2bykilt 開発ロードマップ (Baseline v1)
 
-最終更新: 2025-01-27
+最終更新: 2025-08-26
 対象リポジトリ: https://github.com/Nobukins/2bykilt
 
 本ロードマップは以下を目的とする:
