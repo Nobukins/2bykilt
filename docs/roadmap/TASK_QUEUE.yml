@@ -1,0 +1,34 @@
+generated_at: "2025-08-26T00:00:00Z"
+roadmap_commit: "REPLACE_ME"
+dependencies_commit: "REPLACE_ME"
+items:
+  - issue: 64
+    title: "フィーチャーフラグ フレームワーク"
+    priority: P0
+    size: M
+    wave: A1
+    status: READY
+    depends_on: []
+  - issue: 65
+    title: "マルチ環境設定ローダ"
+    priority: P0
+    size: M
+    wave: A1
+    status: BLOCKED
+    depends_on: [64]
+  - issue: 63
+    title: "llms.txt スキーマ & バリデータ"
+    priority: P0
+    size: S
+    wave: A1
+    status: BLOCKED
+    depends_on: [64,65]
+  - issue: 32
+    title: "Run/Job ID 実装"
+    priority: P0
+    size: S
+    wave: A2
+    status: READY
+    depends_on: []
+notes: >
+  Draft queue; extend via generation script later.

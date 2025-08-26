@@ -1,10 +1,9 @@
 ```mermaid
 %% Auto-generated dependency graph
+%% Generated at: 2025-08-26T13:24:50.197414Z
 %% Edge方向: dependency --> dependent
 graph LR
 
-%% Subgraphs by critical_path_rank (higher = earlier in chain)
-%% Generated: 2025-08-24T23:43:08.221110Z
 subgraph R5[Rank 5]
   32["32 Run/Job ID 基盤"]
   65["65 マルチ環境設定ローダ"]
