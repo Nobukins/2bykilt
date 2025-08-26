@@ -62,7 +62,7 @@
 ### 1. 依存関係チェック
 ```bash
 # 依存関係確認スクリプト例
-python scripts/validate_dependencies.py docs/roadmap/DEPENDENCIES.yml
+python scripts/validate_dependencies.py docs/roadmap/ISSUE_DEPENDENCIES.yml
 ```
 
 ### 2. 基本的な変更フロー
