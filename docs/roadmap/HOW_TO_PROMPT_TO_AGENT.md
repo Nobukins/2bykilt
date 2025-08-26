@@ -65,7 +65,7 @@ Source of Truth 層:
 
 Prompt Skeleton（実際に送るテキスト例）:
 
-```
+```prompt
 Action: Implement
 Issue: #64 フィーチャーフラグ フレームワーク
 RoadmapVersion: <ROADMAP.md の最新 commit hash>
