@@ -11,7 +11,7 @@
 ### 1. Issue ベース開発
 - すべての変更は Issue から開始
 - Issue には Priority (P0-P3) と Size (S/M/L) を必須設定
-- 依存関係を DEPENDENCIES.yml で管理
+- 依存関係を ISSUE_DEPENDENCIES.yml で管理
 
 ### 2. Branch 戦略
 ```bash

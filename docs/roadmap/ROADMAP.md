@@ -10,7 +10,7 @@
 - Copilot Coding Agent を使った小刻みな自動実装を前提とした「一度に一タスク」運用
 
 > 更新ルール: 各 Issue / PR 完了直後に:
-> 1. DEPENDENCIES.yml を更新
+> 1. ISSUE_DEPENDENCIES.yml を更新
 > 2. ROADMAP の該当 Wave 進捗率を更新
 > 3. 関連ガイド (LOGGING / METRICS / FLAGS / CONFIG_SCHEMA / ARTIFACTS_MANIFEST / SECURITY_MODEL / AGENT_PROMPT_GUIDE) を必要に応じ更新
 > 4. PR に「Docs Updated: yes/no(理由)」行を必須記載
@@ -60,7 +60,7 @@ Size: S≤1d, M=2-3d, L=4-6d(要分割)
 
 ---
 ## D. 依存関係
-機械可読: DEPENDENCIES.yml を参照。Issue 本文に "Depends on: #x, #y" を単一行で明記。
+機械可読: ISSUE_DEPENDENCIES.yml を参照。Issue 本文に "Depends on: #x, #y" を単一行で明記。
 
 ---
 ## E. シーケンス (Group A)
