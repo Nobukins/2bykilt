@@ -666,7 +666,7 @@ class MetricsManager:
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
-| 1.0.0 | 2025-01-27 | 初期ドラフト作成 | Copilot Agent |
+| 1.0.0 | 2025-08-26 | 初期ドラフト作成 | Copilot Agent |
 
 ---
 

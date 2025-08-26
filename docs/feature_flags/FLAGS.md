@@ -168,7 +168,7 @@ FLAGS = {
         "description": "新機能Xの段階的リリース",
         "type": "release",
         "default": False,
-        "created_date": "2025-01-27",
+        "created_date": "2025-08-26",
         "owner": "team-backend",
         "jira_ticket": "#64"
     }
@@ -392,7 +392,7 @@ python scripts/unused_flags.py --check-references
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
-| 1.0.0 | 2025-01-27 | 初期ドラフト作成 | Copilot Agent |
+| 1.0.0 | 2025-08-26 | 初期ドラフト作成 | Copilot Agent |
 
 ---
 

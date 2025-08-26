@@ -49,7 +49,7 @@ logger.warning("API rate limit approaching", extra={
     "api_provider": "openai",
     "current_usage": 80,
     "limit": 100,
-    "reset_time": "2025-01-27T12:00:00Z"
+    "reset_time": "2025-08-26T12:00:00Z"
 })
 
 # INFO: 重要な業務イベント
@@ -96,7 +96,7 @@ logging:
 ### 1. 共通フィールド
 ```json
 {
-  "timestamp": "2025-01-27T12:34:56.789Z",
+  "timestamp": "2025-08-26T12:34:56.789Z",
   "level": "INFO",
   "message": "Human readable message",
   "logger": "src.module.component",
@@ -151,7 +151,7 @@ logging:
   "processed_items": 75,
   "failed_items": 2,
   "progress_percent": 75.0,
-  "estimated_completion": "2025-01-27T13:45:00Z"
+  "estimated_completion": "2025-08-26T13:45:00Z"
 }
 ```
 
@@ -609,7 +609,7 @@ except Exception as e:
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
-| 1.0.0 | 2025-01-27 | 初期ドラフト作成 | Copilot Agent |
+| 1.0.0 | 2025-08-26 | 初期ドラフト作成 | Copilot Agent |
 
 ---
 

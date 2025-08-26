@@ -98,7 +98,7 @@ report_artifacts:
 ```json
 {
   "manifest_version": "2.0",
-  "created_at": "2025-01-27T12:34:56.789Z",
+  "created_at": "2025-08-26T12:34:56.789Z",
   "session_id": "sess_20250127_123456",
   "execution_id": "exec_abc123def456",
   "artifacts": {
@@ -128,7 +128,7 @@ report_artifacts:
   "type": "recording/video",
   "path": "recordings/2025/01/27/session_abc123/video.webm",
   "size_bytes": 15728640,
-  "created_at": "2025-01-27T12:35:30.123Z",
+  "created_at": "2025-08-26T12:35:30.123Z",
   "duration_ms": 45000,
   "checksum": {
     "md5": "5d41402abc4b2a76b9719d911017c592",
@@ -703,7 +703,7 @@ class ArtifactExporter:
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
-| 2.0.0 | 2025-01-27 | 初期ドラフト作成 | Copilot Agent |
+| 2.0.0 | 2025-08-26 | 初期ドラフト作成 | Copilot Agent |
 
 ---
 

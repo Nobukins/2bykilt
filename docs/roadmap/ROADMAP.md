@@ -86,6 +86,6 @@ Flags / 後方互換 Schema / 追加専用ログ→削除遅延 / Sandbox enforc
 ## J. 改訂履歴
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
-| 1.0.0 | 2025-01-27 | 初期ドラフト | Copilot Agent |
+| 1.0.0 | 2025-08-26 | 初期ドラフト | Copilot Agent |
 
 (EOF)
