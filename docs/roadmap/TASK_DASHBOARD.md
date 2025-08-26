@@ -1,6 +1,6 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-08-26T15:17:50Z
+Generated at (UTC): 2025-08-26T21:34:59Z
 
 ## 1. メタサマリー
 
@@ -451,73 +451,4 @@ Sorted By: critical_path_rank
 - LongestDistance: 4
 - Depends (1): 66
 - Dependents (0): (none)
-
-## 8. INTERNAL (Diagnostics)
-
-Raw Aggregations (JSON-like):
-```json
-{
-  "by_priority": {
-    "P0": 14,
-    "P1": 12,
-    "P2": 13,
-    "P3": 1
-  },
-  "by_phase": {
-    "1": 17,
-    "1-late": 7,
-    "2": 16
-  },
-  "by_area": {
-    "artifacts": 8,
-    "batch": 4,
-    "config": 3,
-    "docs": 2,
-    "logging": 3,
-    "observability": 2,
-    "plugins": 1,
-    "runner": 14,
-    "security": 3
-  },
-  "risk_dist": {
-    "high": 5,
-    "none": 35
-  },
-  "strict_orphans": [
-    "55",
-    "61"
-  ],
-  "curated_orphans": [
-    "34",
-    "40",
-    "41",
-    "42",
-    "45",
-    "50",
-    "51",
-    "52",
-    "55",
-    "57",
-    "59",
-    "60",
-    "61",
-    "67"
-  ],
-  "missing_in_curated": [],
-  "extra_in_curated": [
-    "34",
-    "40",
-    "41",
-    "42",
-    "45",
-    "50",
-    "51",
-    "52",
-    "57",
-    "59",
-    "60",
-    "67"
-  ]
-}
-```
 
