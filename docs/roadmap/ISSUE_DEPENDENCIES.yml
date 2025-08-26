@@ -1,8 +1,34 @@
-version: 1
-generated_at_utc: 2025-08-24T13:33:45Z
-notes:
-  - critical_path_rank = (その Issue から到達可能な最大下流エッジ長) + 1。葉 (dependents なし) は 1。
-  - ラベルや依存変更後は再生成してください。
+# ISSUE_DEPENDENCIES.yml
+# Single source of truth for machine-readable issue dependency graph.
+#
+# Used by:
+#  - scripts/gen_mermaid.py (Mermaid graph generation -> DEPENDENCY_GRAPH.md)
+#  - scripts/validate_dependencies.py (consistency, cycles, advisory checks)
+#  - Label governance: summary.high_risk ↔ risk:high labeling alignment
+#
+# Terminology / Semantics:
+#  - depends: A depends on B  => Edge: B --> A (B must complete first)
+#  - critical_path_rank: Higher value = positioned more to the left in graph (earlier/on critical path)
+#  - risk: high|medium|low (used for governance + summary.high_risk list)
+#
+# Orphan semantics (IMPORTANT):
+#  - "Strict orphan" = has NO depends AND is NOT referenced by any other issue.
+#  - Field orphan_issues_without_dependents_or_depends below IS A CURATED SUPERSET:
+#       It may contain:
+#         * Strict orphans
+#         * Additional “independent starters” (leaf or near-root items you want to highlight)
+#  - Validator behavior (default --orphan-mode superset):
+#       Ensures all strict orphans are included (missing -> ERROR).
+#       Extra IDs (non-strict) -> WARNING only.
+#    To enforce exact equality for debugging:
+#       python scripts/validate_dependencies.py --orphan-mode exact docs/roadmap/ISSUE_DEPENDENCIES.yml
+#
+# Do NOT reintroduce deprecated docs/roadmap/DEPENDENCIES.yml.
+#
+# NOTE: If you add automated regeneration logic, keep curated extras by either:
+#   (a) Maintaining a separate curated list and merging, or
+#   (b) Passing a preserved block through a regeneration script.
+#
 issues:
   "25":
     title: "git_script が llms.txt で指定したスクリプトを正しく解決するよう修正"
@@ -285,19 +311,19 @@ issues:
     dependents: []
     risk: null
     critical_path_rank: 1
+
+
+
 summary:
   total_issues: 40
   high_risk: ["31","46","49","54","62"]
-  experimental: ["39","40","41","42","49","52","53","54","62"]
-  core_foundation_candidates: ["32","65","64","63","31","56","35","25"]
-  longest_chain_example:
-    - 32
-    - 28
-    - 30
-    - 37
-    - 38
+  # longest_chain_example: クリティカル/代表パス（手動 or 自動算出可）
+  longest_chain_example: ["12","18","23","31","46"]  # 例: 実際のパスに合わせて更新
   data_quality_checks:
     no_cycles_detected: true
+    # CURATED SUPERSET of strict orphans (see header block).
+    # - Must include ALL strict orphans (validator ERROR if any strict orphan missing).
+    # - May include additional “independent starters” (validator WARNING only for extras).
     orphan_issues_without_dependents_or_depends:
       - "34"
       - "40"
@@ -307,9 +333,11 @@ summary:
       - "50"
       - "51"
       - "52"
-      - "55"
+      - "55"   # (strict orphan)
       - "57"
       - "59"
       - "60"
-      - "61"
+      - "61"   # (strict orphan)
       - "67"
+    generated_at_utc: "2025-08-26T12:30:00Z"
+    

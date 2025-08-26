@@ -2,14 +2,24 @@
 """
 Generate a Mermaid dependency graph from ISSUE_DEPENDENCIES.yml.
 
-Usage (Markdown with code fence, default):
+Default behavior (CHANGED):
+  - Legend is now INCLUDED by default (unless --no-legend given).
+  - Previously you needed --legend to include it.
+
+Usage examples:
+  # Standard Markdown with code fence + legend (default)
   python scripts/gen_mermaid.py docs/roadmap/ISSUE_DEPENDENCIES.yml > docs/roadmap/DEPENDENCY_GRAPH.md
 
-Raw Mermaid (.mmd) without code fences:
-  python scripts/gen_mermaid.py --raw-mermaid docs/roadmap/ISSUE_DEPENDENCIES.yml > graph.mmd
+  # Suppress legend explicitly
+  python scripts/gen_mermaid.py --no-legend docs/roadmap/ISSUE_DEPENDENCIES.yml > out.md
 
-Include legend:
+  # Force legend (legacy flag, now redundant unless raw mode)
   python scripts/gen_mermaid.py --legend docs/roadmap/ISSUE_DEPENDENCIES.yml
+
+  # Raw Mermaid (.mmd) without code fences (no legend by default)
+  python scripts/gen_mermaid.py --raw-mermaid docs/roadmap/ISSUE_DEPENDENCIES.yml > graph.mmd
+  # (If you still want legend in raw mode)
+  python scripts/gen_mermaid.py --raw-mermaid --legend docs/roadmap/ISSUE_DEPENDENCIES.yml > graph.mmd
 
 Notes:
 - Edge direction is dependency --> dependent (左が前提 / 右が従属)
@@ -46,7 +56,7 @@ def short_label(title: str, max_len=20):
     return t if len(t) <= max_len else t[: max_len - 1] + "…"
 
 def render_mermaid(data: Dict[str, Any],
-                   show_legend: bool = False,
+                   show_legend: bool = True,
                    add_code_fence: bool = True,
                    raw_mermaid: bool = False) -> str:
     """
@@ -54,7 +64,8 @@ def render_mermaid(data: Dict[str, Any],
     raw_mermaid: 純粋な Mermaid (先頭コメント最小限 / フェンス無し) を出したい場合
     """
     issues = data["issues"]
-    high_risk = set(data.get("summary", {}).get("high_risk", []))
+    summary = data.get("summary", {})
+    high_risk = set(summary.get("high_risk", []))
     progress_nodes = {i for i, m in issues.items() if "progress" in m}
 
     rank_groups = build_rank_groups(issues)
@@ -62,7 +73,7 @@ def render_mermaid(data: Dict[str, Any],
     out = []
 
     if raw_mermaid:
-        # 最小構成: オリジナル期待行を出したいが code fence は不要
+        # 最小構成: コードフェンス無し
         out.append("%% Auto-generated dependency graph")
         out.append("%% Edge方向: dependency --> dependent")
         out.append("graph LR")
@@ -72,17 +83,16 @@ def render_mermaid(data: Dict[str, Any],
         if add_code_fence:
             out.append("```mermaid")
         out.append("%% Auto-generated dependency graph")
+        out.append(f"%% Generated at: {datetime.datetime.utcnow().isoformat()}Z")
         out.append("%% Edge方向: dependency --> dependent")
         out.append("graph LR")
         out.append("")
-        out.append("%% Subgraphs by critical_path_rank (higher = earlier in chain)")
-        out.append(f"%% Generated: {datetime.datetime.utcnow().isoformat()}Z")
 
     # Rank subgraphs
     for rank, ids in rank_groups.items():
         out.append(f"subgraph {RANK_GROUP_PREFIX}{rank}[Rank {rank}]")
         # 数字としてソート (非数字混在時は文字列)
-        for iid in sorted(ids, key=lambda s: int(s) if s.isdigit() else s):
+        for iid in sorted(ids, key=lambda s: int(s) if str(s).isdigit() else s):
             meta = issues[iid]
             title = meta.get("title", "")
             label = short_label(title)
@@ -115,11 +125,11 @@ def render_mermaid(data: Dict[str, Any],
     out.append("")
     out.append("%% Class assignments")
     if high_risk:
-        out.append("class " + ",".join(sorted(high_risk, key=lambda s: int(s) if s.isdigit() else s)) + " highrisk;")
+        out.append("class " + ",".join(sorted(high_risk, key=lambda s: int(s) if str(s).isdigit() else s)) + " highrisk;")
     if progress_nodes:
-        out.append("class " + ",".join(sorted(progress_nodes, key=lambda s: int(s) if s.isdigit() else s)) + " progress;")
+        out.append("class " + ",".join(sorted(progress_nodes, key=lambda s: int(s) if str(s).isdigit() else s)) + " progress;")
 
-    # Legend
+    # Legend (default ON unless raw_mermaid and no explicit --legend)
     if show_legend:
         out.append("")
         out.append("%% Legend (pseudo nodes)")
@@ -138,23 +148,41 @@ def render_mermaid(data: Dict[str, Any],
 def main():
     parser = ArgumentParser()
     parser.add_argument("yaml_path")
-    parser.add_argument("--legend", action="store_true", help="Include legend subgraph")
+    # Legacy flag (now redundant unless you want legend in raw mode)
+    parser.add_argument("--legend", action="store_true",
+                        help="(Optional) Force include legend (default already includes it unless --no-legend).")
+    parser.add_argument("--no-legend", action="store_true",
+                        help="Suppress legend output.")
     parser.add_argument("--no-fence", action="store_true", help="(Markdownモード時) ```mermaid フェンスを出力しない")
     parser.add_argument("--raw-mermaid", action="store_true", help="純粋な .mmd 用出力 (フェンス/追加コメント最小)")
     args = parser.parse_args()
 
     data = load_yaml(args.yaml_path)
+
+    # Legend decision logic
+    if args.raw_mermaid:
+        # Raw mode: do not show legend unless explicitly requested
+        show_legend = args.legend and not args.no_legend
+    else:
+        if args.no_legend:
+            show_legend = False
+        elif args.legend:
+            show_legend = True
+        else:
+            # Default now ON
+            show_legend = True
+
     text = render_mermaid(
         data,
-        show_legend=args.legend,
-        add_code_fence=not args.no_fence,
+        show_legend=show_legend,
+        add_code_fence=not args.no_fence and not args.raw_mermaid,
         raw_mermaid=args.raw_mermaid,
     )
     print(text, end="")
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:
-        print("Usage: gen_mermaid.py [--legend] [--no-fence] [--raw-mermaid] docs/roadmap/ISSUE_DEPENDENCIES.yml", file=sys.stderr)
+        print("Usage: gen_mermaid.py [--no-legend] [--legend] [--no-fence] [--raw-mermaid] docs/roadmap/ISSUE_DEPENDENCIES.yml", file=sys.stderr)
         sys.exit(1)
     main()
     
