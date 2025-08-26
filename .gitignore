@@ -208,9 +208,9 @@ logs/*
 
 # temporally cleanup for dynamically generated files
 assets/fonts/
-tmp/myscript/pytest.ini
-tmp/myscript/browser_control.py
-tmp/test_*
+# tmp/myscript/pytest.ini
+# tmp/myscript/browser_control.py
+# tmp/test_*
 
 
 # test_*
