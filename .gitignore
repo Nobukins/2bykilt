@@ -220,3 +220,7 @@ tmp/test_*
 
 # Recorded videos (artifacts)
 record_videos/
+
+# Multi-environment config artifacts
+effective_config*.json
+config_comparison*.json
