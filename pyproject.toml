@@ -12,3 +12,12 @@ license = {text = "MIT"}
 
 [project.scripts]
 bykilt-config = "src.config.config_cli:main"
+kilt-config = "src.config.config_cli:main"  # alias (optional)
+
+[tool.setuptools]
+package-dir = {"" = "."}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src", "src.*"]
+exclude = ["tests*", "docs*", "tmp*", "scripts*"]

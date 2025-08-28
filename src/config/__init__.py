@@ -1,1 +1,10 @@
-# Empty __init__.py file to make the directory a proper Python package
+"""
+Config package public exports.
+"""
+from .multi_env_loader import (
+    load_config,
+    diff_envs,
+    MultiEnvConfigLoader,
+)
+
+__all__ = ["load_config", "diff_envs", "MultiEnvConfigLoader"]

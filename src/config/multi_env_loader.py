@@ -28,7 +28,6 @@ Out of scope for Issue #65 (handled by future issues):
 - Feature flags resolution (#64)
 - Env var validation (#48)
 """
-
 from __future__ import annotations
 import os
 import json
@@ -42,7 +41,6 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
-# ---- Constants / Config ----
 _ENV_ALIASES = {
     "development": "dev",
     "production": "prod",
@@ -52,7 +50,7 @@ _SECRET_KEY_SUBSTRINGS = ["api_key", "token", "secret", "password", "key"]
 
 
 class MultiEnvConfigError(Exception):
-    """Fatal configuration error (used sparingly)."""
+    """Fatal configuration error."""
     pass
 
 
@@ -68,18 +66,7 @@ class MultiEnvConfigLoader:
         self.files_loaded: List[Path] = []
         self.logical_env: str = "dev"
 
-    # ---------- Public API ----------
-
     def load(self, requested_env: str | None = None) -> Dict[str, Any]:
-        """
-        Load & merge configuration for environment.
-        Args:
-            requested_env: Optional environment name/alias.
-        Returns:
-            UNMASKED merged configuration dict.
-        Raises:
-            MultiEnvConfigError only for truly fatal base layer absence.
-        """
         self.warnings.clear()
         self.files_loaded.clear()
 
@@ -104,7 +91,8 @@ class MultiEnvConfigLoader:
 
         masked_cfg, masked_hashes = self._mask_secrets(merged)
 
-        pseudo_run_id = datetime.utcnow().strftime("%Y%m%d%H%M%S") + "-cfg"
+        # FIX: use timezone-aware now() to silence deprecation warning
+        pseudo_run_id = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S") + "-cfg"
         artifact_path = self._write_effective_artifact(
             env=self.logical_env,
             pseudo_run_id=pseudo_run_id,
@@ -125,12 +113,9 @@ class MultiEnvConfigLoader:
                 "artifact": str(artifact_path),
             },
         )
-        return merged  # UNMASKED (per Q1)
-
-    # ---------- Diff Helper (module-level wrapper exposes) ----------
+        return merged  # UNMASKED
 
     def diff(self, env_a: str, env_b: str) -> Dict[str, Any]:
-        """Compute structural diff (masked secrets in diff via fresh loads)."""
         cfg_a = self._load_for_diff(env_a)
         cfg_b = self._load_for_diff(env_b)
         flat_a = _flatten(cfg_a)
@@ -141,10 +126,11 @@ class MultiEnvConfigLoader:
 
         added = sorted(keys_b - keys_a)
         removed = sorted(keys_a - keys_b)
-        changed = {}
-        for k in sorted(keys_a & keys_b):
-            if flat_a[k] != flat_b[k]:
-                changed[k] = {"from": flat_a[k], "to": flat_b[k]}
+        changed = {
+            k: {"from": flat_a[k], "to": flat_b[k]}
+            for k in sorted(keys_a & keys_b)
+            if flat_a[k] != flat_b[k]
+        }
 
         return {
             "from": self._normalize_env(env_a),
@@ -153,8 +139,6 @@ class MultiEnvConfigLoader:
             "removed": removed,
             "changed": changed,
         }
-
-    # ---------- Internal Helpers ----------
 
     def _normalize_env(self, env: str) -> str:
         logical = _ENV_ALIASES.get(env, env)
@@ -172,9 +156,7 @@ class MultiEnvConfigLoader:
     ) -> List[Path]:
         if not directory.exists():
             if fatal:
-                raise MultiEnvConfigError(
-                    f"Required directory missing: {directory}"
-                )
+                raise MultiEnvConfigError(f"Required directory missing: {directory}")
             self._warn(
                 code="missing_dir",
                 message=f"Config directory missing: {directory}",
@@ -238,7 +220,6 @@ class MultiEnvConfigLoader:
                 if isinstance(existing, dict) and isinstance(v, dict):
                     result[k] = self._deep_merge(existing, v, path + (k,))
                 elif isinstance(existing, list) and isinstance(v, list):
-                    # list replace
                     result[k] = list(v)
                 else:
                     if type(existing) is not type(v):  # noqa: E721
@@ -259,6 +240,12 @@ class MultiEnvConfigLoader:
     def _mask_secrets(
         self, cfg: Dict[str, Any]
     ) -> Tuple[Dict[str, Any], Dict[str, str]]:
+        """
+        Return (masked_config, masked_hashes)
+
+        FIX: Do NOT mask entire dict when key itself (e.g. 'secrets') matches pattern.
+        Only mask scalar leaves. Recurse into dict/list even if parent key matches.
+        """
         masked_hashes: Dict[str, str] = {}
 
         def recurse(obj: Any, trail: Tuple[str, ...]) -> Any:
@@ -267,7 +254,11 @@ class MultiEnvConfigLoader:
                 for key, value in obj.items():
                     lower_key = key.lower()
                     full_path = trail + (key,)
-                    if any(s in lower_key for s in _SECRET_KEY_SUBSTRINGS):
+                    # Only mask if scalar (not dict/list) AND key matches
+                    if (
+                        any(s in lower_key for s in _SECRET_KEY_SUBSTRINGS)
+                        and not isinstance(value, (dict, list))
+                    ):
                         raw = "" if value is None else str(value)
                         digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:8]
                         masked_hashes[".".join(full_path)] = digest
@@ -317,27 +308,18 @@ class MultiEnvConfigLoader:
         )
 
     def _load_for_diff(self, env: str) -> Dict[str, Any]:
-        # Fresh loader instance to isolate warnings; we need masked for diff secrecy -> mask after load
         loader = MultiEnvConfigLoader(self.root)
         raw = loader.load(env)
-        masked, _ = loader._mask_secrets(raw)
+        masked, _ = loader._mask_secrets(raw)  # type: ignore[attr-defined]
         return masked
 
 
-# -------- Module-level convenience --------
-
 def load_config(environment: str | None = None) -> Dict[str, Any]:
-    """
-    Load UNMASKED configuration (artifact contains masked).
-    """
     loader = MultiEnvConfigLoader()
     return loader.load(environment)
 
 
 def diff_envs(a: str, b: str) -> Dict[str, Any]:
-    """
-    Return diff structure between environments a and b.
-    """
     loader = MultiEnvConfigLoader()
     return loader.diff(a, b)
 
