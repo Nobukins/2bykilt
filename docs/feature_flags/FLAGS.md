@@ -393,7 +393,55 @@ python scripts/unused_flags.py --check-references
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
 | 1.0.0 | 2025-08-26 | 初期ドラフト作成 | Copilot Agent |
+| 1.1.0 | 2025-08-29 | 実装ステータス追記 (feature_flags.py / feature_flags.yaml 基盤) | Copilot Agent |
 
 ---
 
 効果的なフラグ管理により、安全で効率的な機能リリースを実現してください。
+
+---
+
+## 実装ステータス (Issue #64 初版)
+
+現在提供される最小フレームワーク:
+
+- デフォルト定義ファイル: `config/feature_flags.yaml`
+- ローダ / 解決ロジック: `src/config/feature_flags.py` (`FeatureFlags` クラス)
+- 優先順位: runtime_override > environment variable > file default
+- 対応型: bool / int / str
+- アーティファクト: `artifacts/runs/<timestamp>-flags/feature_flags_resolved.json`
+- CLI (暫定): `python scripts/flags_cli.py list|get|set|clear`
+
+未実装 (後続 Issue 推奨):
+
+- Gradio UI Flags パネル (一覧 + 一時 override)
+- 変異 (multi-variant) / % rollout / targeting ルール
+- 永続 override / 監査ログ強化 / metrics (#58) 連携
+
+### 基本使用例
+
+```python
+from src.config.feature_flags import FeatureFlags
+
+if FeatureFlags.is_enabled("engine.cdp_use"):
+    # 新しい cdp_use エンジン処理
+    pass
+
+# 任意の一時オーバーライド (プロセス内限定)
+FeatureFlags.set_override("ui.experimental_panel", True, ttl_seconds=300)
+
+value = FeatureFlags.get("enable_llm", expected_type=bool)
+```
+
+### 環境変数オーバーライド
+
+`engine.cdp_use` → `BYKILT_FLAG_ENGINE_CDP_USE` (または簡易 `ENGINE_CDP_USE`)
+
+### ランタイムオーバーライド CLI 例
+
+```bash
+python scripts/flags_cli.py set engine.cdp_use false
+python scripts/flags_cli.py list
+```
+
+---
