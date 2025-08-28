@@ -1,5 +1,132 @@
 actions:
-  - name: run-repo
+  - name: search-linkedin
+    type: script
+    script: search_script.py
+    params:
+      - name: query
+        required: true
+        type: string
+        description: "検索クエリ"
+    command: pytest ./tmp/myscript/search_script.py --query ${params.query}
+    slowmo: 2500
+
+  - name: search-beatport
+    type: script
+    script: search_script_music.py
+    params:
+      - name: query
+        required: true
+        type: string
+        description: "検索クエリ"
+    command: pytest ./tmp/myscript/search_script_music.py --query ${params.query}
+    slowmo: 2500
+
+  - name: phrase-search
+    type: browser-control
+    params:
+      - name: query
+        required: true
+        type: string
+        description: "Search query to execute"
+    slowmo: 1000
+    flow:
+      - action: command
+        url: "https://www.google.com"
+        wait_for: "#APjFqb"
+      - action: click
+        selector: "#APjFqb"
+        wait_for_navigation: true
+      - action: fill_form
+        selector: "#APjFqb"
+        value: "${params.query}"
+      - action: keyboard_press
+        selector: "Enter"
+
+  - name: search-nogtips
+    type: browser-control
+    slowmo: 1000
+    params:
+      - name: query
+        required: true
+        type: string
+        description: "Search query to execute"
+    slowmo: 1000
+    flow:
+      - action: command
+        url: "https://nogtips.wordpress.com/"
+        wait_until: "domcontentloaded"
+      - action: click
+        selector: "#eu-cookie-law > form > input"
+      - action: click
+        selector: "#search-2 > form > label > input"
+      - action: fill_form
+        selector: "#search-2 > form > label > input"
+        value: "${params.query}"
+      - action: keyboard_press
+        selector: "Enter"
+
+  - name: site-defined-script
     type: git-script
-    git: https://example.com/repo.git
-    script_path: main.py
+    git: https://github.com/Nobukins/sample-tests.git
+    script_path: search_script.py
+    version: main
+    params:
+      - name: query
+        required: true
+        type: string
+        description: "Search query to execute"
+    command: pytest ${script_path} --query ${params.query}
+    timeout: 120
+    slowmo: 1000
+
+  - name: search-jsonpayload
+    type: unlock-future
+    keep_tab_open: true
+    params:
+      - name: query
+        required: true
+        type: string
+        description: "Search query to execute"
+    flow:
+      - action: command
+        url: "https://www.google.com"
+        wait_for: "#APjFqb"
+      - action: click
+        selector: "#APjFqb"
+        wait_for_navigation: true
+      - action: fill_form
+        selector: "#APjFqb"
+        value: "${params.query}"
+      - action: keyboard_press
+        key: "Enter"
+
+  - name: click-jsonpayload
+    type: unlock-future
+    tab_selection_strategy: active_tab  # Explicitly specify active_tab
+    keep_tab_open: true
+    flow:
+      - action: keyboard_press
+        key: "Enter"
+
+  - name: nogtips-jsonpayload
+    type: unlock-future
+    keep_tab_open: True
+    tab_selection_strategy: new_tab  # 明示的に新規タブを指定
+    params:
+      - name: query
+        required: true
+        type: string
+        description: "Search query to execute"
+    slowmo: 1000
+    flow:
+      - action: command
+        url: "https://nogtips.wordpress.com/"
+        wait_until: "domcontentloaded"
+      - action: click
+        selector: "#eu-cookie-law > form > input"
+      - action: click
+        selector: "#search-2 > form > label > input"
+      - action: fill_form
+        selector: "#search-2 > form > label > input"
+        value: "${params.query}"
+        
