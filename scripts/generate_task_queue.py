@@ -114,34 +114,42 @@ def get_github_api_data(repo: str, issue_id: str, token: Optional[str]) -> Dict[
         return {}
 
 
-def classify_issue_status(issue_id: str, issue_data: Dict[str, Any], 
-                         api_data: Dict[str, Any], issues: Dict[str, Any]) -> str:
+def classify_issue_status(issue_id: str,
+                          issue_data: Dict[str, Any],
+                          api_data: Dict[str, Any],
+                          issues: Dict[str, Any],
+                          dependency_api_data: Dict[str, Dict[str, Any]]) -> str:
+    """Classify issue status based on:
+    - Own issue API state
+    - Primary PR (if any)
+    - Closure state of all dependency issues
+
+    Rules:
+      * closed -> done
+      * active PR (open) -> in_progress
+      * has dependencies and ANY dependency not closed -> blocked
+      * otherwise -> ready
     """
-    Classify issue status based on dependencies and API data.
-    Returns: 'done', 'in_progress', 'blocked', 'ready'
-    """
-    # Check if issue is closed/done
+    # Closed
     if api_data.get('issue_state') == 'closed':
         return 'done'
-    
-    # Check if issue has a primary PR
+
+    # PR present (simplified; treat draft/open similarly as in_progress for now)
     primary_pr = issue_data.get('progress', {}).get('primary_pr')
     if primary_pr and api_data.get('primary_pr_state') == 'open':
-        if api_data.get('primary_pr_draft', False):
-            return 'in_progress'
-        else:
-            return 'in_progress'
-    
-    # Check dependencies
+        return 'in_progress'
+
+    # Dependency gating
     depends = issue_data.get('depends', [])
     if depends:
         for dep_id in depends:
             dep_str = str(dep_id)
             if dep_str in issues:
-                dep_api_data = get_github_api_data('', dep_str, None)  # Would need full implementation
-                if dep_api_data.get('issue_state', 'open') != 'closed':
+                dep_api = dependency_api_data.get(dep_str, {})
+                # If we lack API data, assume NOT closed (conservative -> stays blocked)
+                if dep_api.get('issue_state', 'open') != 'closed':
                     return 'blocked'
-    
+    # All dependencies closed (or none) => ready
     return 'ready'
 
 
@@ -255,14 +263,23 @@ def generate_task_queue(repo: str, input_path: str, output_path: str,
         if not no_api and not github_token:
             logger.warning("GITHUB_TOKEN not found, proceeding without API enrichment")
         
+        # Pre-fetch API data for all issues (if token available)
+        api_data_map: Dict[str, Dict[str, Any]] = {}
+        if github_token and not no_api:
+            for issue_id in issues.keys():
+                api_data_map[issue_id] = get_github_api_data(repo, issue_id, github_token)
+        else:
+            # Empty map (validator will treat dependencies as open via classify logic)
+            api_data_map = {}
+
         # Process each issue
         issues_list = []
         for issue_id, issue_data in issues.items():
-            # Get API data if available
-            api_data = {} if no_api else get_github_api_data(repo, issue_id, github_token)
-            
-            # Classify status
-            status = classify_issue_status(issue_id, issue_data, api_data, issues)
+            # Own API data
+            api_data = api_data_map.get(issue_id, {})
+
+            # Classify status using pre-fetched dependency API data
+            status = classify_issue_status(issue_id, issue_data, api_data, issues, api_data_map)
             
             # Build issue record
             issue_record = {
