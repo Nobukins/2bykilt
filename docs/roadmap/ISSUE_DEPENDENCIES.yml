@@ -318,7 +318,7 @@ summary:
   total_issues: 40
   high_risk: ["31","46","49","54","62"]
   # longest_chain_example: クリティカル/代表パス（手動 or 自動算出可）
-  longest_chain_example: ["12","18","23","31","46"]  # 例: 実際のパスに合わせて更新
+  longest_chain_example: ["65","64","63","66","67"]  # 更新: 実在するクリティカル設定/ドキュメント連鎖例 (config loader -> flags -> llms schema -> docs v1 -> docs v2)
   data_quality_checks:
     no_cycles_detected: true
     # CURATED SUPERSET of strict orphans (see header block).
@@ -339,5 +339,5 @@ summary:
       - "60"
       - "61"   # (strict orphan)
       - "67"
-    generated_at_utc: "2025-08-26T12:30:00Z"
+  generated_at_utc: "2025-08-29T00:00:00Z"  # 更新日時
     
