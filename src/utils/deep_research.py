@@ -10,8 +10,11 @@ import logging
 from pprint import pprint
 from uuid import uuid4
 
-# LLM機能の有効/無効を制御
-ENABLE_LLM = os.getenv("ENABLE_LLM", "false").lower() == "true"
+try:
+    from src.config.feature_flags import is_llm_enabled
+    ENABLE_LLM = is_llm_enabled()
+except Exception:
+    ENABLE_LLM = os.getenv("ENABLE_LLM", "false").lower() == "true"
 
 # 条件付きLLMインポート
 if ENABLE_LLM:

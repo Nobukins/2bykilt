@@ -172,9 +172,14 @@ def run_app(app, args):
         sys.exit(1)
 
 def create_ui():
-    """Create basic Gradio UI without log tab."""
+    """Create basic Gradio UI without log tab.
+
+    Note: The feature flag (enable_llm) toggle lives in bykilt.py. This stub is
+    intentionally minimal to avoid duplicate/conflicting UI controls.
+    """
     with gr.Blocks() as demo:
-        pass  # Add other necessary UI elements if needed
+        gr.Markdown("## 2Bykilt API Mode")
+        gr.Markdown("This minimal UI is used only when running app.py directly. Main UI: launch via bykilt.py.")
     return demo
 
 if __name__ == "__main__":

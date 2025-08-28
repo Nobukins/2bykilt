@@ -221,6 +221,18 @@ tmp/test_*
 # Recorded videos (artifacts)
 record_videos/
 
+# Run artifacts (auto-generated flag snapshots, etc.)
+artifacts/runs/
+
+# Test run artifacts
+tests/artifacts/runs/
+
+# Temporary browser test settings output
+tests/browser/tmp/webui_settings_test/
+
+# Browser test logs
+tests/browser/logs/
+
 # Multi-environment config artifacts
 effective_config*.json
 config_comparison*.json

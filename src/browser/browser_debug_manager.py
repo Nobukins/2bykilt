@@ -438,3 +438,24 @@ class BrowserDebugManager:
                 logger.error(f"❌ クリーンアップ中にエラー: {e}")
         else:
             logger.debug("ℹ️ セッション維持モード - 最小限のクリーンアップのみ実行")
+
+    # ---------------------------------------------------------------------
+    # Compatibility / Legacy Adapter Methods
+    # ---------------------------------------------------------------------
+    async def initialize_custom_browser(self, use_own_browser=False, headless=False, tab_selection_strategy="new_tab", browser_type=None, **kwargs):
+        """Legacy wrapper expected by older code paths.
+
+        The modern implementation consolidates logic in initialize_browser. We
+        keep this thin wrapper to avoid AttributeError until all callers are
+        migrated. Additional params (tab_selection_strategy, **kwargs) are
+        currently ignored but accepted for forward compatibility.
+        """
+        logger.debug(
+            "🔄 initialize_custom_browser wrapper呼び出し - use_own_browser=%s headless=%s tab_selection=%s browser_type=%s", 
+            use_own_browser, headless, tab_selection_strategy, browser_type
+        )
+        return await self.initialize_browser(
+            use_own_browser=use_own_browser,
+            headless=headless,
+            browser_type=browser_type,
+        )

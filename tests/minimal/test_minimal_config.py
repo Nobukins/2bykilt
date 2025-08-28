@@ -19,7 +19,20 @@ sys.path.insert(0, str(PROJECT_DIR))
 class MinimalConfigTest:
     def __init__(self):
         self.results = []
-        self.python_exec = str(PROJECT_DIR / 'venv312' / 'bin' / 'python')
+        self.python_exec = self._detect_python_exec()
+
+    def _detect_python_exec(self) -> str:
+        """Attempt to locate a project python (prefer venv/venv312) else fallback to current interpreter."""
+        candidates = [
+            PROJECT_DIR / 'venv' / 'bin' / 'python',
+            PROJECT_DIR / 'venv312' / 'bin' / 'python',
+            PROJECT_DIR.parent / 'venv' / 'bin' / 'python',
+            PROJECT_DIR.parent / 'venv312' / 'bin' / 'python',
+        ]
+        for c in candidates:
+            if c.exists():
+                return str(c)
+        return sys.executable
         
     def log_result(self, test_name, success, message):
         status = "✅ PASS" if success else "❌ FAIL"
@@ -179,9 +192,11 @@ else:
             env['ENABLE_LLM'] = 'false'
             
             # Test help command
+            bykilt_path = Path(__file__).resolve().parents[2] / 'bykilt.py'
+            cmd = [self.python_exec, str(bykilt_path), '--help'] if bykilt_path.exists() else [self.python_exec, '-m', 'bykilt', '--help']
             result = subprocess.run(
-                [self.python_exec, 'bykilt.py', '--help'],
-                cwd=PROJECT_DIR,
+                cmd,
+                cwd=Path(__file__).resolve().parents[2],
                 env=env,
                 capture_output=True,
                 text=True,
