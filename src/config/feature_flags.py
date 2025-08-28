@@ -339,3 +339,25 @@ FeatureFlags.reload()
 __all__ = [
     "FeatureFlags",
 ]
+
+# ---------------------------------------------------------------------------
+# Backward compatibility helpers (legacy env variable migration)
+# ---------------------------------------------------------------------------
+def is_llm_enabled() -> bool:
+        """Temporary helper bridging legacy ENABLE_LLM env and new feature flag.
+
+        Resolution order:
+            1. Explicit feature flag 'enable_llm' (runtime/env/file) via FeatureFlags
+            2. Legacy environment variable ENABLE_LLM (already handled inside flag via env)
+
+        This wrapper exists so call sites can migrate from direct os.getenv checks
+        to a stable function. Eventually legacy ENABLE_LLM usages will be removed
+        (Issue: follow-up to #64) and callers should import FeatureFlags directly.
+        """
+        try:
+                return FeatureFlags.is_enabled("enable_llm")
+        except Exception:
+                # Safe fallback mimicking original behavior
+                return os.getenv("ENABLE_LLM", "false").lower() == "true"
+
+__all__.append("is_llm_enabled")

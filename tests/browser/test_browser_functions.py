@@ -18,7 +18,23 @@ sys.path.insert(0, str(PROJECT_DIR))
 class BrowserFunctionTest:
     def __init__(self):
         self.results = []
-        self.python_exec = str(PROJECT_DIR / 'venv' / 'bin' / 'python')
+        self.python_exec = self._detect_python_exec()
+
+    def _detect_python_exec(self) -> str:
+        """Attempt to locate project root venv python.
+
+        Strategy:
+          1. Traverse parent dirs from current test file looking for 'venv/bin/python'.
+          2. Fallback to sys.executable.
+        """
+        current = PROJECT_DIR
+        for _ in range(6):  # search up to repo root safely
+            candidate = current / 'venv' / 'bin' / 'python'
+            if candidate.exists():
+                return str(candidate)
+            current = current.parent
+        # fallback
+        return sys.executable
         
     def log_result(self, test_name, success, message):
         status = "✅ PASS" if success else "❌ FAIL"
@@ -38,18 +54,17 @@ import asyncio
 os.environ["ENABLE_LLM"] = "false"
 
 from src.browser.browser_manager import initialize_browser, close_global_browser
-from src.browser.browser_config import BrowserConfig
 
 async def test_browser_manager():
     try:
-        config = BrowserConfig()
-        browser_manager = await initialize_browser(config, headless=True)
-        
-        if browser_manager and browser_manager.browser:
-            page = await browser_manager.browser.new_page()
+        # initialize_browser returns a dict-like result
+        result = await initialize_browser(headless=True)
+        if isinstance(result, dict) and result.get("status") == "success" and result.get("browser"):
+            browser = result["browser"]
+            page = await browser.new_page()
             await page.goto("https://example.com")
             title = await page.title()
-            await browser_manager.browser.close()
+            await browser.close()
             print(f"SUCCESS: Browser manager test completed. Title: {title}")
             return True
         else:
@@ -136,31 +151,27 @@ import os
 import tempfile
 from pathlib import Path
 
-from src.utils.default_config_settings import (
-    default_config,
-    load_config_from_file,
-    save_config_to_file
-)
+from src.utils.default_config_settings import default_config, load_config_from_file, save_config_to_file
 
 # Test default config
 config = default_config()
 print(f"Default config keys: {list(config.keys())}")
 
 # Test save and load config
-with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-    temp_file = f.name
-
-try:
-    save_config_to_file(config, temp_file)
-    loaded_config = load_config_from_file(temp_file)
-    
-    if loaded_config and len(loaded_config) > 0:
-        print("SUCCESS: Config save/load works")
-    else:
-        print("ERROR: Config save/load failed")
-        exit(1)
-finally:
-    Path(temp_file).unlink(missing_ok=True)
+# Use provided API: save_config_to_file returns a message with path; parse it.
+msg = save_config_to_file(config, './tmp/webui_settings_test')
+import re
+match = re.search(r"Configuration saved to (.+\.pkl)", msg)
+if not match:
+    print("ERROR: Could not parse saved config path")
+    exit(1)
+saved_path = match.group(1)
+loaded_config = load_config_from_file(saved_path)
+if isinstance(loaded_config, dict) and len(loaded_config) == len(config):
+    print("SUCCESS: Config save/load works")
+else:
+    print("ERROR: Config save/load failed")
+    exit(1)
 '''
             
             result = subprocess.run(

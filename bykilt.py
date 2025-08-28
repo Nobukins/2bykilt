@@ -16,8 +16,25 @@ import json  # Added to fix missing import
 import gradio as gr
 from gradio.themes import Citrus, Default, Glass, Monochrome, Ocean, Origin, Soft, Base
 
-# LLM機能の有効/無効を制御
-ENABLE_LLM = os.getenv("ENABLE_LLM", "false").lower() == "true"
+# ---------------------------------------------------------------------------
+# Feature Flags (Issue #64) integration
+# We migrate from legacy ENABLE_LLM env var to feature flag 'enable_llm'.
+# Backward compatibility: legacy env ENABLE_LLM still respected via helper.
+# ---------------------------------------------------------------------------
+try:
+    from src.config.feature_flags import FeatureFlags, is_llm_enabled
+except Exception:
+    # Safe fallback if feature flags not yet available (early bootstrap)
+    def is_llm_enabled():
+        return os.getenv("ENABLE_LLM", "false").lower() == "true"
+    class FeatureFlags:  # type: ignore
+        @staticmethod
+        def set_override(name, value, ttl_seconds=None):
+            pass
+
+# Canonical runtime flag (evaluated at import). For dynamic toggling a restart
+# is still required for heavy LLM module imports.
+ENABLE_LLM = is_llm_enabled()
 
 from src.utils import utils
 from src.utils.default_config_settings import default_config, load_config_from_file, save_config_to_file
@@ -729,7 +746,34 @@ def create_ui(config, theme_name="Ocean"):
                         tool_calling_method = gr.Dropdown(label="Tool Calling Method", value=config['tool_calling_method'], interactive=True, choices=["auto", "json_schema", "function_calling"], info="Tool Calls Function Name", visible=False)
 
             with gr.TabItem("🔧 LLM Configuration", id=2):
-                # LLM機能の状態表示
+                # Runtime toggle (feature flag override) - always show at top
+                with gr.Row():
+                    llm_toggle = gr.Checkbox(label="Enable LLM (feature flag)", value=ENABLE_LLM, info="Toggle runtime feature flag 'enable_llm'. Some modules may require restart to fully load.")
+                    llm_toggle_status = gr.Markdown(value=("✅ LLM flag enabled" if ENABLE_LLM else "ℹ️ LLM flag disabled"))
+                llm_toggle_advice = gr.Markdown(visible=True, value="")
+
+                def _toggle_llm(flag_value: bool):
+                    """Set runtime override for 'enable_llm'. Return status & advisory.
+
+                    NOTE: If enabling when previously disabled, a full restart is needed
+                    to import heavy LLM modules. We do not attempt hot-reload here.
+                    """
+                    try:
+                        FeatureFlags.set_override("enable_llm", bool(flag_value))
+                        # Provide user guidance
+                        if flag_value:
+                            msg = ("✅ LLM flag set ON (enable_llm=true)\n\n"
+                                   "Restart the application to load full LLM modules, or continue in browser-only mode until restart.")
+                        else:
+                            msg = ("ℹ️ LLM flag set OFF (enable_llm=false)\n\n"
+                                   "LLM-dependent UI elements will hide after restart; current session may still have imported modules.")
+                        return (gr.update(value=("✅ LLM flag enabled" if flag_value else "ℹ️ LLM flag disabled")), msg)
+                    except Exception as e:  # noqa: BLE001
+                        return (gr.update(), f"❌ Failed to set flag: {e}")
+
+                llm_toggle.change(_toggle_llm, inputs=llm_toggle, outputs=[llm_toggle_status, llm_toggle_advice])
+
+                # LLM機能の状態表示 (post-toggle evaluation NOT live refreshed for heavy imports)
                 if not ENABLE_LLM or not LLM_MODULES_AVAILABLE:
                     with gr.Group():
                         gr.Markdown("### ⚠️ LLM機能が無効化されています")
@@ -737,9 +781,9 @@ def create_ui(config, theme_name="Ocean"):
                         **現在の状態**: LLM機能は無効化されています  
                         **利用可能な機能**: ブラウザ自動化、Playwright Codegen  
                         **LLM機能を有効化するには**: 
-                        1. 環境変数 `ENABLE_LLM=true` を設定
+                        1. この画面上部の "Enable LLM (feature flag)" を ON にする もしくは 環境変数 `ENABLE_LLM=true` を設定
                         2. LLM関連パッケージをインストール: `pip install -r requirements.txt`
-                        3. アプリケーションを再起動
+                        3. アプリケーションを再起動 (ホットリロードは未対応)
                         """)
                         
                         # LLM無効時でも基本設定は表示（ただし無効化）
@@ -2014,7 +2058,7 @@ async def on_run_agent_click(task, add_infos, llm_provider, llm_model_name, llm_
 - JSON形式のアクション実行
 
 **LLM機能を有効にするには**:
-1. 環境変数を設定: `ENABLE_LLM=true`
+1. 上部 LLM Configuration タブでトグルを ON にする (または環境変数 `ENABLE_LLM=true`)
 2. LLM関連パッケージをインストール: `pip install -r requirements.txt`
 3. アプリケーションを再起動
 """

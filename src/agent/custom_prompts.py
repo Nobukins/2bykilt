@@ -1,31 +1,116 @@
 import pdb
 from typing import List, Optional
 import os
+try:
+  from src.config.feature_flags import is_llm_enabled
+  ENABLE_LLM = is_llm_enabled()
+except Exception:
+  ENABLE_LLM = os.getenv("ENABLE_LLM", "false").lower() == "true"
+import pdb
+from typing import List, Optional
+import os
 
-# LLM機能の有効/無効を制御
-ENABLE_LLM = os.getenv("ENABLE_LLM", "false").lower() == "true"
+# ---------------- Feature flag / legacy env bridge -----------------
+try:
+  from src.config.feature_flags import is_llm_enabled
+  ENABLE_LLM = is_llm_enabled()
+except Exception:
+  ENABLE_LLM = os.getenv("ENABLE_LLM", "false").lower() == "true"
 
-# 条件付きLLMインポート
+# ---------------- Default dummy definitions (always present) -------
+class SystemPrompt:  # type: ignore
+  pass
+
+class AgentMessagePrompt:  # type: ignore
+  pass
+
+class BrowserState:  # type: ignore
+  screenshot = None
+  url = ""
+  tabs = []
+  element_tree = type("_ElemTree", (), {"clickable_elements_to_string": lambda self, **_k: ""})()
+  pixels_above = 0
+  pixels_below = 0
+
+class ActionModel:  # type: ignore
+  def model_dump_json(self, **_k):
+    return "{}"
+
+class ActionResult:  # type: ignore
+  def __init__(self, extracted_content=None, include_in_memory=False, error=None):
+    self.extracted_content = extracted_content
+    self.include_in_memory = include_in_memory
+    self.error = error
+
+class HumanMessage:  # type: ignore
+  def __init__(self, content=None):
+    self.content = content
+
+class SystemMessage:  # type: ignore
+  def __init__(self, content=None):
+    self.content = content
+
+class CustomAgentStepInfo:  # fallback stub
+  def __init__(self, **kwargs):
+    self.step_number = kwargs.get('step_number', 0)
+    self.max_steps = kwargs.get('max_steps', 0)
+    self.task = kwargs.get('task', '')
+    self.add_infos = kwargs.get('add_infos', '')
+    self.memory = kwargs.get('memory', '')
+    self.task_progress = kwargs.get('task_progress', '')
+    self.future_plans = kwargs.get('future_plans', '')
+
+from datetime import datetime
+
+LLM_PROMPTS_AVAILABLE = False
+
+# ---------------- Attempt real imports when LLM enabled -------------
 if ENABLE_LLM:
-    try:
-        from browser_use.agent.prompts import SystemPrompt, AgentMessagePrompt
-        from browser_use.agent.views import ActionResult, ActionModel
-        from browser_use.browser.views import BrowserState
-        from langchain_core.messages import HumanMessage, SystemMessage
-        from datetime import datetime
-        from .custom_views import CustomAgentStepInfo
-        LLM_PROMPTS_AVAILABLE = True
-    except ImportError as e:
-        print(f"⚠️ Warning: LLM prompts modules failed to load: {e}")
-        LLM_PROMPTS_AVAILABLE = False
-        # ダミークラスを定義
-        class SystemPrompt: pass
-        class AgentMessagePrompt: pass
-else:
-    LLM_PROMPTS_AVAILABLE = False
-    # ダミークラスを定義
-    class SystemPrompt: pass
-    class AgentMessagePrompt: pass
+  try:  # noqa: SIM105
+    from browser_use.agent.prompts import SystemPrompt as _RealSystemPrompt, AgentMessagePrompt as _RealAgentMessagePrompt
+    from browser_use.agent.views import ActionResult as _RealActionResult, ActionModel as _RealActionModel
+    from browser_use.browser.views import BrowserState as _RealBrowserState
+    from langchain_core.messages import HumanMessage as _RealHumanMessage, SystemMessage as _RealSystemMessage
+    from .custom_views import CustomAgentStepInfo as _RealCustomAgentStepInfo
+    # Overwrite stubs with real implementations
+    SystemPrompt = _RealSystemPrompt  # type: ignore
+    AgentMessagePrompt = _RealAgentMessagePrompt  # type: ignore
+    ActionResult = _RealActionResult  # type: ignore
+    ActionModel = _RealActionModel  # type: ignore
+    BrowserState = _RealBrowserState  # type: ignore
+    HumanMessage = _RealHumanMessage  # type: ignore
+    SystemMessage = _RealSystemMessage  # type: ignore
+    CustomAgentStepInfo = _RealCustomAgentStepInfo  # type: ignore
+    LLM_PROMPTS_AVAILABLE = True
+  except ImportError as e:  # pragma: no cover
+    print(f"⚠️ Warning: LLM prompts modules failed to load: {e}")
+    pass
+
+  class ActionResult:
+    def __init__(self, extracted_content=None, include_in_memory=False, error=None):
+      self.extracted_content = extracted_content
+      self.include_in_memory = include_in_memory
+      self.error = error
+
+  class HumanMessage:
+    def __init__(self, content=None):
+      self.content = content
+
+  class SystemMessage:
+    def __init__(self, content=None):
+      self.content = content
+
+  class CustomAgentStepInfo:
+    def __init__(self, **kwargs):
+      self.step_number = kwargs.get('step_number', 0)
+      self.max_steps = kwargs.get('max_steps', 0)
+      self.task = kwargs.get('task', '')
+      self.add_infos = kwargs.get('add_infos', '')
+      self.memory = kwargs.get('memory', '')
+      self.task_progress = kwargs.get('task_progress', '')
+      self.future_plans = kwargs.get('future_plans', '')
+
+  from datetime import datetime
 
 
 class CustomSystemPrompt(SystemPrompt):

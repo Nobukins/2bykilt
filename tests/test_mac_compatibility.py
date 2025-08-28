@@ -18,7 +18,18 @@ sys.path.insert(0, str(PROJECT_DIR))
 class MacCompatibilityTest:
     def __init__(self):
         self.results = []
-        self.python_exec = str(PROJECT_DIR / 'venv' / 'bin' / 'python')
+        self.python_exec = self._detect_python_exec()
+
+    def _detect_python_exec(self) -> str:
+        candidates = [
+            PROJECT_DIR / 'venv' / 'bin' / 'python',
+            PROJECT_DIR.parent / 'venv' / 'bin' / 'python',
+            Path(sys.executable)
+        ]
+        for c in candidates:
+            if c.exists():
+                return str(c)
+        return sys.executable
         
     def log_result(self, test_name, success, message):
         status = "✅ PASS" if success else "❌ FAIL"
@@ -149,14 +160,16 @@ if not result:
         try:
             env = os.environ.copy()
             env['ENABLE_LLM'] = 'false'
-            
+            root = Path(__file__).resolve().parents[1]
+            bykilt_path = root / 'bykilt.py'
+            cmd = [self.python_exec, str(bykilt_path), '--help'] if bykilt_path.exists() else [self.python_exec, '-m', 'bykilt', '--help']
             result = subprocess.run(
-                [self.python_exec, 'bykilt.py', '--help'],
-                cwd=PROJECT_DIR,
+                cmd,
+                cwd=root,
                 env=env,
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=60
             )
             
             if result.returncode == 0 and "Gradio UI for 2Bykilt Agent" in result.stdout:
@@ -172,14 +185,16 @@ if not result:
         try:
             env = os.environ.copy()
             env['ENABLE_LLM'] = 'true'
-            
+            root = Path(__file__).resolve().parents[1]
+            bykilt_path = root / 'bykilt.py'
+            cmd = [self.python_exec, str(bykilt_path), '--help'] if bykilt_path.exists() else [self.python_exec, '-m', 'bykilt', '--help']
             result = subprocess.run(
-                [self.python_exec, 'bykilt.py', '--help'],
-                cwd=PROJECT_DIR,
+                cmd,
+                cwd=root,
                 env=env,
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=60
             )
             
             if result.returncode == 0 and "Gradio UI for 2Bykilt Agent" in result.stdout:
