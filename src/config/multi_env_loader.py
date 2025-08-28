@@ -50,7 +50,7 @@ _SECRET_KEY_SUBSTRINGS = ["api_key", "token", "secret", "password", "key"]
 
 
 class MultiEnvConfigError(Exception):
-    """Fatal configuration error."""
+    """Fatal configuration error (new API)."""
     pass
 
 
@@ -335,3 +335,267 @@ def _flatten(obj: Any, prefix: Tuple[str, ...] = ()) -> Dict[str, Any]:
     else:
         out[".".join(prefix)] = obj
     return out
+
+# ---------------------------------------------------------------------------
+# Backward compatibility facade (Option B in Issue #65 discussion)
+# Provides legacy class & exception names expected by existing tests / scripts.
+# NOTE: Marked for deprecation once callers migrate to MultiEnvConfigLoader.
+# ---------------------------------------------------------------------------
+
+# Legacy exception alias (tests expect ConfigValidationError)
+class ConfigValidationError(MultiEnvConfigError):
+    """Backward-compatible validation error alias."""
+    pass
+
+
+class ConfigLoader:
+    """Backward-compatible wrapper exposing legacy API surface.
+
+    Legacy methods provided:
+      * load_config(environment: str | None)
+      * compare_configs(env1, env2)
+      * save_effective_config(config, path)
+      * _get_current_environment()
+
+    Additional behavior:
+      * Injects `_metadata` block (environment / loaded_at / files_loaded / warnings)
+      * Maps external env names: development|production ↔ dev|prod
+      * Minimal schema-driven environment variable overrides (environment_override field)
+    """
+
+    _INVERSE_ENV = {"dev": "development", "staging": "staging", "prod": "production"}
+    _FORWARD_ENV = {"development": "dev", "staging": "staging", "production": "prod"}
+
+    def __init__(self, config_dir: str | Path = "config") -> None:
+        self._config_dir = Path(config_dir)
+        self._loader = MultiEnvConfigLoader(self._config_dir)
+
+    # ---- Public (legacy) API -------------------------------------------------
+    def load_config(self, environment: str | None = None) -> Dict[str, Any]:
+        try:
+            internal_env = None
+            original_env_arg = environment
+            if environment:
+                env_l = environment.lower()
+                internal_env = self._FORWARD_ENV.get(env_l, env_l)
+
+            # Legacy flat structure detection:
+            #   config_dir/base.yml + per-env *.yml (development.yml / production.yml / staging.yml)
+            # New structure would have config_dir/base/ directory.
+            base_file = self._config_dir / "base.yml"
+            base_dir = self._config_dir / "base"
+            use_legacy_flat = base_file.exists() and not base_dir.exists()
+
+            if use_legacy_flat:
+                merged = self._legacy_flat_load(internal_env, original_env_arg)
+            else:
+                merged = self._loader.load(internal_env)
+            # Apply schema based env var overrides (minimal implementation)
+            self._apply_schema_env_overrides(merged)
+            external_env = self._INVERSE_ENV.get(self._loader.logical_env, self._loader.logical_env)
+            metadata = {
+                "environment": external_env,
+                "loaded_at": datetime.now(timezone.utc).isoformat(),
+                "files_loaded": [str(p) for p in self._loader.files_loaded],
+                "warnings": list(self._loader.warnings),
+            }
+            if isinstance(merged.get("_metadata"), dict):
+                merged["_metadata"].update(metadata)
+            else:
+                merged["_metadata"] = metadata
+            return merged
+        except MultiEnvConfigError as e:  # Re-raise under legacy name
+            raise ConfigValidationError(str(e)) from e
+
+    def _legacy_flat_load(self, internal_env: str | None, original_env: str | None) -> Dict[str, Any]:
+        """Load using legacy single-file-per-env layout expected by older tests.
+
+        Layout:
+          config_dir/base.yml
+          config_dir/development.yml (or dev.yml)
+          config_dir/production.yml (or prod.yml)
+          config_dir/staging.yml
+        """
+        # Determine internal env (dev/staging/prod)
+        env_token = internal_env or (os.getenv("BYKILT_ENV", "dev").lower())
+        if env_token in ("development",):
+            env_token = "dev"
+        if env_token in ("production",):
+            env_token = "prod"
+        self._loader.logical_env = env_token  # keep state consistent for metadata mapping
+
+        def _read_yaml(path: Path) -> Dict[str, Any]:
+            if not path.exists():
+                return {}
+            try:
+                text = path.read_text(encoding="utf-8")
+                if not text.strip():
+                    return {}
+                data = yaml.safe_load(text)
+                return data if isinstance(data, dict) else {}
+            except Exception:  # noqa: BLE001
+                return {}
+
+        base_cfg = _read_yaml(self._config_dir / "base.yml")
+
+        # Candidate env file names in preference order
+        candidate_names: List[str] = []
+        if original_env:
+            candidate_names.append(original_env.lower())
+        # Add expanded forms
+        inverse_map = {"dev": "development", "prod": "production"}
+        if env_token in inverse_map:
+            candidate_names.append(inverse_map[env_token])
+        candidate_names.append(env_token)
+        # Deduplicate preserving order
+        seen = set()
+        unique_candidates = []
+        for name in candidate_names:
+            if name and name not in seen:
+                unique_candidates.append(name)
+                seen.add(name)
+
+        env_cfg: Dict[str, Any] = {}
+        for cand in unique_candidates:
+            for ext in (".yml", ".yaml"):
+                p = self._config_dir / f"{cand}{ext}"
+                if p.exists():
+                    env_cfg = self._loader._deep_merge(env_cfg, _read_yaml(p))  # type: ignore[attr-defined]
+                    break
+
+        merged = self._loader._deep_merge(base_cfg, env_cfg)  # type: ignore[attr-defined]
+        return merged
+
+    def compare_configs(self, env1: str, env2: str) -> Dict[str, Any]:
+        cfg1 = self.load_config(env1)
+        cfg2 = self.load_config(env2)
+        flat1 = _flatten(cfg1)
+        flat2 = _flatten(cfg2)
+        keys1 = set(flat1.keys())
+        keys2 = set(flat2.keys())
+        differences: List[Dict[str, Any]] = []
+        # Added (in env2 only)
+        for k in sorted(keys2 - keys1):
+            differences.append({
+                "path": k,
+                "type": "added",
+                "value_env1": None,
+                "value_env2": flat2[k],
+            })
+        # Removed (in env1 only)
+        for k in sorted(keys1 - keys2):
+            differences.append({
+                "path": k,
+                "type": "removed",
+                "value_env1": flat1[k],
+                "value_env2": None,
+            })
+        # Changed (present in both, values differ and not both dict/list objects serialized differently)
+        for k in sorted(keys1 & keys2):
+            if flat1[k] != flat2[k]:
+                differences.append({
+                    "path": k,
+                    "type": "changed",
+                    "value_env1": flat1[k],
+                    "value_env2": flat2[k],
+                })
+        summary = {
+            "configs_identical": len(differences) == 0,
+            "total_differences": len(differences),
+        }
+        return {
+            "environment_1": env1,
+            "environment_2": env2,
+            "differences": differences,
+            "comparison_summary": summary,
+        }
+
+    def save_effective_config(self, config: Dict[str, Any], output_path: str) -> str:
+        path = Path(output_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8")
+        return str(path)
+
+    def _get_current_environment(self) -> str:
+        raw = os.getenv("BYKILT_ENV", "dev").lower()
+        if raw in ("development", "dev"):
+            return "development"
+        if raw == "staging":
+            return "staging"
+        if raw in ("production", "prod"):
+            return "production"
+        return raw
+
+    # ---- Internal helpers ----------------------------------------------------
+    def _apply_schema_env_overrides(self, config: Dict[str, Any]) -> None:
+        """Minimal environment variable override applying based on schema files.
+
+        Looks for config_dir/schema/*.yml and applies entries with
+        leaf dict containing 'environment_override': ENV_NAME.
+        Supported type coercions: float, int, bool, (default: string)
+        Silent on errors (non-fatal for backward compatibility focus).
+        """
+        schema_dir = self._config_dir / "schema"
+        if not schema_dir.exists() or not schema_dir.is_dir():
+            return
+        schema_files = sorted(p for p in schema_dir.glob("*.yml"))
+        if not schema_files:
+            return
+        for sf in schema_files:
+            try:
+                content = sf.read_text(encoding="utf-8")
+                data = yaml.safe_load(content) if content.strip() else None
+                if not isinstance(data, dict):
+                    continue
+                props = data.get("properties")
+                if not isinstance(props, dict):
+                    continue
+                self._walk_schema_properties(props, [], config)
+            except Exception:  # noqa: BLE001
+                continue
+
+    def _walk_schema_properties(self, props: Dict[str, Any], trail: List[str], config: Dict[str, Any]) -> None:
+        for key, node in props.items():
+            if not isinstance(node, dict):
+                continue
+            # Object with nested properties
+            if isinstance(node.get("properties"), dict):
+                self._walk_schema_properties(node["properties"], trail + [key], config)
+                continue
+            env_var = node.get("environment_override")
+            if not env_var or env_var not in os.environ:
+                continue
+            raw_val = os.environ[env_var]
+            desired_type = node.get("type")
+            coerced: Any = raw_val
+            try:  # type coercion best-effort
+                if desired_type == "float":
+                    coerced = float(raw_val)
+                elif desired_type == "int":
+                    coerced = int(raw_val)
+                elif desired_type == "bool":
+                    coerced = raw_val.lower() in ("1", "true", "yes", "on")
+            except Exception:  # noqa: BLE001
+                coerced = raw_val  # fallback to string
+            # Navigate/create path
+            cursor = config
+            for seg in trail:
+                cursor = cursor.setdefault(seg, {})  # type: ignore[assignment]
+            cursor.setdefault(trail[-1] if trail else key, {})  # ensure object path if nested just created
+            cursor = config  # restart to set final value precisely
+            # Build parent
+            parent = config
+            for seg in trail:
+                parent = parent.setdefault(seg, {})  # type: ignore[assignment]
+            parent[key] = coerced
+
+
+# Explicit re-export list for type checkers / star imports (legacy + new)
+__all__ = [
+    "MultiEnvConfigLoader",
+    "MultiEnvConfigError",
+    "ConfigLoader",
+    "ConfigValidationError",
+    "load_config",
+    "diff_envs",
+]
