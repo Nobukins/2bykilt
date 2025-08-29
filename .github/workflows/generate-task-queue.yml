@@ -90,19 +90,31 @@ jobs:
           fi
       
       - name: Commit and push changes
-        if: steps.changes.outputs.changed == 'true'
+        # Avoid pushing from pull_request (detached HEAD) and only push when file changed
+        if: steps.changes.outputs.changed == 'true' && github.event_name != 'pull_request'
         run: |
+          set -euo pipefail
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action (Task Queue Bot)"
           git add docs/roadmap/TASK_QUEUE.yml
-          git commit -m "docs: auto-update task queue 
+          BRANCH_NAME="${GITHUB_REF_NAME:-}" 
+          if [ -z "$BRANCH_NAME" ]; then
+            BRANCH_NAME="${{ github.event.repository.default_branch || 'LLM_AS_OPTION' }}"
+          fi
+          echo "Preparing to push to $BRANCH_NAME"
+          git checkout -B "$BRANCH_NAME"
+          COMMIT_TS=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          git commit -m "docs: auto-update task queue" \
+                     -m "Generated at: $COMMIT_TS" \
+                     -m "Roadmap commit: ${{ steps.commits.outputs.roadmap_commit }}" \
+                     -m "Dependencies commit: ${{ steps.commits.outputs.dependencies_commit }}" \
+                     -m "[skip ci]" || echo "Nothing to commit (race)"
+          git push origin "$BRANCH_NAME"
 
-          Generated at: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
-          Roadmap commit: ${{ steps.commits.outputs.roadmap_commit }}
-          Dependencies commit: ${{ steps.commits.outputs.dependencies_commit }}
-          
-          [skip ci]"
-          git push
+      - name: Skip push (PR context)
+        if: steps.changes.outputs.changed == 'true' && github.event_name == 'pull_request'
+        run: |
+          echo "Skip committing task queue updates on pull_request (detached HEAD)" | tee -a "$GITHUB_STEP_SUMMARY"
       
       - name: Output summary
         run: |
