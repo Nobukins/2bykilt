@@ -96,9 +96,41 @@ def extract_params(prompt: str, param_names: Union[str, List[Dict[str, Any]], No
         return params
 
     for param in param_list:
-        match = re.search(rf'{param}=(\S+)', prompt)
+        # Look for parameter values using a more robust pattern that can handle whitespace and quotes
+        param_pattern = rf'{param}=([^\s]+|"[^"]*"|\'[^\']*\')'
+        match = re.search(param_pattern, prompt)
+        
         if match:
-            params[param] = match.group(1)
+            value = match.group(1)
+            # Remove surrounding quotes if present
+            if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+                value = value[1:-1]
+            params[param] = value
+        else:
+            # Try alternative approach for multi-line or complex values
+            # Look for pattern like param=VALUE where VALUE might contain spaces or newlines
+            parts = prompt.split(f'{param}=', 1)
+            if len(parts) > 1:
+                # Extract everything after param= up to the next parameter or end of string
+                remaining_text = parts[1]
+                # Check if there are other parameters after this one
+                next_param_match = None
+                for next_param in param_list:
+                    if next_param != param:
+                        next_param_pos = remaining_text.find(f'{next_param}=')
+                        if next_param_pos > -1:
+                            if next_param_match is None or next_param_pos < next_param_match[1]:
+                                next_param_match = (next_param, next_param_pos)
+                
+                if next_param_match:
+                    # Extract up to the next parameter
+                    value = remaining_text[:next_param_match[1]].strip()
+                else:
+                    # Extract the whole remaining text
+                    value = remaining_text.strip()
+                
+                params[param] = value
+    
     return params
 
 def resolve_sensitive_env_variables(text: Optional[str]) -> Optional[str]:
