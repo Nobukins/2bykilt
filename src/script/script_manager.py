@@ -6,6 +6,7 @@ import asyncio
 from pathlib import Path
 from typing import Dict, Any, Tuple, Optional, List
 from src.utils.app_logger import logger
+from src.utils.recording_path_utils import get_recording_path
 # New 2024+ Browser Automation Integration
 from src.utils.git_script_automator import GitScriptAutomator, EdgeAutomator, ChromeAutomator
 from typing import Dict as _DictReturn
@@ -445,11 +446,10 @@ markers =
                         command.extend(['--browser-type', 'chromium'])
                         logger.info(f"🔍 Using chromium browser type for better compatibility")
                 
-                # Add recording configuration if enabled
-                if save_recording_path:
-                    os.makedirs(save_recording_path, exist_ok=True)
-                    env['RECORDING_PATH'] = save_recording_path
-                    logger.info(f"Recording enabled, saving to: {save_recording_path}")
+                # Add recording configuration (always set for consistency)
+                recording_path = save_recording_path if save_recording_path else get_recording_path("./tmp/record_videos")
+                env['RECORDING_PATH'] = recording_path
+                logger.info(f"Recording path set to: {recording_path}")
                 
                 # Execute the pytest command
                 process = await asyncio.create_subprocess_exec(
@@ -669,10 +669,10 @@ markers =
                     logger.warning(f"⚠️ Could not load browser configuration: {e}")
                     logger.info("Using default Playwright browser settings")
                 
-                if save_recording_path:
-                    os.makedirs(save_recording_path, exist_ok=True)
-                    env['RECORDING_PATH'] = save_recording_path
-                    logger.info(f"Recording enabled, saving to: {save_recording_path}")
+                # Add recording configuration (always set for consistency)
+                recording_path = save_recording_path if save_recording_path else get_recording_path("./tmp/record_videos")
+                env['RECORDING_PATH'] = recording_path
+                logger.info(f"Recording path set to: {recording_path}")
                 
                 # Execute the command using process_execution
                 process, output_lines = await process_execution(
@@ -799,12 +799,11 @@ markers =
                 if not headless and '--headed' not in command_template:
                     command_parts.append('--headed')
                 
-                # Add recording configuration if enabled
+                # Add recording configuration (always set for consistency)
                 env = os.environ.copy()
-                if save_recording_path:
-                    os.makedirs(save_recording_path, exist_ok=True)
-                    env['RECORDING_PATH'] = save_recording_path
-                    logger.info(f"Recording enabled, saving to: {save_recording_path}")
+                recording_path = save_recording_path if save_recording_path else get_recording_path("./tmp/record_videos")
+                env['RECORDING_PATH'] = recording_path
+                logger.info(f"Recording path set to: {recording_path}")
                 
                 # Execute the command using process_execution
                 process, output_lines = await process_execution(
@@ -931,10 +930,10 @@ markers =
                     logger.warning(f"⚠️ Could not load browser configuration: {e}")
                     logger.info("Using default Playwright browser settings")
                 
-                if save_recording_path:
-                    os.makedirs(save_recording_path, exist_ok=True)
-                    env['RECORDING_PATH'] = save_recording_path
-                    logger.info(f"Recording enabled, saving to: {save_recording_path}")
+                # Add recording configuration (always set for consistency)
+                recording_path = save_recording_path if save_recording_path else get_recording_path("./tmp/record_videos")
+                env['RECORDING_PATH'] = recording_path
+                logger.info(f"Recording path set to: {recording_path}")
                 
                 # Execute the command using process_execution
                 process, output_lines = await process_execution(
