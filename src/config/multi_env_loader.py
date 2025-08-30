@@ -289,11 +289,9 @@ class MultiEnvConfigLoader:
         files: List[Path],
         warnings: List[Dict[str, Any]],
     ) -> Path:
-        if RunContext and pseudo_run_id.startswith(RunContext.get().run_id_base):
-            # Directory already ensured by artifact_dir call in load()
-            out_dir = Path("artifacts") / "runs" / pseudo_run_id
-        else:
-            out_dir = Path("artifacts") / "runs" / pseudo_run_id
+        # REVIEW FIX: remove duplicated path construction; only mkdir when not created via RunContext
+        out_dir = Path("artifacts") / "runs" / pseudo_run_id
+        if not (RunContext and pseudo_run_id.startswith(RunContext.get().run_id_base)):
             out_dir.mkdir(parents=True, exist_ok=True)
         out_file = out_dir / "effective_config.json"
         payload = {

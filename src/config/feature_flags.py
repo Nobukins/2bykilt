@@ -315,10 +315,12 @@ class FeatureFlags:
             if RunContext:
                 out_dir = RunContext.get().artifact_dir("flags")
             else:  # fallback (should not generally occur)
+                # REVIEW FIX: ensure directory actually exists (previously missing mkdir for out_dir)
                 if not _ARTIFACT_ROOT.exists():
                     _ARTIFACT_ROOT.mkdir(parents=True, exist_ok=True)
                 run_id = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S") + "-legacy-flags"
                 out_dir = _ARTIFACT_ROOT / run_id
+                out_dir.mkdir(parents=True, exist_ok=True)
             payload = {
                 "generated_at": datetime.now(timezone.utc).isoformat(),
                 "flags_file": str(cls._flags_file) if cls._flags_file else None,
