@@ -1,6 +1,6 @@
 # 2bykilt 開発ロードマップ (Baseline v1)
 
-最終更新: 2025-08-26
+最終更新: 2025-08-30
 
 対象リポジトリ: https://github.com/Nobukins/2bykilt
 
@@ -41,14 +41,18 @@
 
 ### Group A (Phase 1 – 基盤 & 早期価値)
 
-- Wave A1: #64, #65, #63
-- Wave A2: #32, #31, #56, #57
-- Wave A3: #28, #30, #33, #35, #36, #34, #37, #38
-- Wave A4: #25, #44, #45, #50, (#55 条件次第)
-- Wave A5: #60, #61
-- Wave A6: #58, #59
-- Wave A7: #43
-- Docs Stream: #66 → #67
+| Wave | Issues | Status | 備考 |
+|------|--------|--------|------|
+| A1 | #64 #65 #63 | ✅ Done | Feature Flags / Multi-env Loader / llms.txt Validator 実装完了 (PR #20 由来) |
+| A2 | #32 #31 #56 #57 | ⏳ Pending | #32 Run/Job ID を最初に実装 → Logging 設計/実装/ローテーション |
+| A3 | #28 #30 #33 #35 #36 #34 #37 #38 | Planned | Artifacts 基盤拡張 & 回帰テスト |
+| A4 | #25 #44 #45 #50 (#55) | Planned | Runner Reliability / git_script 系統 |
+| A5 | #60 #61 | Planned | Security Base (Mask / Scan) |
+| A6 | #58 #59 | Planned | Metrics 基盤 & Run API |
+| A7 | #43 | Planned | LLM Toggle パリティ |
+| Docs | #66 → #67 | In Progress | Doc Sync >90% 維持方針 |
+
+Progress Summary (Phase 1): Wave A1 100% / Remaining Waves queued. Draft/試行 PR は進捗計測に含めず（分析除外方針）。
 
 ### Group B (Phase 2 – 拡張 / 高度化)
 
@@ -78,7 +82,7 @@ Gate 条件:
   - P2=重要(後回し可)
   - P3=拡張/実験
 
-- Size: 
+- Size:
   - S≤1d
   - M=2-3d
   - L=4-6d(要分割)
@@ -88,6 +92,7 @@ Gate 条件:
 ## D. 依存関係
 
 機械可読: ISSUE_DEPENDENCIES.yml を参照。
+
 
 Issue 本文に "Depends on: #x, #y" を単一行で明記。
 
@@ -109,6 +114,7 @@ A1 Config → A2 Logging/ID → A3 Artifacts → A4 Runner Reliability → A5 Se
 
 ---
 
+
 ## G. KPI
 
 P0 Burn-down / Wave Completion / Blocked >2d / Cycle Time / Regression Green / Doc Sync Lag / Flag Stale Count
@@ -123,7 +129,21 @@ Flags / 後方互換 Schema / 追加専用ログ→削除遅延 / Sandbox enforc
 
 ## I. 次アクション
 
-未取得 Issue 本文確証 / #62 分割 / ラベル調整 / Dashboard 自動化 / Prompt スクリプト化。
+短期 (直近 1 Wave 移行前準備):
+
+1. ISSUE_DEPENDENCIES.yml 進捗反映 (A1 完了) ✅ 済
+2. Run/Job ID (#32) 仕様確定 (RunContext / run_id フォーマット / artifact ディレクトリ統一)
+3. Logging 設計下書き (フィールド: timestamp, level, event, component, run_id, msg, extra) → #31 着手ゲート
+
+中期 (A2 実装着手後):
+
+1. JSON Lines ロギング実装 (#56)
+1. ローテーション/保持ポリシー (#57) 設計 + flag 化
+
+長期 (先読み):
+
+1. #62 分割検討 (PoC / Enforce) 継続
+1. Dashboard 自動化 / Prompt スクリプト化 (#76 と連動した依存更新自動化)
 
 ---
 
@@ -132,5 +152,8 @@ Flags / 後方互換 Schema / 追加専用ログ→削除遅延 / Sandbox enforc
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
 | 1.0.0 | 2025-08-26 | 初期ドラフト | Copilot Agent |
+| 1.0.1 | 2025-08-30 | Wave A1 完了反映 / 進捗テーブル追加 / 次アクション更新 | Copilot Agent |
+
+
 
 (EOF)
