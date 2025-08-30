@@ -47,7 +47,7 @@ cfg_dir = rc.artifact_dir("cfg")  # Path
 |-------|--------|------|
 | #31 | ログレコードへ run_id 付与 | JSON Lines 共通フィールド |
 | #56 | ログファイル命名統一 | `<run_id_base>-log.jsonl` |
-| #58 | Metrics ラベル | `run_id` を primary dimension | 
+| #58 | Metrics ラベル | `run_id` を primary dimension |
 | #35 | Artifact Manifest v2 | 各エントリへ run_id 埋込 |
 
 ## 改訂履歴

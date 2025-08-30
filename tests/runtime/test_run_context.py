@@ -13,7 +13,12 @@ def test_run_context_unifies_artifact_prefix(tmp_path, monkeypatch):
     rc = RunContext.get()
     base = rc.run_id_base
 
-    # Trigger config artifact
+    # Minimal config structure for loader
+    (Path("config") / "base").mkdir(parents=True, exist_ok=True)
+    (Path("config") / "base" / "core.yaml").write_text("services: { api: { url: 'http://x' } }\n", encoding="utf-8")
+    (Path("config") / "dev").mkdir(parents=True, exist_ok=True)
+    (Path("config") / "dev" / "override.yaml").write_text("services: { api: { timeout: 5 } }\n", encoding="utf-8")
+
     loader = MultiEnvConfigLoader()
     os.environ["BYKILT_ENV"] = "dev"
     loader.load()
