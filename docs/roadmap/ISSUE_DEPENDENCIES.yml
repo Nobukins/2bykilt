@@ -339,5 +339,5 @@ summary:
       - "60"
       - "61"   # (strict orphan)
       - "67"
-  generated_at_utc: "2025-08-29T00:00:00Z"  # 更新日時
+  generated_at_utc: "2025-08-30T00:00:00Z"  # 更新日時 (Wave A1 progress metadata added)
     
