@@ -512,13 +512,52 @@ markers =
                 
                 # Clone repository
                 repo_dir = await clone_git_repo(git_url, version, repo_dir)
-                full_script_path = os.path.join(repo_dir, script_path)
+                
+                # Enhanced path validation with GIT_SCRIPT_V2 feature flag
+                use_v2_validation = os.environ.get('GIT_SCRIPT_V2', 'false').lower() == 'true'
+                
+                if use_v2_validation:
+                    logger.info("🔒 Using GIT_SCRIPT_V2 enhanced path validation (legacy method)")
+                    try:
+                        from src.runner.git_script_path import validate_git_script_path, GitScriptPathError
+                        
+                        # Log execution start metric
+                        logger.info(f"git_script.execution.started - git_url={git_url}, script_path={script_path}, validation_mode=v2_legacy")
+                        
+                        full_script_path, validation_context = validate_git_script_path(
+                            repo_root=repo_dir,
+                            user_path=script_path
+                        )
+                        
+                        # Log successful path resolution
+                        logger.info(f"git_script.resolved - original={validation_context.get('original')}, "
+                                  f"normalized={validation_context.get('normalized')}, "
+                                  f"execution_root={validation_context.get('execution_root')}")
+                        
+                    except GitScriptPathError as e:
+                        logger.error(f"git_script.execution.failed - error_code={e.error_code}, "
+                                   f"error_message={str(e)}, original_path={script_path}, repo_root={repo_dir}")
+                        return f"Path validation failed: {e}", None
+                        
+                else:
+                    # Legacy path handling (original behavior)
+                    full_script_path = os.path.join(repo_dir, script_path)
+                    
+                    # Log execution start metric
+                    logger.info(f"git_script.execution.started - git_url={git_url}, script_path={script_path}, validation_mode=legacy")
+                    
+                    if not os.path.exists(full_script_path):
+                        logger.error(f"git_script.execution.failed - error_code=git_script.path_not_found, "
+                                   f"error_message=Script not found at path: {full_script_path}, "
+                                   f"original_path={script_path}, repo_root={repo_dir}")
+                        raise FileNotFoundError(f"Script not found at path: {full_script_path}")
+                    
+                    # Log legacy path resolution
+                    logger.info(f"git_script.resolved - original={script_path}, normalized={full_script_path}, "
+                              f"execution_root={repo_dir}, validation_mode=legacy")
                 
                 # Apply Chrome executable path patch to the script
                 await patch_search_script_for_chrome(full_script_path)
-                
-                if not os.path.exists(full_script_path):
-                    raise FileNotFoundError(f"Script not found at path: {full_script_path}")
                 
                 # Build command
                 command_template = script_info.get('command', '')
@@ -1284,10 +1323,51 @@ async def execute_git_script_new_method(
         repo_dir = os.path.join(tempfile.gettempdir(), 'bykilt_gitscripts', Path(git_url).stem)
         os.makedirs(os.path.dirname(repo_dir), exist_ok=True)
         repo_dir = await clone_git_repo(git_url, version, repo_dir)
-        full_script_path = os.path.join(repo_dir, script_path)
         
-        if not os.path.exists(full_script_path):
-            raise FileNotFoundError(f"Script not found at path: {full_script_path}")
+        # Step 1.5: Enhanced path validation with GIT_SCRIPT_V2 feature flag
+        use_v2_validation = os.environ.get('GIT_SCRIPT_V2', 'false').lower() == 'true'
+        
+        if use_v2_validation:
+            logger.info("🔒 Using GIT_SCRIPT_V2 enhanced path validation")
+            try:
+                from src.runner.git_script_path import validate_git_script_path, GitScriptPathError
+                
+                # Log execution start metric
+                logger.info(f"git_script.execution.started - git_url={git_url}, script_path={script_path}, validation_mode=v2")
+                
+                full_script_path, validation_context = validate_git_script_path(
+                    repo_root=repo_dir,
+                    user_path=script_path
+                )
+                
+                # Log successful path resolution
+                logger.info(f"git_script.resolved - original={validation_context.get('original')}, "
+                          f"normalized={validation_context.get('normalized')}, "
+                          f"execution_root={validation_context.get('execution_root')}")
+                
+            except GitScriptPathError as e:
+                logger.error(f"git_script.execution.failed - error_code={e.error_code}, "
+                           f"error_message={str(e)}, original_path={script_path}, repo_root={repo_dir}")
+                return f"Path validation failed: {e}", None
+                
+        else:
+            # Legacy path handling (original behavior)
+            logger.info("⚠️ Using legacy path validation (GIT_SCRIPT_V2=false)")
+            
+            # Log execution start metric
+            logger.info(f"git_script.execution.started - git_url={git_url}, script_path={script_path}, validation_mode=legacy")
+            
+            full_script_path = os.path.join(repo_dir, script_path)
+            
+            if not os.path.exists(full_script_path):
+                logger.error(f"git_script.execution.failed - error_code=git_script.path_not_found, "
+                           f"error_message=Script not found at path: {full_script_path}, "
+                           f"original_path={script_path}, repo_root={repo_dir}")
+                raise FileNotFoundError(f"Script not found at path: {full_script_path}")
+            
+            # Log legacy path resolution
+            logger.info(f"git_script.resolved - original={script_path}, normalized={full_script_path}, "
+                      f"execution_root={repo_dir}, validation_mode=legacy")
         
         # Step 2: Determine browser type
         from src.browser.browser_config import browser_config
