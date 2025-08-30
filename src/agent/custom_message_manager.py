@@ -1,25 +1,43 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import List, Optional, Type, Dict
 
-from browser_use.agent.message_manager.service import MessageManager
-from browser_use.agent.message_manager.views import MessageHistory
-from browser_use.agent.prompts import SystemPrompt, AgentMessagePrompt
-from browser_use.agent.views import ActionResult, AgentStepInfo, ActionModel
-from browser_use.browser.views import BrowserState
-from langchain_core.language_models import BaseChatModel
-from langchain_anthropic import ChatAnthropic
-from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import (
-	AIMessage,
-	BaseMessage,
-	HumanMessage,
-    ToolMessage
-)
-from langchain_openai import ChatOpenAI
-from ..utils.llm import DeepSeekR1ChatOpenAI
-from .custom_prompts import CustomAgentMessagePrompt
+# LLM機能の有効/無効を制御
+ENABLE_LLM = os.getenv("ENABLE_LLM", "false").lower() == "true"
+
+# 条件付きLLMインポート
+if ENABLE_LLM:
+    try:
+        from browser_use.agent.message_manager.service import MessageManager
+        from browser_use.agent.message_manager.views import MessageHistory
+        from browser_use.agent.prompts import SystemPrompt, AgentMessagePrompt
+        from browser_use.agent.views import ActionResult, AgentStepInfo, ActionModel
+        from browser_use.browser.views import BrowserState
+        from langchain_core.language_models import BaseChatModel
+        from langchain_anthropic import ChatAnthropic
+        from langchain_core.messages import (
+            AIMessage,
+            BaseMessage,
+            HumanMessage,
+            ToolMessage
+        )
+        from langchain_openai import ChatOpenAI
+        from ..utils.llm import DeepSeekR1ChatOpenAI
+        from .custom_prompts import CustomAgentMessagePrompt
+        LLM_MESSAGE_MANAGER_AVAILABLE = True
+    except ImportError as e:
+        print(f"⚠️ Warning: LLM message manager modules failed to load: {e}")
+        LLM_MESSAGE_MANAGER_AVAILABLE = False
+        # ダミークラスを定義
+        class MessageManager: pass
+        class BaseChatModel: pass
+else:
+    LLM_MESSAGE_MANAGER_AVAILABLE = False
+    # ダミークラスを定義
+    class MessageManager: pass
+    class BaseChatModel: pass
 
 logger = logging.getLogger(__name__)
 

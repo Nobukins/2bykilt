@@ -74,9 +74,15 @@ class BrowserAutomationManager:
         
         try:
             # Execute based on action type
-            if action.get('type') == 'browser-control':
+            action_type = action.get('type')
+            if action_type == 'browser-control':
                 return self._execute_browser_control(action, **params)
-            elif 'script' in action:
+            elif (
+                action_type in ('git-script', 'action_runner_template', 'script')
+                or 'git' in action
+                or 'command' in action
+                or 'script' in action
+            ):
                 return self._execute_script(action, **params)
             else:
                 logger.error(f"Unknown action type for '{name}'")
@@ -160,6 +166,13 @@ class BrowserAutomationManager:
             if "slowmo" in action:
                 env["SLOWMO"] = str(action["slowmo"])
             
+            # Ensure python invocations use current interpreter
+            try:
+                import sys as _sys
+                if command.strip().startswith('python '):
+                    command = command.replace('python', _sys.executable, 1)
+            except Exception:
+                pass
             # コマンド実行
             logger.info(f"コマンド実行: {command}")
             try:

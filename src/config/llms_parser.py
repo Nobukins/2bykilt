@@ -4,6 +4,7 @@ import yaml
 import requests
 from typing import Dict, List, Any, Optional, Union
 from src.utils.app_logger import logger  # Use AppLogger
+from .llms_schema_validator import validate_llms_content, LLMSSchemaValidationError
 
 def fetch_llms_txt(prompt: str) -> str:
     """
@@ -34,18 +35,24 @@ def fetch_llms_txt(prompt: str) -> str:
         raise FileNotFoundError("llms.txt not found locally and no URL provided in prompt.")
 
 def parse_llms_txt(content: str) -> List[Dict[str, Any]]:
+    """Parse and (light) validate llms.txt -> list of actions.
+
+    Non-strict validation (errors logged, invalid actions skipped). Set env
+    BYKILT_LLMS_STRICT=1 for strict mode (raises on first structural issue).
     """
-    Parse llms.txt content into a list of action dictionaries
-    
-    Args:
-        content: Content of llms.txt
-        
-    Returns:
-        List[Dict[str, Any]]: List of action dictionaries
-    """
-    logger.debug("Parsing llms.txt content.")
-    data = yaml.safe_load(content)
-    return data['actions']
+    logger.debug("Parsing llms.txt content with schema validation.")
+    strict = os.getenv("BYKILT_LLMS_STRICT", "0").lower() in ("1", "true", "yes", "on")
+    try:
+        data = validate_llms_content(content, strict=strict)
+        actions = data.get("actions", [])
+        if not isinstance(actions, list):
+            logger.warning("'actions' key missing or not a list after parsing.")
+            return []
+        return actions
+    except LLMSSchemaValidationError as e:
+        # Strict mode path
+        logger.error(f"Strict llms.txt validation failed: {e}")
+        raise
 
 def pre_evaluate_prompt(prompt: str) -> Optional[Dict[str, Any]]:
     """

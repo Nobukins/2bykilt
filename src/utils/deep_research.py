@@ -9,22 +9,41 @@ import sys
 import logging
 from pprint import pprint
 from uuid import uuid4
-from src.utils import utils
-from src.agent.custom_agent import CustomAgent
+
+try:
+    from src.config.feature_flags import is_llm_enabled
+    ENABLE_LLM = is_llm_enabled()
+except Exception:
+    ENABLE_LLM = os.getenv("ENABLE_LLM", "false").lower() == "true"
+
+# 条件付きLLMインポート
+if ENABLE_LLM:
+    try:
+        from src.utils import utils
+        from src.agent.custom_agent import CustomAgent
+        from browser_use.agent.service import Agent
+        from langchain.schema import SystemMessage, HumanMessage
+        from src.agent.custom_prompts import CustomSystemPrompt, CustomAgentMessagePrompt
+        from src.controller.custom_controller import CustomController
+        from src.browser.custom_browser import CustomBrowser
+        from src.browser.custom_context import BrowserContextConfig, BrowserContext
+        LLM_RESEARCH_AVAILABLE = True
+        print("✅ LLM research modules loaded successfully")
+    except ImportError as e:
+        print(f"⚠️ Warning: LLM research modules failed to load: {e}")
+        LLM_RESEARCH_AVAILABLE = False
+else:
+    LLM_RESEARCH_AVAILABLE = False
+    print("ℹ️ LLM research functionality is disabled (ENABLE_LLM=false)")
+
 import json
 import re
-from browser_use.agent.service import Agent
 from browser_use.browser.browser import BrowserConfig, Browser
 from browser_use.agent.views import ActionResult
 from browser_use.browser.context import BrowserContext
 from browser_use.controller.service import Controller, DoneAction
 from main_content_extractor import MainContentExtractor
-from langchain.schema import SystemMessage, HumanMessage
 from json_repair import repair_json
-from src.agent.custom_prompts import CustomSystemPrompt, CustomAgentMessagePrompt
-from src.controller.custom_controller import CustomController
-from src.browser.custom_browser import CustomBrowser
-from src.browser.custom_context import BrowserContextConfig, BrowserContext
 from browser_use.browser.context import (
     BrowserContextConfig,
     BrowserContextWindowSize,
@@ -34,6 +53,10 @@ logger = logging.getLogger(__name__)
 
 
 async def deep_research(task, llm, agent_state=None, **kwargs):
+    # LLM機能が無効な場合はエラーを返す
+    if not ENABLE_LLM or not LLM_RESEARCH_AVAILABLE:
+        return "❌ Deep research requires LLM functionality. Please enable LLM by setting ENABLE_LLM=true", None
+    
     task_id = str(uuid4())
     save_dir = kwargs.get("save_dir", os.path.join(f"./tmp/deep_research/{task_id}"))
     logger.info(f"Save Deep Research at: {save_dir}")
@@ -309,6 +332,10 @@ Provide your output as a JSON formatted list. Each item in the list must adhere 
 
 async def generate_final_report(task, history_infos, save_dir, llm, error_msg=None):
     """Generate report from collected information with error handling"""
+    # LLM機能が無効な場合はエラーを返す
+    if not ENABLE_LLM or not LLM_RESEARCH_AVAILABLE:
+        return "❌ Report generation requires LLM functionality. Please enable LLM by setting ENABLE_LLM=true"
+    
     try:
         logger.info("\nAttempting to generate final report from collected data...")
         

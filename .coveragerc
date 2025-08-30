@@ -1,0 +1,14 @@
+[run]
+source = src, bykilt.py
+relative_files = False
+data_file = .coverage
+omit =
+    */tests/*
+    */venv/*
+    */.venv/*
+    */site-packages/*
+    */tmp/*
+
+[report]
+show_missing = True
+skip_covered = False

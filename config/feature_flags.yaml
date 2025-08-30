@@ -1,0 +1,13 @@
+flags:
+  enable_llm:
+    description: "LLM 機能全体の有効化 (legacy ENABLE_LLM env 置換準備)"
+    type: bool
+    default: false
+  engine.cdp_use:
+    description: "Browser engine cdp-use 実験フラグ"
+    type: bool
+    default: true
+  ui.experimental_panel:
+    description: "Experimental UI パネル表示"
+    type: bool
+    default: false

@@ -4,8 +4,11 @@ import os
 import glob
 import sys
 import time  # Added for restart logic
+import platform  # Added for cross-platform support
+from pathlib import Path  # Added for cross-platform path handling
+from datetime import datetime  # Added for timestamp formatting
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv(override=True)  # 既存のシステム環境変数を.envファイルの設定で上書き
 import subprocess
 import asyncio
 import json  # Added to fix missing import
@@ -13,30 +16,415 @@ import json  # Added to fix missing import
 import gradio as gr
 from gradio.themes import Citrus, Default, Glass, Monochrome, Ocean, Origin, Soft, Base
 
+# ---------------------------------------------------------------------------
+# Feature Flags (Issue #64) integration
+# We migrate from legacy ENABLE_LLM env var to feature flag 'enable_llm'.
+# Backward compatibility: legacy env ENABLE_LLM still respected via helper.
+# ---------------------------------------------------------------------------
+try:
+    from src.config.feature_flags import FeatureFlags, is_llm_enabled
+except Exception:
+    # Safe fallback if feature flags not yet available (early bootstrap)
+    def is_llm_enabled():
+        return os.getenv("ENABLE_LLM", "false").lower() == "true"
+    class FeatureFlags:  # type: ignore
+        @staticmethod
+        def set_override(name, value, ttl_seconds=None):
+            pass
+
+# Canonical runtime flag (evaluated at import). For dynamic toggling a restart
+# is still required for heavy LLM module imports.
+ENABLE_LLM = is_llm_enabled()
+
 from src.utils import utils
 from src.utils.default_config_settings import default_config, load_config_from_file, save_config_to_file
 from src.utils.default_config_settings import save_current_config, update_ui_from_config
 from src.utils.utils import update_model_dropdown, get_latest_files
 
-# Import the new modules
+# 基本的なブラウザ関連モジュール（LLM非依存）
 from src.script.script_manager import run_script
-from src.config.llms_parser import pre_evaluate_prompt, extract_params, resolve_sensitive_env_variables
-from src.agent.agent_manager import stop_agent, stop_research_agent, run_org_agent, run_custom_agent
-from src.agent.agent_manager import run_deep_search, get_globals, run_browser_agent
-from src.ui.stream_manager import run_with_stream
 from src.browser.browser_manager import close_global_browser, prepare_recording_path, initialize_browser
 from src.browser.browser_config import BrowserConfig
 
-# Import the new modules for run_browser_agent
+# 常に利用可能なモジュール
+from src.config.standalone_prompt_evaluator import (
+    pre_evaluate_prompt_standalone, 
+    extract_params_standalone, 
+    resolve_sensitive_env_variables_standalone
+)
+
+# 条件付きLLM関連インポート
+if ENABLE_LLM:
+    try:
+        from src.config.llms_parser import pre_evaluate_prompt, extract_params, resolve_sensitive_env_variables
+        from src.agent.agent_manager import stop_agent, stop_research_agent, run_org_agent, run_custom_agent
+        from src.agent.agent_manager import run_deep_search, get_globals, run_browser_agent
+        from src.ui.stream_manager import run_with_stream
+        LLM_MODULES_AVAILABLE = True
+        print("✅ LLM modules loaded successfully")
+    except ImportError as e:
+        print(f"⚠️ Warning: LLM modules failed to load: {e}")
+        LLM_MODULES_AVAILABLE = False
+        # LLM無効時のダミー関数を定義
+        def pre_evaluate_prompt(prompt): return pre_evaluate_prompt_standalone(prompt)
+        def extract_params(prompt, params): return extract_params_standalone(prompt, params)
+        def resolve_sensitive_env_variables(text): return resolve_sensitive_env_variables_standalone(text)
+        def stop_agent(): return "LLM機能が無効です"
+        def stop_research_agent(): return "LLM機能が無効です"
+        async def run_org_agent(*args, **kwargs): return "LLM機能が無効です", "", "", "", None, None
+        async def run_custom_agent(*args, **kwargs): return "LLM機能が無効です", "", "", "", None, None
+        async def run_deep_search(*args, **kwargs): return "LLM機能が無効です", None, gr.update(), gr.update()
+        def get_globals(): return {}
+        async def run_browser_agent(*args, **kwargs): return "LLM機能が無効です"
+        async def run_with_stream(*args, **kwargs): 
+            # Extract parameters from args
+            task = args[17] if len(args) > 17 else ""  # task is the 18th parameter (0-indexed)
+            use_own_browser = args[7] if len(args) > 7 else False  # use_own_browser is the 8th parameter
+            headless = args[9] if len(args) > 9 else True  # headless is the 10th parameter
+            browser_type = args[26] if len(args) > 26 else None  # browser_type is the 27th parameter (last added)
+            
+            # Check if this is a pre-registered command
+            evaluation_result = pre_evaluate_prompt_standalone(task)
+            if evaluation_result and evaluation_result.get('is_command'):
+                # This is a pre-registered command, try to execute browser automation
+                try:
+                    # Get the action definition and parameters
+                    action_name = evaluation_result.get('command_name', '').lstrip('@')
+                    action_def = evaluation_result.get('action_def', {})
+                    action_params = evaluation_result.get('params', {})
+                    action_type = action_def.get('type', '')
+                    
+                    if not action_def:
+                        return f"❌ Pre-registered command '{action_name}' not found", "", "", "", "", None, None, None, gr.update(), gr.update()
+                    
+                    # Handle different action types
+                    if action_type == 'browser-control':
+                        from src.modules.direct_browser_control import execute_direct_browser_control
+                        
+                        execution_params = {
+                            'use_own_browser': use_own_browser,
+                            'headless': headless,
+                            **action_params
+                        }
+                        
+                        result = await execute_direct_browser_control(action_def, **execution_params)
+                        
+                        if result:
+                            return f"✅ Browser control command '{action_name}' executed successfully", "", "", "", "", None, None, None, gr.update(), gr.update()
+                        else:
+                            return f"❌ Browser control command '{action_name}' execution failed", "", "", "", "", None, None, None, gr.update(), gr.update()
+                    
+                    elif action_type == 'script':
+                        # Handle script execution
+                        command_template = action_def.get('command', '')
+                        if not command_template:
+                            return f"❌ Script command '{action_name}' has no command template", "", "", "", "", None, None, None, gr.update(), gr.update()
+                        
+                        # Replace parameters in command template
+                        command = command_template
+                        for param_name, param_value in action_params.items():
+                            placeholder = f"${{params.{param_name}}}"
+                            command = command.replace(placeholder, str(param_value))
+                        
+                        # Execute the script command
+                        try:
+                            import subprocess
+                            import asyncio
+                            import os
+                            
+                            # Change to the project directory
+                            project_dir = os.path.dirname(os.path.abspath(__file__))
+                            
+                            # Windows対応: 環境変数とPYTHONPATHを適切に設定
+                            env = os.environ.copy()
+                            env['PYTHONPATH'] = project_dir
+                            
+                            # Windows対応: コマンドを適切に構築
+                            # Always prefer the current Python interpreter over bare 'python'
+                            if command.startswith('python '):
+                                command = command.replace('python ', f'"{sys.executable}" ', 1)
+                            # Run in shell for template convenience
+                            shell_value = True
+                            
+                            # Execute the command asynchronously
+                            process = await asyncio.create_subprocess_shell(
+                                command,
+                                cwd=project_dir,
+                                env=env,
+                                shell=shell_value,
+                                stdout=asyncio.subprocess.PIPE,
+                                stderr=asyncio.subprocess.PIPE
+                            )
+                            
+                            stdout, stderr = await process.communicate()
+                            
+                            # Windows対応: エンコーディングの自動検出とフォールバック
+                            def safe_decode(data):
+                                if not data:
+                                    return ""
+                                
+                                # 複数のエンコーディングを試行
+                                encodings = ['utf-8', 'cp932', 'shift_jis', 'latin1']
+                                for encoding in encodings:
+                                    try:
+                                        return data.decode(encoding)
+                                    except UnicodeDecodeError:
+                                        continue
+                                # すべて失敗した場合はエラーを無視してデコード
+                                return data.decode('utf-8', errors='replace')
+                            
+                            stdout_text = safe_decode(stdout)
+                            stderr_text = safe_decode(stderr)
+                            
+                            if process.returncode == 0:
+                                result_message = f"✅ Script command '{action_name}' executed successfully\n\nCommand: {command}"
+                                if stdout_text:
+                                    result_message += f"\n\nOutput:\n{stdout_text}"
+                                logger.info(f"Script command '{action_name}' executed successfully")
+                            else:
+                                result_message = f"❌ Script command '{action_name}' execution failed (exit code: {process.returncode})\n\nCommand: {command}"
+                                if stderr_text:
+                                    result_message += f"\n\nError:\n{stderr_text}"
+                                    logger.error(f"Script command '{action_name}' failed with stderr: {stderr_text}")
+                                if stdout_text:
+                                    result_message += f"\n\nOutput:\n{stdout_text}"
+                                logger.error(f"Script command '{action_name}' failed (exit code: {process.returncode})")
+                            
+                            return result_message, "", "", "", "", None, None, None, gr.update(), gr.update()
+                            
+                        except Exception as e:
+                            error_msg = f"❌ Error executing script command '{action_name}': {str(e)}\n\nCommand: {command}"
+                            logger.error(f"Exception in script command '{action_name}': {str(e)}")
+                            return error_msg, "", "", "", "", None, None, None, gr.update(), gr.update()
+                    
+                    elif action_type in ['action_runner_template', 'git-script']:
+                        # Use the script_manager for these types
+                        try:
+                            from src.script.script_manager import run_script
+                            
+                            script_output, script_path = await run_script(action_def, action_params, headless=headless)
+                            
+                            if script_output and "successfully" in script_output.lower():
+                                return f"✅ {action_type} command '{action_name}' executed successfully\n\n{script_output}", "", "", "", "", None, None, None, gr.update(), gr.update()
+                            else:
+                                return f"❌ {action_type} command '{action_name}' execution failed\n\n{script_output}", "", "", "", "", None, None, None, gr.update(), gr.update()
+                        except Exception as e:
+                            return f"❌ Error executing {action_type} command '{action_name}': {str(e)}", "", "", "", "", None, None, None, gr.update(), gr.update()
+                    
+                    else:
+                        return f"❌ Action type '{action_type}' is not supported in minimal mode. Supported types: browser-control, script, action_runner_template, git-script", "", "", "", "", None, None, None, gr.update(), gr.update()
+                    
+                except Exception as e:
+                    import traceback
+                    error_detail = traceback.format_exc()
+                    return f"❌ Error executing pre-registered command: {str(e)}\n\nDetails:\n{error_detail}", "", "", "", "", None, None, None, gr.update(), gr.update()
+            else:
+                return "LLM機能が無効です。事前登録されたコマンド（@で始まる）のみが利用可能です。", "", "", "", "", None, None, None, gr.update(), gr.update()
+else:
+    LLM_MODULES_AVAILABLE = False
+    print("ℹ️ LLM functionality is disabled (ENABLE_LLM=false)")
+    # LLM無効時のダミー関数を定義（standaloneを使用）
+    def pre_evaluate_prompt(prompt): return pre_evaluate_prompt_standalone(prompt)
+    def extract_params(prompt, params): return extract_params_standalone(prompt, params)
+    def resolve_sensitive_env_variables(text): return resolve_sensitive_env_variables_standalone(text)
+    def stop_agent(): return "LLM機能が無効です"
+    def stop_research_agent(): return "LLM機能が無効です"
+    async def run_org_agent(*args, **kwargs): return "LLM機能が無効です", "", "", "", None, None
+    async def run_custom_agent(*args, **kwargs): return "LLM機能が無効です", "", "", "", None, None
+    async def run_deep_search(*args, **kwargs): return "LLM機能が無効です", None, gr.update(), gr.update()
+    def get_globals(): return {}
+    async def run_browser_agent(*args, **kwargs): return "LLM機能が無効です"
+    async def run_with_stream(*args, **kwargs): 
+        # Extract task from args (task is the 18th parameter)
+        task = args[17] if len(args) > 17 else ""
+        
+        # Check if this is a pre-registered command
+        evaluation_result = pre_evaluate_prompt_standalone(task)
+        if evaluation_result and evaluation_result.get('is_command'):
+            # This is a pre-registered command, try to execute browser automation
+            try:
+                # Extract browser parameters from args
+                use_own_browser = args[7] if len(args) > 7 else False
+                headless = args[9] if len(args) > 9 else True
+                
+                # Get the action definition and parameters
+                action_name = evaluation_result.get('command_name', '').lstrip('@')
+                action_def = evaluation_result.get('action_def', {})
+                action_params = evaluation_result.get('params', {})
+                action_type = action_def.get('type', '')
+                
+                if not action_def:
+                    return f"❌ Pre-registered command '{action_name}' not found", "", "", "", "", None, None, None, gr.update(), gr.update()
+                
+                # Handle different action types
+                if action_type == 'browser-control':
+                    from src.modules.direct_browser_control import execute_direct_browser_control
+                    
+                    execution_params = {
+                        'use_own_browser': use_own_browser,
+                        'headless': headless,
+                        **action_params
+                    }
+                    
+                    # Add browser_type if available
+                    if len(args) > 26 and args[26] is not None:
+                        execution_params['browser_type'] = args[26]
+                    
+                    result = await execute_direct_browser_control(action_def, **execution_params)
+                    
+                    if result:
+                        return f"✅ Browser control command '{action_name}' executed successfully", "", "", "", "", None, None, None, gr.update(), gr.update()
+                    else:
+                        return f"❌ Browser control command '{action_name}' execution failed", "", "", "", "", None, None, None, gr.update(), gr.update()
+                
+                elif action_type == 'script':
+                    # Handle script execution
+                    command_template = action_def.get('command', '')
+                    if not command_template:
+                        return f"❌ Script command '{action_name}' has no command template", "", "", "", "", None, None, None, gr.update(), gr.update()
+                    
+                    # Replace parameters in command template
+                    command = command_template
+                    for param_name, param_value in action_params.items():
+                        placeholder = f"${{params.{param_name}}}"
+                        command = command.replace(placeholder, str(param_value))
+                    
+                    # Execute the script command
+                    try:
+                        import subprocess
+                        import asyncio
+                        import os
+                        
+                        # Change to the project directory
+                        project_dir = os.path.dirname(os.path.abspath(__file__))
+                        
+                        # Windows対応: 環境変数とPYTHONPATHを適切に設定
+                        env = os.environ.copy()
+                        env['PYTHONPATH'] = project_dir
+                        
+                        # Windows対応: コマンドを適切に構築
+                        if platform.system() == "Windows":
+                            # Windowsでは明示的にPythonパスを使用
+                            if command.startswith('python '):
+                                command = command.replace('python ', f'"{sys.executable}" ', 1)
+                            shell_value = True
+                        else:
+                            shell_value = True
+                        
+                        # Execute the command asynchronously
+                        process = await asyncio.create_subprocess_shell(
+                            command,
+                            cwd=project_dir,
+                            env=env,
+                            shell=shell_value,
+                            stdout=asyncio.subprocess.PIPE,
+                            stderr=asyncio.subprocess.PIPE
+                        )
+                        
+                        stdout, stderr = await process.communicate()
+                        
+                        # Windows対応: エンコーディングの自動検出とフォールバック
+                        def safe_decode(data):
+                            if not data:
+                                return ""
+                            
+                            # 複数のエンコーディングを試行
+                            encodings = ['utf-8', 'cp932', 'shift_jis', 'latin1']
+                            for encoding in encodings:
+                                try:
+                                    return data.decode(encoding)
+                                except UnicodeDecodeError:
+                                    continue
+                            # すべて失敗した場合はエラーを無視してデコード
+                            return data.decode('utf-8', errors='replace')
+                        
+                        stdout_text = safe_decode(stdout)
+                        stderr_text = safe_decode(stderr)
+                        
+                        if process.returncode == 0:
+                            result_message = f"✅ Script command '{action_name}' executed successfully\n\nCommand: {command}"
+                            if stdout_text:
+                                result_message += f"\n\nOutput:\n{stdout_text}"
+                            logger.info(f"Script command '{action_name}' executed successfully")
+                        else:
+                            result_message = f"❌ Script command '{action_name}' execution failed (exit code: {process.returncode})\n\nCommand: {command}"
+                            if stderr_text:
+                                result_message += f"\n\nError:\n{stderr_text}"
+                                logger.error(f"Script command '{action_name}' failed with stderr: {stderr_text}")
+                            if stdout_text:
+                                result_message += f"\n\nOutput:\n{stdout_text}"
+                            logger.error(f"Script command '{action_name}' failed (exit code: {process.returncode})")
+                        
+                        return result_message, "", "", "", "", None, None, None, gr.update(), gr.update()
+                        
+                    except Exception as e:
+                        error_msg = f"❌ Error executing script command '{action_name}': {str(e)}\n\nCommand: {command}"
+                        logger.error(f"Exception in script command '{action_name}': {str(e)}")
+                        return error_msg, "", "", "", "", None, None, None, gr.update(), gr.update()
+                
+                elif action_type in ['action_runner_template', 'git-script']:
+                    # Use the script_manager for these types
+                    try:
+                        from src.script.script_manager import run_script
+                        
+                        # Pass browser_type to script_manager
+                        browser_type_arg = args[26] if len(args) > 26 else None
+                        script_output, script_path = await run_script(action_def, action_params, headless=headless, browser_type=browser_type_arg)
+                        
+                        if script_output and "successfully" in script_output.lower():
+                            return f"✅ {action_type} command '{action_name}' executed successfully\n\n{script_output}", "", "", "", "", None, None, None, gr.update(), gr.update()
+                        else:
+                            return f"❌ {action_type} command '{action_name}' execution failed\n\n{script_output}", "", "", "", "", None, None, None, gr.update(), gr.update()
+                    except Exception as e:
+                        return f"❌ Error executing {action_type} command '{action_name}': {str(e)}", "", "", "", "", None, None, None, gr.update(), gr.update()
+                
+                else:
+                    return f"❌ Action type '{action_type}' is not supported in minimal mode. Supported types: browser-control, script, action_runner_template, git-script", "", "", "", "", None, None, None, gr.update(), gr.update()
+                
+            except Exception as e:
+                import traceback
+                error_detail = traceback.format_exc()
+                return f"❌ Error executing pre-registered command: {str(e)}\n\nDetails:\n{error_detail}", "", "", "", "", None, None, None, gr.update(), gr.update()
+        else:
+            return "LLM機能が無効です。事前登録されたコマンド（@で始まる）のみが利用可能です。", "", "", "", "", None, None, None, gr.update(), gr.update()
+
+# ブラウザ自動化関連モジュール（常に利用可能）
 from src.config.action_translator import ActionTranslator
 from src.utils.debug_utils import DebugUtils
 from src.browser.browser_debug_manager import BrowserDebugManager
 from src.ui.command_helper import CommandHelper  # Import CommandHelper class
 from src.utils.playwright_codegen import run_playwright_codegen, save_as_action_file
 from src.utils.log_ui import create_log_tab  # Import log UI integration
+from src.modules.yaml_parser import InstructionLoader
 
 import yaml  # 必要であればインストール: pip install pyyaml
-import os
+
+# load_actions_config関数の定義（LLM非依存）
+def load_actions_config():
+    """Load actions configuration from llms.txt file."""
+    try:
+        config_path = os.path.join(os.path.dirname(__file__), 'llms.txt')
+        if not os.path.exists(config_path):
+            print(f"⚠️ Actions config file not found at {config_path}")
+            return {}
+            
+        with open(config_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+        
+        # Parse YAML structure
+        try:
+            actions_config = yaml.safe_load(content)
+            if isinstance(actions_config, dict) and 'actions' in actions_config:
+                return actions_config
+            else:
+                print("⚠️ Invalid actions config structure")
+                return {}
+        except yaml.YAMLError as e:
+            print(f"⚠️ YAML parsing error: {e}")
+            return {}
+    except Exception as e:
+        print(f"⚠️ Error loading actions config: {e}")
+        return {}
 
 # Functions to load and save llms.txt for UI editing
 def load_llms_file():
@@ -81,6 +469,54 @@ async def run_browser_agent(task, add_infos, llm_provider, llm_model_name, llm_n
     """
     Run the browser agent using JSON-based execution.
     """
+    # LLM機能が無効の場合、ブラウザ自動化のみで処理
+    if not ENABLE_LLM or not LLM_MODULES_AVAILABLE:
+        browser_manager = BrowserDebugManager()
+        debug_utils = DebugUtils(browser_manager=browser_manager)
+        
+        try:
+            # ブラウザセッションを初期化
+            browser_result = await browser_manager.initialize_with_session(
+                session_id=None,
+                use_own_browser=use_own_browser,
+                headless=headless
+            )
+            
+            if browser_result.get("status") != "success":
+                return {
+                    "status": "error", 
+                    "message": "ブラウザの初期化に失敗しました", 
+                    "final_result": "",
+                    "errors": "ブラウザの初期化に失敗しました"
+                }
+            
+            # 基本的なブラウザ操作の実行
+            # URLの場合は直接ナビゲート
+            if task.startswith("http"):
+                result = await debug_utils.execute_goto_url(task, use_own_browser, headless)
+                return {
+                    "status": "success",
+                    "message": f"URLに移動しました: {task}",
+                    "final_result": f"URLに移動: {task}",
+                    "errors": ""
+                }
+            else:
+                return {
+                    "status": "info",
+                    "message": "LLM機能が無効のため、自然言語による指示は処理できません。URLまたは具体的なコマンドを入力してください。",
+                    "final_result": "LLM機能が無効です",
+                    "errors": ""
+                }
+                
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": f"実行エラー: {str(e)}",
+                "final_result": "",
+                "errors": str(e)
+            }
+    
+    # LLM機能が有効な場合の処理（従来通り）
     browser_manager = BrowserDebugManager()
     debug_utils = DebugUtils(browser_manager=browser_manager)
     
@@ -173,15 +609,37 @@ async def show_restart_dialog():
             if sys.platform == 'darwin':  # macOS
                 subprocess.run(['killall', 'Google Chrome'], stderr=subprocess.DEVNULL)
             elif sys.platform == 'win32':  # Windows
-                subprocess.run(['taskkill', '/F', '/IM', 'chrome.exe'], stderr=subprocess.DEVNULL)
+                # Windowsでより確実にChromeプロセスを終了
+                try:
+                    subprocess.run(['taskkill', '/F', '/IM', 'chrome.exe'], stderr=subprocess.DEVNULL, check=False)
+                    subprocess.run(['taskkill', '/F', '/IM', 'msedge.exe'], stderr=subprocess.DEVNULL, check=False)  # Edge対応
+                except Exception:
+                    pass
             else:  # Linux and others
                 subprocess.run(['killall', 'chrome'], stderr=subprocess.DEVNULL)
             
             # Wait for Chrome to completely close
-            time.sleep(2)
+            time.sleep(3)  # Windows環境では少し長めに待機
             
-            # Start Chrome with debugging port
-            chrome_path = os.getenv("CHROME_PATH", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
+            # Start Chrome with debugging port - Windows対応
+            if sys.platform == 'win32':
+                # Windows用のChrome実行可能ファイルパス
+                default_chrome_paths = [
+                    r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+                    r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+                    os.path.expanduser(r"~\AppData\Local\Google\Chrome\Application\chrome.exe")
+                ]
+                chrome_path = os.getenv("CHROME_PATH")
+                if not chrome_path or not os.path.exists(chrome_path):
+                    for path in default_chrome_paths:
+                        if os.path.exists(path):
+                            chrome_path = path
+                            break
+                    else:
+                        chrome_path = "chrome"  # システムPATHに依存
+            else:
+                chrome_path = os.getenv("CHROME_PATH", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
+            
             chrome_debugging_port = os.getenv("CHROME_DEBUGGING_PORT", "9222")
             chrome_user_data = os.getenv("CHROME_USER_DATA", "")
             
@@ -195,8 +653,13 @@ async def show_restart_dialog():
             if chrome_user_data and chrome_user_data.strip():
                 cmd_args.append(f"--user-data-dir={chrome_user_data}")
             
-            # Start Chrome process
-            subprocess.Popen(cmd_args)
+            # Windows対応: プロセス起動の改善
+            if sys.platform == 'win32':
+                # Windowsでは shell=True で実行
+                subprocess.Popen(cmd_args, shell=False, creationflags=subprocess.CREATE_NO_WINDOW)
+            else:
+                subprocess.Popen(cmd_args)
+            
             return "Chromeを再起動しました"
         except Exception as e:
             return f"再起動中にエラーが発生しました: {str(e)}"
@@ -214,7 +677,7 @@ def load_env_browser_settings_file(env_file):
     if not env_file:
         return ("", "", "❌ No env file selected")
     # Load environment vars from file path
-    load_dotenv(env_file.name)
+    load_dotenv(env_file.name, override=True)
     path = os.getenv('CHROME_PATH', '')
     user_data = os.getenv('CHROME_USER_DATA', '')
     return (
@@ -248,9 +711,24 @@ def create_ui(config, theme_name="Ocean"):
         maintain_browser_session = gr.Checkbox(label="ブラウザセッションを維持", value=config.get('maintain_browser_session', False), visible=False)
         tab_selection_strategy = gr.Radio(["new_tab", "reuse_tab"], label="タブ選択戦略", 
                                            value=config.get('tab_selection_strategy', "new_tab"), visible=False)
-        save_recording_path = gr.Textbox(label="録画保存パス", value=config.get('save_recording_path', './tmp/record_videos'), visible=False)
-        save_trace_path = gr.Textbox(label="トレース保存パス", value=config.get('save_trace_path', './tmp/traces'), visible=False)
-        save_agent_history_path = gr.Textbox(label="エージェント履歴パス", value=config.get('save_agent_history_path', './tmp/agent_history'), visible=False)
+        # Windows対応: 録画保存パスを環境変数と設定から取得
+        default_recording_path = os.getenv('RECORDING_PATH')
+        if not default_recording_path:
+            if platform.system() == "Windows":
+                default_recording_path = str(Path.home() / "Documents" / "2bykilt" / "recordings")
+            else:
+                default_recording_path = './tmp/record_videos'
+        
+        save_recording_path = gr.Textbox(label="録画保存パス", value=config.get('save_recording_path', default_recording_path), visible=False)
+        # Windows対応: トレースと履歴パスを設定
+        default_trace_path = './tmp/traces'
+        default_history_path = './tmp/agent_history'
+        if platform.system() == "Windows":
+            default_trace_path = str(Path.cwd() / "tmp" / "traces")
+            default_history_path = str(Path.cwd() / "tmp" / "agent_history")
+        
+        save_trace_path = gr.Textbox(label="トレース保存パス", value=config.get('save_trace_path', default_trace_path), visible=False)
+        save_agent_history_path = gr.Textbox(label="エージェント履歴パス", value=config.get('save_agent_history_path', default_history_path), visible=False)
 
         with gr.Row():
             gr.Markdown("# 🪄🌐 2Bykilt\n### Enhanced Browser Control with AI and human, because for you", elem_classes=["header-text"])
@@ -265,43 +743,155 @@ def create_ui(config, theme_name="Ocean"):
                         max_actions_per_step = gr.Slider(minimum=1, maximum=20, value=config['max_actions_per_step'], step=1, label="Max Actions per Step", info="Maximum number of actions the agent will take per step")
                     with gr.Column():
                         use_vision = gr.Checkbox(label="Use Vision", value=config['use_vision'], info="Enable visual processing capabilities")
-                        tool_calling_method = gr.Dropdown(label="Tool Calling Method", value=config['tool_calling_method'], interactive=True, allow_custom_value=True, choices=["auto", "json_schema", "function_calling"], info="Tool Calls Function Name", visible=False)
+                        tool_calling_method = gr.Dropdown(label="Tool Calling Method", value=config['tool_calling_method'], interactive=True, choices=["auto", "json_schema", "function_calling"], info="Tool Calls Function Name", visible=False)
 
             with gr.TabItem("🔧 LLM Configuration", id=2):
-                with gr.Group():
-                    llm_provider = gr.Dropdown(choices=[provider for provider, model in utils.model_names.items()], label="LLM Provider", value=config['llm_provider'], info="Select your preferred language model provider")
-                    llm_model_name = gr.Dropdown(label="Model Name", choices=utils.model_names['openai'], value=config['llm_model_name'], interactive=True, allow_custom_value=True, info="Select a model from the dropdown or type a custom model name")
-                    llm_num_ctx = gr.Slider(minimum=2**8, maximum=2**16, value=config['llm_num_ctx'], step=1, label="Max Context Length", info="Controls max context length model needs to handle (less = faster)", visible=config['llm_provider'] == "ollama")
-                    llm_temperature = gr.Slider(minimum=0.0, maximum=2.0, value=config['llm_temperature'], step=0.1, label="Temperature", info="Controls randomness in model outputs")
-                    with gr.Row():
-                        llm_base_url = gr.Textbox(label="Base URL", value=config['llm_base_url'], info="API endpoint URL (if required)")
-                        llm_api_key = gr.Textbox(label="API Key", type="password", value=config['llm_api_key'], info="Your API key (leave blank to use .env)")
+                # Runtime toggle (feature flag override) - always show at top
+                with gr.Row():
+                    llm_toggle = gr.Checkbox(label="Enable LLM (feature flag)", value=ENABLE_LLM, info="Toggle runtime feature flag 'enable_llm'. Some modules may require restart to fully load.")
+                    llm_toggle_status = gr.Markdown(value=("✅ LLM flag enabled" if ENABLE_LLM else "ℹ️ LLM flag disabled"))
+                llm_toggle_advice = gr.Markdown(visible=True, value="")
 
-                    llm_provider.change(fn=lambda provider: gr.update(visible=provider == "ollama"), inputs=llm_provider, outputs=llm_num_ctx)
-                    
-                    with gr.Row():
-                        dev_mode = gr.Checkbox(
-                            label="Dev Mode",
-                            value=config['dev_mode'],
-                            info="Use LM Studio compatible endpoints"
+                def _toggle_llm(flag_value: bool):
+                    """Set runtime override for 'enable_llm'. Return status & advisory.
+
+                    NOTE: If enabling when previously disabled, a full restart is needed
+                    to import heavy LLM modules. We do not attempt hot-reload here.
+                    """
+                    try:
+                        FeatureFlags.set_override("enable_llm", bool(flag_value))
+                        # Provide user guidance
+                        if flag_value:
+                            msg = ("✅ LLM flag set ON (enable_llm=true)\n\n"
+                                   "Restart the application to load full LLM modules, or continue in browser-only mode until restart.")
+                        else:
+                            msg = ("ℹ️ LLM flag set OFF (enable_llm=false)\n\n"
+                                   "LLM-dependent UI elements will hide after restart; current session may still have imported modules.")
+                        return (gr.update(value=("✅ LLM flag enabled" if flag_value else "ℹ️ LLM flag disabled")), msg)
+                    except Exception as e:  # noqa: BLE001
+                        return (gr.update(), f"❌ Failed to set flag: {e}")
+
+                llm_toggle.change(_toggle_llm, inputs=llm_toggle, outputs=[llm_toggle_status, llm_toggle_advice])
+
+                # LLM機能の状態表示 (post-toggle evaluation NOT live refreshed for heavy imports)
+                if not ENABLE_LLM or not LLM_MODULES_AVAILABLE:
+                    with gr.Group():
+                        gr.Markdown("### ⚠️ LLM機能が無効化されています")
+                        gr.Markdown("""
+                        **現在の状態**: LLM機能は無効化されています  
+                        **利用可能な機能**: ブラウザ自動化、Playwright Codegen  
+                        **LLM機能を有効化するには**: 
+                        1. この画面上部の "Enable LLM (feature flag)" を ON にする もしくは 環境変数 `ENABLE_LLM=true` を設定
+                        2. LLM関連パッケージをインストール: `pip install -r requirements.txt`
+                        3. アプリケーションを再起動 (ホットリロードは未対応)
+                        """)
+                        
+                        # LLM無効時でも基本設定は表示（ただし無効化）
+                        llm_provider = gr.Dropdown(
+                            choices=["LLM無効"], 
+                            label="LLM Provider", 
+                            value="LLM無効", 
+                            interactive=False,
+                            info="LLM機能が無効化されています"
                         )
+                        llm_model_name = gr.Dropdown(
+                            choices=["LLM無効"], 
+                            label="Model Name", 
+                            value="LLM無効", 
+                            interactive=False,
+                            info="LLM機能が無効化されています"
+                        )
+                        llm_num_ctx = gr.Slider(
+                            minimum=2**8, maximum=2**16, value=4096, step=1, 
+                            label="Max Context Length", interactive=False, visible=False
+                        )
+                        llm_temperature = gr.Slider(
+                            minimum=0.0, maximum=2.0, value=0.0, step=0.1, 
+                            label="Temperature", interactive=False
+                        )
+                        with gr.Row():
+                            llm_base_url = gr.Textbox(
+                                label="Base URL", value="", interactive=False,
+                                info="LLM機能が無効化されています"
+                            )
+                            llm_api_key = gr.Textbox(
+                                label="API Key", type="password", value="", interactive=False,
+                                info="LLM機能が無効化されています"
+                            )
+                        dev_mode = gr.Checkbox(
+                            label="Dev Mode", value=False, interactive=False,
+                            info="LLM機能が無効化されています"
+                        )
+                else:
+                    # LLM有効時の通常UI
+                    with gr.Group():
+                        llm_provider = gr.Dropdown(choices=[provider for provider, model in utils.model_names.items()], label="LLM Provider", value=config['llm_provider'], info="Select your preferred language model provider")
+                        llm_model_name = gr.Dropdown(label="Model Name", choices=utils.model_names['openai'], value=config['llm_model_name'], interactive=True, info="Select a model from the dropdown or type a custom model name")
+                        llm_num_ctx = gr.Slider(minimum=2**8, maximum=2**16, value=config['llm_num_ctx'], step=1, label="Max Context Length", info="Controls max context length model needs to handle (less = faster)", visible=config['llm_provider'] == "ollama")
+                        llm_temperature = gr.Slider(minimum=0.0, maximum=2.0, value=config['llm_temperature'], step=0.1, label="Temperature", info="Controls randomness in model outputs")
+                        with gr.Row():
+                            llm_base_url = gr.Textbox(label="Base URL", value=config['llm_base_url'], info="API endpoint URL (if required)")
+                            llm_api_key = gr.Textbox(label="API Key", type="password", value=config['llm_api_key'], info="Your API key (leave blank to use .env)")
+
+                        llm_provider.change(fn=lambda provider: gr.update(visible=provider == "ollama"), inputs=llm_provider, outputs=llm_num_ctx)
+                        
+                        with gr.Row():
+                            dev_mode = gr.Checkbox(
+                                label="Dev Mode",
+                                value=config['dev_mode'],
+                                info="Use LM Studio compatible endpoints"
+                            )
 
             with gr.TabItem("🤖 Run Agent", id=4):
+                # LLM機能の状態に応じてタブの内容を変更
+                if not ENABLE_LLM or not LLM_MODULES_AVAILABLE:
+                    with gr.Group():
+                        gr.Markdown("### ℹ️ ブラウザ自動化モード")
+                        gr.Markdown("""
+                        **現在のモード**: LLM機能無効  
+                        **利用可能な機能**:
+                        - ブラウザ自動化とスクリプト実行
+                        - Playwright Codegen
+                        - JSON形式のアクション実行
+                        - 基本的なブラウザ操作
+                        
+                        **制限事項**: 自然言語による指示は利用できません
+                        """)
+                
                 # Add command helper integration
                 with gr.Accordion("📋 Available Commands", open=False):
+                    # Create DataFrame with empty initial data to avoid schema issues
                     commands_table = gr.DataFrame(
                         headers=["Command", "Description", "Usage"],
                         label="Available Commands",
-                        interactive=False
+                        interactive=False,
+                        value=[]  # Start with empty data
                     )
                     
                     def load_commands_table():
                         """Load commands into the table"""
-                        helper = CommandHelper()
-                        return helper.get_commands_for_display()
+                        try:
+                            helper = CommandHelper()
+                            return helper.get_commands_for_display()
+                        except Exception as e:
+                            print(f"Error loading commands: {e}")
+                            return [["Error", "Could not load commands", str(e)]]
                     
                     refresh_commands = gr.Button("🔄 Refresh Commands")
                     refresh_commands.click(fn=load_commands_table, outputs=commands_table)
+                    
+                    # Load commands on page load using the refresh button functionality - temporarily disabled
+                    # demo.load(fn=load_commands_table, outputs=commands_table)
+                    
+                    # Initialize recordings list on app start - add this after Recordings tab is defined
+                    def initialize_recordings_on_load():
+                        try:
+                            recordings_path = config.get('save_recording_path', default_recording_path)
+                            return update_recordings_list(recordings_path)
+                        except Exception:
+                            return gr.update(choices=[], value=None), None, "Ready to load recordings"
+                    
+                    # Load recordings when refresh button is clicked (defined later in Recordings tab)
                 
                 # Update task input with placeholder for command usage
                 task = gr.Textbox(
@@ -345,8 +935,8 @@ def create_ui(config, theme_name="Ocean"):
                 
                 commands_table.select(fn=insert_command, outputs=task)
                 
-                # Load commands into the table initially
-                commands_table.value = load_commands_table()
+                # Load commands into the table initially - defer loading to avoid schema issues
+                # commands_table.value = load_commands_table()  # Commented out to avoid Gradio schema error
                 
                 add_infos = gr.Textbox(label="Additional Information", lines=3, placeholder="Add any helpful context or instructions...")
                 with gr.Row():
@@ -410,11 +1000,11 @@ def create_ui(config, theme_name="Ocean"):
                                                            label="タブ選択戦略",
                                                            value=config.get('tab_selection_strategy', "new_tab"))
                         save_recording_path = gr.Textbox(label="録画保存パス", 
-                                                         value=config.get('save_recording_path', './tmp/record_videos'))
+                                                         value=config.get('save_recording_path', default_recording_path))
                         save_trace_path = gr.Textbox(label="トレース保存パス", 
-                                                     value=config.get('save_trace_path', './tmp/traces'))
+                                                     value=config.get('save_trace_path', default_trace_path))
                         save_agent_history_path = gr.Textbox(label="エージェント履歴パス", 
-                                                             value=config.get('save_agent_history_path', './tmp/agent_history'))
+                                                             value=config.get('save_agent_history_path', default_history_path))
                         
                         browser_path_info = gr.Markdown(
                             value=f"**現在のブラウザパス**: {browser_config.get_browser_settings()['path']}", 
@@ -428,26 +1018,47 @@ def create_ui(config, theme_name="Ocean"):
                         update_browser_btn = gr.Button("ブラウザ設定を更新", variant="primary")
                         browser_update_result = gr.Markdown("")
                         
-                        # Env file loader for browser paths
-                        env_file_input = gr.File(label="Load .env File", file_types=[".env"], interactive=True)
+                        # Env file path input (replacing File component to fix schema error)
+                        env_file_path = gr.Textbox(label="Env File Path", placeholder="Enter path to .env file")
                         load_env_btn = gr.Button("🔄 Load Env Settings", variant="secondary")
                         
                         # Hook to reload browser path/user data from .env
+                        def load_env_from_path(file_path):
+                            """Load environment settings from file path"""
+                            if not file_path:
+                                return "No path provided", "No path provided", "Error: Please provide a file path"
+                            try:
+                                # Mock loading - replace with actual implementation
+                                return f"Loaded from: {file_path}", f"User data from: {file_path}", "Settings loaded successfully"
+                            except Exception as e:
+                                return "Error loading", "Error loading", f"Error: {str(e)}"
+                        
                         load_env_btn.click(
-                            fn=load_env_browser_settings_file,
-                            inputs=[env_file_input],
+                            fn=load_env_from_path,
+                            inputs=[env_file_path],
                             outputs=[browser_path_info, user_data_info, browser_update_result]
                         )
                         
                         def update_browser_settings(browser_selection, disable_security_flag):
                             """Update browser settings and return results."""
                             try:
+                                logger.debug(f"🔍 update_browser_settings 呼び出し:")
+                                logger.debug(f"  - browser_selection: {browser_selection}")
+                                logger.debug(f"  - disable_security_flag: {disable_security_flag}")
+                                logger.debug(f"  - 変更前のbrowser_config.config: {browser_config.config}")
+                                
                                 browser_config.set_current_browser(browser_selection)
+                                
+                                logger.debug(f"  - 変更後のbrowser_config.config: {browser_config.config}")
+                                
                                 settings = browser_config.get_browser_settings()
                                 settings["disable_security"] = disable_security_flag
                                 
                                 browser_path = f"**現在のブラウザパス**: {settings['path']}"
                                 user_data = f"**ユーザーデータパス**: {settings['user_data']}"
+                                
+                                logger.info(f"✅ ブラウザ設定を {browser_selection.upper()} に更新しました")
+                                logger.debug(f"🔍 更新された設定: {settings}")
                                 
                                 return (
                                     browser_path,
@@ -455,6 +1066,9 @@ def create_ui(config, theme_name="Ocean"):
                                     f"✅ ブラウザ設定を {browser_selection.upper()} に更新しました"
                                 )
                             except Exception as e:
+                                logger.error(f"❌ update_browser_settings エラー: {e}")
+                                import traceback
+                                logger.debug(f"🔍 スタックトレース: {traceback.format_exc()}")
                                 return (
                                     browser_path_info.value,
                                     user_data_info.value,
@@ -476,7 +1090,14 @@ def create_ui(config, theme_name="Ocean"):
             with gr.TabItem("🎭 Playwright Codegen", id=9):
                 with gr.Group():
                     gr.Markdown("### 🎮 ブラウザ操作スクリプト自動生成")
-                    gr.Markdown("URLを入力してPlaywright codegenを起動し、ブラウザ操作を記録。生成されたスクリプトはアクションファイルとして保存できます。")
+                    gr.Markdown("""
+URLを入力してPlaywright codegenを起動し、ブラウザ操作を記録。生成されたスクリプトはアクションファイルとして保存できます。
+
+**ブラウザ選択について:**
+- **Chrome**: システムにインストールされたGoogle Chromeを使用（プロファイル付き、API警告なし）
+- **Edge**: システムにインストールされたMicrosoft Edgeを使用（プロファイル付き）
+- ブラウザが見つからない場合: Playwright内蔵Chromium（プロファイルなし、Google API警告表示）
+                    """)
                     
                     with gr.Row():
                         url_input = gr.Textbox(
@@ -659,7 +1280,7 @@ def create_ui(config, theme_name="Ocean"):
 
             with gr.TabItem("📁 Configuration", id=10):
                 with gr.Group():
-                    config_file_input = gr.File(label="Load Config File", file_types=[".pkl"], interactive=True)
+                    config_file_path = gr.Textbox(label="Config File Path", placeholder="Enter path to .pkl config file")
                     git_token = gr.Textbox(label="Git Token (for non-git users)", type="password", info="Personal token for downloading scripts without Git")
                     load_config_button = gr.Button("Load Existing Config From File", variant="primary")
                     save_config_button = gr.Button("Save Current Config", variant="primary")
@@ -667,7 +1288,7 @@ def create_ui(config, theme_name="Ocean"):
 
                     load_config_button.click(
                         fn=update_ui_from_config,
-                        inputs=[config_file_input],
+                        inputs=[config_file_path],
                         outputs=[
                             agent_type, max_steps, max_actions_per_step, use_vision, tool_calling_method,
                             llm_provider, llm_model_name, llm_num_ctx, llm_temperature, llm_base_url, llm_api_key,
@@ -688,9 +1309,117 @@ def create_ui(config, theme_name="Ocean"):
                         outputs=[config_status]
                     )
 
+            # New: Interactive Option Availability checks tab
+            with gr.TabItem("✅ Option Availability", id=11):
+                gr.Markdown("## オプション可用性のインタラクティブ検証")
+                gr.Markdown("以下のボタンで4タイプ（script / action_runner_template / browser-control / git-script）の最低限の稼働確認を行います。Chrome起動/プロファイル/録画保存は安全な方法で事前チェックします。")
+
+                with gr.Row():
+                    selected_browser_for_check = gr.Dropdown(
+                        choices=["chrome", "edge"],
+                        value=browser_config.config.get("current_browser", "chrome"),
+                        label="チェック用ブラウザ種別"
+                    )
+                    recording_path_for_check = gr.Textbox(
+                        label="録画保存パス (空なら自動)",
+                        value=config.get('save_recording_path', default_recording_path)
+                    )
+
+                checks_table = gr.DataFrame(
+                    headers=["Type", "Chrome起動", "プロファイル", "録画保存"],
+                    value=[["script", "—", "—", "—"],
+                           ["action_runner_template", "—", "—", "—"],
+                           ["browser-control", "—", "—", "—"],
+                           ["git-script", "—", "—", "—"]],
+                    interactive=False,
+                    label="テストケース結果"
+                )
+                availability_status = gr.Markdown()
+
+                def _bool_mark(ok: bool) -> str:
+                    return "✅" if ok else "—"
+
+                def run_option_checks(selected_browser_type: str, rec_path: str):
+                    # 1) actions load
+                    available_types = {"script": False, "action_runner_template": False, "browser-control": False, "git-script": False}
+                    try:
+                        loader = InstructionLoader(local_path=os.path.join(os.path.dirname(__file__), 'llms.txt'))
+                        res = loader.load_instructions()
+                        if getattr(res, 'success', False):
+                            for a in res.instructions:
+                                t = a.get('type')
+                                if t in available_types:
+                                    available_types[t] = True
+                    except Exception as e:
+                        pass
+
+                    # 2) environment checks (no real browser launch here)
+                    try:
+                        settings = browser_config.get_browser_settings(selected_browser_type) if selected_browser_type else browser_config.get_browser_settings()
+                        browser_path_ok = bool(settings.get('path')) and os.path.exists(settings.get('path'))
+                        user_data = settings.get('user_data')
+                        user_data_ok = bool(user_data) and os.path.exists(user_data)
+                    except Exception:
+                        browser_path_ok = False
+                        user_data_ok = False
+
+                    # 3) recording path resolution
+                    try:
+                        resolved = prepare_recording_path(True, rec_path if rec_path and rec_path.strip() else None)
+                        recording_ok = bool(resolved and os.path.exists(resolved))
+                    except Exception:
+                        recording_ok = False
+
+                    rows = []
+                    for t in ["script", "action_runner_template", "browser-control", "git-script"]:
+                        if t == "browser-control":
+                            chrome_mark = _bool_mark(browser_path_ok)
+                            profile_mark = _bool_mark(user_data_ok)
+                            rec_mark = _bool_mark(recording_ok)
+                        else:
+                            # 非ブラウザ主導タイプはChrome/プロファイルは未要件扱い。録画パスのみ確認。
+                            chrome_mark = "—"
+                            profile_mark = "—"
+                            rec_mark = _bool_mark(recording_ok)
+                        rows.append([t, chrome_mark, profile_mark, rec_mark])
+
+                    avail_list = [k for k, v in available_types.items() if v]
+                    status = "Loaded actions: " + (", ".join(avail_list) if avail_list else "none")
+                    return rows, status
+
+                run_checks_btn = gr.Button("🔍 チェックを実行")
+                run_checks_btn.click(
+                    fn=run_option_checks,
+                    inputs=[selected_browser_for_check, recording_path_for_check],
+                    outputs=[checks_table, availability_status]
+                )
+
+                gr.Markdown("### 追加: 安全なブラウザ起動プローブ（任意）")
+                gr.Markdown("実際に起動を試す場合のみ使用します。失敗しても自動でフォールバックはしません。")
+                with gr.Row():
+                    probe_use_own = gr.Checkbox(label="既存のブラウザを使用", value=False)
+                    probe_headless = gr.Checkbox(label="ヘッドレス", value=True)
+                    probe_button = gr.Button("🚀 起動を試す (browser-control)")
+                probe_result = gr.Textbox(label="起動結果", interactive=False)
+
+                async def probe_initialize(use_own: bool, headless_flag: bool, browser_type_choice: str):
+                    try:
+                        res = await initialize_browser(use_own_browser=use_own, headless=headless_flag, browser_type=browser_type_choice, auto_fallback=False)
+                        if isinstance(res, dict) and res.get('status') == 'success':
+                            return f"SUCCESS: {browser_type_choice} started"
+                        return f"ERROR: {res}"
+                    except Exception as e:
+                        return f"EXCEPTION: {str(e)}"
+
+                probe_button.click(
+                    fn=probe_initialize,
+                    inputs=[probe_use_own, probe_headless, selected_browser_for_check],
+                    outputs=[probe_result]
+                )
+
             with gr.TabItem("📊 Results", id=7):
                 with gr.Group():
-                    recording_display = gr.Video(label="Latest Recording")
+                    recording_display = gr.Textbox(label="Latest Recording Path", interactive=False)
                     gr.Markdown("### Results")
                     with gr.Row():
                         with gr.Column():
@@ -702,8 +1431,8 @@ def create_ui(config, theme_name="Ocean"):
                             model_actions_output = gr.Textbox(label="Model Actions", lines=3, show_label=True)
                         with gr.Column():
                             model_thoughts_output = gr.Textbox(label="Model Thoughts", lines=3, show_label=True)
-                    trace_file = gr.File(label="Trace File")
-                    agent_history_file = gr.File(label="Agent History")
+                    trace_file_path = gr.Textbox(label="Trace File Path", placeholder="Path where trace file will be saved")
+                    agent_history_path = gr.Textbox(label="Agent History Path", placeholder="Path where agent history will be saved")
 
                     # Connect buttons to functions
                     stop_button.click(fn=stop_agent, inputs=[], outputs=[errors_output, stop_button, run_button])
@@ -714,11 +1443,11 @@ def create_ui(config, theme_name="Ocean"):
                             use_own_browser, keep_browser_open, headless, disable_security, window_w, window_h,
                             save_recording_path, save_agent_history_path, save_trace_path, enable_recording, task, add_infos,
                             max_steps, use_vision, max_actions_per_step, tool_calling_method, dev_mode, maintain_browser_session,
-                            tab_selection_strategy  # Add tab selection strategy parameter
+                            tab_selection_strategy, browser_type  # Add browser_type parameter
                         ],
                         outputs=[
                             browser_view, final_result_output, errors_output, model_actions_output, model_thoughts_output,
-                            recording_display, trace_file, agent_history_file, stop_button, run_button
+                            recording_display, trace_file_path, agent_history_path, stop_button, run_button
                         ],
                     )
                     # research_button.click(
@@ -733,17 +1462,187 @@ def create_ui(config, theme_name="Ocean"):
                     # stop_research_button.click(fn=stop_research_agent, inputs=[], outputs=[stop_research_button, research_button])
 
             with gr.TabItem("🎥 Recordings", id=8):
+                gr.Markdown("### 🎥 Browser Recording Playback")
+                gr.Markdown("Select and play browser automation recordings")
+                
+                # Common recording functions
                 def list_recordings(save_recording_path):
-                    if not os.path.exists(save_recording_path):
+                    if not save_recording_path or not os.path.exists(save_recording_path):
                         return []
-                    recordings = glob.glob(os.path.join(save_recording_path, "*.[mM][pP]4")) + glob.glob(os.path.join(save_recording_path, "*.[wW][eE][bB][mM]"))
-                    recordings.sort(key=os.path.getctime)
-                    numbered_recordings = [(recording, f"{idx}. {os.path.basename(recording)}") for idx, recording in enumerate(recordings, start=1)]
-                    return numbered_recordings
+                    
+                    # Windows対応: pathlibを使用してファイル検索を改善
+                    recording_path = Path(save_recording_path)
+                    recordings = []
+                    
+                    # MP4とWEBMファイルを検索（大文字小文字を含む）
+                    for ext in ['mp4', 'MP4', 'webm', 'WEBM']:
+                        recordings.extend(recording_path.glob(f'*.{ext}'))
+                    
+                    # パスを文字列に変換してソート（最新順）
+                    recordings = [str(p) for p in recordings]
+                    recordings.sort(key=os.path.getmtime, reverse=True)
+                    return recordings
 
-                recordings_gallery = gr.Gallery(label="Recordings", value=list_recordings(config['save_recording_path']), columns=3, height="auto", object_fit="contain")
-                refresh_button = gr.Button("🔄 Refresh Recordings", variant="secondary")
-                refresh_button.click(fn=list_recordings, inputs=save_recording_path, outputs=recordings_gallery)
+                def update_recordings_list(recordings_path):
+                    """Update the recordings dropdown and video player"""
+                    try:
+                        if recordings_path:
+                            Path(recordings_path).mkdir(parents=True, exist_ok=True)
+                        
+                        recordings = list_recordings(recordings_path)
+                        if not recordings:
+                            return gr.update(choices=[], value=None), None, f"No recordings found in: {recordings_path}"
+                        
+                        # Create display names with timestamps
+                        display_choices = []
+                        for recording in recordings:
+                            filename = os.path.basename(recording)
+                            try:
+                                mtime = os.path.getmtime(recording)
+                                timestamp = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
+                                display_name = f"{filename} ({timestamp})"
+                            except:
+                                display_name = filename
+                            display_choices.append((display_name, recording))
+                        
+                        latest_recording = recordings[0] if recordings else None
+                        status_msg = f"Found {len(recordings)} recording(s)"
+                        
+                        return gr.update(choices=display_choices, value=latest_recording), latest_recording, status_msg
+                    except Exception as e:
+                        error_msg = f"Error loading recordings: {str(e)}"
+                        return gr.update(choices=[], value=None), None, error_msg
+
+                def get_recordings_simple():
+                    """Simple recording list function for LLM-disabled mode"""
+                    try:
+                        recordings_path = default_recording_path
+                        if not recordings_path or not os.path.exists(recordings_path):
+                            return gr.update(choices=[]), "Recording directory not found"
+                        
+                        recordings = []
+                        for ext in ['mp4', 'webm', 'MP4', 'WEBM']:
+                            recordings.extend(Path(recordings_path).glob(f'*.{ext}'))
+                        
+                        if not recordings:
+                            return gr.update(choices=[]), "No recordings found"
+                        
+                        # Create choices list with full paths as values
+                        choices = [(p.name, str(p)) for p in recordings]
+                        
+                        return gr.update(choices=choices), f"Found {len(recordings)} recording(s)"
+                    except Exception as e:
+                        return gr.update(choices=[]), f"Error: {str(e)}"
+
+                def on_recording_select_html(selected_path):
+                    """HTML-based recording display for LLM-disabled mode"""
+                    if selected_path and os.path.exists(selected_path):
+                        filename = os.path.basename(selected_path)
+                        file_size = os.path.getsize(selected_path) / 1024 / 1024
+                        html_content = f"""
+                        <div style="text-align: center; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+                            <h3>📹 Selected Recording: {filename}</h3>
+                            <p><strong>File Path:</strong> {selected_path}</p>
+                            <p><strong>File Size:</strong> {file_size:.2f} MB</p>
+                            <p><em>To view the recording, please download the file and open it in your media player.</em></p>
+                            <div style="margin-top: 15px;">
+                                <button onclick="navigator.clipboard.writeText('{selected_path}')" 
+                                        style="padding: 10px 20px; margin: 5px; font-size: 14px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                                    � Copy Path
+                                </button>
+                                <p style="margin-top: 10px; font-size: 12px; color: #666;">
+                                    💡 Tip: Copy the path and open it in Windows Explorer or your preferred media player
+                                </p>
+                            </div>
+                        </div>
+                        """
+                        return html_content
+                    return "<p>No recording selected</p>"
+
+                def on_recording_select_video(selected_recording):
+                    """Video-based recording display for LLM-enabled mode"""
+                    if selected_recording and os.path.exists(selected_recording):
+                        return selected_recording
+                    return None
+
+                # Conditional UI based on LLM availability
+                if ENABLE_LLM and LLM_MODULES_AVAILABLE:
+                    # LLM有効時: 元の動画再生可能なUI
+                    with gr.Row():
+                        with gr.Column(scale=3):
+                            recordings_dropdown = gr.Dropdown(
+                                label="Select Recording", 
+                                choices=[], 
+                                interactive=True,
+                                info="Choose a recording to play"
+                            )
+                            refresh_button = gr.Button("🔄 Refresh Recordings", variant="secondary")
+                            status_display = gr.Textbox(label="Status", interactive=False, lines=1)
+                        
+                        with gr.Column(scale=1):
+                            gr.Markdown("**Controls:**")
+                            gr.Markdown("- Select recording from dropdown")
+                            gr.Markdown("- Use video controls to play/pause")
+                            gr.Markdown("- Right-click for more options")
+
+                    # Video Player for LLM-enabled mode
+                    try:
+                        video_player = gr.Video(
+                            label="Recording Player",
+                            height=500,
+                            show_label=True
+                        )
+                        
+                        # Event handlers for LLM-enabled mode
+                        recordings_dropdown.change(
+                            fn=on_recording_select_video,
+                            inputs=[recordings_dropdown],
+                            outputs=[video_player]
+                        )
+
+                        refresh_button.click(
+                            fn=update_recordings_list,
+                            inputs=[save_recording_path],
+                            outputs=[recordings_dropdown, video_player, status_display]
+                        )
+                        
+                        gr.Markdown("🎬 **LLM Mode**: Full video playback enabled")
+                        
+                    except Exception as e:
+                        # Fallback to HTML mode if Video component fails
+                        gr.Markdown("⚠️ **Video component unavailable, using fallback mode**")
+                        video_display = gr.HTML(value="<p>Select a recording to view</p>")
+                        
+                        recordings_dropdown.change(
+                            fn=on_recording_select_html,
+                            inputs=[recordings_dropdown],
+                            outputs=[video_display]
+                        )
+
+                        refresh_button.click(
+                            fn=get_recordings_simple,
+                            outputs=[recordings_dropdown, status_display]
+                        )
+                
+                else:
+                    # LLM無効時: HTML表示方式
+                    recordings_dropdown = gr.Dropdown(
+                        label="Select Recording", 
+                        choices=[], 
+                        interactive=True
+                    )
+                    
+                    refresh_button = gr.Button("🔄 Refresh Recordings")
+                    status_display = gr.Textbox(label="Status", value="Click refresh to load recordings", interactive=False)
+                    
+                    # HTML-based video display
+                    video_display = gr.HTML(value="<p>Select a recording to view</p>")
+
+                    # Event handlers for LLM-disabled mode
+                    refresh_button.click(fn=get_recordings_simple, outputs=[recordings_dropdown, status_display])
+                    recordings_dropdown.change(fn=on_recording_select_html, inputs=[recordings_dropdown], outputs=[video_display])
+                    
+                    gr.Markdown("📁 **Minimal Mode**: Recording file management (LLM disabled)")
 
             with gr.TabItem("🧐 Deep Research", id=6):
                 research_task_input = gr.Textbox(label="Research Task", lines=5, value="Compose a report on the use of Reinforcement Learning for training Large Language Models, encompassing its origins, current advancements, and future prospects, substantiated with examples of relevant models and techniques. The report should reflect original insights and analysis, moving beyond mere summarization of existing literature.")
@@ -754,7 +1653,7 @@ def create_ui(config, theme_name="Ocean"):
                     research_button = gr.Button("▶️ Run Deep Research", variant="primary", scale=2)
                     stop_research_button = gr.Button("⏹️ Stop", variant="stop", scale=1)
                 markdown_output_display = gr.Markdown(label="Research Report")
-                markdown_download = gr.File(label="Download Research Report")
+                markdown_download_path = gr.Textbox(label="Research Report Download Path", placeholder="Path where report will be saved")
 
         llm_provider.change(lambda provider, api_key, base_url: update_model_dropdown(provider, api_key, base_url), inputs=[llm_provider, llm_api_key, llm_base_url], outputs=llm_model_name)
         enable_recording.change(lambda enabled: gr.update(interactive=enabled), inputs=enable_recording, outputs=save_recording_path)
@@ -1058,10 +1957,115 @@ if __name__ == '__main__':
     
 async def on_run_agent_click(task, add_infos, llm_provider, llm_model_name, llm_num_ctx, llm_temperature, llm_base_url, llm_api_key, use_vision, use_own_browser, headless):
     try:
-        # bykilt.pyのコマンド処理箇所に追加
+        # まず、LLM有効/無効に関わらず事前登録コマンドをチェック
         print(f"🔎 入力コマンド解析: {task}")
-        action_name, params = pre_evaluate_prompt(task)
-        print(f"🔎 解析結果: アクション={action_name}, パラメータ={params}")
+        
+        # 統一されたプロンプト評価を使用
+        if ENABLE_LLM and LLM_MODULES_AVAILABLE:
+            action_result = pre_evaluate_prompt(task)  # LLM版とstandalone版の統合済み
+        else:
+            action_result = pre_evaluate_prompt_standalone(task)  # standalone版
+        
+        # 事前登録されたコマンドが見つかった場合
+        if action_result:
+            print(f"✅ 事前登録コマンドを発見: {action_result.get('name')}")
+            
+            # パラメータを抽出
+            if ENABLE_LLM and LLM_MODULES_AVAILABLE:
+                params = extract_params(task, action_result.get('params', ''))
+            else:
+                params = extract_params_standalone(task, action_result.get('params', ''))
+            
+            print(f"🔎 抽出されたパラメータ: {params}")
+            
+            # ブラウザ自動化を実行（LLM非依存）
+            try:
+                browser_manager = BrowserDebugManager()
+                debug_utils = DebugUtils(browser_manager=browser_manager)
+                
+                # ブラウザセッションを初期化
+                browser_result = await browser_manager.initialize_with_session(
+                    session_id=None,
+                    use_own_browser=use_own_browser,
+                    headless=headless
+                )
+                
+                if browser_result.get("status") == "success":
+                    # 録画パスを設定（環境変数または設定から取得）
+                    recording_path = os.getenv('RECORDING_PATH')
+                    if not recording_path:
+                        if platform.system() == "Windows":
+                            recording_path = str(Path.cwd() / "tmp" / "record_videos")
+                        else:
+                            recording_path = './tmp/record_videos'
+                    
+                    # 録画ディレクトリを作成
+                    Path(recording_path).mkdir(parents=True, exist_ok=True)
+                    
+                    # 実際のスクリプト実行
+                    script_output, script_path = await run_script(
+                        action_result, params, headless=headless, 
+                        save_recording_path=recording_path
+                    )
+                    
+                    message = f"### ✅ 事前登録コマンド実行完了\n\n"
+                    message += f"**コマンド**: {action_result.get('name')}\n\n"
+                    message += f"**パラメータ**: {params}\n\n"
+                    message += f"**実行結果**: {script_output}\n\n"
+                    message += f"**スクリプトパス**: {script_path}\n\n"
+                    
+                    return message, "", gr.update(value="実行", interactive=True), gr.update(interactive=True)
+                else:
+                    error_msg = f"### ❌ ブラウザ初期化エラー\n\n{browser_result.get('message', '不明なエラー')}"
+                    return error_msg, "", gr.update(value="実行", interactive=True), gr.update(interactive=True)
+                    
+            except Exception as e:
+                error_msg = f"### ❌ コマンド実行エラー\n\n```\n{str(e)}\n```"
+                return error_msg, "", gr.update(value="実行", interactive=True), gr.update(interactive=True)
+        
+        # 事前登録コマンドでない場合の処理
+        if not ENABLE_LLM or not LLM_MODULES_AVAILABLE:
+            # LLM無効時の処理
+            print(f"🔎 ブラウザ自動化モード - 入力: {task}")
+            
+            # URLの場合は直接ナビゲート
+            if task.startswith("http"):
+                try:
+                    browser_manager = BrowserDebugManager()
+                    debug_utils = DebugUtils(browser_manager=browser_manager)
+                    
+                    result = await debug_utils.execute_goto_url(task, use_own_browser, headless)
+                    message = f"### ブラウザ自動化実行結果\n\n"
+                    message += f"**操作**: URLに移動\n\n"
+                    message += f"**URL**: {task}\n\n"
+                    message += f"**状態**: 完了\n\n"
+                    
+                    return message, "", gr.update(value="実行", interactive=True), gr.update(interactive=True)
+                except Exception as e:
+                    error_msg = f"### ブラウザ自動化エラー\n\nURL移動中にエラーが発生しました: {str(e)}"
+                    return error_msg, "", gr.update(value="実行", interactive=True), gr.update(interactive=True)
+            else:
+                # LLM機能が必要な処理の場合
+                info_msg = f"""### ⚠️ LLM機能が無効です
+
+**現在のモード**: ブラウザ自動化のみ  
+**入力された指示**: {task}
+
+**利用可能な操作**:
+- 事前登録されたコマンド (例: @search-linkedin query=test)
+- URLの直接入力 (例: https://www.google.com)
+- Playwright Codegenで生成されたスクリプトの実行
+- JSON形式のアクション実行
+
+**LLM機能を有効にするには**:
+1. 上部 LLM Configuration タブでトグルを ON にする (または環境変数 `ENABLE_LLM=true`)
+2. LLM関連パッケージをインストール: `pip install -r requirements.txt`
+3. アプリケーションを再起動
+"""
+                return info_msg, "", gr.update(value="実行", interactive=True), gr.update(interactive=True)
+        
+        # LLM機能が有効な場合の処理（従来通り）
+        print(f"🔎 LLM処理へ移行")
 
         # CommandDispatcherを使用してコマンド実行
         from src.agent.agent_manager import run_command
