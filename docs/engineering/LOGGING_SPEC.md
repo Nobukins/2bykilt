@@ -31,7 +31,7 @@ Status: Draft (Design Only)  / Implements: #31 (prepares #56 / #57 / #58 depende
 | msg | string | Yes | メインメッセージ (format 済) |
 | logger | string | Yes | `__name__` などロガー名 |
 | run_id | string | Yes | RunContext.run_id_base |
-| component | string | Yes | high-level subsystem (browser, runner, config, agent, logging, artifacts, security, metrics, ui) |
+| component | string | Yes | high-level subsystem (browser, runner, config, agent, logging, artifacts, security, metrics, ui). Naming rule: must match regex `[a-z0-9_]+` (lowercase only). Leading/trailing whitespace, uppercase, hyphen, dot, slash are rejected (ValueError). Rationale: avoid silent normalization masking typos. |
 | event | string | Conditional | セマンティックイベント名 (例: `browser.launch`) |
 | kwargs | object | Conditional | フォーマット展開補助 / 追加 context (flat or nested) |
 | exc | object | Conditional | 例外発生時: {type, message, stack} |

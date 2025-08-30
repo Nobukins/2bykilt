@@ -18,7 +18,7 @@ Acceptance Criteria (#31):
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Dict, Any, ClassVar, Optional
 import threading
@@ -31,9 +31,10 @@ Hook = Callable[[dict], dict]
 class _LoggerCore:
     component: str
     file_path: Path
-    hooks: list[Hook]
+    hooks: list[Hook] = field(default_factory=list)
     seq: int = 0
-    lock: threading.Lock = threading.Lock()
+    # Each core gets its own lock (avoid shared dataclass default instance)
+    lock: threading.Lock = field(default_factory=threading.Lock)
 
 class JsonlLogger:
     _instances: ClassVar[dict[str, "JsonlLogger"]] = {}
@@ -47,9 +48,28 @@ class JsonlLogger:
     def get(cls, component: str) -> "JsonlLogger":
         """Return (and create if needed) a component logger.
 
-        Idempotent & thread-safe. Does NOT create the log file yet.
+        Behavior:
+          * Component must match ^[a-z0-9_]+$ (lowercase enforced).
+          * Strips surrounding whitespace; raises ValueError if normalization changes case/charset.
+          * Idempotent & thread-safe. Does NOT create the log file yet.
         """
-        key = component.strip().lower()
+        if component is None:
+            raise ValueError("component is required")
+        stripped = component.strip()
+        if not stripped:
+            raise ValueError("component must be non-empty")
+        # Reject if caller had leading/trailing whitespace to avoid confusion
+        if stripped != component:
+            raise ValueError("component must not have leading/trailing whitespace")
+        normalized = stripped.lower()
+        # Enforce allowed charset (lowercase alnum + underscore)
+        import re
+        if not re.fullmatch(r"[a-z0-9_]+", normalized):
+            raise ValueError(f"invalid component name '{component}'; allowed pattern [a-z0-9_]+")
+        # If caller used uppercase or other diff, we choose strictness: reject rather than silently merge
+        if stripped != normalized:
+            raise ValueError(f"component '{component}' must be lowercase (received normalized '{normalized}')")
+        key = normalized
         if key in cls._instances:
             return cls._instances[key]
         with cls._instances_lock:
@@ -58,7 +78,7 @@ class JsonlLogger:
                 # Strategy A: directory `<run_id_base>-log/` containing app.log.jsonl
                 base_dir = rc.artifact_dir("log")  # creates directory
                 file_path = base_dir / "app.log.jsonl"
-                core = _LoggerCore(component=key, file_path=file_path, hooks=[])
+                core = _LoggerCore(component=key, file_path=file_path)
                 cls._instances[key] = JsonlLogger(core)
             return cls._instances[key]
 
@@ -93,3 +113,13 @@ class JsonlLogger:
         return self._c.component
 
 __all__ = ["JsonlLogger"]
+
+
+# --- Minimal coverage helper (design-phase) ---
+def _design_phase_ping() -> bool:
+    """Trivial helper to ensure at least one executable line for coverage tools.
+
+    Will be removed once Issue #56 implements real write logic.
+    """
+    return True
+
