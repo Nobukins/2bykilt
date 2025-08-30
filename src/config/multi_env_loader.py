@@ -39,6 +39,11 @@ from typing import Any, Dict, List, Tuple
 
 import yaml
 
+try:
+    from src.runtime.run_context import RunContext
+except Exception:  # noqa: BLE001
+    RunContext = None  # type: ignore
+
 logger = logging.getLogger(__name__)
 
 _ENV_ALIASES = {
@@ -91,8 +96,11 @@ class MultiEnvConfigLoader:
 
         masked_cfg, masked_hashes = self._mask_secrets(merged)
 
-        # FIX: use timezone-aware now() to silence deprecation warning
-        pseudo_run_id = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S") + "-cfg"
+        # Unified run/job id base (Issue #32)
+        if RunContext:
+            pseudo_run_id = RunContext.get().artifact_dir("cfg").name  # e.g. <run_id_base>-cfg
+        else:  # fallback
+            pseudo_run_id = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S") + "-legacy-cfg"
         artifact_path = self._write_effective_artifact(
             env=self.logical_env,
             pseudo_run_id=pseudo_run_id,
@@ -281,12 +289,15 @@ class MultiEnvConfigLoader:
         files: List[Path],
         warnings: List[Dict[str, Any]],
     ) -> Path:
+        # REVIEW FIX: remove duplicated path construction; only mkdir when not created via RunContext
         out_dir = Path("artifacts") / "runs" / pseudo_run_id
-        out_dir.mkdir(parents=True, exist_ok=True)
+        if not (RunContext and pseudo_run_id.startswith(RunContext.get().run_id_base)):
+            out_dir.mkdir(parents=True, exist_ok=True)
         out_file = out_dir / "effective_config.json"
         payload = {
             "env": env,
             "pseudo_run_id": pseudo_run_id,
+            "run_id_base": RunContext.get().run_id_base if RunContext else None,
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "files_loaded": [
                 str(p.relative_to(Path.cwd())) if p.is_absolute() else str(p)
