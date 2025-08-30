@@ -44,7 +44,7 @@
 | Wave | Issues | Status | 備考 |
 |------|--------|--------|------|
 | A1 | #64 #65 #63 | ✅ Done | Feature Flags / Multi-env Loader / llms.txt Validator 実装完了 (PR #20 由来) |
-| A2 | #32 #31 #56 #57 | ⏳ Pending | #32 Run/Job ID を最初に実装 → Logging 設計/実装/ローテーション |
+| A2 | #32 ✅ #31 #56 #57 | 🚧 In Progress | #32 Run/Job ID 完了 (PR #79) → 次: Logging 設計 (#31) / 実装 (#56) / ローテーション (#57) |
 | A3 | #28 #30 #33 #35 #36 #34 #37 #38 | Planned | Artifacts 基盤拡張 & 回帰テスト |
 | A4 | #25 #44 #45 #50 (#55) | Planned | Runner Reliability / git_script 系統 |
 | A5 | #60 #61 | Planned | Security Base (Mask / Scan) |
@@ -52,7 +52,7 @@
 | A7 | #43 | Planned | LLM Toggle パリティ |
 | Docs | #66 → #67 | In Progress | Doc Sync >90% 維持方針 |
 
-Progress Summary (Phase 1): Wave A1 100% / Remaining Waves queued. Draft/試行 PR は進捗計測に含めず（分析除外方針）。
+Progress Summary (Phase 1): Wave A1 100% / Wave A2 25% (#32 完了) / 残り Waves queued. Draft/試行 PR は進捗計測に含めず（分析除外方針）。
 
 ### Group B (Phase 2 – 拡張 / 高度化)
 
@@ -129,11 +129,11 @@ Flags / 後方互換 Schema / 追加専用ログ→削除遅延 / Sandbox enforc
 
 ## I. 次アクション
 
-短期 (直近 1 Wave 移行前準備):
+短期 (A2 進行中):
 
-1. ISSUE_DEPENDENCIES.yml 進捗反映 (A1 完了) ✅ 済
-2. Run/Job ID (#32) 仕様確定 (RunContext / run_id フォーマット / artifact ディレクトリ統一)
-3. Logging 設計下書き (フィールド: timestamp, level, event, component, run_id, msg, extra) → #31 着手ゲート
+1. Run/Job ID (#32) 仕様確定 ✅ 済 (PR #79 / ISSUE_DEPENDENCIES.yml 進捗反映済)
+2. Logging 設計下書き (#31) 着手中 (フィールド確定 + format 契約 + rotation インタフェース雛形)
+3. JSON Lines logger 実装 (#56) 着手ゲート: 設計レビュー完了 / 最低 1 smoke test 方針合意
 
 中期 (A2 実装着手後):
 
@@ -153,6 +153,7 @@ Flags / 後方互換 Schema / 追加専用ログ→削除遅延 / Sandbox enforc
 |---------|------|---------|--------|
 | 1.0.0 | 2025-08-26 | 初期ドラフト | Copilot Agent |
 | 1.0.1 | 2025-08-30 | Wave A1 完了反映 / 進捗テーブル追加 / 次アクション更新 | Copilot Agent |
+| 1.0.2 | 2025-08-30 | Wave A2 #32 完了反映 / Progress Summary & 次アクション更新 | Copilot Agent |
 
 
 
