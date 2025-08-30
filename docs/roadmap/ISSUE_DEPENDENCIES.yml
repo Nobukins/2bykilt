@@ -283,6 +283,7 @@ issues:
     dependents: ["66"]
     risk: null
     critical_path_rank: 3
+  progress: {state: done, primary_pr: 20, notes: "Wave A1 complete"}
   "64":
     title: "フィーチャーフラグフレームワーク"
     meta: {area: config, type: feat, priority: P0, phase: "1", stability: core}
@@ -290,6 +291,7 @@ issues:
     dependents: ["63","43","49"]
     risk: null
     critical_path_rank: 4
+  progress: {state: done, primary_pr: 20, notes: "Wave A1 complete"}
   "65":
     title: "マルチ環境設定ローダ"
     meta: {area: config, type: feat, priority: P0, phase: "1", stability: core}
@@ -297,6 +299,7 @@ issues:
     dependents: ["64","63","43","48"]
     risk: null
     critical_path_rank: 5
+  progress: {state: done, primary_pr: 20, notes: "Wave A1 complete"}
   "66":
     title: "ドキュメント整備 第1弾"
     meta: {area: docs, type: docs, priority: P2, phase: "1-late", stability: core}
@@ -339,5 +342,5 @@ summary:
       - "60"
       - "61"   # (strict orphan)
       - "67"
-  generated_at_utc: "2025-08-29T00:00:00Z"  # 更新日時
+  generated_at_utc: "2025-08-30T00:00:00Z"  # 更新日時 (Wave A1 progress metadata added)
     
