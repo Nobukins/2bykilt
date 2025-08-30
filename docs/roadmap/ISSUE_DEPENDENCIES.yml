@@ -64,6 +64,7 @@ issues:
     meta: {area: runner, type: feat, priority: P0, phase: "1", stability: core}
     depends: []
     dependents: ["28","31","33","35","46","54","56","58","39","62"]
+  progress: {state: done, primary_pr: 79}
     risk: null
     critical_path_rank: 5
   "33":
