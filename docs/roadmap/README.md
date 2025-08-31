@@ -46,6 +46,23 @@ To make changes:
 2. Run generation scripts locally OR wait for next automation cycle
 3. Generated files will be updated automatically
 
+### Pre-PR Dependency Workflow (Summary)
+
+The canonical, full checklist lives in `ROADMAP.md` Section K ("依存グラフ更新 / Pre-PR ローカル検証 & CI 方針"). For any PR that changes `ISSUE_DEPENDENCIES.yml`:
+
+Minimal local steps (see full list for details):
+
+1. Edit `ISSUE_DEPENDENCIES.yml` (add / update issue, progress, risk)
+2. Validate: `python scripts/validate_dependencies.py docs/roadmap/ISSUE_DEPENDENCIES.yml`
+3. Regenerate graph: `python scripts/gen_mermaid.py docs/roadmap/ISSUE_DEPENDENCIES.yml > docs/roadmap/DEPENDENCY_GRAPH.md`
+4. Regenerate dashboard & queue: `python scripts/generate_task_dashboard.py` & `python scripts/generate_task_queue.py --repo <owner/repo> --input docs/roadmap/ISSUE_DEPENDENCIES.yml --output docs/roadmap/TASK_QUEUE.yml --no-api`
+5. Validate queue: `python scripts/validate_task_queue.py --queue docs/roadmap/TASK_QUEUE.yml --dependencies docs/roadmap/ISSUE_DEPENDENCIES.yml`
+6. Re-run generation to confirm zero diff (idempotent)
+7. Update `ROADMAP.md` progress (Wave status) if completion state changed
+8. Fill PR template fields (Docs Updated / Validation / Idempotent Check)
+
+Avoid duplicating the checklist elsewhere—always treat Section K as the source of truth.
+
 ### Generation Scripts
 
 Located in `scripts/` directory:
