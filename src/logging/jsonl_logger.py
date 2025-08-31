@@ -166,10 +166,15 @@ class JsonlLogger:
                 oldest.unlink()
             except OSError:  # pragma: no cover - ignore
                 pass
-        # Shift indexes down (reverse order)
-        for idx in range(max_files - 1, 0, -1):
-            src = fp.with_name(fp.name + f".{idx}")
-            dst = fp.with_name(fp.name + f".{idx+1}")
+        # Shift indexes up: .(n) -> .(n+1). Use range including max_files to avoid off-by-one.
+        # Example max_files=5:
+        #   delete .5 (above) then move .4->.5 .3->.4 .2->.3 .1->.2 active->.1
+        for idx in range(max_files, 0, -1):
+            if idx == 1:
+                # active file will be moved after loop
+                continue
+            src = fp.with_name(fp.name + f".{idx-1}")
+            dst = fp.with_name(fp.name + f".{idx}")
             if src.exists():
                 try:
                     src.replace(dst)

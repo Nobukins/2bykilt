@@ -30,8 +30,8 @@ issues:
   "53": {title: "cdp-use 追加タイプ調査", meta: {area: runner, type: spike, priority: P2, phase: "2", stability: experimental}, depends: [], dependents: ["54"], risk: null, critical_path_rank: 2}
   "54": {title: "cdp-use デュアルエンジン抽象レイヤ", meta: {area: runner, type: feat, priority: P1, phase: "2", stability: experimental}, depends: ["32","53"], dependents: [], risk: high, critical_path_rank: 1}
   "55": {title: "browser_control pytest パス修正", meta: {area: runner, type: bug, priority: P0, phase: "1", stability: core}, depends: [], dependents: [], risk: null, critical_path_rank: 1}
-  "56": {title: "統一 JSON Lines ロギング実装", meta: {area: logging, type: feat, priority: P0, phase: "1", stability: core}, depends: ["31","32"], dependents: ["57","60","41"], risk: null, critical_path_rank: 2}
-  "57": {title: "ログ保持期間 & ローテーション", meta: {area: logging, type: feat, priority: P1, phase: "1-late", stability: core}, depends: ["56"], dependents: [], risk: null, critical_path_rank: 1}
+  "56": {title: "統一 JSON Lines ロギング実装", meta: {area: logging, type: feat, priority: P0, phase: "1", stability: core}, depends: ["31","32"], dependents: ["57","60","41"], progress: {state: done, primary_pr: 83}, risk: null, critical_path_rank: 2}
+  "57": {title: "ログ保持期間 & ローテーション", meta: {area: logging, type: feat, priority: P1, phase: "1-late", stability: core}, depends: ["56"], dependents: [], progress: {state: done, primary_pr: 83}, risk: null, critical_path_rank: 1}
   "58": {title: "メトリクス計測基盤", meta: {area: observability, type: feat, priority: P1, phase: "2", stability: core}, depends: ["32"], dependents: ["59"], risk: null, critical_path_rank: 2}
   "59": {title: "Run メトリクス API", meta: {area: observability, type: feat, priority: P2, phase: "2", stability: core}, depends: ["58"], dependents: [], risk: null, critical_path_rank: 1}
   "60": {title: "シークレットマスキング拡張", meta: {area: security, type: feat, priority: P1, phase: "1-late", stability: core}, depends: ["56"], dependents: [], risk: null, critical_path_rank: 1}
