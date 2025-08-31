@@ -1,42 +1,42 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-08-26T21:34:59Z
+Generated at (UTC): 2025-08-30T23:35:01Z
 
 ## 1. メタサマリー
 
-- Total Issues: 40
+- Total Issues: 41
 - High Risk (declared): 5 → 31, 46, 49, 54, 62
 - Cycle Detected: false (none)
-- Strict Orphans: 2
-- Curated Orphan List Count: 14
+- Strict Orphans: 3
+- Curated Orphan List Count: 15
 
 ## 2. 分布 (Distribution)
 
 ### Priority
-- P0: 14 (35.0%)
-- P1: 12 (30.0%)
-- P2: 13 (32.5%)
-- P3: 1 (2.5%)
+- P0: 14 (34.1%)
+- P1: 13 (31.7%)
+- P2: 13 (31.7%)
+- P3: 1 (2.4%)
 
 ### Phase
-- 1: 17 (42.5%)
-- 1-late: 7 (17.5%)
-- 2: 16 (40.0%)
+- 1: 18 (43.9%)
+- 1-late: 7 (17.1%)
+- 2: 16 (39.0%)
 
 ### Area
-- artifacts: 8 (20.0%)
-- batch: 4 (10.0%)
-- config: 3 (7.5%)
-- docs: 2 (5.0%)
-- logging: 3 (7.5%)
-- observability: 2 (5.0%)
-- plugins: 1 (2.5%)
-- runner: 14 (35.0%)
-- security: 3 (7.5%)
+- artifacts: 8 (19.5%)
+- batch: 4 (9.8%)
+- config: 3 (7.3%)
+- docs: 2 (4.9%)
+- logging: 3 (7.3%)
+- observability: 2 (4.9%)
+- plugins: 1 (2.4%)
+- runner: 15 (36.6%)
+- security: 3 (7.3%)
 
 ### Risk
-- high: 5 (12.5%)
-- none: 35 (87.5%)
+- high: 5 (12.2%)
+- none: 36 (87.8%)
 
 ## 3. リスク詳細 (High / Medium / etc.)
 
@@ -52,6 +52,7 @@ High Risk Issues:
 Strict Orphans (自動抽出 = 依存なし & 参照されず):
 - 55: browser_control pytest パス修正
 - 61: 依存セキュリティスキャン最適化
+- 81: Async/Browser テスト安定化計画
 
 Curated Orphan List (summary.data_quality_checks.orphan_issues_without_dependents_or_depends):
 - 34: 要素値キャプチャ & エクスポート
@@ -68,6 +69,7 @@ Curated Orphan List (summary.data_quality_checks.orphan_issues_without_dependent
 - 60: シークレットマスキング拡張
 - 61: 依存セキュリティスキャン最適化
 - 67: ドキュメント整備 第2弾
+- 81: Async/Browser テスト安定化計画
 
 Missing Strict Orphans in curated list: (none)
 Extra non-strict entries in curated list (WARNING only): 34, 40, 41, 42, 45, 50, 51, 52, 57, 59, 60, 67
@@ -80,7 +82,7 @@ Auto Estimated Path (Longest Distance):
 32 → 28 → 30 → 37 → 38
 
 Provided Example (existing IDs only):
-31 → 46
+65 → 64 → 63 → 66 → 67
 
 ## 6. Issues Table (sorted)
 
@@ -88,13 +90,13 @@ Sorted By: critical_path_rank
 
 | ID | Title | Pri | Phase | Area | Risk | CP Rank | LongestDist | Depends | Dependents | PrimaryPR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 32 | Run/Job ID 基盤 | P0 | 1 | runner |  | 5 | 0 | 0 | 10 |  |
+| 32 | Run/Job ID 基盤 | P0 | 1 | runner |  | 5 | 0 | 0 | 10 | #79 |
 | 65 | マルチ環境設定ローダ | P0 | 1 | config |  | 5 | 0 | 0 | 4 |  |
 | 28 | 録画ファイル保存パス統一 | P0 | 1 | artifacts |  | 4 | 1 | 1 | 1 |  |
 | 64 | フィーチャーフラグフレームワーク | P0 | 1 | config |  | 4 | 1 | 1 | 3 |  |
 | 25 | git_script が llms.txt で指定したスクリプトを正しく解決するよう修正 | P0 | 1 | runner |  | 3 | 0 | 0 | 4 | #27 |
 | 30 | 録画タイプ間不整合是正 | P0 | 1 | artifacts |  | 3 | 2 | 1 | 2 |  |
-| 31 | 統一ログ設計 (JSON Lines) | P0 | 1 | logging | high | 3 | 1 | 1 | 1 |  |
+| 31 | 統一ログ設計 (JSON Lines) | P0 | 1 | logging | high | 3 | 1 | 1 | 1 | #80 |
 | 35 | アーティファクト manifest v2 | P0 | 1 | artifacts |  | 3 | 1 | 1 | 3 |  |
 | 46 | Run/Job タイムアウト & キャンセル | P2 | 2 | runner | high | 3 | 1 | 1 | 1 |  |
 | 63 | llms.txt スキーマ & バリデータ | P0 | 1-late | config |  | 3 | 2 | 2 | 1 |  |
@@ -109,6 +111,7 @@ Sorted By: critical_path_rank
 | 58 | メトリクス計測基盤 | P1 | 2 | observability |  | 2 | 1 | 1 | 1 |  |
 | 62 | 実行サンドボックス機能制限 | P0 | 2 | security | high | 2 | 1 | 1 | 1 |  |
 | 66 | ドキュメント整備 第1弾 | P2 | 1-late | docs |  | 2 | 3 | 1 | 1 |  |
+| 81 | Async/Browser テスト安定化計画 | P1 | 1 | runner |  | 2 | 0 | 0 | 0 |  |
 | 34 | 要素値キャプチャ & エクスポート | P1 | 1 | artifacts |  | 1 | 2 | 2 | 0 |  |
 | 38 | 録画統一後回帰テストスイート | P2 | 1-late | artifacts |  | 1 | 4 | 5 | 0 |  |
 | 40 | CSV D&D UI 連携 | P2 | 2 | batch |  | 1 | 2 | 1 | 0 |  |
@@ -138,6 +141,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 0
 - Depends (0): (none)
 - Dependents (10): 28, 31, 33, 35, 46, 54, 56, 58, 39, 62
+- Progress: {"state": "done", "primary_pr": 79}
 
 ### Issue 65: マルチ環境設定ローダ
 - Priority: P0, Phase: 1, Area: config
@@ -187,6 +191,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 1
 - Depends (1): 32
 - Dependents (1): 56
+- Progress: {"state": "done", "primary_pr": 80}
 
 ### Issue 35: アーティファクト manifest v2
 - Priority: P0, Phase: 1, Area: artifacts
@@ -299,6 +304,14 @@ Sorted By: critical_path_rank
 - LongestDistance: 3
 - Depends (1): 63
 - Dependents (1): 67
+
+### Issue 81: Async/Browser テスト安定化計画
+- Priority: P1, Phase: 1, Area: runner
+- Risk: (none)
+- CriticalPathRank: 2
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
 
 ### Issue 34: 要素値キャプチャ & エクスポート
 - Priority: P1, Phase: 1, Area: artifacts

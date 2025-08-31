@@ -1,6 +1,6 @@
 ```mermaid
 %% Auto-generated dependency graph
-%% Generated at: 2025-08-26T13:24:50.197414Z
+%% Generated at: 2025-08-30T23:34:38.774253Z
 %% Edge方向: dependency --> dependent
 graph LR
 
@@ -32,6 +32,7 @@ subgraph R2[Rank 2]
   58["58 メトリクス計測基盤"]
   62["62 実行サンドボックス機能制限"]
   66["66 ドキュメント整備 第1弾"]
+  81["81 Async/Browser テスト安定…"]
 end
 subgraph R1[Rank 1]
   34["34 要素値キャプチャ & エクスポート"]
@@ -109,7 +110,7 @@ classDef progress fill:#e6f4ff,stroke:#0366d6,stroke-width:2px,color:#000;
 
 %% Class assignments
 class 31,46,49,54,62 highrisk;
-class 25 progress;
+class 25,31,32 progress;
 
 %% Legend (pseudo nodes)
 subgraph Legend[Legend]
