@@ -3,29 +3,18 @@
 Generate a Mermaid dependency graph from ISSUE_DEPENDENCIES.yml.
 
 Default behavior (CHANGED):
-  - Legend is now INCLUDED by default (unless --no-legend given).
-  - Previously you needed --legend to include it.
+    - Legend is now INCLUDED by default (unless --no-legend given).
+    - Previously you needed --legend to include it.
 
 Usage examples:
-  # Standard Markdown with code fence + legend (default)
   python scripts/gen_mermaid.py docs/roadmap/ISSUE_DEPENDENCIES.yml > docs/roadmap/DEPENDENCY_GRAPH.md
-
-  # Suppress legend explicitly
   python scripts/gen_mermaid.py --no-legend docs/roadmap/ISSUE_DEPENDENCIES.yml > out.md
-
-  # Force legend (legacy flag, now redundant unless raw mode)
-  python scripts/gen_mermaid.py --legend docs/roadmap/ISSUE_DEPENDENCIES.yml
-
-  # Raw Mermaid (.mmd) without code fences (no legend by default)
   python scripts/gen_mermaid.py --raw-mermaid docs/roadmap/ISSUE_DEPENDENCIES.yml > graph.mmd
-  # (If you still want legend in raw mode)
-  python scripts/gen_mermaid.py --raw-mermaid --legend docs/roadmap/ISSUE_DEPENDENCIES.yml > graph.mmd
 
 Notes:
 - Edge direction is dependency --> dependent (左が前提 / 右が従属)
 - Mermaid classDef syntax: property:value (NOT property=value)
 """
-
 import sys
 import yaml
 import datetime
@@ -48,7 +37,6 @@ def build_rank_groups(issues: Dict[str, Any]):
     for issue_id, meta in issues.items():
         rank = meta.get("critical_path_rank", 1)
         groups.setdefault(rank, []).append(issue_id)
-    # Higher rank first (視覚的に左寄せになることを期待)
     return dict(sorted(groups.items(), key=lambda x: -x[0]))
 
 def short_label(title: str, max_len=20):
@@ -59,21 +47,15 @@ def render_mermaid(data: Dict[str, Any],
                    show_legend: bool = True,
                    add_code_fence: bool = True,
                    raw_mermaid: bool = False) -> str:
-    """
-    add_code_fence: Markdown ```mermaid フェンスを付与する (raw_mermaid=True の場合は強制無効)
-    raw_mermaid: 純粋な Mermaid (先頭コメント最小限 / フェンス無し) を出したい場合
-    """
     issues = data["issues"]
     summary = data.get("summary", {})
     high_risk = set(summary.get("high_risk", []))
     progress_nodes = {i for i, m in issues.items() if "progress" in m}
 
     rank_groups = build_rank_groups(issues)
-
     out = []
 
     if raw_mermaid:
-        # 最小構成: コードフェンス無し
         out.append("%% Auto-generated dependency graph")
         out.append("%% Edge方向: dependency --> dependent")
         out.append("graph LR")
@@ -88,10 +70,8 @@ def render_mermaid(data: Dict[str, Any],
         out.append("graph LR")
         out.append("")
 
-    # Rank subgraphs
     for rank, ids in rank_groups.items():
         out.append(f"subgraph {RANK_GROUP_PREFIX}{rank}[Rank {rank}]")
-        # 数字としてソート (非数字混在時は文字列)
         for iid in sorted(ids, key=lambda s: int(s) if str(s).isdigit() else s):
             meta = issues[iid]
             title = meta.get("title", "")
@@ -108,15 +88,12 @@ def render_mermaid(data: Dict[str, Any],
             out.append(f'  {iid}["{full_label}"]')
         out.append("end")
 
-    # Edges
     out.append("")
     out.append("%% Edges (depends --> dependent)")
     for iid, meta in issues.items():
-        depends = meta.get("depends") or []
-        for dep in depends:
+        for dep in meta.get("depends") or []:
             out.append(f"{dep} --> {iid}")
 
-    # Styling
     out.append("")
     out.append("%% Styling definitions (Mermaid syntax uses colon)")
     for cname, style in STYLE_CLASSDEFS.items():
@@ -129,7 +106,6 @@ def render_mermaid(data: Dict[str, Any],
     if progress_nodes:
         out.append("class " + ",".join(sorted(progress_nodes, key=lambda s: int(s) if str(s).isdigit() else s)) + " progress;")
 
-    # Legend (default ON unless raw_mermaid and no explicit --legend)
     if show_legend:
         out.append("")
         out.append("%% Legend (pseudo nodes)")
@@ -148,29 +124,17 @@ def render_mermaid(data: Dict[str, Any],
 def main():
     parser = ArgumentParser()
     parser.add_argument("yaml_path")
-    # Legacy flag (now redundant unless you want legend in raw mode)
-    parser.add_argument("--legend", action="store_true",
-                        help="(Optional) Force include legend (default already includes it unless --no-legend).")
-    parser.add_argument("--no-legend", action="store_true",
-                        help="Suppress legend output.")
-    parser.add_argument("--no-fence", action="store_true", help="(Markdownモード時) ```mermaid フェンスを出力しない")
-    parser.add_argument("--raw-mermaid", action="store_true", help="純粋な .mmd 用出力 (フェンス/追加コメント最小)")
+    parser.add_argument("--legend", action="store_true", help="Force include legend in raw mode")
+    parser.add_argument("--no-legend", action="store_true", help="Suppress legend output")
+    parser.add_argument("--no-fence", action="store_true", help="Do not wrap with ```mermaid fences")
+    parser.add_argument("--raw-mermaid", action="store_true", help="Output raw Mermaid (no fences, minimal header)")
     args = parser.parse_args()
 
     data = load_yaml(args.yaml_path)
-
-    # Legend decision logic
     if args.raw_mermaid:
-        # Raw mode: do not show legend unless explicitly requested
         show_legend = args.legend and not args.no_legend
     else:
-        if args.no_legend:
-            show_legend = False
-        elif args.legend:
-            show_legend = True
-        else:
-            # Default now ON
-            show_legend = True
+        show_legend = not args.no_legend
 
     text = render_mermaid(
         data,
