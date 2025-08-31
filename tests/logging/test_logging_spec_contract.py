@@ -15,12 +15,15 @@ def test_logger_get_creates_directory_using_run_context(tmp_path, monkeypatch):
     assert logger.file_path.name == "app.log.jsonl"
 
 
-def test_logger_methods_raise_not_implemented():
+def test_logger_methods_emit_jsonl(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("BYKILT_RUN_ID", "emitcase")
+    JsonlLogger._instances.clear()  # type: ignore[attr-defined]
+    RunContext._instance = None  # type: ignore[attr-defined]
     logger = JsonlLogger.get(component="runner")
-    for method in (logger.debug, logger.info, logger.warning, logger.error, logger.critical):
-        try:
-            method("test message")
-        except NotImplementedError as e:
-            assert "Issue #56" in str(e)
-        else:  # pragma: no cover - defensive
-            raise AssertionError("Expected NotImplementedError")
+    logger.info("hello", answer=42)
+    fp = logger.file_path
+    assert fp.exists()
+    line = fp.read_text(encoding="utf-8").strip()
+    assert '"hello"' in line
+    assert '"answer":42' in line
