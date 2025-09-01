@@ -23,3 +23,11 @@ flags:
     description: "動画アーティファクト保持期間(日) (#37) 0=無効"
     type: int
     default: 7
+  artifacts.video_target_container:
+    description: "録画動画ターゲットコンテナ (#30) 'auto' or 'mp4'"
+    type: str
+    default: auto
+  artifacts.video_transcode_enabled:
+    description: "webm→mp4 変換を有効化 (ffmpeg 必須, #30)"
+    type: bool
+    default: false

@@ -144,6 +144,56 @@ class ArtifactManager:
         manifest["artifacts"].append(asdict(entry))
         self._persist_manifest()
 
+    # ---------------- Video Handling (#30) -------------------
+    def register_video_file(self, video_path: Path) -> Path:
+        """Register a video artifact. Optionally transcode to target container.
+
+        Feature flags:
+          artifacts.video_target_container: 'auto' (keep) or 'mp4'
+          artifacts.video_transcode_enabled: bool (if true and source != target)
+        Transcoding requires `ffmpeg` on PATH. Failures are logged silently (no raise).
+        """
+        target_container = FeatureFlags.get("artifacts.video_target_container", expected_type=str, default="auto")
+        transcode_enabled = FeatureFlags.is_enabled("artifacts.video_transcode_enabled")
+        src = video_path
+        final_path = src
+        try:
+            if target_container and target_container != "auto":
+                desired_ext = f".{target_container.lower()}"
+                if src.suffix.lower() != desired_ext and transcode_enabled:
+                    # attempt transcode webm->mp4 only (current scope)
+                    if desired_ext == ".mp4" and src.suffix.lower() in {".webm", ".mp4"}:
+                        out_path = src.with_suffix(desired_ext)
+                        # avoid overwriting existing good file
+                        if not out_path.exists():
+                            import subprocess
+                            cmd = ["ffmpeg", "-y", "-i", str(src), str(out_path)]
+                            try:
+                                subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                                final_path = out_path
+                            except Exception:
+                                final_path = src  # fallback keep original
+                        else:
+                            final_path = out_path
+        except Exception:
+            final_path = src
+
+        try:
+            self.add_entry(ArtifactEntry(
+                type="video",
+                path=self._to_portable_relpath(final_path),
+                created_at=datetime.now(timezone.utc).isoformat(),
+                size=final_path.stat().st_size if final_path.exists() else None,
+                meta={
+                    "original_ext": src.suffix.lower(),
+                    "final_ext": final_path.suffix.lower(),
+                    "transcoded": final_path != src,
+                },
+            ))
+        except Exception:
+            pass
+        return final_path
+
     # ---------------- Capture Helpers ----------------
     def save_screenshot_bytes(self, data: bytes, prefix: str = "screenshot") -> Path:
         ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")

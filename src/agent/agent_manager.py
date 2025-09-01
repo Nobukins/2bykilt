@@ -2,6 +2,7 @@ import os
 import logging
 import traceback
 import glob
+from pathlib import Path
 from typing import Tuple, Optional, Dict, Any
 
 import gradio as gr
@@ -42,6 +43,7 @@ else:
 from src.utils.utils import get_latest_files
 from src.script.script_manager import run_script
 from src.browser.browser_manager import prepare_recording_path
+from src.core.artifact_manager import get_artifact_manager
 from src.utils import utils
 from src.utils.globals_manager import get_globals, _global_browser, _global_browser_context, _global_agent, _global_agent_state
 
@@ -486,6 +488,11 @@ async def run_browser_agent(
                            glob.glob(os.path.join(recording_path, "*.[wW][eE][bB][mM]")))
             if new_videos - existing_videos:
                 latest_video = list(new_videos - existing_videos)[0]
+                # Register artifact (Issue #30 integration)
+                try:
+                    get_artifact_manager().register_video_file(Path(latest_video))
+                except Exception:
+                    pass
 
         return (
             final_result, errors, model_actions, model_thoughts, latest_video, trace_file, history_file,
