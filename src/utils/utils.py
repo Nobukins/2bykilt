@@ -265,38 +265,28 @@ def get_latest_files(directory: str, file_types: list = ['.webm', '.zip']) -> Di
             
     return latest_files
 async def capture_screenshot(browser_context):
-    """Capture and encode a screenshot"""
-    # Extract the Playwright browser instance
-    playwright_browser = browser_context.browser.playwright_browser  # Ensure this is correct.
+    """Capture and encode a screenshot (Issue #33 unified path).
 
-    # Check if the browser instance is valid and if an existing context can be reused
-    if playwright_browser and playwright_browser.contexts:
-        playwright_context = playwright_browser.contexts[0]
-    else:
-        return None
-
-    # Access pages in the context
-    pages = None
-    if playwright_context:
-        pages = playwright_context.pages
-
-    # Use an existing page or create a new one if none exist
-    if pages:
-        active_page = pages[0]
-        for page in pages:
-            if page.url != "about:blank":
-                active_page = page
-    else:
-        return None
-
-    # Take screenshot
+    Uses first non about:blank page; delegates to screenshot_manager for storage.
+    Returns base64 string or None.
+    """
     try:
-        screenshot = await active_page.screenshot(
-            type='jpeg',
-            quality=75,
-            scale="css"
-        )
-        encoded = base64.b64encode(screenshot).decode('utf-8')
-        return encoded
-    except Exception as e:
+        playwright_browser = browser_context.browser.playwright_browser
+        if not (playwright_browser and playwright_browser.contexts):
+            return None
+        ctx = playwright_browser.contexts[0]
+        pages = list(ctx.pages) if ctx else []
+        target = None
+        for p in pages:
+            if p.url != "about:blank":
+                target = p
+                break
+        if not target and pages:
+            target = pages[0]
+        if not target:
+            return None
+        from src.core.screenshot_manager import capture_page_screenshot
+        _path, b64 = capture_page_screenshot(target, prefix="auto")
+        return b64
+    except Exception:
         return None
