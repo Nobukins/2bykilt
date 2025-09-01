@@ -34,8 +34,9 @@ from typing import Dict, List, Any, Optional, Tuple
 
 try:
     from ruamel.yaml import YAML  # type: ignore
-except ImportError as e:  # pragma: no cover
-    print("[ERROR] ruamel.yaml not installed. Add to requirements and install.", file=sys.stderr)
+except ImportError:  # pragma: no cover
+    # Provide an explicit remediation command for faster developer action.
+    print("[ERROR] Missing dependency 'ruamel.yaml'. Install it via: pip install ruamel.yaml", file=sys.stderr)
     sys.exit(12)
 
 import urllib.request
@@ -127,7 +128,12 @@ def github_request(repo: str, token: Optional[str], page: int = 1, per_page: int
             body = resp.read().decode("utf-8")
             return json.loads(body)
     except urllib.error.HTTPError as e:  # pragma: no cover
-        raise RuntimeError(f"GitHub API HTTPError {e.code}: {e.read().decode('utf-8', 'ignore')}")
+        # Read body once (reading multiple times can yield empty content)
+        try:
+            error_body = e.read().decode('utf-8', 'ignore')
+        except Exception:
+            error_body = getattr(e, 'reason', '') or 'NO_BODY'
+        raise RuntimeError(f"GitHub API HTTPError {e.code}: {error_body}")
     except urllib.error.URLError as e:  # pragma: no cover
         raise RuntimeError(f"GitHub API URLError: {e}")
 
@@ -173,8 +179,16 @@ def map_labels_to_fields(labels: List[str]) -> Dict[str, Any]:
         elif lab == 'risk/high':
             out['risk'] = 'high'
     if priorities:
-        # pick highest (P0 < P1 ...)
-        priorities.sort(key=lambda p: int(p[1]))
+        # Pick highest (P0 < P1 ...) while tolerating unexpected formats (e.g., P10)
+        def prio_key(label: str) -> int:
+            m = re.search(r"\d+", label)
+            if not m:
+                return 99  # push unknown to end
+            try:
+                return int(m.group(0))
+            except ValueError:
+                return 99
+        priorities.sort(key=prio_key)
         out.setdefault('meta', {})['priority'] = priorities[0]
     return out
 
