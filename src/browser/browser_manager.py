@@ -6,6 +6,7 @@ from typing import Dict, Optional, Any
 from pathlib import Path
 
 from src.utils.globals_manager import get_globals
+from src.core.artifact_manager import ArtifactManager
 from src.browser.browser_config import BrowserConfig
 from src.browser.browser_debug_manager import BrowserDebugManager
 
@@ -245,32 +246,25 @@ async def initialize_browser(use_own_browser=False, headless=False, browser_type
     return {"status": "error", "message": f"すべてのブラウザ初期化試行が失敗しました"}
 
 def prepare_recording_path(enable_recording: bool, save_recording_path: Optional[str]) -> Optional[str]:
-    """Prepare recording path based on settings (Windows対応済み・改良版)"""
+    """Prepare recording path (Wave A3 #28 integration).
+
+    Uses ArtifactManager.resolve_recording_dir for unified path strategy when
+    feature flag artifacts.unified_recording_path is enabled. Falls back to
+    legacy behavior for backward compatibility.
+    """
     if not enable_recording:
         return None
-        
-    if save_recording_path and save_recording_path.strip():
-        # 明示的にパスが指定されている場合
-        try:
-            # Windows対応: pathlibを使用してパス処理を統一
-            recording_path = Path(save_recording_path).resolve()
-            recording_path.mkdir(parents=True, exist_ok=True)
-            logger.info(f"Recording directory prepared: {recording_path}")
-            return str(recording_path)
-        except PermissionError as e:
-            logger.error(f"Permission denied creating recording directory: {e}")
-        except Exception as e:
-            logger.error(f"Failed to create recording directory: {e}")
-    
-    # フォールバック: 自動的にプラットフォーム適応のパスを使用
     try:
-        recording_path = get_recording_path("./tmp/record_videos")
-        logger.info(f"Using automatic recording path: {recording_path}")
-        return recording_path
-    except Exception as e:
-        logger.error(f"Failed to prepare automatic recording path: {e}")
-        # 最終フォールバック: 一時ディレクトリ
-        import tempfile
-        temp_path = tempfile.gettempdir()
-        logger.warning(f"Using system temporary directory as final fallback: {temp_path}")
-        return temp_path
+        path = ArtifactManager.resolve_recording_dir(save_recording_path)
+        logger.info(f"Recording directory prepared: {path}")
+        return str(path)
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"Failed to resolve recording directory: {e}")
+        try:
+            path = Path(get_recording_path("./tmp/record_videos")).resolve()
+            return str(path)
+        except Exception:
+            import tempfile
+            tmp = tempfile.gettempdir()
+            logger.warning(f"Using system temporary directory as final fallback: {tmp}")
+            return tmp
