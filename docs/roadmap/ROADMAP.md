@@ -1,8 +1,8 @@
 # 2bykilt 開発ロードマップ (Baseline v1)
 
-最終更新: 2025-08-31
+最終更新: 2025-09-01
 
-対象リポジトリ: https://github.com/Nobukins/2bykilt
+対象リポジトリ: <https://github.com/Nobukins/2bykilt>
 
 本ロードマップは以下を目的とする:
 
@@ -45,7 +45,7 @@
 |------|--------|--------|------|
 | A1 | #64 #65 #63 | ✅ Done | Feature Flags / Multi-env Loader / llms.txt Validator 実装完了 (PR #20 由来) |
 | A2 | #32 ✅ #31 ✅ #56 ✅ #57 ✅ | ✅ Done | #56 / #57 実装完了 (PR #83) |
-| A3 | #28 #30 #33 #35 #36 #34 #37 #38 | Planned | Artifacts 基盤拡張 & 回帰テスト |
+| A3 | #28 #30 #33 #35 #36 #34 #37 #38 #87 #88 #89 | In Progress | #33 PR #86 / 新規派生 (#87 duplicate copy flag, #88 exception narrowing, #89 logging events prep) |
 | A4 | #25 #44 #45 #50 (#55) | Planned | Runner Reliability / git_script 系統 |
 | A5 | #60 #61 | Planned | Security Base (Mask / Scan) |
 | A6 | #58 #59 | Planned | Metrics 基盤 & Run API |
@@ -129,16 +129,18 @@ Flags / 後方互換 Schema / 追加専用ログ→削除遅延 / Sandbox enforc
 
 ## I. 次アクション
 
-短期 (A2 進行中):
+短期 (A3 進行中):
 
-1. Logging 設計 (#31) ✅ 完了 (PR #80 / ISSUE_DEPENDENCIES.yml 反映済)
-2. JSON Lines logger 実装 (#56) ✅ 完了 (PR #83)
-3. ローテーション/保持ポリシー (#57) ✅ 完了 (PR #83)
+1. Screenshot Utility (#33) PR #86 仕上げ (Flag 追加, Docs sync) → マージ後 #33 close
+2. 新規派生 #87 Flag 実装 (本 PR で定義済) / 有効化デフォルト(true)
+3. #88 例外分類 (Playwright 特定例外へ縮小) 設計下書き着手
+4. #89 ログイベント schema 草案 (metrics 基盤 #58 連携フィールド定義案)
+5. #76 依存更新自動化パイプラインの設計着手 (PR ベースの ISSUE_DEPENDENCIES 自動更新を段階的に導入)
 
-中期 (A2 実装着手後):
+中期 (A3 後半 / A6 先行準備):
 
-1. Secret Mask 拡張 (#60) 事前スコープ定義 (#56 の出力フィールド確定後)
-2. Metrics 基盤 (#58) 着手準備 (ログ seq / rotate_count エクスポート計画)
+1. Metrics 基盤 (#58) 着手準備 (Screenshot イベント -> counter / latency hist 設計)
+2. Secret Mask 拡張 (#60) 事前スコープ定義 (#56 ログフィールド確定済)
 
 長期 (先読み):
 
@@ -156,6 +158,8 @@ Flags / 後方互換 Schema / 追加専用ログ→削除遅延 / Sandbox enforc
 | 1.0.2 | 2025-08-30 | Wave A2 #32 完了反映 / Progress Summary & 次アクション更新 | Copilot Agent |
 | 1.0.3 | 2025-08-31 | Wave A2 #31 完了反映 (#31 done / PR #80) / 進捗率更新 / 次アクション再構成 | Copilot Agent |
 | 1.0.4 | 2025-08-31 | Wave A2 #56/#57 完了反映 (PR #83) / Progress 更新 / 次アクション整理 | Copilot Agent |
+| 1.0.5 | 2025-09-01 | A3 In Progress (#87 #88 #89 追加) / 短期アクション更新 / Flag 追加反映 | Copilot Agent |
+| 1.0.6 | 2025-09-01 | #76 を A3 にスケジュール、短期 Next Actions に追加 | Copilot Agent |
 
 ---
 
