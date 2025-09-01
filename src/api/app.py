@@ -17,6 +17,7 @@ from src.browser.browser_config import BrowserConfig
 from src.utils.log_ui import create_log_tab  # Correct import from log_ui instead of app_logger
 from src.utils.app_logger import logger
 import gradio as gr
+from src.core.artifact_manager import ArtifactManager
 
 # Simplified CSP middleware
 class CSPMiddleware(BaseHTTPMiddleware):
@@ -62,6 +63,23 @@ def create_fastapi_app(demo, args):
     @app.get("/api/status")
     async def root():
         return {"message": "APIサーバーは正常に動作しています"}
+
+    # Artifact manifest listing (#36)
+    @app.get("/api/artifacts")
+    async def list_artifacts(limit: int = 10, type: str | None = None):  # noqa: A002
+        manager = ArtifactManager()
+        manifests = ArtifactManager.list_manifests(limit=limit)
+        # Flatten artifacts with run association
+        items = []
+        for m in manifests:
+            run_id = m.get("run_id")
+            for a in m.get("artifacts", []):
+                if type and a.get("type") != type:
+                    continue
+                a_copy = dict(a)
+                a_copy["run_id"] = run_id
+                items.append(a_copy)
+        return {"items": items, "count": len(items)}
     
     # 簡易的なコマンド一覧取得用エンドポイント（エラー処理を簡略化）
     @app.get("/api/commands-simple")
