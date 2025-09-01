@@ -1,10 +1,10 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-08-30T23:35:01Z
+Generated at (UTC): 2025-09-01T11:48:52Z
 
 ## 1. メタサマリー
 
-- Total Issues: 41
+- Total Issues: 45
 - High Risk (declared): 5 → 31, 46, 49, 54, 62
 - Cycle Detected: false (none)
 - Strict Orphans: 3
@@ -13,30 +13,31 @@ Generated at (UTC): 2025-08-30T23:35:01Z
 ## 2. 分布 (Distribution)
 
 ### Priority
-- P0: 14 (34.1%)
-- P1: 13 (31.7%)
-- P2: 13 (31.7%)
-- P3: 1 (2.4%)
+- P0: 14 (31.1%)
+- P1: 15 (33.3%)
+- P2: 15 (33.3%)
+- P3: 1 (2.2%)
 
 ### Phase
-- 1: 18 (43.9%)
-- 1-late: 7 (17.1%)
-- 2: 16 (39.0%)
+- 1: 18 (40.0%)
+- 1-late: 11 (24.4%)
+- 2: 16 (35.6%)
 
 ### Area
-- artifacts: 8 (19.5%)
-- batch: 4 (9.8%)
-- config: 3 (7.3%)
-- docs: 2 (4.9%)
-- logging: 3 (7.3%)
-- observability: 2 (4.9%)
-- plugins: 1 (2.4%)
-- runner: 15 (36.6%)
-- security: 3 (7.3%)
+- artifacts: 10 (22.2%)
+- automation: 1 (2.2%)
+- batch: 4 (8.9%)
+- config: 3 (6.7%)
+- docs: 2 (4.4%)
+- logging: 3 (6.7%)
+- observability: 3 (6.7%)
+- plugins: 1 (2.2%)
+- runner: 15 (33.3%)
+- security: 3 (6.7%)
 
 ### Risk
-- high: 5 (12.2%)
-- none: 36 (87.8%)
+- high: 5 (11.1%)
+- none: 40 (88.9%)
 
 ## 3. リスク詳細 (High / Medium / etc.)
 
@@ -100,17 +101,18 @@ Sorted By: critical_path_rank
 | 35 | アーティファクト manifest v2 | P0 | 1 | artifacts |  | 3 | 1 | 1 | 3 |  |
 | 46 | Run/Job タイムアウト & キャンセル | P2 | 2 | runner | high | 3 | 1 | 1 | 1 |  |
 | 63 | llms.txt スキーマ & バリデータ | P0 | 1-late | config |  | 3 | 2 | 2 | 1 |  |
-| 33 | スクリーンショット取得ユーティリティ | P0 | 1 | artifacts |  | 2 | 1 | 1 | 2 |  |
+| 33 | スクリーンショット取得ユーティリティ | P0 | 1 | artifacts |  | 2 | 1 | 1 | 3 |  |
 | 36 | アーティファクト一覧 API | P1 | 1 | artifacts |  | 2 | 2 | 1 | 1 |  |
 | 37 | 動画アーティファクト保持期間 | P1 | 1 | artifacts |  | 2 | 3 | 1 | 1 |  |
 | 39 | CSV 駆動バッチエンジンコア | P1 | 2 | batch |  | 2 | 1 | 1 | 3 |  |
 | 44 | git_script 解決ロジック不具合修正 | P0 | 1 | runner |  | 2 | 1 | 1 | 1 |  |
 | 47 | 並列実行キュー & 制限 | P2 | 2 | runner |  | 2 | 2 | 1 | 1 |  |
 | 53 | cdp-use 追加タイプ調査 | P2 | 2 | runner |  | 2 | 0 | 0 | 1 |  |
-| 56 | 統一 JSON Lines ロギング実装 | P0 | 1 | logging |  | 2 | 2 | 2 | 3 |  |
+| 56 | 統一 JSON Lines ロギング実装 | P0 | 1 | logging |  | 2 | 2 | 2 | 3 | #83 |
 | 58 | メトリクス計測基盤 | P1 | 2 | observability |  | 2 | 1 | 1 | 1 |  |
 | 62 | 実行サンドボックス機能制限 | P0 | 2 | security | high | 2 | 1 | 1 | 1 |  |
 | 66 | ドキュメント整備 第1弾 | P2 | 1-late | docs |  | 2 | 3 | 1 | 1 |  |
+| 76 | 依存更新自動化パイプライン (PR 起票時の ISSUE_DEPENDENCIES.yml 自動更新) | P1 | 1-late | automation |  | 2 | 2 | 1 | 0 |  |
 | 81 | Async/Browser テスト安定化計画 | P1 | 1 | runner |  | 2 | 0 | 0 | 0 |  |
 | 34 | 要素値キャプチャ & エクスポート | P1 | 1 | artifacts |  | 1 | 2 | 2 | 0 |  |
 | 38 | 録画統一後回帰テストスイート | P2 | 1-late | artifacts |  | 1 | 4 | 5 | 0 |  |
@@ -126,11 +128,14 @@ Sorted By: critical_path_rank
 | 52 | サンドボックス allow/deny パス | P2 | 2 | runner |  | 1 | 2 | 1 | 0 |  |
 | 54 | cdp-use デュアルエンジン抽象レイヤ | P1 | 2 | runner | high | 1 | 1 | 2 | 0 |  |
 | 55 | browser_control pytest パス修正 | P0 | 1 | runner |  | 1 | 0 | 0 | 0 |  |
-| 57 | ログ保持期間 & ローテーション | P1 | 1-late | logging |  | 1 | 3 | 1 | 0 |  |
+| 57 | ログ保持期間 & ローテーション | P1 | 1-late | logging |  | 1 | 3 | 1 | 0 | #83 |
 | 59 | Run メトリクス API | P2 | 2 | observability |  | 1 | 2 | 1 | 0 |  |
 | 60 | シークレットマスキング拡張 | P1 | 1-late | security |  | 1 | 3 | 1 | 0 |  |
 | 61 | 依存セキュリティスキャン最適化 | P1 | 2 | security |  | 1 | 0 | 0 | 0 |  |
 | 67 | ドキュメント整備 第2弾 | P2 | 1-late | docs |  | 1 | 4 | 1 | 0 |  |
+| 87 | スクリーンショット重複保存フラグ導入 | P1 | 1-late | artifacts |  | 1 | 2 | 2 | 1 |  |
+| 88 | スクリーンショット例外分類と特定例外キャッチ | P2 | 1-late | artifacts |  | 1 | 0 | 1 | 0 |  |
+| 89 | Screenshot ログイベント整備 (metrics 連携準備) | P2 | 1-late | observability |  | 1 | 2 | 2 | 0 |  |
 
 ## 7. 依存詳細 (Fan-in / Fan-out)
 
@@ -223,7 +228,7 @@ Sorted By: critical_path_rank
 - CriticalPathRank: 2
 - LongestDistance: 1
 - Depends (1): 32
-- Dependents (2): 38, 34
+- Dependents (3): 38, 34, 76
 
 ### Issue 36: アーティファクト一覧 API
 - Priority: P1, Phase: 1, Area: artifacts
@@ -280,6 +285,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 2
 - Depends (2): 31, 32
 - Dependents (3): 57, 60, 41
+- Progress: {"state": "done", "primary_pr": 83}
 
 ### Issue 58: メトリクス計測基盤
 - Priority: P1, Phase: 2, Area: observability
@@ -304,6 +310,14 @@ Sorted By: critical_path_rank
 - LongestDistance: 3
 - Depends (1): 63
 - Dependents (1): 67
+
+### Issue 76: 依存更新自動化パイプライン (PR 起票時の ISSUE_DEPENDENCIES.yml 自動更新)
+- Priority: P1, Phase: 1-late, Area: automation
+- Risk: (none)
+- CriticalPathRank: 2
+- LongestDistance: 2
+- Depends (1): 33
+- Dependents (0): (none)
 
 ### Issue 81: Async/Browser テスト安定化計画
 - Priority: P1, Phase: 1, Area: runner
@@ -432,6 +446,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 3
 - Depends (1): 56
 - Dependents (0): (none)
+- Progress: {"state": "done", "primary_pr": 83}
 
 ### Issue 59: Run メトリクス API
 - Priority: P2, Phase: 2, Area: observability
@@ -463,5 +478,29 @@ Sorted By: critical_path_rank
 - CriticalPathRank: 1
 - LongestDistance: 4
 - Depends (1): 66
+- Dependents (0): (none)
+
+### Issue 87: スクリーンショット重複保存フラグ導入
+- Priority: P1, Phase: 1-late, Area: artifacts
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 2
+- Depends (2): 33, 35
+- Dependents (1): 83
+
+### Issue 88: スクリーンショット例外分類と特定例外キャッチ
+- Priority: P2, Phase: 1-late, Area: artifacts
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 0
+- Depends (1): 82
+- Dependents (0): (none)
+
+### Issue 89: Screenshot ログイベント整備 (metrics 連携準備)
+- Priority: P2, Phase: 1-late, Area: observability
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 2
+- Depends (2): 33, 58
 - Dependents (0): (none)
 

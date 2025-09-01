@@ -1,6 +1,6 @@
 ```mermaid
 %% Auto-generated dependency graph
-%% Generated at: 2025-08-30T23:34:38.774253Z
+%% Generated at: 2025-09-01T11:48:48.082363Z
 %% Edge方向: dependency --> dependent
 graph LR
 
@@ -32,6 +32,7 @@ subgraph R2[Rank 2]
   58["58 メトリクス計測基盤"]
   62["62 実行サンドボックス機能制限"]
   66["66 ドキュメント整備 第1弾"]
+  76["76 依存更新自動化パイプライン (PR 起…"]
   81["81 Async/Browser テスト安定…"]
 end
 subgraph R1[Rank 1]
@@ -54,6 +55,9 @@ subgraph R1[Rank 1]
   60["60 シークレットマスキング拡張"]
   61["61 依存セキュリティスキャン最適化"]
   67["67 ドキュメント整備 第2弾"]
+  87["87 スクリーンショット重複保存フラグ導入"]
+  88["88 スクリーンショット例外分類と特定例外キ…"]
+  89["89 Screenshot ログイベント整備…"]
 end
 
 %% Edges (depends --> dependent)
@@ -103,6 +107,12 @@ end
 65 --> 64
 63 --> 66
 66 --> 67
+33 --> 76
+33 --> 87
+35 --> 87
+82 --> 88
+33 --> 89
+58 --> 89
 
 %% Styling definitions (Mermaid syntax uses colon)
 classDef highrisk fill:#ffe6e6,stroke:#d40000,stroke-width:2px,color:#000;
@@ -110,7 +120,7 @@ classDef progress fill:#e6f4ff,stroke:#0366d6,stroke-width:2px,color:#000;
 
 %% Class assignments
 class 31,46,49,54,62 highrisk;
-class 25,31,32 progress;
+class 25,31,32,56,57 progress;
 
 %% Legend (pseudo nodes)
 subgraph Legend[Legend]
