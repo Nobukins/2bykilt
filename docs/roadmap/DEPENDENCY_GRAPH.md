@@ -1,6 +1,6 @@
 ```mermaid
 %% Auto-generated dependency graph
-%% Generated at: 2025-09-01T11:48:48.082363Z
+%% Generated at: STABLE
 %% Edge方向: dependency --> dependent
 graph LR
 
@@ -58,6 +58,7 @@ subgraph R1[Rank 1]
   87["87 スクリーンショット重複保存フラグ導入"]
   88["88 スクリーンショット例外分類と特定例外キ…"]
   89["89 Screenshot ログイベント整備…"]
+  90["90 Temp test issue for…"]
 end
 
 %% Edges (depends --> dependent)

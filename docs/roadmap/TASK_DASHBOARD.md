@@ -1,43 +1,45 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-09-01T11:48:52Z
+Generated at (UTC): 2025-09-01T14:42:38+00:00
 
 ## 1. メタサマリー
 
-- Total Issues: 45
+- Total Issues: 46
 - High Risk (declared): 5 → 31, 46, 49, 54, 62
 - Cycle Detected: false (none)
-- Strict Orphans: 3
-- Curated Orphan List Count: 15
+- Strict Orphans: 4
+- Curated Orphan List Count: 16
 
 ## 2. 分布 (Distribution)
 
 ### Priority
-- P0: 14 (31.1%)
-- P1: 15 (33.3%)
-- P2: 15 (33.3%)
+- P0: 14 (30.4%)
+- P1: 15 (32.6%)
+- P2: 16 (34.8%)
 - P3: 1 (2.2%)
 
 ### Phase
-- 1: 18 (40.0%)
-- 1-late: 11 (24.4%)
-- 2: 16 (35.6%)
+- (none): 1 (2.2%)
+- 1: 18 (39.1%)
+- 1-late: 11 (23.9%)
+- 2: 16 (34.8%)
 
 ### Area
-- artifacts: 10 (22.2%)
+- (none): 1 (2.2%)
+- artifacts: 10 (21.7%)
 - automation: 1 (2.2%)
-- batch: 4 (8.9%)
-- config: 3 (6.7%)
-- docs: 2 (4.4%)
-- logging: 3 (6.7%)
-- observability: 3 (6.7%)
+- batch: 4 (8.7%)
+- config: 3 (6.5%)
+- docs: 2 (4.3%)
+- logging: 3 (6.5%)
+- observability: 3 (6.5%)
 - plugins: 1 (2.2%)
-- runner: 15 (33.3%)
-- security: 3 (6.7%)
+- runner: 15 (32.6%)
+- security: 3 (6.5%)
 
 ### Risk
-- high: 5 (11.1%)
-- none: 40 (88.9%)
+- high: 5 (10.9%)
+- none: 41 (89.1%)
 
 ## 3. リスク詳細 (High / Medium / etc.)
 
@@ -54,6 +56,7 @@ Strict Orphans (自動抽出 = 依存なし & 参照されず):
 - 55: browser_control pytest パス修正
 - 61: 依存セキュリティスキャン最適化
 - 81: Async/Browser テスト安定化計画
+- 90: Temp test issue for enrichment
 
 Curated Orphan List (summary.data_quality_checks.orphan_issues_without_dependents_or_depends):
 - 34: 要素値キャプチャ & エクスポート
@@ -71,6 +74,7 @@ Curated Orphan List (summary.data_quality_checks.orphan_issues_without_dependent
 - 61: 依存セキュリティスキャン最適化
 - 67: ドキュメント整備 第2弾
 - 81: Async/Browser テスト安定化計画
+- 90: Temp test issue for enrichment
 
 Missing Strict Orphans in curated list: (none)
 Extra non-strict entries in curated list (WARNING only): 34, 40, 41, 42, 45, 50, 51, 52, 57, 59, 60, 67
@@ -136,6 +140,7 @@ Sorted By: critical_path_rank
 | 87 | スクリーンショット重複保存フラグ導入 | P1 | 1-late | artifacts |  | 1 | 2 | 2 | 1 |  |
 | 88 | スクリーンショット例外分類と特定例外キャッチ | P2 | 1-late | artifacts |  | 1 | 0 | 1 | 0 |  |
 | 89 | Screenshot ログイベント整備 (metrics 連携準備) | P2 | 1-late | observability |  | 1 | 2 | 2 | 0 |  |
+| 90 | Temp test issue for enrichment | P2 |  |  |  |  | 0 | 0 | 0 |  |
 
 ## 7. 依存詳細 (Fan-in / Fan-out)
 
@@ -502,5 +507,13 @@ Sorted By: critical_path_rank
 - CriticalPathRank: 1
 - LongestDistance: 2
 - Depends (2): 33, 58
+- Dependents (0): (none)
+
+### Issue 90: Temp test issue for enrichment
+- Priority: P2, Phase: None, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
 - Dependents (0): (none)
 
