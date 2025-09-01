@@ -76,6 +76,92 @@ class ArtifactManager:
         self._video_transcoded = 0
         self._video_bytes_total = 0
 
+    # ---------------- Internal helpers -----------------
+    @staticmethod
+    def _should_write_manifest() -> bool:
+        return FeatureFlags.is_enabled("artifacts.enable_manifest_v2")
+
+    def _maybe_add_video_entry(self, src: Path, final_path: Path, transcoded: bool, started_at: float, size_val: int | None) -> None:
+        if not self._should_write_manifest():
+            return
+        try:
+            self.add_entry(
+                ArtifactEntry(
+                    type="video",
+                    path=self._to_portable_relpath(final_path),
+                    created_at=datetime.now(timezone.utc).isoformat(),
+                    size=size_val,
+                    meta={
+                        "original_ext": src.suffix.lower(),
+                        "final_ext": final_path.suffix.lower(),
+                        "transcoded": transcoded,
+                        "register_duration_ms": int((time.time() - started_at) * 1000),
+                    },
+                )
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                "Failed to append video entry to manifest",
+                extra={"event": "artifact.video.manifest.fail", "error": repr(e), "file": str(final_path)},
+            )
+
+    def _update_video_metrics(self, size_val: int | None, transcoded: bool) -> dict:
+        with self._metrics_lock:
+            if size_val:
+                self._video_bytes_total += size_val
+            self._video_count += 1
+            if transcoded:
+                self._video_transcoded += 1
+            return {
+                "videos_total": self._video_count,
+                "videos_transcoded": self._video_transcoded,
+                "video_bytes_total": self._video_bytes_total,
+            }
+
+    def _maybe_transcode(self, src: Path, target_container: str, transcode_enabled: bool) -> Path:
+        if not (transcode_enabled and target_container and target_container != "auto"):
+            return src
+        ffmpeg_path = shutil.which("ffmpeg")
+        if not ffmpeg_path:
+            return src
+        desired_ext = f".{target_container.lower()}"
+        if desired_ext != ".mp4" or src.suffix.lower() == desired_ext or src.suffix.lower() not in {".webm", ".mp4"}:
+            return src
+        out_path = src.with_suffix(desired_ext)
+        if out_path.exists():
+            return out_path
+        import subprocess
+        cmd = [ffmpeg_path, "-y", "-i", str(src), str(out_path)]
+        logger.info(
+            "Transcode attempt",
+            extra={
+                "event": "artifact.video.transcode.start",
+                "src": str(src),
+                "dst": str(out_path),
+                "cmd": " ".join(cmd),
+            },
+        )
+        try:
+            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            logger.info(
+                "Transcode success",
+                extra={"event": "artifact.video.transcode.success", "src": str(src), "dst": str(out_path)},
+            )
+            return out_path
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                "Transcode failed (keeping original)",
+                extra={"event": "artifact.video.transcode.fail", "error": repr(e), "src": str(src), "dst": str(out_path)},
+            )
+            return src
+
+    # Test helper (not exported) to reset metrics quickly
+    def _reset_video_metrics(self) -> None:  # pragma: no cover - only for tests/manual
+        with self._metrics_lock:
+            self._video_count = 0
+            self._video_transcoded = 0
+            self._video_bytes_total = 0
+
 
     # ---------------- Internal path serializer -----------------
     @staticmethod
@@ -166,9 +252,7 @@ class ArtifactManager:
         target_container = FeatureFlags.get("artifacts.video_target_container", expected_type=str, default="auto")
         transcode_enabled = FeatureFlags.is_enabled("artifacts.video_transcode_enabled")
         src = video_path
-        final_path = src
         started_at = time.time()
-        ffmpeg_path = shutil.which("ffmpeg") if transcode_enabled else None
         logger.info(
             "Video register start",
             extra={
@@ -176,101 +260,16 @@ class ArtifactManager:
                 "file": str(src),
                 "target_container": target_container,
                 "transcode_enabled": transcode_enabled,
-                "ffmpeg": bool(ffmpeg_path),
             },
         )
+        final_path = self._maybe_transcode(src, target_container, transcode_enabled)
         try:
-            if (
-                transcode_enabled
-                and ffmpeg_path
-                and target_container
-                and target_container != "auto"
-            ):
-                desired_ext = f".{target_container.lower()}"
-                if desired_ext == ".mp4" and src.suffix.lower() != desired_ext and src.suffix.lower() in {".webm", ".mp4"}:
-                    out_path = src.with_suffix(desired_ext)
-                    if not out_path.exists():
-                        import subprocess
-                        cmd = [ffmpeg_path, "-y", "-i", str(src), str(out_path)]
-                        logger.info(
-                            "Transcode attempt",
-                            extra={
-                                "event": "artifact.video.transcode.start",
-                                "src": str(src),
-                                "dst": str(out_path),
-                                "cmd": " ".join(cmd),
-                            },
-                        )
-                        try:
-                            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                            final_path = out_path
-                            logger.info(
-                                "Transcode success",
-                                extra={
-                                    "event": "artifact.video.transcode.success",
-                                    "src": str(src),
-                                    "dst": str(out_path),
-                                },
-                            )
-                        except Exception as e:  # noqa: BLE001
-                            logger.warning(
-                                "Transcode failed (keeping original)",
-                                extra={
-                                    "event": "artifact.video.transcode.fail",
-                                    "error": repr(e),
-                                    "src": str(src),
-                                    "dst": str(out_path),
-                                },
-                            )
-                    else:
-                        final_path = out_path
-        except Exception as e:  # noqa: BLE001
-            logger.warning(
-                "Video registration processing error",
-                extra={"event": "artifact.video.register.error", "error": repr(e), "file": str(src)},
-            )
-            final_path = src
-
-        size_val = None
-        if final_path.exists():
-            try:
-                size_val = final_path.stat().st_size
-            except Exception:  # noqa: BLE001
-                size_val = None
+            size_val = final_path.stat().st_size if final_path.exists() else None
+        except Exception:  # noqa: BLE001
+            size_val = None
         transcoded = final_path != src
-        try:
-            self.add_entry(
-                ArtifactEntry(
-                    type="video",
-                    path=self._to_portable_relpath(final_path),
-                    created_at=datetime.now(timezone.utc).isoformat(),
-                    size=size_val,
-                    meta={
-                        "original_ext": src.suffix.lower(),
-                        "final_ext": final_path.suffix.lower(),
-                        "transcoded": transcoded,
-                        "register_duration_ms": int((time.time() - started_at) * 1000),
-                    },
-                )
-            )
-        except Exception as e:  # noqa: BLE001
-            logger.warning(
-                "Failed to append video entry to manifest",
-                extra={"event": "artifact.video.manifest.fail", "error": repr(e), "file": str(final_path)},
-            )
-
-        # metrics update
-        with self._metrics_lock:
-            if size_val:
-                self._video_bytes_total += size_val
-            self._video_count += 1
-            if transcoded:
-                self._video_transcoded += 1
-            metrics_snapshot = {
-                "videos_total": self._video_count,
-                "videos_transcoded": self._video_transcoded,
-                "video_bytes_total": self._video_bytes_total,
-            }
+        self._maybe_add_video_entry(src, final_path, transcoded, started_at, size_val)
+        metrics_snapshot = self._update_video_metrics(size_val, transcoded)
         logger.info(
             "Video register complete",
             extra={
