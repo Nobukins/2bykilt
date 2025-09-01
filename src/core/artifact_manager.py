@@ -67,6 +67,30 @@ class ArtifactManager:
         self.manifest_path = self.dir / _MANIFEST_FILENAME
         self._manifest_cache: Dict[str, Any] | None = None
 
+    # ---------------- Internal path serializer -----------------
+    @staticmethod
+    def _to_portable_relpath(p: Path) -> str:
+        """Return a POSIX relative path string for manifest storage.
+
+        Strategy:
+          1. Try relative to CWD
+          2. Else try relative to artifacts/ root
+          3. Else fallback to basename
+        Always uses '/' separators (portable) to avoid Windows '\\'.
+        """
+        cwd = Path.cwd()
+        try:
+            rel = p.relative_to(cwd)
+            return rel.as_posix()
+        except Exception:  # noqa: BLE001
+            pass
+        artifacts_root = Path("artifacts")
+        try:
+            rel = p.relative_to(artifacts_root)
+            return rel.as_posix()
+        except Exception:  # noqa: BLE001
+            return p.name
+
     # ---------------- Path Logic -----------------
     @staticmethod
     def resolve_recording_dir(explicit: Optional[str] = None) -> Path:
@@ -130,7 +154,7 @@ class ArtifactManager:
         fpath.write_bytes(data)
         self.add_entry(ArtifactEntry(
             type="screenshot",
-            path=str(fpath.relative_to(Path.cwd())),
+            path=self._to_portable_relpath(fpath),
             created_at=datetime.now(timezone.utc).isoformat(),
             size=fpath.stat().st_size,
             meta={"format": "png"},
@@ -159,7 +183,7 @@ class ArtifactManager:
         fpath.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         self.add_entry(ArtifactEntry(
             type="element_capture",
-            path=str(fpath.relative_to(Path.cwd())),
+            path=self._to_portable_relpath(fpath),
             created_at=datetime.now(timezone.utc).isoformat(),
             size=fpath.stat().st_size,
             meta={"selector": selector},
