@@ -2,58 +2,175 @@
 ### Canonical machine-readable dependency graph
 
 issues:
-  "25": {title: "git_script が llms.txt で指定したスクリプトを正しく解決するよう修正", meta: {area: runner, type: bug, priority: P0, phase: "1", stability: core}, depends: [], dependents: ["44","45","49","50"], progress: {primary_pr: 27, coverage: partial}, risk: null, critical_path_rank: 3}
-  "28": {title: "録画ファイル保存パス統一", meta: {area: artifacts, type: bug, priority: P0, phase: "1", stability: core}, depends: ["32"], dependents: ["30"], risk: null, critical_path_rank: 4}
-  "30": {title: "録画タイプ間不整合是正", meta: {area: artifacts, type: bug, priority: P0, phase: "1", stability: core}, depends: ["28"], dependents: ["37","38"], risk: null, critical_path_rank: 3}
-  "31": {title: "統一ログ設計 (JSON Lines)", meta: {area: logging, type: feat, priority: P0, phase: "1", stability: core}, depends: ["32"], dependents: ["56"], risk: high, progress: {state: done, primary_pr: 80}, critical_path_rank: 3}
-  "32": {title: "Run/Job ID 基盤", meta: {area: runner, type: feat, priority: P0, phase: "1", stability: core}, depends: [], dependents: ["28","31","33","35","46","54","56","58","39","62"], progress: {state: done, primary_pr: 79}, risk: null, critical_path_rank: 5}
-  "33": {title: "スクリーンショット取得ユーティリティ", meta: {area: artifacts, type: feat, priority: P0, phase: "1", stability: core}, depends: ["32"], dependents: ["38","34","76"], risk: null, critical_path_rank: 2}
-  "34": {title: "要素値キャプチャ & エクスポート", meta: {area: artifacts, type: feat, priority: P1, phase: "1", stability: core}, depends: ["33","35"], dependents: [], risk: null, critical_path_rank: 1}
-  "35": {title: "アーティファクト manifest v2", meta: {area: artifacts, type: feat, priority: P0, phase: "1", stability: core}, depends: ["32"], dependents: ["34","36","38"], risk: null, critical_path_rank: 3}
-  "36": {title: "アーティファクト一覧 API", meta: {area: artifacts, type: feat, priority: P1, phase: "1", stability: core}, depends: ["35"], dependents: ["38"], risk: null, critical_path_rank: 2}
-  "37": {title: "動画アーティファクト保持期間", meta: {area: artifacts, type: feat, priority: P1, phase: "1", stability: core}, depends: ["30"], dependents: ["38"], risk: null, critical_path_rank: 2}
-  "38": {title: "録画統一後回帰テストスイート", meta: {area: artifacts, type: feat, priority: P2, phase: "1-late", stability: core}, depends: ["30","33","35","36","37"], dependents: [], risk: null, critical_path_rank: 1}
-  "39": {title: "CSV 駆動バッチエンジンコア", meta: {area: batch, type: feat, priority: P1, phase: "2", stability: experimental}, depends: ["32"], dependents: ["40","41","42"], risk: null, critical_path_rank: 2}
-  "40": {title: "CSV D&D UI 連携", meta: {area: batch, type: feat, priority: P2, phase: "2", stability: experimental}, depends: ["39"], dependents: [], risk: null, critical_path_rank: 1}
-  "41": {title: "バッチ進捗・サマリー", meta: {area: batch, type: feat, priority: P2, phase: "2", stability: experimental}, depends: ["39","56"], dependents: [], risk: null, critical_path_rank: 1}
-  "42": {title: "バッチ部分リトライ", meta: {area: batch, type: feat, priority: P2, phase: "2", stability: experimental}, depends: ["39"], dependents: [], risk: null, critical_path_rank: 1}
-  "43": {title: "ENABLE_LLM パリティ", meta: {area: runner, type: feat, priority: P1, phase: "1-late", stability: core}, depends: ["64","65"], dependents: [], risk: null, critical_path_rank: 1}
-  "44": {title: "git_script 解決ロジック不具合修正", meta: {area: runner, type: bug, priority: P0, phase: "1", stability: core}, depends: ["25"], dependents: ["45"], risk: null, critical_path_rank: 2}
-  "45": {title: "git_script 認証 & プロキシ", meta: {area: runner, type: feat, priority: P1, phase: "1", stability: core}, depends: ["25","44"], dependents: [], risk: null, critical_path_rank: 1}
-  "46": {title: "Run/Job タイムアウト & キャンセル", meta: {area: runner, type: feat, priority: P2, phase: "2", stability: core}, depends: ["32"], dependents: ["47"], risk: high, critical_path_rank: 3}
-  "47": {title: "並列実行キュー & 制限", meta: {area: runner, type: feat, priority: P2, phase: "2", stability: core}, depends: ["46"], dependents: ["51"], risk: null, critical_path_rank: 2}
-  "48": {title: "環境変数バリデーション & 診断", meta: {area: runner, type: feat, priority: P2, phase: "2", stability: core}, depends: ["65"], dependents: [], risk: null, critical_path_rank: 1}
-  "49": {title: "ユーザースクリプト プラグインアーキテクチャ", meta: {area: plugins, type: feat, priority: P3, phase: "2", stability: experimental}, depends: ["64","25"], dependents: [], risk: high, critical_path_rank: 1}
-  "50": {title: "ディレクトリ名変更 & 移行", meta: {area: runner, type: chore, priority: P1, phase: "1", stability: core}, depends: ["25"], dependents: [], risk: null, critical_path_rank: 1}
-  "51": {title: "Windows プロファイル永続化", meta: {area: runner, type: feat, priority: P2, phase: "2", stability: core}, depends: ["47"], dependents: [], risk: null, critical_path_rank: 1}
-  "52": {title: "サンドボックス allow/deny パス", meta: {area: runner, type: feat, priority: P2, phase: "2", stability: experimental}, depends: ["62"], dependents: [], risk: null, critical_path_rank: 1}
-  "53": {title: "cdp-use 追加タイプ調査", meta: {area: runner, type: spike, priority: P2, phase: "2", stability: experimental}, depends: [], dependents: ["54"], risk: null, critical_path_rank: 2}
-  "54": {title: "cdp-use デュアルエンジン抽象レイヤ", meta: {area: runner, type: feat, priority: P1, phase: "2", stability: experimental}, depends: ["32","53"], dependents: [], risk: high, critical_path_rank: 1}
-  "55": {title: "browser_control pytest パス修正", meta: {area: runner, type: bug, priority: P0, phase: "1", stability: core}, depends: [], dependents: [], risk: null, critical_path_rank: 1}
-  "56": {title: "統一 JSON Lines ロギング実装", meta: {area: logging, type: feat, priority: P0, phase: "1", stability: core}, depends: ["31","32"], dependents: ["57","60","41"], progress: {state: done, primary_pr: 83}, risk: null, critical_path_rank: 2}
-  "57": {title: "ログ保持期間 & ローテーション", meta: {area: logging, type: feat, priority: P1, phase: "1-late", stability: core}, depends: ["56"], dependents: [], progress: {state: done, primary_pr: 83}, risk: null, critical_path_rank: 1}
-  "58": {title: "メトリクス計測基盤", meta: {area: observability, type: feat, priority: P1, phase: "2", stability: core}, depends: ["32"], dependents: ["59"], risk: null, critical_path_rank: 2}
-  "59": {title: "Run メトリクス API", meta: {area: observability, type: feat, priority: P2, phase: "2", stability: core}, depends: ["58"], dependents: [], risk: null, critical_path_rank: 1}
-  "60": {title: "シークレットマスキング拡張", meta: {area: security, type: feat, priority: P1, phase: "1-late", stability: core}, depends: ["56"], dependents: [], risk: null, critical_path_rank: 1}
-  "61": {title: "依存セキュリティスキャン最適化", meta: {area: security, type: chore, priority: P1, phase: "2", stability: core}, depends: [], dependents: [], risk: null, critical_path_rank: 1}
-  "62": {title: "実行サンドボックス機能制限", meta: {area: security, type: feat, priority: P0, phase: "2", stability: experimental}, depends: ["32"], dependents: ["52"], risk: high, critical_path_rank: 2}
-  "63": {title: "llms.txt スキーマ & バリデータ", meta: {area: config, type: feat, priority: P0, phase: "1-late", stability: core}, depends: ["64","65"], dependents: ["66"], risk: null, critical_path_rank: 3}
-  "64": {title: "フィーチャーフラグフレームワーク", meta: {area: config, type: feat, priority: P0, phase: "1", stability: core}, depends: ["65"], dependents: ["63","43","49"], risk: null, critical_path_rank: 4}
-  "65": {title: "マルチ環境設定ローダ", meta: {area: config, type: feat, priority: P0, phase: "1", stability: core}, depends: [], dependents: ["64","63","43","48"], risk: null, critical_path_rank: 5}
-  "66": {title: "ドキュメント整備 第1弾", meta: {area: docs, type: docs, priority: P2, phase: "1-late", stability: core}, depends: ["63"], dependents: ["67"], risk: null, critical_path_rank: 2}
-  "67": {title: "ドキュメント整備 第2弾", meta: {area: docs, type: docs, priority: P2, phase: "1-late", stability: core}, depends: ["66"], dependents: [], risk: null, critical_path_rank: 1}
-  "76": {title: "依存更新自動化パイプライン (PR 起票時の ISSUE_DEPENDENCIES.yml 自動更新)", meta: {area: automation, type: feat, priority: P1, phase: "1-late", stability: core}, depends: ["33"], dependents: [], risk: null, critical_path_rank: 2}
-  "81": {title: "Async/Browser テスト安定化計画", meta: {area: runner, type: stability, priority: P1, phase: "1", stability: core}, depends: [], dependents: [], risk: null, critical_path_rank: 2}
-  "87": {title: "スクリーンショット重複保存フラグ導入", meta: {area: artifacts, type: feat, priority: P1, phase: "1-late", stability: core}, depends: ["33","35"], dependents: ["83"], risk: null, critical_path_rank: 1}
-  "88": {title: "スクリーンショット例外分類と特定例外キャッチ", meta: {area: artifacts, type: feat, priority: P2, phase: "1-late", stability: core}, depends: ["82"], dependents: [], risk: null, critical_path_rank: 1}
-  "89": {title: "Screenshot ログイベント整備 (metrics 連携準備)", meta: {area: observability, type: chore, priority: P2, phase: "1-late", stability: core}, depends: ["33","58"], dependents: [], risk: null, critical_path_rank: 1}
+  "25": {title: "git_script が llms.txt で指定したスクリプトを正しく解決するよう修正", meta: {area: 
+        runner, type: bug, priority: P0, phase: "1", stability: core}, depends: [],
+    dependents: ["44", "45", "49", "50"], progress: {primary_pr: 27, coverage: 
+        partial}, risk: null, critical_path_rank: 3}
+  "28": {title: "録画ファイル保存パス統一", meta: {area: artifacts, type: bug, priority: P0, 
+        phase: "1", stability: core}, depends: ["32"], dependents: ["30"], risk: 
+      null, critical_path_rank: 4}
+  "30": {title: "録画タイプ間不整合是正", meta: {area: artifacts, type: bug, priority: P0, 
+        phase: "1", stability: core}, depends: ["28"], dependents: ["37", "38"], 
+      risk: null, critical_path_rank: 3}
+  "31": {title: "統一ログ設計 (JSON Lines)", meta: {area: logging, type: feat, 
+        priority: P0, phase: "1", stability: core}, depends: ["32"], dependents: [
+      "56"], risk: high, progress: {state: done, primary_pr: 80}, 
+      critical_path_rank: 3}
+  "32": {title: "Run/Job ID 基盤", meta: {area: runner, type: feat, priority: P0, 
+        phase: "1", stability: core}, depends: [], dependents: ["28", "31", "33",
+      "35", "46", "54", "56", "58", "39", "62"], progress: {state: done, 
+        primary_pr: 79}, risk: null, critical_path_rank: 5}
+  "33": {title: "スクリーンショット取得ユーティリティ", meta: {area: artifacts, type: feat, 
+        priority: P0, phase: "1", stability: core}, depends: ["32"], dependents: [
+      "38", "34", "76"], risk: null, critical_path_rank: 2}
+  "34": {title: "要素値キャプチャ & エクスポート", meta: {area: artifacts, type: feat, 
+        priority: P1, phase: "1", stability: core}, depends: ["33", "35"], 
+      dependents: [], risk: null, critical_path_rank: 1}
+  "35": {title: "アーティファクト manifest v2", meta: {area: artifacts, type: feat, 
+        priority: P0, phase: "1", stability: core}, depends: ["32"], dependents: [
+      "34", "36", "38"], risk: null, critical_path_rank: 3}
+  "36": {title: "アーティファクト一覧 API", meta: {area: artifacts, type: feat, priority: 
+        P1, phase: "1", stability: core}, depends: ["35"], dependents: ["38"], 
+      risk: null, critical_path_rank: 2}
+  "37": {title: "動画アーティファクト保持期間", meta: {area: artifacts, type: feat, priority: 
+        P1, phase: "1", stability: core}, depends: ["30"], dependents: ["38"], 
+      risk: null, critical_path_rank: 2}
+  "38": {title: "録画統一後回帰テストスイート", meta: {area: artifacts, type: feat, priority: 
+        P2, phase: "1-late", stability: core}, depends: ["30", "33", "35", "36", "37"],
+    dependents: [], risk: null, critical_path_rank: 1}
+  "39": {title: "CSV 駆動バッチエンジンコア", meta: {area: batch, type: feat, priority: P1, 
+        phase: "2", stability: experimental}, depends: ["32"], dependents: ["40",
+      "41", "42"], risk: null, critical_path_rank: 2}
+  "40": {title: "CSV D&D UI 連携", meta: {area: batch, type: feat, priority: P2, 
+        phase: "2", stability: experimental}, depends: ["39"], dependents: [], 
+      risk: null, critical_path_rank: 1}
+  "41": {title: "バッチ進捗・サマリー", meta: {area: batch, type: feat, priority: P2, 
+        phase: "2", stability: experimental}, depends: ["39", "56"], dependents: [],
+    risk: null, critical_path_rank: 1}
+  "42": {title: "バッチ部分リトライ", meta: {area: batch, type: feat, priority: P2, phase: "2",
+      stability: experimental}, depends: ["39"], dependents: [], risk: null, 
+      critical_path_rank: 1}
+  "43": {title: "ENABLE_LLM パリティ", meta: {area: runner, type: feat, priority: P1,
+      phase: "1-late", stability: core}, depends: ["64", "65"], dependents: [], 
+      risk: null, critical_path_rank: 1}
+  "44": {title: "git_script 解決ロジック不具合修正", meta: {area: runner, type: bug, 
+        priority: P0, phase: "1", stability: core}, depends: ["25"], dependents: [
+      "45"], risk: null, critical_path_rank: 2}
+  "45": {title: "git_script 認証 & プロキシ", meta: {area: runner, type: feat, 
+        priority: P1, phase: "1", stability: core}, depends: ["25", "44"], 
+      dependents: [], risk: null, critical_path_rank: 1}
+  "46": {title: "Run/Job タイムアウト & キャンセル", meta: {area: runner, type: feat, 
+        priority: P2, phase: "2", stability: core}, depends: ["32"], dependents: [
+      "47"], risk: high, critical_path_rank: 3}
+  "47": {title: "並列実行キュー & 制限", meta: {area: runner, type: feat, priority: P2, 
+        phase: "2", stability: core}, depends: ["46"], dependents: ["51"], risk: 
+      null, critical_path_rank: 2}
+  "48": {title: "環境変数バリデーション & 診断", meta: {area: runner, type: feat, priority: 
+        P2, phase: "2", stability: core}, depends: ["65"], dependents: [], risk: 
+      null, critical_path_rank: 1}
+  "49": {title: "ユーザースクリプト プラグインアーキテクチャ", meta: {area: plugins, type: feat, 
+        priority: P3, phase: "2", stability: experimental}, depends: ["64", "25"],
+    dependents: [], risk: high, critical_path_rank: 1}
+  "50": {title: "ディレクトリ名変更 & 移行", meta: {area: runner, type: chore, priority: P1,
+      phase: "1", stability: core}, depends: ["25"], dependents: [], risk: null, 
+      critical_path_rank: 1}
+  "51": {title: "Windows プロファイル永続化", meta: {area: runner, type: feat, priority: 
+        P2, phase: "2", stability: core}, depends: ["47"], dependents: [], risk: 
+      null, critical_path_rank: 1}
+  "52": {title: "サンドボックス allow/deny パス", meta: {area: runner, type: feat, 
+        priority: P2, phase: "2", stability: experimental}, depends: ["62"], 
+      dependents: [], risk: null, critical_path_rank: 1}
+  "53": {title: "cdp-use 追加タイプ調査", meta: {area: runner, type: spike, priority: 
+        P2, phase: "2", stability: experimental}, depends: [], dependents: ["54"],
+    risk: null, critical_path_rank: 2}
+  "54": {title: "cdp-use デュアルエンジン抽象レイヤ", meta: {area: runner, type: feat, 
+        priority: P1, phase: "2", stability: experimental}, depends: ["32", "53"],
+    dependents: [], risk: high, critical_path_rank: 1}
+  "55": {title: "browser_control pytest パス修正", meta: {area: runner, type: bug, 
+        priority: P0, phase: "1", stability: core}, depends: [], dependents: [], 
+      risk: null, critical_path_rank: 1}
+  "56": {title: "統一 JSON Lines ロギング実装", meta: {area: logging, type: feat, 
+        priority: P0, phase: "1", stability: core}, depends: ["31", "32"], 
+      dependents: ["57", "60", "41"], progress: {state: done, primary_pr: 83}, 
+      risk: null, critical_path_rank: 2}
+  "57": {title: "ログ保持期間 & ローテーション", meta: {area: logging, type: feat, priority: 
+        P1, phase: "1-late", stability: core}, depends: ["56"], dependents: [], 
+      progress: {state: done, primary_pr: 83}, risk: null, critical_path_rank: 1}
+  "58": {title: "メトリクス計測基盤", meta: {area: observability, type: feat, priority: 
+        P1, phase: "2", stability: core}, depends: ["32"], dependents: ["59"], 
+      risk: null, critical_path_rank: 2}
+  "59": {title: "Run メトリクス API", meta: {area: observability, type: feat, 
+        priority: P2, phase: "2", stability: core}, depends: ["58"], dependents: [],
+    risk: null, critical_path_rank: 1}
+  "60": {title: "シークレットマスキング拡張", meta: {area: security, type: feat, priority: P1,
+      phase: "1-late", stability: core}, depends: ["56"], dependents: [], risk: 
+      null, critical_path_rank: 1}
+  "61": {title: "依存セキュリティスキャン最適化", meta: {area: security, type: chore, priority: 
+        P1, phase: "2", stability: core}, depends: [], dependents: [], risk: 
+      null, critical_path_rank: 1}
+  "62": {title: "実行サンドボックス機能制限", meta: {area: security, type: feat, priority: P0,
+      phase: "2", stability: experimental}, depends: ["32"], dependents: ["52"], 
+      risk: high, critical_path_rank: 2}
+  "63": {title: "llms.txt スキーマ & バリデータ", meta: {area: config, type: feat, 
+        priority: P0, phase: "1-late", stability: core}, depends: ["64", "65"], 
+      dependents: ["66"], risk: null, critical_path_rank: 3}
+  "64": {title: "フィーチャーフラグフレームワーク", meta: {area: config, type: feat, priority: 
+        P0, phase: "1", stability: core}, depends: ["65"], dependents: ["63", "43",
+      "49"], risk: null, critical_path_rank: 4}
+  "65": {title: "マルチ環境設定ローダ", meta: {area: config, type: feat, priority: P0, 
+        phase: "1", stability: core}, depends: [], dependents: ["64", "63", "43",
+      "48"], risk: null, critical_path_rank: 5}
+  "66": {title: "ドキュメント整備 第1弾", meta: {area: docs, type: docs, priority: P2, 
+        phase: "1-late", stability: core}, depends: ["63"], dependents: ["67"], 
+      risk: null, critical_path_rank: 2}
+  "67": {title: "ドキュメント整備 第2弾", meta: {area: docs, type: docs, priority: P2, 
+        phase: "1-late", stability: core}, depends: ["66"], dependents: [], risk: 
+      null, critical_path_rank: 1}
+  "76": {title: "依存更新自動化パイプライン (PR 起票時の ISSUE_DEPENDENCIES.yml 自動更新)", meta: {
+        area: automation, type: feat, priority: P1, phase: "1-late", stability: 
+        core}, depends: ["33"], dependents: [], risk: null, critical_path_rank: 
+      2}
+  "81": {title: "Async/Browser テスト安定化計画", meta: {area: runner, type: stability, 
+        priority: P1, phase: "1", stability: core}, depends: [], dependents: [], 
+      risk: null, critical_path_rank: 2}
+  "87": {title: "スクリーンショット重複保存フラグ導入", meta: {area: artifacts, type: feat, 
+        priority: P1, phase: "1-late", stability: core}, depends: ["33", "35"], 
+      dependents: ["83"], risk: null, critical_path_rank: 1}
+  "88": {title: "スクリーンショット例外分類と特定例外キャッチ", meta: {area: artifacts, type: feat, 
+        priority: P2, phase: "1-late", stability: core}, depends: ["82"], 
+      dependents: [], risk: null, critical_path_rank: 1}
+  "89": {title: "Screenshot ログイベント整備 (metrics 連携準備)", meta: {area: observability,
+      type: chore, priority: P2, phase: "1-late", stability: core}, depends: ["33",
+      "58"], dependents: [], risk: null, critical_path_rank: 1}
+  '90':
+    title: Temp test issue for enrichment
+    meta:
+      priority: P2
+    risk:
+    depends: []
+    dependents: []
 
 summary:
-  total_issues: 45
-  high_risk: ["31","46","49","54","62"]
-  longest_chain_example: ["65","64","63","66","67"]
+  total_issues: 46
+  high_risk: ["31", "46", "49", "54", "62"]
+  longest_chain_example: ["65", "64", "63", "66", "67"]
   data_quality_checks:
     no_cycles_detected: true
-    orphan_issues_without_dependents_or_depends: ["34","40","41","42","45","50","51","52","55","57","59","60","61","67","81"]
+    orphan_issues_without_dependents_or_depends:
+    - "34"
+    - "40"
+    - "41"
+    - "42"
+    - "45"
+    - "50"
+    - "51"
+    - "52"
+    - "55"
+    - "57"
+    - "59"
+    - "60"
+    - "61"
+    - "67"
+    - "81"
+    - '90'
   generated_at_utc: "2025-09-01T00:00:00Z"
-    

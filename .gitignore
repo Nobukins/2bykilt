@@ -236,3 +236,6 @@ tests/browser/logs/
 # Multi-environment config artifacts
 effective_config*.json
 config_comparison*.json
+
+# ignore generated enrichment summaries
+enrich_summary.json

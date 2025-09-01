@@ -235,7 +235,8 @@ def generate_dashboard(issues: Dict[str, Issue],
                        sort_mode: str,
                        include_internal: bool) -> str:
     total = len(issues)
-    now = dt.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    # Use timezone-aware UTC (PEP 495 / aware datetime best practice)
+    now = dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat()
 
     strict_orphans = compute_strict_orphans(issues)
     curated_orphans = set(summary.get("data_quality_checks", {}).get("orphan_issues_without_dependents_or_depends", []))

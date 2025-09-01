@@ -46,7 +46,8 @@ def short_label(title: str, max_len=20):
 def render_mermaid(data: Dict[str, Any],
                    show_legend: bool = True,
                    add_code_fence: bool = True,
-                   raw_mermaid: bool = False) -> str:
+                   raw_mermaid: bool = False,
+                   stable: bool = False) -> str:
     issues = data["issues"]
     summary = data.get("summary", {})
     high_risk = set(summary.get("high_risk", []))
@@ -65,7 +66,8 @@ def render_mermaid(data: Dict[str, Any],
         if add_code_fence:
             out.append("```mermaid")
         out.append("%% Auto-generated dependency graph")
-        out.append(f"%% Generated at: {datetime.datetime.utcnow().isoformat()}Z")
+        ts = "STABLE" if stable else datetime.datetime.now(datetime.UTC).isoformat()
+        out.append(f"%% Generated at: {ts}")
         out.append("%% Edge方向: dependency --> dependent")
         out.append("graph LR")
         out.append("")
@@ -128,6 +130,7 @@ def main():
     parser.add_argument("--no-legend", action="store_true", help="Suppress legend output")
     parser.add_argument("--no-fence", action="store_true", help="Do not wrap with ```mermaid fences")
     parser.add_argument("--raw-mermaid", action="store_true", help="Output raw Mermaid (no fences, minimal header)")
+    parser.add_argument("--stable", action="store_true", help="Use stable timestamp to enable idempotent diff")
     args = parser.parse_args()
 
     data = load_yaml(args.yaml_path)
@@ -141,6 +144,7 @@ def main():
         show_legend=show_legend,
         add_code_fence=not args.no_fence and not args.raw_mermaid,
         raw_mermaid=args.raw_mermaid,
+        stable=args.stable,
     )
     print(text, end="")
 
