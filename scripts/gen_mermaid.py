@@ -65,7 +65,8 @@ def render_mermaid(data: Dict[str, Any],
         if add_code_fence:
             out.append("```mermaid")
         out.append("%% Auto-generated dependency graph")
-        out.append(f"%% Generated at: {datetime.datetime.utcnow().isoformat()}Z")
+    # Use timezone-aware UTC (utcnow() deprecation avoidance)
+    out.append(f"%% Generated at: {datetime.datetime.now(datetime.UTC).isoformat()}")
         out.append("%% Edge方向: dependency --> dependent")
         out.append("graph LR")
         out.append("")
