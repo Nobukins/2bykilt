@@ -35,16 +35,20 @@ import base64
 import json
 import os
 import time
+import shutil
+import logging
+import threading
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from src.config.feature_flags import FeatureFlags
 from src.runtime.run_context import RunContext
 
 _ARTIFACT_COMPONENT = "art"
 _MANIFEST_FILENAME = "manifest_v2.json"
+logger = logging.getLogger(__name__)
 
 @dataclass
 class ArtifactEntry:
@@ -66,6 +70,98 @@ class ArtifactManager:
         self.dir = self.rc.artifact_dir(_ARTIFACT_COMPONENT)
         self.manifest_path = self.dir / _MANIFEST_FILENAME
         self._manifest_cache: Dict[str, Any] | None = None
+        # metrics (process local, thread-safe increments)
+        self._metrics_lock = threading.Lock()
+        self._video_count = 0
+        self._video_transcoded = 0
+        self._video_bytes_total = 0
+
+    # ---------------- Internal helpers -----------------
+    @staticmethod
+    def _should_write_manifest() -> bool:
+        return FeatureFlags.is_enabled("artifacts.enable_manifest_v2")
+
+    def _maybe_add_video_entry(self, src: Path, final_path: Path, transcoded: bool, started_at: float, size_val: int | None) -> None:
+        if not self._should_write_manifest():
+            return
+        try:
+            self.add_entry(
+                ArtifactEntry(
+                    type="video",
+                    path=self._to_portable_relpath(final_path),
+                    created_at=datetime.now(timezone.utc).isoformat(),
+                    size=size_val,
+                    meta={
+                        "original_ext": src.suffix.lower(),
+                        "final_ext": final_path.suffix.lower(),
+                        "transcoded": transcoded,
+                        "register_duration_ms": int((time.time() - started_at) * 1000),
+                    },
+                )
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                "Failed to append video entry to manifest",
+                extra={"event": "artifact.video.manifest.fail", "error": repr(e), "file": str(final_path)},
+            )
+
+    def _update_video_metrics(self, size_val: int | None, transcoded: bool) -> dict:
+        with self._metrics_lock:
+            if size_val:
+                self._video_bytes_total += size_val
+            self._video_count += 1
+            if transcoded:
+                self._video_transcoded += 1
+            return {
+                "videos_total": self._video_count,
+                "videos_transcoded": self._video_transcoded,
+                "video_bytes_total": self._video_bytes_total,
+            }
+
+    def _maybe_transcode(self, src: Path, target_container: str, transcode_enabled: bool) -> Path:
+        if not (transcode_enabled and target_container and target_container != "auto"):
+            return src
+        ffmpeg_path = shutil.which("ffmpeg")
+        if not ffmpeg_path:
+            return src
+        desired_ext = f".{target_container.lower()}"
+        if desired_ext != ".mp4" or src.suffix.lower() == desired_ext or src.suffix.lower() not in {".webm", ".mp4"}:
+            return src
+        out_path = src.with_suffix(desired_ext)
+        if out_path.exists():
+            return out_path
+        import subprocess
+        cmd = [ffmpeg_path, "-y", "-i", str(src), str(out_path)]
+        logger.info(
+            "Transcode attempt",
+            extra={
+                "event": "artifact.video.transcode.start",
+                "src": str(src),
+                "dst": str(out_path),
+                "cmd": " ".join(cmd),
+            },
+        )
+        try:
+            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            logger.info(
+                "Transcode success",
+                extra={"event": "artifact.video.transcode.success", "src": str(src), "dst": str(out_path)},
+            )
+            return out_path
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                "Transcode failed (keeping original)",
+                extra={"event": "artifact.video.transcode.fail", "error": repr(e), "src": str(src), "dst": str(out_path)},
+            )
+            return src
+
+    # Test helper (not exported) to reset metrics quickly
+    def _reset_video_metrics(self) -> None:  # pragma: no cover - only for tests/manual
+        with self._metrics_lock:
+            self._video_count = 0
+            self._video_transcoded = 0
+            self._video_bytes_total = 0
+
 
     # ---------------- Internal path serializer -----------------
     @staticmethod
@@ -143,6 +239,56 @@ class ArtifactManager:
         manifest = self._load_manifest()
         manifest["artifacts"].append(asdict(entry))
         self._persist_manifest()
+
+    # ---------------- Video Handling (#30) -------------------
+    def register_video_file(self, video_path: Path) -> Path:
+        """Register a video artifact. Optionally transcode to target container.
+
+        Feature flags:
+          artifacts.video_target_container: 'auto' (keep) or 'mp4'
+          artifacts.video_transcode_enabled: bool (if true and source != target)
+        Transcoding requires `ffmpeg` on PATH. Failures are logged silently (no raise).
+        """
+        target_container = FeatureFlags.get("artifacts.video_target_container", expected_type=str, default="auto")
+        transcode_enabled = FeatureFlags.is_enabled("artifacts.video_transcode_enabled")
+        src = video_path
+        started_at = time.time()
+        logger.info(
+            "Video register start",
+            extra={
+                "event": "artifact.video.register.start",
+                "file": str(src),
+                "target_container": target_container,
+                "transcode_enabled": transcode_enabled,
+            },
+        )
+        final_path = self._maybe_transcode(src, target_container, transcode_enabled)
+        try:
+            size_val = final_path.stat().st_size if final_path.exists() else None
+        except Exception:  # noqa: BLE001
+            size_val = None
+        transcoded = final_path != src
+        self._maybe_add_video_entry(src, final_path, transcoded, started_at, size_val)
+        metrics_snapshot = self._update_video_metrics(size_val, transcoded)
+        logger.info(
+            "Video register complete",
+            extra={
+                "event": "artifact.video.register.complete",
+                "file": str(final_path),
+                "transcoded": transcoded,
+                "size": size_val,
+                **metrics_snapshot,
+            },
+        )
+        return final_path
+
+    def get_video_metrics(self) -> Dict[str, int]:
+        with self._metrics_lock:
+            return {
+                "videos_total": self._video_count,
+                "videos_transcoded": self._video_transcoded,
+                "video_bytes_total": self._video_bytes_total,
+            }
 
     # ---------------- Capture Helpers ----------------
     def save_screenshot_bytes(self, data: bytes, prefix: str = "screenshot") -> Path:
