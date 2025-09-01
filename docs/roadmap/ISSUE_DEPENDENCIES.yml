@@ -7,7 +7,7 @@ issues:
   "30": {title: "録画タイプ間不整合是正", meta: {area: artifacts, type: bug, priority: P0, phase: "1", stability: core}, depends: ["28"], dependents: ["37","38"], risk: null, critical_path_rank: 3}
   "31": {title: "統一ログ設計 (JSON Lines)", meta: {area: logging, type: feat, priority: P0, phase: "1", stability: core}, depends: ["32"], dependents: ["56"], risk: high, progress: {state: done, primary_pr: 80}, critical_path_rank: 3}
   "32": {title: "Run/Job ID 基盤", meta: {area: runner, type: feat, priority: P0, phase: "1", stability: core}, depends: [], dependents: ["28","31","33","35","46","54","56","58","39","62"], progress: {state: done, primary_pr: 79}, risk: null, critical_path_rank: 5}
-  "33": {title: "スクリーンショット取得ユーティリティ", meta: {area: artifacts, type: feat, priority: P0, phase: "1", stability: core}, depends: ["32"], dependents: ["38","34"], risk: null, critical_path_rank: 2}
+  "33": {title: "スクリーンショット取得ユーティリティ", meta: {area: artifacts, type: feat, priority: P0, phase: "1", stability: core}, depends: ["32"], dependents: ["38","34","76"], risk: null, critical_path_rank: 2}
   "34": {title: "要素値キャプチャ & エクスポート", meta: {area: artifacts, type: feat, priority: P1, phase: "1", stability: core}, depends: ["33","35"], dependents: [], risk: null, critical_path_rank: 1}
   "35": {title: "アーティファクト manifest v2", meta: {area: artifacts, type: feat, priority: P0, phase: "1", stability: core}, depends: ["32"], dependents: ["34","36","38"], risk: null, critical_path_rank: 3}
   "36": {title: "アーティファクト一覧 API", meta: {area: artifacts, type: feat, priority: P1, phase: "1", stability: core}, depends: ["35"], dependents: ["38"], risk: null, critical_path_rank: 2}
@@ -42,14 +42,18 @@ issues:
   "65": {title: "マルチ環境設定ローダ", meta: {area: config, type: feat, priority: P0, phase: "1", stability: core}, depends: [], dependents: ["64","63","43","48"], risk: null, critical_path_rank: 5}
   "66": {title: "ドキュメント整備 第1弾", meta: {area: docs, type: docs, priority: P2, phase: "1-late", stability: core}, depends: ["63"], dependents: ["67"], risk: null, critical_path_rank: 2}
   "67": {title: "ドキュメント整備 第2弾", meta: {area: docs, type: docs, priority: P2, phase: "1-late", stability: core}, depends: ["66"], dependents: [], risk: null, critical_path_rank: 1}
+  "76": {title: "依存更新自動化パイプライン (PR 起票時の ISSUE_DEPENDENCIES.yml 自動更新)", meta: {area: automation, type: feat, priority: P1, phase: "1-late", stability: core}, depends: ["33"], dependents: [], risk: null, critical_path_rank: 2}
   "81": {title: "Async/Browser テスト安定化計画", meta: {area: runner, type: stability, priority: P1, phase: "1", stability: core}, depends: [], dependents: [], risk: null, critical_path_rank: 2}
+  "87": {title: "スクリーンショット重複保存フラグ導入", meta: {area: artifacts, type: feat, priority: P1, phase: "1-late", stability: core}, depends: ["33","35"], dependents: ["83"], risk: null, critical_path_rank: 1}
+  "88": {title: "スクリーンショット例外分類と特定例外キャッチ", meta: {area: artifacts, type: feat, priority: P2, phase: "1-late", stability: core}, depends: ["82"], dependents: [], risk: null, critical_path_rank: 1}
+  "89": {title: "Screenshot ログイベント整備 (metrics 連携準備)", meta: {area: observability, type: chore, priority: P2, phase: "1-late", stability: core}, depends: ["33","58"], dependents: [], risk: null, critical_path_rank: 1}
 
 summary:
-  total_issues: 41
+  total_issues: 45
   high_risk: ["31","46","49","54","62"]
   longest_chain_example: ["65","64","63","66","67"]
   data_quality_checks:
     no_cycles_detected: true
     orphan_issues_without_dependents_or_depends: ["34","40","41","42","45","50","51","52","55","57","59","60","61","67","81"]
-  generated_at_utc: "2025-08-31T00:00:00Z"
+  generated_at_utc: "2025-09-01T00:00:00Z"
     

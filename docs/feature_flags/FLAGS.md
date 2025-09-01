@@ -1,6 +1,6 @@
 # Feature Flags Management
 
-最終更新: 2025-08-26
+最終更新: 2025-09-01
 
 ## 概要
 
@@ -394,6 +394,7 @@ python scripts/unused_flags.py --check-references
 |---------|------|---------|--------|
 | 1.0.0 | 2025-08-26 | 初期ドラフト作成 | Copilot Agent |
 | 1.1.0 | 2025-08-29 | 実装ステータス追記 (feature_flags.py / feature_flags.yaml 基盤) | Copilot Agent |
+| 1.2.0 | 2025-09-01 | 新規フラグ `artifacts.screenshot.user_named_copy_enabled` 追加 (#87) | Copilot Agent |
 
 ---
 
@@ -431,6 +432,24 @@ if FeatureFlags.is_enabled("engine.cdp_use"):
 FeatureFlags.set_override("ui.experimental_panel", True, ttl_seconds=300)
 
 value = FeatureFlags.get("enable_llm", expected_type=bool)
+
+### 新規フラグ: artifacts.screenshot.user_named_copy_enabled (#87)
+
+スクリーンショット保存時に `ArtifactManager` 標準パスとは別にユーザー向け安定ファイル名 (prefix+timestamp) の重複保存を行うかを制御します。
+
+- 目的: 既存利用者が期待するシンプルなファイル名による参照利便性維持 (将来 manifest v2 のみで参照へ移行する際の撤去を容易化)
+- 型: bool
+- デフォルト: true (後方互換)
+- 無効化効果: 重複ファイル書き込みをスキップ (I/O 削減)
+- 削除目安: manifest v2 (#35) + エクスポート UI 安定後 / metrics (#58) 連携でアクセス頻度低下を確認したタイミング
+
+使用例:
+```python
+from src.config.feature_flags import FeatureFlags
+if FeatureFlags.is_enabled("artifacts.screenshot.user_named_copy_enabled"):
+    # duplicate copy enabled
+    pass
+```
 ```
 
 ### 環境変数オーバーライド

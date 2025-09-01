@@ -231,11 +231,11 @@ def test_browser_control(page: Page):
         try:
             from src.core.screenshot_manager import capture_page_screenshot
             _p,_b = capture_page_screenshot(page, prefix="error")
-        except Exception:
+        except Exception as primary_exc:
             try:
                 page.screenshot(path="error.png")  # fallback legacy
-            except Exception:
-                pass
+            except Exception as legacy_exc:
+                print(f"Screenshot capture failed (legacy fallback also failed): {legacy_exc}; primary: {primary_exc}")
         raise e
 '''
     return script_content

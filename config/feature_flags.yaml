@@ -31,3 +31,7 @@ flags:
     description: "webm→mp4 変換を有効化 (ffmpeg 必須, #30)"
     type: bool
     default: false
+  artifacts.screenshot.user_named_copy_enabled:
+    description: "スクリーンショット重複 (ユーザー指定名) 保存を有効化 (#87)"
+    type: bool
+    default: true

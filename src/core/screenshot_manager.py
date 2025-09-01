@@ -18,6 +18,7 @@ from typing import Optional, Tuple
 
 from src.core.artifact_manager import get_artifact_manager
 from src.config.feature_flags import FeatureFlags
+from src.utils.app_logger import logger
 
 
 _DEF_PREFIX = "screenshot"
@@ -32,21 +33,35 @@ def capture_page_screenshot(page, prefix: str = _DEF_PREFIX, image_format: str =
     mgr = get_artifact_manager()
     ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
     fname = f"{prefix}_{ts}.{image_format.lower()}"
+
+    logger.info(f"[screenshot_manager] capture_start prefix={prefix} format={image_format.lower()}")
+
     try:
         raw_bytes = page.screenshot(type=image_format.lower())  # sync API in most contexts
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # Broad for now; follow-up issue will narrow to Playwright specifics
+        logger.warning(f"[screenshot_manager] capture_fail prefix={prefix} error={exc}")
         return None, None
-    # Persist via ArtifactManager (only if manifest v2 enabled OR legacy allowed)
+
     try:
-        # ArtifactManager always writes file to its own screenshots folder (canonical)
-        path = mgr.save_screenshot_bytes(raw_bytes, prefix=f"{prefix}")  # it creates its own timestamped name
-        # If user wants deterministic name, also write secondary copy under artifacts dir for reference
-        user_named = path.parent / fname
-        if not user_named.exists():
-            user_named.write_bytes(raw_bytes)
+        path = mgr.save_screenshot_bytes(raw_bytes, prefix=f"{prefix}")
+        # Optional duplicate (deterministic) filename copy gated by flag (default True for backward compatibility)
+        write_dup = True
+        try:  # tolerate absent flag config gracefully
+            write_dup = FeatureFlags.is_enabled("artifacts.screenshot.user_named_copy_enabled")  # type: ignore
+        except Exception:
+            write_dup = True
+        if write_dup:
+            user_named = path.parent / fname
+            if not user_named.exists():
+                try:
+                    user_named.write_bytes(raw_bytes)
+                except Exception as dup_exc:  # noqa: BLE001
+                    logger.warning(f"[screenshot_manager] duplicate_copy_fail target={user_named} error={dup_exc}")
         b64 = base64.b64encode(raw_bytes).decode("utf-8")
+        logger.info(f"[screenshot_manager] capture_success prefix={prefix} path={path}")
         return path, b64
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logger.error(f"[screenshot_manager] persist_fail prefix={prefix} error={exc}")
         return None, None
 
 __all__ = ["capture_page_screenshot"]
