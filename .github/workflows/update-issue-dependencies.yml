@@ -1,0 +1,99 @@
+name: Update Issue Dependencies (Issue #76)
+
+on:
+  schedule:
+    - cron: '17 03 * * *'
+  workflow_dispatch: {}
+  issues:
+    types: [opened, edited, labeled, unlabeled, reopened]
+  label:
+    types: [created, deleted]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  enrich-and-pr:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Enrichment dry-run
+        id: dryrun
+        run: |
+          set +e
+          python scripts/enrich_issue_dependencies.py --repo ${GITHUB_REPOSITORY} --dry-run
+          code=$?
+          echo "code=$code" >> $GITHUB_OUTPUT
+          echo "Dry-run exit code: $code"
+          # Always succeed here; next steps decide
+          exit 0
+
+      - name: Show dry-run summary
+        if: steps.dryrun.outputs.code == '3'
+        run: echo "Diff detected; proceeding to apply phase." 
+
+      - name: Apply enrichment
+        if: steps.dryrun.outputs.code == '3'
+        run: |
+          python scripts/enrich_issue_dependencies.py --repo ${GITHUB_REPOSITORY} --apply --auto-add-new --json-summary enrich_summary.json
+
+      - name: Regenerate derived artifacts
+        if: steps.dryrun.outputs.code == '3'
+        run: |
+          chmod +x scripts/regen_dependencies.sh || true
+          ./scripts/regen_dependencies.sh docs/roadmap/ISSUE_DEPENDENCIES.yml
+
+      - name: Git diff (diagnostics)
+        if: steps.dryrun.outputs.code == '3'
+        run: git --no-pager diff --name-status || true
+
+      - name: Create Pull Request
+        if: steps.dryrun.outputs.code == '3'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: bot/roadmap-sync/${{ github.run_id }}
+          title: "chore(roadmap): auto enrich ISSUE_DEPENDENCIES $(date -u +'%Y-%m-%d')"
+          commit-message: "chore(roadmap): auto enrich ISSUE_DEPENDENCIES (Issue #76)"
+          body: |
+            Automated enrichment (Issue #76 Phase 2).
+
+            - Dry-run detected differences and applied updates.
+            - Regenerated dependency artifacts (graph, dashboard, queue).
+            - See enrich_summary.json (attached artifact) for structured diff.
+
+            Workflow: `.github/workflows/update-issue-dependencies.yml`
+          add-paths: |
+            docs/roadmap/ISSUE_DEPENDENCIES.yml
+            docs/roadmap/DEPENDENCY_GRAPH.md
+            docs/roadmap/TASK_DASHBOARD.md
+            docs/roadmap/TASK_QUEUE.yml
+            scripts/enrich_issue_dependencies.py
+          labels: automation, roadmap
+          draft: false
+
+      - name: Upload JSON summary artifact
+        if: steps.dryrun.outputs.code == '3'
+        uses: actions/upload-artifact@v4
+        with:
+          name: enrich-summary
+          path: enrich_summary.json
+
+      - name: No changes
+        if: steps.dryrun.outputs.code != '3'
+        run: echo "No enrichment changes detected (exit code ${CODE})." 
