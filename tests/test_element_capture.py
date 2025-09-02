@@ -51,3 +51,35 @@ def test_label_sanitization(monkeypatch):
     assert not p.name.startswith('.')
     assert '..' not in p.name
     assert '/' not in p.name
+
+
+def test_partial_fields(monkeypatch):
+    monkeypatch.setenv("BYKILT_RUN_ID", "TESTRUN125")
+    page = DummyPage()
+    p = capture_element_value(page, "#a", label="partial", fields=["value"])  # only value
+    assert p is not None
+    content = p.read_text(encoding="utf-8")
+    assert content.startswith("VALUE:")
+
+
+class FailingLocator(DummyLocator):
+    def inner_text(self, timeout: int = 0):  # noqa: ARG002
+        raise RuntimeError("boom text")
+    def inner_html(self, timeout: int = 0):  # noqa: ARG002
+        raise RuntimeError("boom html")
+
+
+class MixedPage(DummyPage):
+    def __init__(self):
+        self.locators = {"#bad": FailingLocator(), "#ok": DummyLocator()}
+
+
+def test_failure_branches(monkeypatch):
+    monkeypatch.setenv("BYKILT_RUN_ID", "TESTRUN126")
+    page = MixedPage()
+    # Should return None because all fields fail
+    res = capture_element_value(page, "#bad", label="bad", fields=["text","html"])
+    assert res is None
+    # Mixed success
+    res2 = capture_element_value(page, "#ok", label="ok", fields=["text","html"])
+    assert res2 is not None and res2.exists()

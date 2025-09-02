@@ -59,41 +59,49 @@ def capture_element_value(page, selector: str, label: str, fields: Optional[List
     try:
         loc = page.locator(selector)
         collected: list[str] = []
+
         if "text" in fields:
             try:
                 txt = loc.inner_text(timeout=2000)
                 collected.append(f"TEXT: {txt.strip()}")
-            except Exception as e:  # noqa: BLE001
-                logger.warning(f"element_capture.text_fail selector={selector} error={repr(e)}")
+            except (AttributeError, RuntimeError, TimeoutError) as e:  # narrow expected failures
+                logger.warning(f"element_capture.text_fail selector={selector} err={type(e).__name__}:{e}")
+            except Exception as e:  # unexpected
+                logger.warning(f"element_capture.text_unexpected selector={selector} err={type(e).__name__}:{e}")
+
         if "value" in fields:
             try:
                 val = loc.input_value(timeout=2000)
                 collected.append(f"VALUE: {val}")
-            except Exception:
-                # not all nodes support input_value
-                pass
+            except (AttributeError, RuntimeError, TimeoutError) as e:
+                logger.warning(f"element_capture.value_fail selector={selector} err={type(e).__name__}:{e}")
+            except Exception as e:
+                logger.warning(f"element_capture.value_unexpected selector={selector} err={type(e).__name__}:{e}")
+
         if "html" in fields:
             try:
                 html = loc.inner_html(timeout=2000)
                 collected.append("HTML:\n" + html)
-            except Exception as e:  # noqa: BLE001
-                logger.warning(f"element_capture.html_fail selector={selector} error={repr(e)}")
+            except (AttributeError, RuntimeError, TimeoutError) as e:
+                logger.warning(f"element_capture.html_fail selector={selector} err={type(e).__name__}:{e}")
+            except Exception as e:
+                logger.warning(f"element_capture.html_unexpected selector={selector} err={type(e).__name__}:{e}")
+
         if not collected:
             logger.warning(f"element_capture.empty selector={selector} label={safe_label}")
             return None
+
         content = "\n\n".join(collected)
         fpath.write_text(content, encoding="utf-8")
-        # also create JSON manifest entry (selector + first line of text)
-        first_text = None
-        for line in collected:
-            if line.startswith("TEXT:"):
-                first_text = line[5:].strip()
-                break
+        first_text = next((line[5:].strip() for line in collected if line.startswith("TEXT:")), None)
         mgr.save_element_capture(selector=selector, text=first_text, value=None)
         logger.info(f"element_capture.success file={fpath} selector={selector} label={safe_label}")
         return fpath
-    except Exception as e:  # noqa: BLE001
-        logger.warning(f"element_capture.fail selector={selector} error={repr(e)}")
+    except (OSError, IOError) as e:  # file system related
+        logger.warning(f"element_capture.fs_fail selector={selector} err={type(e).__name__}:{e}")
+        return None
+    except Exception as e:
+        logger.warning(f"element_capture.fail selector={selector} err={type(e).__name__}:{e}")
         return None
 
 __all__ = ["capture_element_value"]
