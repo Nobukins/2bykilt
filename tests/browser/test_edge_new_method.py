@@ -10,6 +10,9 @@ import shutil
 from pathlib import Path
 from playwright.async_api import async_playwright
 
+import pytest
+
+@pytest.mark.local_only
 async def test_edge_new_method():
     print("🧪 Edge 新しい作法テストを開始...")
     

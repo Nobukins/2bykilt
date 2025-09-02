@@ -71,7 +71,7 @@ jobs:
       - name: Pytest (full suite for coverage)
         run: |
           echo "Running full pytest suite to generate comprehensive coverage (previously limited subset caused 0% new code coverage)."
-          coverage run -m pytest -c tests/pytest.ini
+          coverage run -m pytest -c tests/pytest.ini -m "not local_only"
           coverage xml -i -o coverage.xml
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
