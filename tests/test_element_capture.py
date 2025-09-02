@@ -1,4 +1,3 @@
-import types
 from pathlib import Path
 
 from src.core.element_capture import capture_element_value
