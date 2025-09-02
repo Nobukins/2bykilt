@@ -68,10 +68,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest pytest-cov
-      - name: Pytest (logging design scope)
+      - name: Pytest (full suite for coverage)
         run: |
-          echo "Run only logging design contract tests (Issue #31) to validate PR #80 without full integration dependencies"
-          coverage run -m pytest -c tests/pytest.ini -k 'logging_spec_contract or component_validation'
+          echo "Running full pytest suite to generate comprehensive coverage (previously limited subset caused 0% new code coverage)."
+          coverage run -m pytest -c tests/pytest.ini
           coverage xml -i -o coverage.xml
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
