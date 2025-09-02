@@ -1,6 +1,6 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-09-01T22:11:27+00:00
+Generated at (UTC): 2025-09-02T23:04:25+00:00
 
 ## 1. メタサマリー
 
@@ -118,7 +118,7 @@ Sorted By: critical_path_rank
 | 66 | ドキュメント整備 第1弾 | P2 | 1-late | docs |  | 2 | 3 | 1 | 1 |  |
 | 76 | 依存更新自動化パイプライン (PR 起票時の ISSUE_DEPENDENCIES.yml 自動更新) | P1 | 1-late | automation |  | 2 | 2 | 1 | 0 |  |
 | 81 | Async/Browser テスト安定化計画 | P1 | 1 | runner |  | 2 | 0 | 0 | 0 |  |
-| 34 | 要素値キャプチャ & エクスポート | P1 | 1 | artifacts |  | 1 | 2 | 2 | 0 |  |
+| 34 | 要素値キャプチャ & エクスポート | P1 | 1 | artifacts |  | 1 | 2 | 2 | 0 | #93 |
 | 38 | 録画統一後回帰テストスイート | P2 | 1-late | artifacts |  | 1 | 4 | 5 | 0 |  |
 | 40 | CSV D&D UI 連携 | P2 | 2 | batch |  | 1 | 2 | 1 | 0 |  |
 | 41 | バッチ進捗・サマリー | P2 | 2 | batch |  | 1 | 3 | 2 | 0 |  |
@@ -138,7 +138,7 @@ Sorted By: critical_path_rank
 | 61 | 依存セキュリティスキャン最適化 | P1 | 2 | security |  | 1 | 0 | 0 | 0 |  |
 | 67 | ドキュメント整備 第2弾 | P2 | 1-late | docs |  | 1 | 4 | 1 | 0 |  |
 | 87 | スクリーンショット重複保存フラグ導入 | P1 | 1-late | artifacts |  | 1 | 2 | 2 | 1 |  |
-| 88 | スクリーンショット例外分類と特定例外キャッチ | P2 | 1-late | artifacts |  | 1 | 0 | 1 | 0 |  |
+| 88 | スクリーンショット例外分類と特定例外キャッチ | P2 | 1-late | artifacts |  | 1 | 2 | 2 | 0 |  |
 | 89 | Screenshot ログイベント整備 (metrics 連携準備) | P2 | 1-late | observability |  | 1 | 2 | 2 | 0 |  |
 | 90 | Temp test issue for enrichment | P2 |  |  |  |  | 0 | 0 | 0 |  |
 
@@ -339,6 +339,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 2
 - Depends (2): 33, 35
 - Dependents (0): (none)
+- Progress: {"state": "done", "primary_pr": 93}
 
 ### Issue 38: 録画統一後回帰テストスイート
 - Priority: P2, Phase: 1-late, Area: artifacts
@@ -497,8 +498,8 @@ Sorted By: critical_path_rank
 - Priority: P2, Phase: 1-late, Area: artifacts
 - Risk: (none)
 - CriticalPathRank: 1
-- LongestDistance: 0
-- Depends (1): 82
+- LongestDistance: 2
+- Depends (2): 33, 35
 - Dependents (0): (none)
 
 ### Issue 89: Screenshot ログイベント整備 (metrics 連携準備)
