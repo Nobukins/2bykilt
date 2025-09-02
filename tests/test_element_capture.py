@@ -1,4 +1,5 @@
 from pathlib import Path
+import pytest
 
 from src.core.element_capture import capture_element_value
 from src.core.artifact_manager import get_artifact_manager
@@ -24,6 +25,7 @@ class DummyPage:
     def locator(self, sel: str):
         return self.locators[sel]
 
+@pytest.mark.ci_safe
 def test_capture_element_value(tmp_path, monkeypatch):
     # Redirect artifact root via RunContext env override
     monkeypatch.setenv("BYKILT_RUN_ID", "TESTRUN123")
@@ -41,6 +43,7 @@ def test_capture_element_value(tmp_path, monkeypatch):
     assert "element_capture" in data
 
 
+@pytest.mark.ci_safe
 def test_label_sanitization(monkeypatch):
     monkeypatch.setenv("BYKILT_RUN_ID", "TESTRUN124")
     page = DummyPage()
@@ -52,6 +55,7 @@ def test_label_sanitization(monkeypatch):
     assert '/' not in p.name
 
 
+@pytest.mark.ci_safe
 def test_partial_fields(monkeypatch):
     monkeypatch.setenv("BYKILT_RUN_ID", "TESTRUN125")
     page = DummyPage()
@@ -73,6 +77,7 @@ class MixedPage(DummyPage):
         self.locators = {"#bad": FailingLocator(), "#ok": DummyLocator()}
 
 
+@pytest.mark.ci_safe
 def test_failure_branches(monkeypatch):
     monkeypatch.setenv("BYKILT_RUN_ID", "TESTRUN126")
     page = MixedPage()

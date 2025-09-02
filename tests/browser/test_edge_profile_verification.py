@@ -9,8 +9,10 @@ import os
 import sys
 import shutil
 from pathlib import Path
+import pytest
 from playwright.async_api import async_playwright
 
+@pytest.mark.local_only
 async def test_edge_profile_verification():
     print("🧪 Edge プロファイル検証テストを開始...")
     
