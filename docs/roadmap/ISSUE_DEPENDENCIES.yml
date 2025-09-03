@@ -34,10 +34,10 @@ issues:
       risk: null, progress: {state: done, primary_pr: 95}, critical_path_rank: 2}
   "37": {title: "動画アーティファクト保持期間", meta: {area: artifacts, type: feat, priority: 
         P1, phase: "1", stability: core}, depends: ["30"], dependents: ["38"], 
-      risk: null, progress: {state: in_progress}, critical_path_rank: 2}
+      risk: null, progress: {state: done, primary_pr: 99}, critical_path_rank: 2}
   "38": {title: "録画統一後回帰テストスイート", meta: {area: artifacts, type: feat, priority: 
         P2, phase: "1-late", stability: core}, depends: ["30", "33", "35", "36", "37"],
-    dependents: [], risk: null, critical_path_rank: 1}
+    dependents: [], risk: null, progress: {state: in_progress}, critical_path_rank: 1}
   "39": {title: "CSV 駆動バッチエンジンコア", meta: {area: batch, type: feat, priority: P1, 
         phase: "2", stability: experimental}, depends: ["32"], dependents: ["40",
       "41", "42"], risk: null, critical_path_rank: 2}
