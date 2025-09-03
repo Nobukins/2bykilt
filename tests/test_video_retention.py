@@ -1,6 +1,7 @@
 import os
 import time
 from datetime import datetime, timedelta, timezone
+RETENTION_TEST_OLD_FILE_OFFSET_DAYS = 2  # how many days back to mark old file (must exceed flag=1)
 from pathlib import Path
 
 import pytest
@@ -54,8 +55,11 @@ def test_video_retention_enforcement(tmp_path, monkeypatch):
     old_video.write_bytes(b'old')
     recent_video.write_bytes(b'new')
 
-    # simulate old file by modifying mtime to 2 days ago (microseconds stripped for determinism)
-    old_ts = (datetime.now(timezone.utc).replace(microsecond=0) - timedelta(days=2)).timestamp()
+    # simulate old file by modifying mtime to RETENTION_TEST_OLD_FILE_OFFSET_DAYS days ago (microseconds stripped for determinism)
+    old_ts = (
+        datetime.now(timezone.utc).replace(microsecond=0)
+        - timedelta(days=RETENTION_TEST_OLD_FILE_OFFSET_DAYS)
+    ).timestamp()
     os.utime(old_video, (old_ts, old_ts))
 
     removed = mgr.enforce_video_retention()

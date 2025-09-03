@@ -88,7 +88,16 @@ class ArtifactManager:
             # Flag may not exist yet; treat undefined or errors as 0 (disabled)
             try:
                 retention_days = FeatureFlags.get("artifacts.video_retention_days", expected_type=int, default=0)
-            except Exception:  # noqa: BLE001
+            except (TypeError, ValueError):  # expected type/parse issues -> fallback silently
+                retention_days = 0
+            except Exception as e:  # noqa: BLE001 - unexpected; log once then fallback
+                logger.warning(
+                    "Unexpected error retrieving video_retention_days; defaulting to 0",
+                    extra={
+                        "event": "artifact.video.retention.flag_error",
+                        "error": repr(e),
+                    },
+                )
                 retention_days = 0
             self.add_entry(
                 ArtifactEntry(
