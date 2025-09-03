@@ -45,14 +45,14 @@
 |------|--------|--------|------|
 | A1 | #64 #65 #63 | ✅ Done | Feature Flags / Multi-env Loader / llms.txt Validator 実装完了 (PR #20 由来) |
 | A2 | #32 ✅ #31 ✅ #56 ✅ #57 ✅ | ✅ Done | #56 / #57 実装完了 (PR #83) |
-| A3 | #28 #30 #33 #35 #36 #34 ✅ #37 #38 #87 #88 #89 | In Progress | #34 element capture implemented (PR #93) / #33 PR #86 / 新規派生 (#87 duplicate copy flag, #88 exception narrowing, #89 logging events prep) |
+| A3 | #28 #30 ✅ #33 ✅ #35 ✅ #36 #34 ✅ #37 #38 #87 #88 #89 | In Progress | #35 minimal manifest schema + tests (PR TBD) / #34 element capture (PR #93) / #33 PR #86 / 新規派生 (#87 duplicate copy flag, #88 exception narrowing, #89 logging events prep) |
 | A4 | #25 #44 #45 #50 (#55) | Planned | Runner Reliability / git_script 系統 |
 | A5 | #60 #61 | Planned | Security Base (Mask / Scan) |
 | A6 | #58 #59 | Planned | Metrics 基盤 & Run API |
 | A7 | #43 | Planned | LLM Toggle パリティ |
 | Docs | #66 → #67 | In Progress | Doc Sync >90% 維持方針 |
 
-Progress Summary (Phase 1): Wave A1 100% / Wave A2 100% (#32, #31, #56, #57 完了) / Wave A3 部分進捗 (#34 完了 PR #93) / 残り Waves queued. Draft/試行 PR は進捗計測に含めず（分析除外方針）。
+Progress Summary (Phase 1): Wave A1 100% / Wave A2 100% (#32, #31, #56, #57 完了) / Wave A3 部分進捗 (#34 完了 PR #93, #35 実装済 PR 準備中) / 残り Waves queued. Draft/試行 PR は進捗計測に含めず（分析除外方針）。
 
 ### Group B (Phase 2 – 拡張 / 高度化)
 
@@ -161,6 +161,7 @@ Flags / 後方互換 Schema / 追加専用ログ→削除遅延 / Sandbox enforc
 | 1.0.5 | 2025-09-01 | A3 In Progress (#87 #88 #89 追加) / 短期アクション更新 / Flag 追加反映 | Copilot Agent |
 | 1.0.6 | 2025-09-01 | #76 を A3 にスケジュール、短期 Next Actions に追加 | Copilot Agent |
 | 1.0.7 | 2025-09-03 | #34 完了 (PR #93) / Wave A3 テーブル反映 / Progress Summary 更新 | Copilot Agent |
+| 1.0.8 | 2025-09-03 | #35 最小 manifest v2 スキーマ + flag gating + tests 追加 | Copilot Agent |
 
 ---
 

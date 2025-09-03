@@ -28,7 +28,7 @@ issues:
       dependents: [], risk: null, progress: {state: done, primary_pr: 93}, critical_path_rank: 1}
   "35": {title: "アーティファクト manifest v2", meta: {area: artifacts, type: feat, 
         priority: P0, phase: "1", stability: core}, depends: ["32"], dependents: [
-      "34", "36", "38"], risk: null, critical_path_rank: 3}
+      "34", "36", "38"], risk: null, progress: {state: done, primary_pr: 94}, critical_path_rank: 3}
   "36": {title: "アーティファクト一覧 API", meta: {area: artifacts, type: feat, priority: 
         P1, phase: "1", stability: core}, depends: ["35"], dependents: ["38"], 
       risk: null, critical_path_rank: 2}

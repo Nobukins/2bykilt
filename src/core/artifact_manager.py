@@ -240,6 +240,23 @@ class ArtifactManager:
         manifest["artifacts"].append(asdict(entry))
         self._persist_manifest()
 
+    # ---------------- Accessors (Issue #35 helper) -------------------
+    def get_manifest(self, reload: bool = False) -> Dict[str, Any]:
+        """Return current manifest dict.
+
+        reload=True will force re-read from disk (discarding in-memory cache).
+        Safe for tests and lightweight listing API (#36) to inspect without
+        mutating state.
+        """
+        if reload and self.manifest_path.exists():
+            try:
+                data = json.loads(self.manifest_path.read_text(encoding="utf-8"))
+                self._manifest_cache = data
+                return data
+            except Exception:  # noqa: BLE001
+                pass
+        return self._load_manifest()
+
     # ---------------- Video Handling (#30) -------------------
     def register_video_file(self, video_path: Path) -> Path:
         """Register a video artifact. Optionally transcode to target container.
@@ -298,13 +315,21 @@ class ArtifactManager:
         out_dir.mkdir(parents=True, exist_ok=True)
         fpath = out_dir / fname
         fpath.write_bytes(data)
-        self.add_entry(ArtifactEntry(
-            type="screenshot",
-            path=self._to_portable_relpath(fpath),
-            created_at=datetime.now(timezone.utc).isoformat(),
-            size=fpath.stat().st_size,
-            meta={"format": "png"},
-        ))
+        # Respect feature flag (Issue #35): suppress manifest entirely when disabled
+        if self._should_write_manifest():
+            try:
+                self.add_entry(ArtifactEntry(
+                    type="screenshot",
+                    path=self._to_portable_relpath(fpath),
+                    created_at=datetime.now(timezone.utc).isoformat(),
+                    size=fpath.stat().st_size,
+                    meta={"format": "png"},
+                ))
+            except Exception as e:  # noqa: BLE001
+                logger.warning(
+                    "Failed to append screenshot entry to manifest",
+                    extra={"event": "artifact.screenshot.manifest.fail", "error": repr(e), "file": str(fpath)},
+                )
         return fpath
 
     def save_base64_screenshot(self, b64: str, prefix: str = "screenshot") -> Path:
@@ -327,13 +352,20 @@ class ArtifactManager:
             "captured_at": datetime.now(timezone.utc).isoformat(),
         }
         fpath.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-        self.add_entry(ArtifactEntry(
-            type="element_capture",
-            path=self._to_portable_relpath(fpath),
-            created_at=datetime.now(timezone.utc).isoformat(),
-            size=fpath.stat().st_size,
-            meta={"selector": selector},
-        ))
+        if self._should_write_manifest():
+            try:
+                self.add_entry(ArtifactEntry(
+                    type="element_capture",
+                    path=self._to_portable_relpath(fpath),
+                    created_at=datetime.now(timezone.utc).isoformat(),
+                    size=fpath.stat().st_size,
+                    meta={"selector": selector},
+                ))
+            except Exception as e:  # noqa: BLE001
+                logger.warning(
+                    "Failed to append element_capture entry to manifest",
+                    extra={"event": "artifact.element_capture.manifest.fail", "error": repr(e), "file": str(fpath)},
+                )
         return fpath
 
     # ---------------- Listing / Query --------------
@@ -383,8 +415,14 @@ def get_artifact_manager() -> ArtifactManager:
         _default_manager = ArtifactManager()
     return _default_manager
 
+def reset_artifact_manager_singleton() -> None:  # pragma: no cover - test helper
+    """Reset the module-level ArtifactManager singleton (testing/support only)."""
+    global _default_manager
+    _default_manager = None
+
 __all__ = [
     "ArtifactManager",
     "ArtifactEntry",
     "get_artifact_manager",
+    "reset_artifact_manager_singleton",
 ]
