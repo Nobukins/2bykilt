@@ -138,10 +138,10 @@ issues:
       dependents: ["83"], progress: {state: done, primary_pr: 96}, risk: null, critical_path_rank: 1}
   "88": {title: "スクリーンショット例外分類と特定例外キャッチ", meta: {area: artifacts, type: feat, 
         priority: P2, phase: "1-late", stability: core}, depends: ["33", "35"], 
-      dependents: [], risk: null, critical_path_rank: 1} # Adjusted depends: removed invalid 82 -> aligns with screenshot/manifest prerequisites
+      dependents: [], risk: null, progress: {state: done, primary_pr: 97}, critical_path_rank: 1} # Adjusted depends: removed invalid 82 -> aligns with screenshot/manifest prerequisites
   "89": {title: "Screenshot ログイベント整備 (metrics 連携準備)", meta: {area: observability,
       type: chore, priority: P2, phase: "1-late", stability: core}, depends: ["33",
-      "58"], dependents: [], risk: null, critical_path_rank: 1}
+      "58"], dependents: [], risk: null, progress: {state: in_progress}, critical_path_rank: 1}
   '90':
     title: Temp test issue for enrichment
     meta:
