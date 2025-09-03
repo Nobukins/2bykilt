@@ -107,3 +107,4 @@ Wave A3 の範囲では video / screenshot / element_capture の 3 種を対象�
 | 2.0.0 | 2025-08-26 | 初期包括ドラフト | Copilot Agent |
 | 2.0.1 | 2025-09-03 | Issue #35 最小スキーマ定義へスコープ縮小 / 過剰フィールド分離 | Copilot Agent |
 | 2.0.2 | 2025-09-03 | Issue #36 一覧 API 仕様/レスポンス記述 & 将来拡張 TODO 追加 (links: #37 #58 #38 #87 #88 #89) | Copilot Agent |
+| 2.0.3 | 2025-09-03 | Issue #87 重複ユーザー向けスクリーンショットコピー行追加 / Flag 説明明記 | Copilot Agent |
