@@ -75,7 +75,7 @@ Wave A3 の範囲では video / screenshot / element_capture の 3 種を対象�
 
 | 項目 | Issue | メモ |
 |------|-------|------|
-| video retention ポリシ metadata 表示 | #37 | manifest レベルに集約メタ付与検討 (retention_days) |
+| video retention ポリシ metadata 表示 | #37 | video entry meta に retention_days 追加 (実装済) |
 | metrics export (カウント/バイト) | #58 | list API に aggregated counters オプション追加 (e.g. `summary`) |
 | pagination / cursor | #38 | regression suite 運用で必要性確認後 v3 |
 | screenshot user_defined 名称 | #87 | prefix に user 指定名許可 (重複保存制御と組み合わせ) |
@@ -108,3 +108,4 @@ Wave A3 の範囲では video / screenshot / element_capture の 3 種を対象�
 | 2.0.1 | 2025-09-03 | Issue #35 最小スキーマ定義へスコープ縮小 / 過剰フィールド分離 | Copilot Agent |
 | 2.0.2 | 2025-09-03 | Issue #36 一覧 API 仕様/レスポンス記述 & 将来拡張 TODO 追加 (links: #37 #58 #38 #87 #88 #89) | Copilot Agent |
 | 2.0.3 | 2025-09-03 | Issue #87 重複ユーザー向けスクリーンショットコピー行追加 / Flag 説明明記 | Copilot Agent |
+| 2.0.4 | 2025-09-03 | Issue #37 video retention_days meta 追加 (video エントリ) | Copilot Agent |
