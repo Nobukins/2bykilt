@@ -12,13 +12,42 @@ Design:
 from __future__ import annotations
 
 import base64
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Type
 
 from src.core.artifact_manager import get_artifact_manager
 from src.config.feature_flags import FeatureFlags
 from src.utils.app_logger import logger
+
+# --- Exception Classification (Issue #88) ---
+# We avoid importing playwright.sync_api directly to keep optional dependency loose.
+# Instead we classify by exception name substrings to prevent hard coupling.
+_TRANSIENT_KEYWORDS = [
+    "TimeoutError",  # operation timeouts
+    "TargetClosedError",  # browser/page closed mid-operation
+    "WebSocketError",  # transport hiccups
+]
+
+_FATAL_KEYWORDS = [
+    "NotConnectedError",  # underlying browser driver dead
+    "ProtocolError",  # low-level protocol corruption
+]
+
+def _classify_exception(exc: Exception) -> str:
+    name = type(exc).__name__
+    full = f"{name}:{exc}"[:300]
+    for kw in _TRANSIENT_KEYWORDS:
+        if kw in name:
+            return "transient"
+    for kw in _FATAL_KEYWORDS:
+        if kw in name:
+            return "fatal"
+    # Generic fallback: treat common OSError as transient (IOError is alias in Py3)
+    if isinstance(exc, OSError):
+        return "transient"
+    return "unknown"
 
 
 _DEF_PREFIX = "screenshot"
@@ -38,8 +67,14 @@ def capture_page_screenshot(page, prefix: str = _DEF_PREFIX, image_format: str =
 
     try:
         raw_bytes = page.screenshot(type=image_format.lower())  # sync API in most contexts
-    except Exception as exc:  # Broad for now; follow-up issue will narrow to Playwright specifics
-        logger.warning(f"[screenshot_manager] capture_fail prefix={prefix} error={exc}")
+    except Exception as exc:  # noqa: BLE001
+        error_type = _classify_exception(exc)
+        # Log level selection: transient -> warning, fatal -> error, unknown -> warning
+        if error_type == "fatal":
+            logger.error(f"[screenshot_manager] capture_fail prefix={prefix} error_type={error_type} error={exc}")
+        else:
+            logger.warning(f"[screenshot_manager] capture_fail prefix={prefix} error_type={error_type} error={exc}")
+        # For transient we may consider retry in future (#89 / metrics instrumentation) – no retry yet.
         return None, None
 
     try:
@@ -67,7 +102,10 @@ def capture_page_screenshot(page, prefix: str = _DEF_PREFIX, image_format: str =
         )
         return path, b64
     except Exception as exc:  # noqa: BLE001
-        logger.error(f"[screenshot_manager] persist_fail prefix={prefix} error={exc}")
+        error_type = _classify_exception(exc)
+        # Consistent with capture_fail: only fatal escalates to error level; unknown stays warning.
+        level_fn = logger.error if error_type == "fatal" else logger.warning
+        level_fn(f"[screenshot_manager] persist_fail prefix={prefix} error_type={error_type} error={exc}")
         return None, None
 
 __all__ = ["capture_page_screenshot"]

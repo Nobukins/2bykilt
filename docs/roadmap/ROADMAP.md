@@ -45,7 +45,7 @@
 |------|--------|--------|------|
 | A1 | #64 #65 #63 | ✅ Done | Feature Flags / Multi-env Loader / llms.txt Validator 実装完了 (PR #20 由来) |
 | A2 | #32 ✅ #31 ✅ #56 ✅ #57 ✅ | ✅ Done | #56 / #57 実装完了 (PR #83) |
-| A3 | #28 #30 ✅ #33 ✅ #35 ✅ #36 #34 ✅ #37 #38 #87 #88 #89 | In Progress | #35 minimal manifest schema + tests (PR TBD) / #34 element capture (PR #93) / #33 PR #86 / 新規派生 (#87 duplicate copy flag, #88 exception narrowing, #89 logging events prep) |
+| A3 | #28 #30 ✅ #33 ✅ #35 ✅ #36 #34 ✅ #37 #38 #87 ✅ #88 #89 | In Progress | #35 minimal manifest schema + tests (PR TBD) / #34 element capture (PR #93) / #33 PR #86 / #87 done (PR #96) / 新規派生 (#88 exception narrowing, #89 logging events prep) |
 | A4 | #25 #44 #45 #50 (#55) | Planned | Runner Reliability / git_script 系統 |
 | A5 | #60 #61 | Planned | Security Base (Mask / Scan) |
 | A6 | #58 #59 | Planned | Metrics 基盤 & Run API |
@@ -162,6 +162,7 @@ Flags / 後方互換 Schema / 追加専用ログ→削除遅延 / Sandbox enforc
 | 1.0.6 | 2025-09-01 | #76 を A3 にスケジュール、短期 Next Actions に追加 | Copilot Agent |
 | 1.0.7 | 2025-09-03 | #34 完了 (PR #93) / Wave A3 テーブル反映 / Progress Summary 更新 | Copilot Agent |
 | 1.0.8 | 2025-09-03 | #35 最小 manifest v2 スキーマ + flag gating + tests 追加 | Copilot Agent |
+| 1.0.9 | 2025-09-03 | #87 duplicate screenshot copy flag 完了 (PR #96) / A3 進捗更新 | Copilot Agent |
 
 ---
 

@@ -135,7 +135,7 @@ issues:
       risk: null, critical_path_rank: 2}
   "87": {title: "スクリーンショット重複保存フラグ導入", meta: {area: artifacts, type: feat, 
         priority: P1, phase: "1-late", stability: core}, depends: ["33", "35"], 
-      dependents: ["83"], risk: null, critical_path_rank: 1}
+      dependents: ["83"], progress: {state: done, primary_pr: 96}, risk: null, critical_path_rank: 1}
   "88": {title: "スクリーンショット例外分類と特定例外キャッチ", meta: {area: artifacts, type: feat, 
         priority: P2, phase: "1-late", stability: core}, depends: ["33", "35"], 
       dependents: [], risk: null, critical_path_rank: 1} # Adjusted depends: removed invalid 82 -> aligns with screenshot/manifest prerequisites
