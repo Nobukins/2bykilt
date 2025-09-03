@@ -12,7 +12,7 @@ class _CaptureHandler(logging.Handler):
     def __init__(self):
         super().__init__(level=logging.INFO)
         self.lines = []
-    def emit(self, record: logging.LogRecord):  # noqa: D401
+    def emit(self, record: logging.LogRecord):
         """Parse screenshot event JSON from a log record and store it.
 
         Only records whose message contains the screenshot event prefix are considered.
