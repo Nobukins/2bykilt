@@ -1,6 +1,4 @@
-import json
-from pathlib import Path
-
+import argparse
 import pytest
 from fastapi.testclient import TestClient
 
@@ -8,6 +6,15 @@ from src.api.app import create_fastapi_app, create_ui
 from src.core.artifact_manager import ArtifactManager, reset_artifact_manager_singleton
 from src.runtime.run_context import RunContext
 from src.config.feature_flags import FeatureFlags
+
+
+def _make_app():
+    """Create FastAPI app with a lightweight args namespace.
+
+    Centralizes the previously repeated dynamic type(...) pattern noted in review.
+    """
+    args = argparse.Namespace(ip="127.0.0.1", port=0)
+    return create_fastapi_app(create_ui(), args=args)
 
 @pytest.mark.ci_safe
 def test_artifact_listing_basic(monkeypatch, tmp_path):
@@ -23,7 +30,7 @@ def test_artifact_listing_basic(monkeypatch, tmp_path):
     mgr.save_element_capture("#id", text="hi", value="v")
 
     # Build API app
-    app = create_fastapi_app(create_ui(), args=type("A", (), {"ip": "127.0.0.1", "port": 0})())
+    app = _make_app()
     client = TestClient(app)
 
     r = client.get("/api/artifacts")
@@ -46,7 +53,7 @@ def test_artifact_listing_type_filter(monkeypatch, tmp_path):
     mgr.save_screenshot_bytes(b"img", prefix="onlyshot")
     mgr.save_element_capture("#x", text=None, value=None)
 
-    app = create_fastapi_app(create_ui(), args=type("A", (), {"ip": "127.0.0.1", "port": 0})())
+    app = _make_app()
     client = TestClient(app)
 
     r = client.get("/api/artifacts?type=screenshot")
@@ -65,9 +72,10 @@ def test_artifact_listing_limit(monkeypatch, tmp_path):
     mgr = ArtifactManager()
     # create 3 artifacts
     for i in range(3):
-        mgr.save_screenshot_bytes(f"im{i}".encode(), prefix=f"lim{i}")
+        # Simple deterministic bytes (review suggestion: avoid f-string encode noise)
+        mgr.save_screenshot_bytes(b"im%d" % i, prefix=f"lim{i}")
 
-    app = create_fastapi_app(create_ui(), args=type("A", (), {"ip": "127.0.0.1", "port": 0})())
+    app = _make_app()
     client = TestClient(app)
 
     r = client.get("/api/artifacts?limit=1")
