@@ -85,27 +85,26 @@ class ArtifactManager:
         if not self._should_write_manifest():
             return
         try:
-                retention_days = None
-                try:
-                    # Flag may not exist yet; treat undefined as 0 (disabled)
-                    retention_days = FeatureFlags.get("artifacts.video_retention_days", expected_type=int, default=0)
-                except Exception:
-                    retention_days = 0
-                self.add_entry(
-                    ArtifactEntry(
-                        type="video",
-                        path=self._to_portable_relpath(final_path),
-                        created_at=datetime.now(timezone.utc).isoformat(),
-                        size=size_val,
-                        meta={
-                            "original_ext": src.suffix.lower(),
-                            "final_ext": final_path.suffix.lower(),
-                            "transcoded": transcoded,
-                            "register_duration_ms": int((time.time() - started_at) * 1000),
-                            "retention_days": retention_days,
-                        },
-                    )
+            # Flag may not exist yet; treat undefined or errors as 0 (disabled)
+            try:
+                retention_days = FeatureFlags.get("artifacts.video_retention_days", expected_type=int, default=0)
+            except Exception:  # noqa: BLE001
+                retention_days = 0
+            self.add_entry(
+                ArtifactEntry(
+                    type="video",
+                    path=self._to_portable_relpath(final_path),
+                    created_at=datetime.now(timezone.utc).isoformat(),
+                    size=size_val,
+                    meta={
+                        "original_ext": src.suffix.lower(),
+                        "final_ext": final_path.suffix.lower(),
+                        "transcoded": transcoded,
+                        "register_duration_ms": int((time.time() - started_at) * 1000),
+                        "retention_days": retention_days,
+                    },
                 )
+            )
         except Exception as e:  # noqa: BLE001
             logger.warning(
                 "Failed to append video entry to manifest",
