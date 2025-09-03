@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import base64
 import time
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Tuple, Type
@@ -64,27 +65,39 @@ def capture_page_screenshot(page, prefix: str = _DEF_PREFIX, image_format: str =
     fname = f"{prefix}_{ts}.{image_format.lower()}"
 
     start_ts = time.perf_counter()
+    # human-readable + structured JSON on following line
     logger.info(f"[screenshot_manager] capture_start event=screenshot.capture_start prefix={prefix} format={image_format.lower()}")
+    logger.info(json.dumps({
+        "event": "screenshot.capture.start",  # dotted form
+        "schema_version": 1,
+        "prefix": prefix,
+        "format": image_format.lower(),
+    }, ensure_ascii=False, separators=(",", ":")))
 
     try:
         raw_bytes = page.screenshot(type=image_format.lower())  # sync API in most contexts
         capture_latency_ms = int((time.perf_counter() - start_ts) * 1000)
     except Exception as exc:  # noqa: BLE001
         error_type = _classify_exception(exc)
-        # Log level selection: transient -> warning, fatal -> error, unknown -> warning
         if error_type == "fatal":
             logger.error(f"[screenshot_manager] capture_fail event=screenshot.capture_fail prefix={prefix} error_type={error_type} error={exc}")
         else:
             logger.warning(f"[screenshot_manager] capture_fail event=screenshot.capture_fail prefix={prefix} error_type={error_type} error={exc}")
-        # For transient we may consider retry in future (#89 / metrics instrumentation) – no retry yet.
+        logger.warning(json.dumps({
+            "event": "screenshot.capture.fail",
+            "schema_version": 1,
+            "prefix": prefix,
+            "error_type": error_type,
+            "error_message": str(exc)[:500],
+            "latency_ms": int((time.perf_counter() - start_ts) * 1000),
+        }, ensure_ascii=False, separators=(",", ":")))
         return None, None
 
     try:
         path = mgr.save_screenshot_bytes(raw_bytes, prefix=f"{prefix}")
         size_bytes = len(raw_bytes) if isinstance(raw_bytes, (bytes, bytearray)) else None
-        # Optional duplicate (deterministic) filename copy gated by flag (default True for backward compatibility)
         write_dup = True
-        try:  # tolerate absent flag config gracefully
+        try:
             write_dup = FeatureFlags.is_enabled("artifacts.screenshot.user_named_copy_enabled")  # type: ignore
         except Exception:
             write_dup = True
@@ -95,21 +108,35 @@ def capture_page_screenshot(page, prefix: str = _DEF_PREFIX, image_format: str =
                 try:
                     user_named.write_bytes(raw_bytes)
                 except Exception as dup_exc:  # noqa: BLE001
-                    # Failure to create the optional duplicate should not fail overall capture.
                     logger.warning(f"[screenshot_manager] duplicate_copy_fail target={user_named} error={dup_exc}")
-            # PR #96 review: treat duplicate_copy as "present after operation" (either pre-existing or just written)
             duplicate_copy = user_named.exists()
         b64 = base64.b64encode(raw_bytes).decode("utf-8")
         logger.info(
             f"[screenshot_manager] capture_success event=screenshot.capture_success prefix={prefix} path={path} duplicate_copy={duplicate_copy} latency_ms={capture_latency_ms} size_bytes={size_bytes}"
         )
+        logger.info(json.dumps({
+            "event": "screenshot.capture.success",
+            "schema_version": 1,
+            "prefix": prefix,
+            "path": str(path),
+            "duplicate_copy": duplicate_copy,
+            "latency_ms": capture_latency_ms,
+            "size_bytes": size_bytes,
+        }, ensure_ascii=False, separators=(",", ":")))
         return path, b64
     except Exception as exc:  # noqa: BLE001
         error_type = _classify_exception(exc)
-        # Consistent with capture_fail: only fatal escalates to error level; unknown stays warning.
         level_fn = logger.error if error_type == "fatal" else logger.warning
         persist_latency_ms = int((time.perf_counter() - start_ts) * 1000)
         level_fn(f"[screenshot_manager] persist_fail event=screenshot.persist_fail prefix={prefix} error_type={error_type} error={exc} latency_ms={persist_latency_ms}")
+        level_fn(json.dumps({
+            "event": "screenshot.persist.fail",
+            "schema_version": 1,
+            "prefix": prefix,
+            "error_type": error_type,
+            "error_message": str(exc)[:500],
+            "latency_ms": persist_latency_ms,
+        }, ensure_ascii=False, separators=(",", ":")))
         return None, None
 
 __all__ = ["capture_page_screenshot"]
