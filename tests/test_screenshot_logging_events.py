@@ -6,6 +6,7 @@ import pytest
 from src.core.screenshot_manager import capture_page_screenshot
 from src.runtime.run_context import RunContext
 
+
 @pytest.mark.ci_safe
 def test_screenshot_logging_events_success(monkeypatch, tmp_path, capsys):
     class DummyPage:
@@ -21,6 +22,7 @@ def test_screenshot_logging_events_success(monkeypatch, tmp_path, capsys):
     assert b64 == base64.b64encode(b"binaryimagedata123").decode()
     # Validate file size matches expected
     assert path.stat().st_size == 18  # bytes length of dummy data
+
 
 @pytest.mark.ci_safe
 def test_screenshot_logging_events_failure(monkeypatch, tmp_path, capsys):
