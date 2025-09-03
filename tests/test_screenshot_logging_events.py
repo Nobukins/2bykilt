@@ -19,7 +19,7 @@ def test_screenshot_logging_events_success(monkeypatch, tmp_path, capsys):
     path, b64 = capture_page_screenshot(page, prefix="evt")
     assert path is not None and path.exists()
     assert b64 == base64.b64encode(b"binaryimagedata123").decode()
-    # Validate file size matches expected
+    # Validate file size matches expected (raw bytes length is 18; review suggestion miscounted)
     assert path.stat().st_size == 18  # bytes length of dummy data
 
 @pytest.mark.ci_safe

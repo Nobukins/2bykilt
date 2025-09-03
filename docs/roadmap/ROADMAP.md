@@ -45,14 +45,14 @@
 |------|--------|--------|------|
 | A1 | #64 #65 #63 | ✅ Done | Feature Flags / Multi-env Loader / llms.txt Validator 実装完了 (PR #20 由来) |
 | A2 | #32 ✅ #31 ✅ #56 ✅ #57 ✅ | ✅ Done | #56 / #57 実装完了 (PR #83) |
-| A3 | #28 #30 ✅ #33 ✅ #35 ✅ #36 #34 ✅ #37 #38 #87 ✅ #88 ✅ #89 | In Progress | #35 minimal manifest schema + tests (PR TBD) / #34 element capture (PR #93) / #33 PR #86 / #87 done (PR #96) / #88 done (PR #97) / 着手中: #89 logging events prep |
+| A3 | #28 #30 ✅ #33 ✅ #35 ✅ #36 #34 ✅ #37 #38 #87 ✅ #88 ✅ #89 ✅ | In Progress | #35 minimal manifest schema + tests (PR TBD) / #34 element capture (PR #93) / #33 PR #86 / #87 done (PR #96) / #88 done (PR #97) / #89 done (PR #98) / 着手中: #37 video retention |
 | A4 | #25 #44 #45 #50 (#55) | Planned | Runner Reliability / git_script 系統 |
 | A5 | #60 #61 | Planned | Security Base (Mask / Scan) |
 | A6 | #58 #59 | Planned | Metrics 基盤 & Run API |
 | A7 | #43 | Planned | LLM Toggle パリティ |
 | Docs | #66 → #67 | In Progress | Doc Sync >90% 維持方針 |
 
-Progress Summary (Phase 1): Wave A1 100% / Wave A2 100% (#32, #31, #56, #57 完了) / Wave A3 進捗更新 (#34 完了 PR #93, #35 実装済 PR 準備中, #87 PR #96, #88 PR #97 完了, #89 着手) / 残り Waves queued. Draft/試行 PR は進捗計測に含めず（分析除外方針）。
+Progress Summary (Phase 1): Wave A1 100% / Wave A2 100% (#32, #31, #56, #57 完了) / Wave A3 進捗更新 (#34 完了 PR #93, #35 実装済 PR 準備中, #87 PR #96, #88 PR #97, #89 PR #98 完了, #37 着手) / 残り Waves queued. Draft/試行 PR は進捗計測に含めず（分析除外方針）。
 
 ### Group B (Phase 2 – 拡張 / 高度化)
 
@@ -132,9 +132,9 @@ Flags / 後方互換 Schema / 追加専用ログ→削除遅延 / Sandbox enforc
 短期 (A3 進行中):
 
 1. Screenshot Utility (#33) PR #86 仕上げ (Flag 追加, Docs sync) → マージ後 #33 close
-2. #89 ログイベント schema 実装 (capture_latency_ms / size_bytes / error_type / duplicate_copy) → 後続 #58 metrics 連携材料
-3. #37 動画アーティファクト保持期間 設計 & 基本メタ項目 (retention_days) 下書き
-4. #38 回帰テストスイート拡張 (manifest v2 + screenshot events) 仕様整理
+2. #37 動画アーティファクト保持期間 設計 & 基本メタ項目 (retention_days) 実装
+3. #38 回帰テストスイート拡張 (manifest v2 + screenshot events + video retention) 仕様整理
+4. #89 完了後メトリクス (#58) 連携準備 (latency_ms / size_bytes / video retention removal count expose)
 5. #76 依存更新自動化パイプラインの設計継続 (Issue 状態自動反映)
 
 中期 (A3 後半 / A6 先行準備):
@@ -164,6 +164,7 @@ Flags / 後方互換 Schema / 追加専用ログ→削除遅延 / Sandbox enforc
 | 1.0.8 | 2025-09-03 | #35 最小 manifest v2 スキーマ + flag gating + tests 追加 | Copilot Agent |
 | 1.0.9 | 2025-09-03 | #87 duplicate screenshot copy flag 完了 (PR #96) / A3 進捗更新 | Copilot Agent |
 | 1.0.10 | 2025-09-03 | #88 screenshot exception classification 完了 (PR #97) / #89 着手反映 | Copilot Agent |
+| 1.0.11 | 2025-09-03 | #89 screenshot logging events 完了 (PR #98) / #37 着手 | Copilot Agent |
 
 ---
 
