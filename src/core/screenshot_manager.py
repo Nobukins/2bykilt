@@ -12,6 +12,7 @@ Design:
 from __future__ import annotations
 
 import base64
+import json
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -53,38 +54,67 @@ def _classify_exception(exc: Exception) -> str:
 _DEF_PREFIX = "screenshot"
 
 
+def _emit_event(level: str, payload: dict) -> None:
+    """Emit a structured JSON line for screenshot events (Issue #89 schema v1).
+
+    Payload MUST already contain 'event' key. Adds schema_version if missing.
+    """
+    if "schema_version" not in payload:
+        payload["schema_version"] = 1
+    line = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+    if level == "error":
+        logger.error(line)
+    elif level == "warning":
+        logger.warning(line)
+    else:
+        logger.info(line)
+
+
 def capture_page_screenshot(page, prefix: str = _DEF_PREFIX, image_format: str = "png") -> Tuple[Optional[Path], Optional[str]]:
     """Capture a screenshot of a Playwright page and store through ArtifactManager.
 
-    Returns (file_path, base64_string).
-    Fails soft (no raise) to not break primary flows.
+    Returns (file_path, base64_string). Soft-fail design: returns (None,None) on error.
+    Structured logging (Issue #89) events:
+      - screenshot.capture.start
+      - screenshot.capture.success
+      - screenshot.capture.fail
+      - screenshot.persist.fail
+    Common fields: event, prefix, latency_ms (when applicable), size_bytes (success), error_type/error_message (fail), duplicate_copy.
     """
     mgr = get_artifact_manager()
     ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
     fname = f"{prefix}_{ts}.{image_format.lower()}"
-
     start_ts = time.perf_counter()
-    logger.info(f"[screenshot_manager] capture_start event=screenshot.capture_start prefix={prefix} format={image_format.lower()}")
+
+    _emit_event("info", {
+        "event": "screenshot.capture.start",
+        "prefix": prefix,
+        "format": image_format.lower(),
+    })
 
     try:
-        raw_bytes = page.screenshot(type=image_format.lower())  # sync API in most contexts
+        raw_bytes = page.screenshot(type=image_format.lower())  # sync API
         capture_latency_ms = int((time.perf_counter() - start_ts) * 1000)
     except Exception as exc:  # noqa: BLE001
+        capture_latency_ms = int((time.perf_counter() - start_ts) * 1000)
         error_type = _classify_exception(exc)
-        # Log level selection: transient -> warning, fatal -> error, unknown -> warning
-        if error_type == "fatal":
-            logger.error(f"[screenshot_manager] capture_fail event=screenshot.capture_fail prefix={prefix} error_type={error_type} error={exc}")
-        else:
-            logger.warning(f"[screenshot_manager] capture_fail event=screenshot.capture_fail prefix={prefix} error_type={error_type} error={exc}")
-        # For transient we may consider retry in future (#89 / metrics instrumentation) – no retry yet.
+        level = "error" if error_type == "fatal" else "warning"
+        _emit_event(level, {
+            "event": "screenshot.capture.fail",
+            "prefix": prefix,
+            "error_type": error_type,
+            "error_message": str(exc),
+            "latency_ms": capture_latency_ms,
+        })
         return None, None
 
+    # Success path: attempt persistence and optional duplicate
     try:
         path = mgr.save_screenshot_bytes(raw_bytes, prefix=f"{prefix}")
         size_bytes = len(raw_bytes) if isinstance(raw_bytes, (bytes, bytearray)) else None
         # Optional duplicate (deterministic) filename copy gated by flag (default True for backward compatibility)
         write_dup = True
-        try:  # tolerate absent flag config gracefully
+        try:
             write_dup = FeatureFlags.is_enabled("artifacts.screenshot.user_named_copy_enabled")  # type: ignore
         except Exception:
             write_dup = True
@@ -95,21 +125,34 @@ def capture_page_screenshot(page, prefix: str = _DEF_PREFIX, image_format: str =
                 try:
                     user_named.write_bytes(raw_bytes)
                 except Exception as dup_exc:  # noqa: BLE001
-                    # Failure to create the optional duplicate should not fail overall capture.
-                    logger.warning(f"[screenshot_manager] duplicate_copy_fail target={user_named} error={dup_exc}")
-            # PR #96 review: treat duplicate_copy as "present after operation" (either pre-existing or just written)
+                    _emit_event("warning", {
+                        "event": "screenshot.duplicate.fail",
+                        "prefix": prefix,
+                        "target": str(user_named),
+                        "error_message": str(dup_exc),
+                    })
             duplicate_copy = user_named.exists()
         b64 = base64.b64encode(raw_bytes).decode("utf-8")
-        logger.info(
-            f"[screenshot_manager] capture_success event=screenshot.capture_success prefix={prefix} path={path} duplicate_copy={duplicate_copy} latency_ms={capture_latency_ms} size_bytes={size_bytes}"
-        )
+        _emit_event("info", {
+            "event": "screenshot.capture.success",
+            "prefix": prefix,
+            "path": str(path),
+            "duplicate_copy": duplicate_copy,
+            "latency_ms": capture_latency_ms,
+            "size_bytes": size_bytes,
+        })
         return path, b64
     except Exception as exc:  # noqa: BLE001
-        error_type = _classify_exception(exc)
-        # Consistent with capture_fail: only fatal escalates to error level; unknown stays warning.
-        level_fn = logger.error if error_type == "fatal" else logger.warning
         persist_latency_ms = int((time.perf_counter() - start_ts) * 1000)
-        level_fn(f"[screenshot_manager] persist_fail event=screenshot.persist_fail prefix={prefix} error_type={error_type} error={exc} latency_ms={persist_latency_ms}")
+        error_type = _classify_exception(exc)
+        level = "error" if error_type == "fatal" else "warning"
+        _emit_event(level, {
+            "event": "screenshot.persist.fail",
+            "prefix": prefix,
+            "error_type": error_type,
+            "error_message": str(exc),
+            "latency_ms": persist_latency_ms,
+        })
         return None, None
 
 __all__ = ["capture_page_screenshot"]
