@@ -50,15 +50,21 @@ def capture_page_screenshot(page, prefix: str = _DEF_PREFIX, image_format: str =
             write_dup = FeatureFlags.is_enabled("artifacts.screenshot.user_named_copy_enabled")  # type: ignore
         except Exception:
             write_dup = True
+        duplicate_copy = False
         if write_dup:
             user_named = path.parent / fname
             if not user_named.exists():
                 try:
                     user_named.write_bytes(raw_bytes)
                 except Exception as dup_exc:  # noqa: BLE001
+                    # Failure to create the optional duplicate should not fail overall capture.
                     logger.warning(f"[screenshot_manager] duplicate_copy_fail target={user_named} error={dup_exc}")
+            # PR #96 review: treat duplicate_copy as "present after operation" (either pre-existing or just written)
+            duplicate_copy = user_named.exists()
         b64 = base64.b64encode(raw_bytes).decode("utf-8")
-        logger.info(f"[screenshot_manager] capture_success prefix={prefix} path={path}")
+        logger.info(
+            f"[screenshot_manager] capture_success prefix={prefix} path={path} duplicate_copy={duplicate_copy}"
+        )
         return path, b64
     except Exception as exc:  # noqa: BLE001
         logger.error(f"[screenshot_manager] persist_fail prefix={prefix} error={exc}")

@@ -12,6 +12,7 @@ Wave A3 の範囲では video / screenshot / element_capture の 3 種を対象�
 |------|----------------------|---------|------|
 | video | videos/*.mp4(webm) | original_ext / final_ext / transcoded / register_duration_ms | 変換は ffmpeg 存在時 (#30) |
 | screenshot | screenshots/*.png | format: png | 将来 user_named (#87) 追加予定 |
+| screenshot (duplicate copy) | screenshots/`<prefix>`_`<ts>`.png | format: png | Flag `artifacts.screenshot.user_named_copy_enabled` (Issue #87) により生成 / OFF で無効 |
 | element_capture | elements/*.json | selector: \<CSS\> | JSON 本体に text/value/captured_at |
 
 ## JSON 構造 (最小)
@@ -106,3 +107,4 @@ Wave A3 の範囲では video / screenshot / element_capture の 3 種を対象�
 | 2.0.0 | 2025-08-26 | 初期包括ドラフト | Copilot Agent |
 | 2.0.1 | 2025-09-03 | Issue #35 最小スキーマ定義へスコープ縮小 / 過剰フィールド分離 | Copilot Agent |
 | 2.0.2 | 2025-09-03 | Issue #36 一覧 API 仕様/レスポンス記述 & 将来拡張 TODO 追加 (links: #37 #58 #38 #87 #88 #89) | Copilot Agent |
+| 2.0.3 | 2025-09-03 | Issue #87 重複ユーザー向けスクリーンショットコピー行追加 / Flag 説明明記 | Copilot Agent |
