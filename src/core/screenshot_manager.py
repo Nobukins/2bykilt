@@ -44,8 +44,8 @@ def _classify_exception(exc: Exception) -> str:
     for kw in _FATAL_KEYWORDS:
         if kw in name:
             return "fatal"
-    # Generic fallbacks: treat common IOError/OSError as transient (resource hiccup)
-    if isinstance(exc, (OSError, IOError)):
+    # Generic fallback: treat common OSError as transient (IOError is alias in Py3)
+    if isinstance(exc, OSError):
         return "transient"
     return "unknown"
 
@@ -103,7 +103,8 @@ def capture_page_screenshot(page, prefix: str = _DEF_PREFIX, image_format: str =
         return path, b64
     except Exception as exc:  # noqa: BLE001
         error_type = _classify_exception(exc)
-        level_fn = logger.error if error_type in ("fatal", "unknown") else logger.warning
+        # Consistent with capture_fail: only fatal escalates to error level; unknown stays warning.
+        level_fn = logger.error if error_type == "fatal" else logger.warning
         level_fn(f"[screenshot_manager] persist_fail prefix={prefix} error_type={error_type} error={exc}")
         return None, None
 
