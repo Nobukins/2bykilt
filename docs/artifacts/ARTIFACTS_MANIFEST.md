@@ -43,6 +43,46 @@ Wave A3 の範囲では video / screenshot / element_capture の 3 種を対象�
 
 `artifacts.enable_manifest_v2` = false の場合は **manifest_v2.json を生成せず** 既存 capture は通常出力のみ。
 
+## 一覧 API (Issue #36)
+
+エンドポイント: `GET /api/artifacts`
+
+クエリパラメータ:
+
+- `limit` (int, 任意, default=10): 取得対象 run manifests の走査上限 (最新 run から降順)。
+- `type` (string, 任意): `video` / `screenshot` / `element_capture` にフィルタ。
+
+レスポンス例:
+
+```jsonc
+{
+    "items": [
+        {"run_id": "20250903T101010-abcd01", "type": "screenshot", "path": "artifacts/runs/.../screenshots/xxx.png", "size": 4567, "created_at": "...", "meta": {"format": "png"}},
+        {"run_id": "20250903T101010-abcd01", "type": "element_capture", "path": ".../elements/element_...json", "size": 234, "created_at": "...", "meta": {"selector": "#login"}}
+    ],
+    "count": 2
+}
+```
+
+実装メモ:
+
+- 各 run の `manifest_v2.json` を上限 `limit` 件まで読み込み、`artifacts[]` をフラット化し `run_id` 埋め込み。
+- 将来的な pagination / cursor は v3 拡張 (Issue #38 regression suite 運用状況見ながら検討)。
+- `type` フィルタはメモリ内フィルタ (現状件数小規模想定)。
+
+### 将来拡張 TODO (リンク)
+
+| 項目 | Issue | メモ |
+|------|-------|------|
+| video retention ポリシ metadata 表示 | #37 | manifest レベルに集約メタ付与検討 (retention_days) |
+| metrics export (カウント/バイト) | #58 | list API に aggregated counters オプション追加 (e.g. `summary`) |
+| pagination / cursor | #38 | regression suite 運用で必要性確認後 v3 |
+| screenshot user_defined 名称 | #87 | prefix に user 指定名許可 (重複保存制御と組み合わせ) |
+| screenshot 例外種別ログ | #88 | manifest 失敗 WARN を細分 (特定例外 → info/skip) |
+| screenshot ログイベント拡張 | #89 | metrics 連携用 event フィールド (latency / size) |
+
+> 上記 TODO は PR #95 から参照されるフォローアップ計画。個別 Issue 側で Acceptance Criteria 詳細化予定。
+
 ## 将来拡張 (v3 候補)
 
 - checksums / hash integrity
@@ -60,7 +100,9 @@ Wave A3 の範囲では video / screenshot / element_capture の 3 種を対象�
 ---
 
 改訂履歴:
+
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
 | 2.0.0 | 2025-08-26 | 初期包括ドラフト | Copilot Agent |
 | 2.0.1 | 2025-09-03 | Issue #35 最小スキーマ定義へスコープ縮小 / 過剰フィールド分離 | Copilot Agent |
+| 2.0.2 | 2025-09-03 | Issue #36 一覧 API 仕様/レスポンス記述 & 将来拡張 TODO 追加 (links: #37 #58 #38 #87 #88 #89) | Copilot Agent |
