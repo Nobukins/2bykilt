@@ -54,8 +54,8 @@ def test_video_retention_enforcement(tmp_path, monkeypatch):
     old_video.write_bytes(b'old')
     recent_video.write_bytes(b'new')
 
-    # simulate old file by modifying mtime to 2 days ago
-    old_ts = (datetime.now(timezone.utc) - timedelta(days=2)).timestamp()
+    # simulate old file by modifying mtime to 2 days ago (microseconds stripped for determinism)
+    old_ts = (datetime.now(timezone.utc).replace(microsecond=0) - timedelta(days=2)).timestamp()
     os.utime(old_video, (old_ts, old_ts))
 
     removed = mgr.enforce_video_retention()
