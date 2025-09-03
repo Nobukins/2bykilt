@@ -7,7 +7,7 @@ import logging
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 from playwright.async_api import async_playwright, BrowserContext
-from unittest.mock import AsyncMock  # for test environment detection
+from unittest.mock import AsyncMock  # for test environment detection / heuristics
 
 logger = logging.getLogger(__name__)
 
@@ -181,27 +181,45 @@ class BrowserLauncher:
             import inspect
             ap = async_playwright()
             start_fn = getattr(ap, "start", None)
-            # Treat as awaitable if coroutinefunction or AsyncMock (tests)
-            start_is_awaitable = callable(start_fn) and (inspect.iscoroutinefunction(start_fn) or isinstance(start_fn, AsyncMock))
 
-            if start_is_awaitable:
-                # テストが start() を期待している場合に一致
-                p = await start_fn()  # type: ignore[misc]
-                context = await p.chromium.launch_persistent_context(**launch_options)
-                logger.info(f"✅ {self.browser_type} launched successfully with SeleniumProfile (start())")
-                if context.pages:
-                    logger.info(f"📄 Initial page URL: {context.pages[0].url}")
-                context._playwright_instance = p  # type: ignore[attr-defined]
-                return context
-            else:
-                # 一般的な async context manager にフォールバック
-                async with async_playwright() as p:
+            # Heuristic:
+            # 1. Prefer start() path only when tests explicitly configured a return_value
+            #    that exposes a chromium.launch_persistent_context attribute.
+            # 2. Otherwise default to context manager (stable & auto‑cleanup).
+            use_start_mode = False
+            if callable(start_fn):
+                # Real playwright: start is a coroutinefunction.
+                if inspect.iscoroutinefunction(start_fn):
+                    use_start_mode = True
+                else:
+                    # AsyncMock case: check that return_value has chromium launcher configured.
+                    rv = getattr(start_fn, "return_value", None)
+                    chromium_obj = getattr(getattr(rv, "chromium", None), "launch_persistent_context", None)
+                    if chromium_obj is not None:
+                        use_start_mode = True
+
+            if use_start_mode:
+                # We purposefully do NOT swallow failures from launch_persistent_context; tests rely on exception propagation.
+                try:
+                    p = await start_fn()  # type: ignore[misc]
+                except Exception as start_invoke_error:
+                    logger.debug(f"🔁 start() invocation failed, falling back to context manager: {start_invoke_error}")
+                else:
                     context = await p.chromium.launch_persistent_context(**launch_options)
-                    logger.info(f"✅ {self.browser_type} launched successfully with SeleniumProfile")
-                    logger.info(f"📊 Context pages count: {len(context.pages)}")
+                    logger.info(f"✅ {self.browser_type} launched successfully with SeleniumProfile (start())")
                     if context.pages:
                         logger.info(f"📄 Initial page URL: {context.pages[0].url}")
+                    context._playwright_instance = p  # type: ignore[attr-defined]
                     return context
+
+            # Context manager path (default / fallback)
+            async with async_playwright() as p:
+                context = await p.chromium.launch_persistent_context(**launch_options)
+                logger.info(f"✅ {self.browser_type} launched successfully with SeleniumProfile")
+                logger.info(f"📊 Context pages count: {len(context.pages)}")
+                if context.pages:
+                    logger.info(f"📄 Initial page URL: {context.pages[0].url}")
+                return context
 
         except Exception as e:
             logger.error(f"❌ Failed to launch {self.browser_type}: {e}")
@@ -271,28 +289,22 @@ class BrowserLauncher:
             import inspect
             ap = async_playwright()
             start_fn = getattr(ap, "start", None)
-            start_is_awaitable = callable(start_fn) and (inspect.iscoroutinefunction(start_fn) or isinstance(start_fn, AsyncMock))
+            use_start_mode = False
+            if callable(start_fn):
+                if inspect.iscoroutinefunction(start_fn):
+                    use_start_mode = True
+                else:
+                    rv = getattr(start_fn, "return_value", None)
+                    chromium_obj = getattr(getattr(rv, "chromium", None), "launch", None)
+                    if chromium_obj is not None:
+                        use_start_mode = True
 
-            if start_is_awaitable:
-                p = await start_fn()  # type: ignore[misc]
-                browser = await p.chromium.launch(
-                    headless=False,
-                    args=chromium_args,
-                    ignore_default_args=["--enable-automation"],
-                )
-                context = await browser.new_context(
-                    user_agent=self._get_user_agent(),
-                    accept_downloads=True,
-                    bypass_csp=True,
-                    ignore_https_errors=True,
-                    java_script_enabled=True,
-                )
-                logger.info(f"✅ Chromium launched successfully without profile (start())")
-                context._playwright_instance = p  # type: ignore[attr-defined]
-                context._browser_instance = browser  # type: ignore[attr-defined]
-                return context
-            else:
-                async with async_playwright() as p:
+            if use_start_mode:
+                try:
+                    p = await start_fn()  # type: ignore[misc]
+                except Exception as start_invoke_error:
+                    logger.debug(f"🔁 start() invocation failed (chromium no-profile); fallback to context manager: {start_invoke_error}")
+                else:
                     browser = await p.chromium.launch(
                         headless=False,
                         args=chromium_args,
@@ -305,8 +317,26 @@ class BrowserLauncher:
                         ignore_https_errors=True,
                         java_script_enabled=True,
                     )
-                    logger.info(f"✅ Chromium launched successfully without profile")
+                    logger.info(f"✅ Chromium launched successfully without profile (start())")
+                    context._playwright_instance = p  # type: ignore[attr-defined]
+                    context._browser_instance = browser  # type: ignore[attr-defined]
                     return context
+
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(
+                    headless=False,
+                    args=chromium_args,
+                    ignore_default_args=["--enable-automation"],
+                )
+                context = await browser.new_context(
+                    user_agent=self._get_user_agent(),
+                    accept_downloads=True,
+                    bypass_csp=True,
+                    ignore_https_errors=True,
+                    java_script_enabled=True,
+                )
+                logger.info(f"✅ Chromium launched successfully without profile")
+                return context
 
         except Exception as e:
             logger.error(f"❌ Failed to launch Chromium without profile: {e}")

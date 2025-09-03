@@ -247,7 +247,7 @@ async def test_minimal_browser():
             page = await browser.new_page()
             print("✅ New page created")
             
-            await page.goto("https://httpbin.org/get")
+            await page.goto("https://nogtips.wordpress.com/2025/03/31/llms-txt%e3%81%ab%e3%81%a4%e3%81%84%e3%81%a6/")
             print("✅ Page navigation successful")
             
             title = await page.title()

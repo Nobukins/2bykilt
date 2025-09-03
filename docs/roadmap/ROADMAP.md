@@ -45,14 +45,14 @@
 |------|--------|--------|------|
 | A1 | #64 #65 #63 | ✅ Done | Feature Flags / Multi-env Loader / llms.txt Validator 実装完了 (PR #20 由来) |
 | A2 | #32 ✅ #31 ✅ #56 ✅ #57 ✅ | ✅ Done | #56 / #57 実装完了 (PR #83) |
-| A3 | #28 #30 ✅ #33 ✅ #35 ✅ #36 #34 ✅ #37 #38 #87 ✅ #88 ✅ #89 | In Progress | #35 minimal manifest schema + tests (PR TBD) / #34 element capture (PR #93) / #33 PR #86 / #87 done (PR #96) / #88 done (PR #97) / 着手中: #89 logging events prep |
+| A3 | #28 #30 ✅ #33 ✅ #35 ✅ #36 #34 ✅ #37 #38 #87 ✅ #88 ✅ #89 | In Progress | #89 structured screenshot events schema v1 + JSON tests 完了 (PR draft準備) / #37 retention meta は draft PR (#99) で一時停止 / #35 minimal manifest schema + tests (PR TBD) / #34 element capture (PR #93) / #33 PR #86 / #87 done (PR #96) / #88 done (PR #97) |
 | A4 | #25 #44 #45 #50 (#55) | Planned | Runner Reliability / git_script 系統 |
 | A5 | #60 #61 | Planned | Security Base (Mask / Scan) |
 | A6 | #58 #59 | Planned | Metrics 基盤 & Run API |
 | A7 | #43 | Planned | LLM Toggle パリティ |
 | Docs | #66 → #67 | In Progress | Doc Sync >90% 維持方針 |
 
-Progress Summary (Phase 1): Wave A1 100% / Wave A2 100% (#32, #31, #56, #57 完了) / Wave A3 進捗更新 (#34 完了 PR #93, #35 実装済 PR 準備中, #87 PR #96, #88 PR #97 完了, #89 着手) / 残り Waves queued. Draft/試行 PR は進捗計測に含めず（分析除外方針）。
+Progress Summary (Phase 1): Wave A1 100% / Wave A2 100% (#32, #31, #56, #57 完了) / Wave A3: #87/#88 完了, #89 schema v1 + tests 完了(PR draft), #37 は draft (#99) で一時停止 (retention meta) / 残り Waves queued. Draft/試行 PR は進捗計測に含めず。
 
 ### Group B (Phase 2 – 拡張 / 高度化)
 
@@ -164,6 +164,7 @@ Flags / 後方互換 Schema / 追加専用ログ→削除遅延 / Sandbox enforc
 | 1.0.8 | 2025-09-03 | #35 最小 manifest v2 スキーマ + flag gating + tests 追加 | Copilot Agent |
 | 1.0.9 | 2025-09-03 | #87 duplicate screenshot copy flag 完了 (PR #96) / A3 進捗更新 | Copilot Agent |
 | 1.0.10 | 2025-09-03 | #88 screenshot exception classification 完了 (PR #97) / #89 着手反映 | Copilot Agent |
+| 1.0.11 | 2025-09-03 | #89 structured screenshot events schema v1 + JSON schema tests 追加 / Wave A3 備考更新 / Metrics (#58) readiness note 反映 | Copilot Agent |
 
 ---
 

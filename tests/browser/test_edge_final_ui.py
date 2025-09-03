@@ -63,7 +63,8 @@ async def test_edge_final_ui_automation():
         logger.info("📋 Step 4: Execute Edge automation workflow (headful mode)")
         result = await automator.execute_git_script_workflow(
             workspace_dir=workspace_dir,
-            test_url="https://httpbin.org/get",  # Simple test endpoint
+            # Switched to stable owned content page (Issue: replace httpbin dependency)
+            test_url="https://nogtips.wordpress.com/2025/03/31/llms-txt%e3%81%ab%e3%81%a4%e3%81%84%e3%81%a6/",  # Owned content
             headless=False  # Force headful for Edge stability
         )
         
@@ -71,11 +72,11 @@ async def test_edge_final_ui_automation():
         logger.info("📋 Step 5: Verify automation results")
         if not result["success"]:
             raise Exception(f"Edge automation workflow failed: {result.get('error', 'Unknown error')}")
-        
+
         logger.info("✅ Edge automation workflow completed successfully")
         logger.info(f"📁 SeleniumProfile used: {result.get('selenium_profile')}")
-        logger.info(f"🌐 Test URL accessed: https://httpbin.org/get")
-        
+        logger.info("🌐 Test URL accessed: https://nogtips.wordpress.com/2025/03/31/llms-txt%e3%81%ab%e3%81%a4%e3%81%84%e3%81%a6/")
+
         # Step 6: Validate profile cleanup
         logger.info("📋 Step 6: Validate profile cleanup (if applicable)")
         selenium_profile = result.get('selenium_profile')
@@ -84,10 +85,10 @@ async def test_edge_final_ui_automation():
             logger.info("ℹ️ This is expected behavior - cleanup can be manual")
         else:
             logger.info("🧹 SeleniumProfile already cleaned up")
-        
+
         logger.info("🎉 Edge Final UI Integration Test PASSED")
         return True
-        
+
     except Exception as e:
         logger.error(f"❌ Edge Final UI Integration Test FAILED: {str(e)}")
         return False
