@@ -22,7 +22,8 @@ def test_playwright_codegen():
     print(f"  CHROME_PATH: {os.environ.get('CHROME_PATH', 'NOT SET')}")
     print(f"  EDGE_PATH: {os.environ.get('EDGE_PATH', 'NOT SET')}")
     
-    test_url = "https://httpbin.org/get"
+    # Replaced unstable external endpoint with controlled blog content page
+    test_url = "https://nogtips.wordpress.com/2025/03/31/llms-txt%e3%81%ab%e3%81%a4%e3%81%84%e3%81%a6/"
     
     # Chromeテスト
     print(f"\n🔴 Testing Chrome codegen with URL: {test_url}")

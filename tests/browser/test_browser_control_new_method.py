@@ -30,7 +30,7 @@ async def test_browser_control():
         "flow": [
             {
                 "action": "command",
-                "url": "https://httpbin.org/get",
+                "url": "https://nogtips.wordpress.com/2025/03/31/llms-txt%e3%81%ab%e3%81%a4%e3%81%84%e3%81%a6/",
                 "wait_for": "body"
             },
             {
@@ -44,7 +44,7 @@ async def test_browser_control():
     }
     
     print(f"📋 Test Action: {test_action['name']}")
-    print(f"📋 Test URL: https://httpbin.org/get")
+    print("📋 Test URL: https://nogtips.wordpress.com/2025/03/31/llms-txt%e3%81%ab%e3%81%a4%e3%81%84%e3%81%a6/")
     print(f"📋 Expected behavior: Launch Chrome with profile, no warnings")
     print()
     
