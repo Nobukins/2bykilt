@@ -122,7 +122,7 @@ class TestRealEdgeIntegration:
                     page = await context.new_page()
                 
                 # シンプルなページに移動
-                await page.goto("https://httpbin.org/get", wait_until="networkidle")
+                await page.goto("https://nogtips.wordpress.com/2025/03/31/llms-txt%e3%81%ab%e3%81%a4%e3%81%84%e3%81%a6/", wait_until="networkidle")
                 title = await page.title()
                 print(f"📄 Page title: {title}")
                 

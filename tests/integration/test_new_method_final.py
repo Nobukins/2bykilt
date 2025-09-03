@@ -61,7 +61,7 @@ async def test_new_method_integration():
         "type": "browser-control",
         "name": "test_browser_control",
         "flow": [
-            {"action": "navigate", "url": "https://httpbin.org/get"},
+            {"action": "navigate", "url": "https://nogtips.wordpress.com/2025/03/31/llms-txt%e3%81%ab%e3%81%a4%e3%81%84%e3%81%a6/"},
             {"action": "wait_for_selector", "selector": "body", "timeout": 5000}
         ],
         "slowmo": 1000

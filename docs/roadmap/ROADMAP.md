@@ -46,6 +46,7 @@
 | A1 | #64 #65 #63 | ✅ Done | Feature Flags / Multi-env Loader / llms.txt Validator 実装完了 (PR #20 由来) |
 | A2 | #32 ✅ #31 ✅ #56 ✅ #57 ✅ | ✅ Done | #56 / #57 実装完了 (PR #83) |
 | A3 | #28 #30 ✅ #33 ✅ #35 ✅ #36 #34 ✅ #37 #38 #87 ✅ #88 ✅ #89 ✅ | In Progress | #35 minimal manifest schema + tests (PR TBD) / #34 element capture (PR #93) / #33 PR #86 / #87 done (PR #96) / #88 done (PR #97) / #89 done (PR #98) / 着手中: #37 video retention |
+| A3 | #28 #30 ✅ #33 ✅ #35 ✅ #36 #34 ✅ #37 #38 #87 ✅ #88 ✅ #89 | In Progress | #89 structured screenshot events schema v1 + JSON tests 完了 (PR draft準備) / #37 retention meta は draft PR (#99) で一時停止 / #35 minimal manifest schema + tests (PR TBD) / #34 element capture (PR #93) / #33 PR #86 / #87 done (PR #96) / #88 done (PR #97) |
 | A4 | #25 #44 #45 #50 (#55) | Planned | Runner Reliability / git_script 系統 |
 | A5 | #60 #61 | Planned | Security Base (Mask / Scan) |
 | A6 | #58 #59 | Planned | Metrics 基盤 & Run API |
@@ -132,9 +133,9 @@ Flags / 後方互換 Schema / 追加専用ログ→削除遅延 / Sandbox enforc
 短期 (A3 進行中):
 
 1. Screenshot Utility (#33) PR #86 仕上げ (Flag 追加, Docs sync) → マージ後 #33 close
-2. #37 動画アーティファクト保持期間 設計 & 基本メタ項目 (retention_days) 実装
-3. #38 回帰テストスイート拡張 (manifest v2 + screenshot events + video retention) 仕様整理
-4. #89 完了後メトリクス (#58) 連携準備 (latency_ms / size_bytes / video retention removal count expose)
+2. #89 ログイベント schema 実装 (capture_latency_ms / size_bytes / error_type / duplicate_copy) → 後続 #58 metrics 連携材料
+3. #37 動画アーティファクト保持期間 設計 & 基本メタ項目 (retention_days) 下書き
+4. #38 回帰テストスイート拡張 (manifest v2 + screenshot events) 仕様整理
 5. #76 依存更新自動化パイプラインの設計継続 (Issue 状態自動反映)
 
 中期 (A3 後半 / A6 先行準備):

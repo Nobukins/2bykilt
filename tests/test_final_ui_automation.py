@@ -48,7 +48,7 @@ async def test_final_ui_automation():
                         page = await context.new_page()
                     
                     # テストページに移動
-                    await page.goto("https://httpbin.org/get", timeout=10000)
+                    await page.goto("https://nogtips.wordpress.com/2025/03/31/llms-txt%e3%81%ab%e3%81%a4%e3%81%84%e3%81%a6/", timeout=10000)
                     title = await page.title()
                     print(f"📄 Chrome ページタイトル: {title}")
                     
@@ -90,7 +90,7 @@ async def test_final_ui_automation():
                         page = await context.new_page()
                     
                     # テストページに移動
-                    await page.goto("https://httpbin.org/get", timeout=10000)
+                    await page.goto("https://nogtips.wordpress.com/2025/03/31/llms-txt%e3%81%ab%e3%81%a4%e3%81%84%e3%81%a6/", timeout=10000)
                     title = await page.title()
                     print(f"📄 Edge ページタイトル: {title}")
                     

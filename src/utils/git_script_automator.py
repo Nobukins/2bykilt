@@ -286,7 +286,8 @@ class GitScriptAutomator:
         try:
             result = await self.execute_git_script_workflow(
                 workspace_dir=test_workspace,
-                test_url="https://httpbin.org/get",
+                # Replaced httpbin (external dependency) with owned content page for stability
+                test_url="https://nogtips.wordpress.com/2025/03/31/llms-txt%e3%81%ab%e3%81%a4%e3%81%84%e3%81%a6/",
                 headless=True  # テストはヘッドレスで実行
             )
             
