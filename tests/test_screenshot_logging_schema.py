@@ -13,13 +13,21 @@ class _CaptureHandler(logging.Handler):
         super().__init__(level=logging.INFO)
         self.lines = []
     def emit(self, record: logging.LogRecord):  # noqa: D401
+        """Parse screenshot event JSON from a log record and store it.
+
+        Only records whose message contains the screenshot event prefix are considered.
+        JSON decode errors are ignored (best-effort capture) but logged at DEBUG for troubleshooting.
+        """
         msg = record.getMessage()
-        if '"event":"screenshot.' in msg:
-            try:
-                obj = json.loads(msg[msg.index('{'):])
-                self.lines.append(obj)
-            except Exception:  # noqa: BLE001
-                pass
+        if '"event":"screenshot.' not in msg:
+            return
+        try:
+            obj = json.loads(msg[msg.index('{'):])
+        except json.JSONDecodeError as e:  # narrow exception (review feedback)
+            logging.debug("Skip unparsable screenshot event line: %s", e)
+            return
+        if isinstance(obj, dict) and obj.get("event", "").startswith("screenshot."):
+            self.lines.append(obj)
 
 def _with_capture():
     from src.utils.app_logger import logger as app_logger
