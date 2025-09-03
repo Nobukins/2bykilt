@@ -21,8 +21,13 @@ class _CaptureHandler(logging.Handler):
         msg = record.getMessage()
         if '"event":"screenshot.' not in msg:
             return
+        # More defensive extraction: find first '{' to avoid ValueError from index()
+        start_idx = msg.find('{')
+        if start_idx == -1:
+            logging.debug("Skip screenshot event line: missing JSON brace")
+            return
         try:
-            obj = json.loads(msg[msg.index('{'):])
+            obj = json.loads(msg[start_idx:])
         except json.JSONDecodeError as e:  # narrow exception (review feedback)
             logging.debug("Skip unparsable screenshot event line: %s", e)
             return

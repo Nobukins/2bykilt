@@ -61,6 +61,8 @@ def _emit_event(level: str, payload: dict) -> None:
     """
     if "schema_version" not in payload:
         payload["schema_version"] = 1
+    # ensure_ascii=False keeps non-ASCII (e.g., JP prefixes / paths) readable in UTF-8 log streams.
+    # Downstream processors (metrics/exporters) operate on UTF-8; escaping would reduce local diagnosability.
     line = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     if level == "error":
         logger.error(line)
