@@ -415,8 +415,14 @@ def get_artifact_manager() -> ArtifactManager:
         _default_manager = ArtifactManager()
     return _default_manager
 
+def reset_artifact_manager_singleton() -> None:  # pragma: no cover - test helper
+    """Reset the module-level ArtifactManager singleton (testing/support only)."""
+    global _default_manager
+    _default_manager = None
+
 __all__ = [
     "ArtifactManager",
     "ArtifactEntry",
     "get_artifact_manager",
+    "reset_artifact_manager_singleton",
 ]

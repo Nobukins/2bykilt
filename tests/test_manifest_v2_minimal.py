@@ -1,8 +1,7 @@
 import json
 from pathlib import Path
 
-from src.core import artifact_manager as am
-from src.core.artifact_manager import ArtifactManager, get_artifact_manager
+from src.core.artifact_manager import ArtifactManager, reset_artifact_manager_singleton
 from src.runtime.run_context import RunContext
 from src.config.feature_flags import FeatureFlags
 
@@ -15,8 +14,8 @@ def _read_manifest_text(mgr) -> str:
 def test_manifest_flag_off(tmp_path, monkeypatch):
     # Fresh context
     monkeypatch.setenv("BYKILT_RUN_ID", "MFLAGOFF1")
-    RunContext._instance = None  # type: ignore[attr-defined]
-    am._default_manager = None  # type: ignore[attr-defined]
+    RunContext.reset()
+    reset_artifact_manager_singleton()
     FeatureFlags.set_override("artifacts.enable_manifest_v2", False)
     # Remove any leftover artifacts directory for this run id to avoid contamination
     leftover_dir = Path("artifacts") / "runs" / "MFLAGOFF1-art"
@@ -24,7 +23,7 @@ def test_manifest_flag_off(tmp_path, monkeypatch):
         import shutil
         try:
             shutil.rmtree(leftover_dir)
-        except Exception:
+        except (OSError, PermissionError):  # narrow expected cleanup errors
             pass
     mgr = ArtifactManager()
     pre_artifacts = []
@@ -43,13 +42,17 @@ def test_manifest_flag_off(tmp_path, monkeypatch):
         # Count should not increase
         assert len(after_artifacts) == len(pre_artifacts)
         # No path with the new prefix should exist
-        assert not any(a.get("path"," ").endswith(".png") and "offcase_" in a.get("path","") for a in after_artifacts)
+        def is_offcase_png_path(artifact: dict) -> bool:
+            path = artifact.get("path", "")
+            return path.endswith(".png") and "offcase_" in path
+
+        assert not any(is_offcase_png_path(a) for a in after_artifacts)
 
 
 def test_manifest_basic_entries_increment(tmp_path, monkeypatch):
     monkeypatch.setenv("BYKILT_RUN_ID", "MFLAGON1")
-    RunContext._instance = None  # type: ignore[attr-defined]
-    am._default_manager = None  # type: ignore[attr-defined]
+    RunContext.reset()
+    reset_artifact_manager_singleton()
     FeatureFlags.set_override("artifacts.enable_manifest_v2", True)
     mgr = ArtifactManager()
     pre = 0
@@ -68,8 +71,8 @@ def test_manifest_basic_entries_increment(tmp_path, monkeypatch):
 
 def test_element_capture_entry(monkeypatch):
     monkeypatch.setenv("BYKILT_RUN_ID", "MFLAGON2")
-    RunContext._instance = None  # type: ignore[attr-defined]
-    am._default_manager = None  # type: ignore[attr-defined]
+    RunContext.reset()
+    reset_artifact_manager_singleton()
     FeatureFlags.set_override("artifacts.enable_manifest_v2", True)
     mgr = ArtifactManager()
     pre = 0
@@ -89,8 +92,8 @@ def test_element_capture_entry(monkeypatch):
 
 def test_video_entry_when_enabled(monkeypatch, tmp_path):
     monkeypatch.setenv("BYKILT_RUN_ID", "MFLAGON3")
-    RunContext._instance = None  # type: ignore[attr-defined]
-    am._default_manager = None  # type: ignore[attr-defined]
+    RunContext.reset()
+    reset_artifact_manager_singleton()
     FeatureFlags.set_override("artifacts.enable_manifest_v2", True)
     mgr = ArtifactManager()
     vdir = mgr.dir / "videos"
