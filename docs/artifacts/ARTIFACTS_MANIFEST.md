@@ -12,6 +12,7 @@ Wave A3 の範囲では video / screenshot / element_capture の 3 種を対象�
 |------|----------------------|---------|------|
 | video | videos/*.mp4(webm) | original_ext / final_ext / transcoded / register_duration_ms | 変換は ffmpeg 存在時 (#30) |
 | screenshot | screenshots/*.png | format: png | 将来 user_named (#87) 追加予定 |
+| screenshot (duplicate copy) | screenshots/`<prefix>`_`<ts>`.png | format: png | Flag `artifacts.screenshot.user_named_copy_enabled` (Issue #87) により生成 / OFF で無効 |
 | element_capture | elements/*.json | selector: \<CSS\> | JSON 本体に text/value/captured_at |
 
 ## JSON 構造 (最小)
