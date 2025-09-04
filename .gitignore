@@ -221,6 +221,11 @@ tmp/test_*
 # Recorded videos (artifacts)
 record_videos/
 
+# Selenium user data profiles (temporary copies / test artifacts)
+SeleniumProfile/
+**/SeleniumProfile/
+**/SeleniumProfile/**
+
 # Run artifacts (auto-generated flag snapshots, etc.)
 artifacts/runs/
 

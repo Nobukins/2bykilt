@@ -1,6 +1,6 @@
 # 2bykilt 開発ロードマップ (Baseline v1)
 
-最終更新: 2025-09-03
+最終更新: 2025-09-04
 
 対象リポジトリ: <https://github.com/Nobukins/2bykilt>
 
@@ -12,11 +12,13 @@
 - Copilot Coding Agent を使った小刻みな自動実装を前提とした「一度に一タスク」運用
 
 > 更新ルール: 各 Issue / PR 完了直後に:
+ 
 > 1. ISSUE_DEPENDENCIES.yml を更新
 > 2. ROADMAP の該当 Wave 進捗率を更新
 > 3. 関連ガイド (LOGGING / METRICS / FLAGS / CONFIG_SCHEMA / ARTIFACTS_MANIFEST / SECURITY_MODEL / AGENT_PROMPT_GUIDE) を必要に応じ更新
 > 4. PR に「Docs Updated: yes/no(理由)」行を必須記載
 > 5. 未反映差分があればラベル `docs/desync` を付与し次の最優先 (P0) タスク化
+
 
 ---
 
@@ -45,7 +47,7 @@
 |------|--------|--------|------|
 | A1 | #64 #65 #63 | ✅ Done | Feature Flags / Multi-env Loader / llms.txt Validator 実装完了 (PR #20 由来) |
 | A2 | #32 ✅ #31 ✅ #56 ✅ #57 ✅ | ✅ Done | #56 / #57 実装完了 (PR #83) |
-| A3 | #28 #30 ✅ #33 ✅ #35 ✅ #36 ✅ #34 ✅ #37 ✅ #38 #87 ✅ #88 ✅ #89 ✅ | In Progress | #37 retention meta 完了 (PR #99) / #38 regression suite 拡張進行中 / #28 recording path unify pending / #35 manifest v2 / screenshot events (#89) 完了 |
+| A3 | #28 ✅ #30 ✅ #33 ✅ #35 ✅ #36 ✅ #34 ✅ #37 ✅ #38 #87 ✅ #88 ✅ #89 ✅ #91 ✅ | In Progress | #91 完了 (flag default=true + tests + async 安定化) / #38 regression suite 拡張 (#103) 継続 |
 | A4 | #25 #44 #45 #50 (#55) | Planned | Runner Reliability / git_script 系統 |
 | A5 | #60 #61 | Planned | Security Base (Mask / Scan) |
 | A6 | #58 #59 | Planned | Metrics 基盤 & Run API |
@@ -131,11 +133,9 @@ Flags / 後方互換 Schema / 追加専用ログ→削除遅延 / Sandbox enforc
 
 短期 (A3 進行中):
 
-1. Screenshot Utility (#33) PR #86 仕上げ (Flag 追加, Docs sync) → マージ後 #33 close
-2. #89 ログイベント schema 実装 (capture_latency_ms / size_bytes / error_type / duplicate_copy) → 後続 #58 metrics 連携材料
-3. #37 動画アーティファクト保持期間 設計 & 基本メタ項目 (retention_days) 下書き
-4. #38 回帰テストスイート拡張 (manifest v2 + screenshot events) 仕様整理
-5. #76 依存更新自動化パイプラインの設計継続 (Issue 状態自動反映)
+1. #91 統一録画パス Rollout: Docs & テスト override 削除、完了後 progress 更新
+2. #38 回帰テストスイート拡張: metrics プレースホルダ / エッジ失敗系 仕上げ
+3. #76 依存更新自動化パイプライン設計継続 (自動 Dashboard)
 
 中期 (A3 後半 / A6 先行準備):
 
@@ -166,6 +166,7 @@ Flags / 後方互換 Schema / 追加専用ログ→削除遅延 / Sandbox enforc
 | 1.0.10 | 2025-09-03 | #88 screenshot exception classification 完了 (PR #97) / #89 着手反映 | Copilot Agent |
 | 1.0.11 | 2025-09-03 | #89 screenshot logging events 完了 (PR #98) / #37 着手 | Copilot Agent |
 | 1.0.12 | 2025-09-04 | #37 完了 (PR #99) / #38 regression suite 着手 | Copilot Agent |
+| 1.0.13 | 2025-09-04 | #91 統一録画パス rollout 完了 (flag default 有効化, legacy path warn, async loop 安定化, flaky tests 正常化) | Copilot Agent |
 
 ---
 

@@ -10,8 +10,8 @@ Responsibilities (initial increment):
   * Hooks for regression test suite (#38) - placeholder
 
 Design Notes:
-  - Backward compatibility: existing tests reference ./tmp/record_videos. We keep
-    legacy path unless feature flag artifacts.unified_recording_path=true.
+    - Rollout (#91): unified path now default (artifacts.unified_recording_path=true).
+        Legacy ./tmp/record_videos still available when flag explicitly disabled (one-time warn).
   - Manifest v2 schema (subject to doc update when #35 closes):
         {
           "schema": "artifact-manifest-v2",
@@ -223,6 +223,18 @@ class ArtifactManager:
         # legacy
         p = Path("./tmp/record_videos").resolve()
         p.mkdir(parents=True, exist_ok=True)
+        # Emit a one-time per-process warning to encourage migration (Issue #91)
+        flag = "_bykilt_legacy_recording_warned"
+        if not getattr(ArtifactManager, flag, False):  # type: ignore[attr-defined]
+            setattr(ArtifactManager, flag, True)
+            logger.warning(
+                "Legacy recording path in use; enable artifacts.unified_recording_path (now default true) to migrate",
+                extra={
+                    "event": "artifact.recording.legacy_path",
+                    "path": str(p),
+                    "recommendation": "Use unified artifacts run videos directory",
+                },
+            )
         return p
 
     # ---------------- Manifest -------------------
