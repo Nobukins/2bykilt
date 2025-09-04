@@ -328,7 +328,12 @@ class FeatureFlags:
                         return
                 else:
                     return
-            except Exception:  # noqa: BLE001
+            except Exception as e:  # noqa: BLE001
+                # Log once for observability while still suppressing to avoid cascading failures
+                logger.warning(
+                    "Error while probing existing flags artifact directory",
+                    extra={"event": "flag.artifact.dir.error", "error": repr(e)},
+                )
                 return
         try:
             # Gather current resolved values (resolve defaults without side effects)

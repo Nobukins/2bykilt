@@ -11,6 +11,7 @@ import shutil
 import tempfile
 import atexit
 import signal
+import re
 from pathlib import Path
 from playwright.async_api import async_playwright
 
@@ -43,9 +44,12 @@ def create_temp_browser_profile(browser_type):
         display = str(bt_name).upper()
     except Exception:
         display = str(bt_name)
-    # Safe identifier for filesystem usage (avoid repr with slashes from BrowserType)
-    browser_key = str(bt_name).split('/')[-1].split()[-1] if bt_name else 'browser'
-    browser_key = browser_key.lower()
+    # Safe identifier for filesystem usage (avoid repr with slashes / spaces)
+    raw = str(bt_name) if bt_name else "browser"
+    # Extract last path component then keep alphanumerics + dashes
+    raw_component = raw.split('/')[-1]
+    m = re.search(r"[A-Za-z0-9_-]+", raw_component)
+    browser_key = (m.group(0) if m else "browser").lower()
     print(f"🔧 {display} 一時プロファイル作成開始")
     print(f"{'='*60}")
     

@@ -3,6 +3,10 @@ from src.config.feature_flags import FeatureFlags, _reset_feature_flags_for_test
 from src.runtime.run_context import RunContext
 
 
+def _legacy_msgs(caplog):
+    return [r.message for r in caplog.records if "Legacy recording path in use" in r.message]
+
+
 def test_unified_recording_path_default_enabled(monkeypatch):
     monkeypatch.setenv("BYKILT_RUN_ID", "ROLL91A")
     # Reset singletons & flags (split per PEP8 for readability)
@@ -25,8 +29,6 @@ def test_unified_recording_path_legacy_warning(monkeypatch, caplog):
     caplog.set_level("WARNING")
     d = ArtifactManager.resolve_recording_dir()
     assert d.name == "record_videos"
-    msgs = [r.message for r in caplog.records if "Legacy recording path in use" in r.message]
-    assert len(msgs) == 1
+    assert len(_legacy_msgs(caplog)) == 1
     ArtifactManager.resolve_recording_dir()
-    msgs2 = [r.message for r in caplog.records if "Legacy recording path in use" in r.message]
-    assert len(msgs2) == 1
+    assert len(_legacy_msgs(caplog)) == 1  # still one (single emission)
