@@ -149,7 +149,7 @@ issues:
     risk:
     depends: []
     dependents: []
-  "91": {title: "統一録画パス Rollout (flag default 有効化 & legacy 廃止)", meta: {area: artifacts, type: chore, priority: P0, phase: "1-late", stability: core}, depends: ["28"], dependents: [], progress: {state: done, primary_pr: 0}, risk: null, critical_path_rank: 1}
+  "91": {title: "統一録画パス Rollout (flag default 有効化 & legacy 廃止)", meta: {area: artifacts, type: chore, priority: P0, phase: "1-late", stability: core}, depends: ["28"], dependents: [], progress: {state: done, primary_pr: 105}, risk: null, critical_path_rank: 1}
 
 summary:
   total_issues: 47
