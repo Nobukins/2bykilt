@@ -86,6 +86,7 @@ class FeatureFlags:
     _artifact_written = False
     _resolved_cache: Dict[str, Any] = {}
     _flags_file: Path | None = None
+    _flags_mtime: float | None = None  # track mtime to auto-reload if file updated during runtime
 
     # ----------------------- Public API ---------------------------------- #
     @classmethod
@@ -96,8 +97,13 @@ class FeatureFlags:
             cls._resolved_cache = {}
             cls._artifact_written = False
             cls._flags_file = cls._determine_flags_file()
+            cls._flags_mtime = None
             if cls._flags_file and cls._flags_file.exists():
                 try:
+                    try:
+                        cls._flags_mtime = cls._flags_file.stat().st_mtime
+                    except Exception:  # noqa: BLE001
+                        cls._flags_mtime = None
                     data = yaml.safe_load(cls._flags_file.read_text(encoding="utf-8"))
                     if isinstance(data, dict) and isinstance(data.get("flags"), dict):
                         for name, meta in data["flags"].items():  # type: ignore[index]
@@ -220,8 +226,28 @@ class FeatureFlags:
     # -------------------- Internal helpers -------------------------------- #
     @classmethod
     def _ensure_loaded(cls) -> None:
-        if not cls._defaults and cls._flags_file is None:
+        # Initial load
+        if (not cls._defaults and cls._flags_file is None) or cls._flags_file is None:
             cls.reload()
+            return
+        # Hot-reload if file mtime changed (Issue #91: tests modify defaults between runs)
+        try:
+            if cls._flags_file.exists():
+                current_mtime = cls._flags_file.stat().st_mtime
+                if cls._flags_mtime is not None and current_mtime > cls._flags_mtime:
+                    logger.info(
+                        "Feature flags file modified on disk; reloading",
+                        extra={"event": "flag.file.modified.reload", "path": str(cls._flags_file)},
+                    )
+                    cls.reload()
+            else:
+                # If file disappeared, keep existing defaults (avoid churn)
+                pass
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                "Failed during feature flag mtime check",
+                extra={"event": "flag.file.mtime.error", "error": repr(e)},
+            )
 
     @staticmethod
     def _determine_flags_file() -> Path:
@@ -289,7 +315,20 @@ class FeatureFlags:
     @classmethod
     def _maybe_write_artifact(cls, force_refresh: bool = False) -> None:
         if not force_refresh and cls._artifact_written:
-            return
+            # If working directory changed after first write (tests use tmp_path + chdir),
+            # the previously written artifact may no longer exist relative to the new CWD.
+            # Allow a second write in that case so tests see a -flags directory (Issue #91 side-effect).
+            try:  # defensive; never block flag resolution
+                if RunContext:
+                    expected_dir = RunContext.get().artifact_dir("flags", ensure=False)  # type: ignore[arg-type]
+                    if not expected_dir.exists():
+                        cls._artifact_written = False  # reset and proceed to write below
+                    else:
+                        return
+                else:
+                    return
+            except Exception:  # noqa: BLE001
+                return
         try:
             # Gather current resolved values (resolve defaults without side effects)
             resolved: Dict[str, Any] = {}
@@ -371,3 +410,13 @@ def is_llm_enabled() -> bool:
                 return os.getenv("ENABLE_LLM", "false").lower() == "true"
 
 __all__.append("is_llm_enabled")
+
+# ------------------------- Test Helpers (non-public) ------------------------------
+def _reset_feature_flags_for_tests() -> None:  # pragma: no cover - test utility
+    """Internal helper to clear caches & reload defaults (used by tests)."""
+    try:
+        FeatureFlags.reload()
+    except Exception:  # noqa: BLE001
+        pass
+
+__all__.append("_reset_feature_flags_for_tests")

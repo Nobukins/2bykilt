@@ -55,6 +55,10 @@ class RunContext:
 
   # -------------- Artifact Helpers --------------
   def artifact_dir(self, component: str, ensure: bool = True) -> Path:
+    """Return artifact directory for a component.
+
+    ensure=False returns the expected path without creating it (used by tests to
+    detect whether a previous working directory write occurred)."""
     safe_component = component.strip().replace(os.sep, "_")
     path = _ARTIFACT_ROOT / f"{self.run_id_base}-{safe_component}"
     if ensure:

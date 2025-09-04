@@ -12,9 +12,9 @@ flags:
     type: bool
     default: false
   artifacts.unified_recording_path:
-    description: "録画ファイル保存パス統一 (#28) を有効化 (false=従来 ./tmp/record_videos)"
+    description: "録画ファイル保存パス統一 (#28,#91) (true=artifacts/runs/<run>-art/videos, false=legacy ./tmp/record_videos)"
     type: bool
-    default: false
+    default: true
   artifacts.enable_manifest_v2:
     description: "アーティファクト manifest v2 (#35) の生成を有効化"
     type: bool
