@@ -33,13 +33,24 @@ signal.signal(signal.SIGTERM, lambda signum, frame: cleanup_temp_profiles())
 signal.signal(signal.SIGINT, lambda signum, frame: cleanup_temp_profiles())
 
 def create_temp_browser_profile(browser_type):
-    """一時的なブラウザプロファイルを作成"""
+    """一時的なブラウザプロファイルを作成
+
+    Accepts a Playwright BrowserType or plain string; extract .name if present.
+    """
     print(f"\n{'='*60}")
-    print(f"🔧 {browser_type.upper()} 一時プロファイル作成開始")
+    bt_name = getattr(browser_type, 'name', browser_type)
+    try:
+        display = str(bt_name).upper()
+    except Exception:
+        display = str(bt_name)
+    # Safe identifier for filesystem usage (avoid repr with slashes from BrowserType)
+    browser_key = str(bt_name).split('/')[-1].split()[-1] if bt_name else 'browser'
+    browser_key = browser_key.lower()
+    print(f"🔧 {display} 一時プロファイル作成開始")
     print(f"{'='*60}")
     
     # 環境変数から設定を取得
-    if browser_type == 'edge':
+    if str(bt_name) == 'edge':
         browser_path = os.environ.get('EDGE_PATH', '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge')
         original_profile = os.environ.get('EDGE_USER_DATA', '')
     else:  # chrome
@@ -50,7 +61,7 @@ def create_temp_browser_profile(browser_type):
     print(f"📍 Original Profile: {original_profile}")
     
     # 一時ディレクトリを作成（システムの一時領域を使用）
-    temp_dir = tempfile.mkdtemp(prefix=f'playwright_{browser_type}_profile_')
+    temp_dir = tempfile.mkdtemp(prefix=f'playwright_{browser_key}_profile_')
     temp_profiles.append(temp_dir)  # クリーンアップリストに追加
     
     temp_user_data = os.path.join(temp_dir, "UserData")
@@ -224,9 +235,17 @@ def create_temp_browser_profile(browser_type):
     }
 
 async def test_browser_with_temp_profile(browser_type):
-    """一時プロファイルでブラウザテストを実行"""
+    """一時プロファイルでブラウザテストを実行
+
+    Normalize browser_type as above to prevent AttributeError when provided an object.
+    """
     print(f"\n{'='*60}")
-    print(f"🧪 {browser_type.upper()} 一時プロファイルテスト開始")
+    bt_name = getattr(browser_type, 'name', browser_type)
+    try:
+        display = str(bt_name).upper()
+    except Exception:
+        display = str(bt_name)
+    print(f"🧪 {display} 一時プロファイルテスト開始")
     print(f"{'='*60}")
     
     # 一時プロファイルを作成

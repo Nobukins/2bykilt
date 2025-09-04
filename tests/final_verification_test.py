@@ -12,9 +12,18 @@ from pathlib import Path
 from playwright.async_api import async_playwright
 
 async def test_browser_profile(browser_type):
-    """指定されたブラウザでプロファイル読み込みテストを実行"""
+    """指定されたブラウザでプロファイル読み込みテストを実行
+
+    The incoming browser_type may be a Playwright BrowserType object (with a .name attr)
+    or a plain string. Normalize to an uppercase string to avoid AttributeError.
+    """
     print(f"\n{'='*60}")
-    print(f"🧪 {browser_type.upper()} プロファイル最終検証開始")
+    bt_name = getattr(browser_type, 'name', browser_type)
+    try:
+        display = str(bt_name).upper()
+    except Exception:
+        display = str(bt_name)
+    print(f"🧪 {display} プロファイル最終検証開始")
     print(f"{'='*60}")
     
     # 環境変数から設定を取得
