@@ -10,9 +10,8 @@ import pytest
 try:
     import nest_asyncio  # type: ignore
     nest_asyncio.apply()
-except Exception:
-    # If nest_asyncio is unavailable, continue; tests that don't nest loops still pass.
-    pass
+except (ImportError, ModuleNotFoundError):  # narrow scope to import errors only
+    pass  # If unavailable, continue; tests that don't nest loops still pass.
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"

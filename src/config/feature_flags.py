@@ -320,7 +320,8 @@ class FeatureFlags:
             # Allow a second write in that case so tests see a -flags directory (Issue #91 side-effect).
             try:  # defensive; never block flag resolution
                 if RunContext:
-                    expected_dir = RunContext.get().artifact_dir("flags", ensure=False)  # type: ignore[arg-type]
+                    # artifact_dir returns Path; ensure=False avoids creating when probing existence
+                    expected_dir = RunContext.get().artifact_dir("flags", ensure=False)
                     if not expected_dir.exists():
                         cls._artifact_written = False  # reset and proceed to write below
                     else:
