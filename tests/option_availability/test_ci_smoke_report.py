@@ -12,12 +12,10 @@ import pytest
 @pytest.mark.ci_safe
 def test_pytest_config_and_paths_print_summary(capsys):
     # Verify we are using the project's pytest.ini and coverage is configured
-    ini_candidates = [
-        Path('tests/pytest.ini'),
-        Path('pytest.ini'),
-    ]
-    found_ini = next((p for p in ini_candidates if p.exists()), None)
-    assert found_ini, "pytest.ini not found under tests/ or project root"
+    # Only accept root-level pytest.ini after migration; legacy tests/pytest.ini reference would trigger CI guard
+    root_ini = Path('pytest.ini')
+    assert root_ini.exists(), "pytest.ini not found at project root (expected after config migration)"
+    found_ini = root_ini
 
     # Emit a short environment summary for logs
     print("[CI-SAFE SUMMARY]")
@@ -33,5 +31,5 @@ def test_pytest_config_and_paths_print_summary(capsys):
     print("git-script | - | - | ✅ (mocked clone/exec)")
 
     # Ensure output was written
-    out, err = capsys.readouterr()
+    out, _ = capsys.readouterr()
     assert "[CI-SAFE SUMMARY]" in out

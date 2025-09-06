@@ -46,4 +46,4 @@ def test_delimiters():
     assert pipe_split == args
 
 if __name__ == "__main__":
-    recommended = test_delimiters()
+    test_delimiters()
