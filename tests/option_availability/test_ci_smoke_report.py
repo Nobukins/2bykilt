@@ -12,7 +12,7 @@ import pytest
 @pytest.mark.ci_safe
 def test_pytest_config_and_paths_print_summary(capsys):
     # Verify we are using the project's pytest.ini and coverage is configured
-    # Only accept root-level pytest.ini after migration; legacy tests/pytest.ini reference would trigger CI guard
+    # Only accept root-level pytest.ini after migration; legacy config path references removed
     root_ini = Path('pytest.ini')
     assert root_ini.exists(), "pytest.ini not found at project root (expected after config migration)"
     found_ini = root_ini

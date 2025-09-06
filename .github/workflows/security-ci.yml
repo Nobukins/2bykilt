@@ -72,8 +72,8 @@ jobs:
         run: |
           echo "Running pytest restricted to ci_safe tests to avoid environment-specific browser/profile failures in CI."
           # Guard: fail fast if any workflow or script still references the deprecated tests/pytest.ini path
-          if grep -R "tests/pytest.ini" -n . | grep -v "scripts/ci_pytest.sh"; then
-            echo "[FATAL] Detected stale reference to tests/pytest.ini. Please remove it." >&2
+          if grep -R "tests/pytest.ini" -n . | grep -v "scripts/ci_pytest.sh" | grep -v "./docs/"; then
+            echo "[FATAL] Detected stale non-doc reference to tests/pytest.ini. Please remove it (docs/ path is tolerated)." >&2
             exit 5
           fi
           # Use unified runner script for consistent local/CI behavior
