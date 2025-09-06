@@ -30,11 +30,8 @@ def test_pipe_serialization():
     print(f"Pipe-parsed: {parsed_args}")
     
     # Verify they match
-    if args == parsed_args:
-        print("✅ Pipe serialization/deserialization successful!")
-    else:
-        print("❌ Pipe serialization/deserialization failed!")
-        return False
+    assert args == parsed_args, "Pipe serialization/deserialization failed"
+    print("✅ Pipe serialization/deserialization successful!")
     
     # Test specific problematic argument
     window_size_arg = '--window-size=1280,720'
@@ -44,12 +41,11 @@ def test_pipe_serialization():
         if window_size_arg in parsed_args:
             print("✅ Problematic argument survived pipe roundtrip!")
         else:
-            print("❌ Problematic argument lost in pipe roundtrip!")
-            return False
+            assert False, "Problematic argument lost in pipe roundtrip"
     else:
         print(f"⚠️ Test argument {window_size_arg} not found in optimized args")
     
-    return True
+    # success
 
 def test_env_variable_simulation():
     """Simulate setting and reading the environment variable with pipe delimiter"""
@@ -74,15 +70,10 @@ def test_env_variable_simulation():
     else:
         print("ℹ️ No comma-containing arguments found")
         
-    return True
+    # success
 
 if __name__ == "__main__":
     print("🔧 Testing pipe-delimited browser argument serialization\n")
-    
-    test1_ok = test_pipe_serialization()
-    test2_ok = test_env_variable_simulation()
-    
-    if test1_ok and test2_ok:
-        print("\n✅ All tests passed! Pipe-delimited serialization should fix the Playwright argument issue.")
-    else:
-        print("\n❌ Some tests failed!")
+    test_pipe_serialization()
+    test_env_variable_simulation()
+    print("\n✅ All tests passed! Pipe-delimited serialization should fix the Playwright argument issue.")

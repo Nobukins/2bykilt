@@ -8,6 +8,10 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+# NOTE:
+#   PLAYWRIGHT_CODEGEN_AUTOMATE=1 を設定すると実ブラウザを起動せず決定的なスタブを返す。
+#   手動操作依存の flaky / 対話要求のあるテストを CI 上で安定化させる目的。
+
 def get_default_edge_user_data():
     """Get the default Edge user data directory based on the OS"""
     if sys.platform == 'win32':  # Windows
@@ -72,6 +76,12 @@ def run_normal_codegen(url):
     通常のPlaywright codegenコマンドを実行（Chromeなど）
     """
     try:
+        # 自動化モード: 対話操作不要な決定的スタブを返す (CI / 非対話テスト用)
+        if os.environ.get("PLAYWRIGHT_CODEGEN_AUTOMATE") == "1":
+            logger.info("[playwright_codegen] AUTOMATEモード有効: 実ブラウザ起動をスキップしスタブ生成")
+            stub = f"""from playwright.async_api import Page\n\n# Auto-generated (automated stub mode) for URL: {url}\nasync def run_actions(page: Page, query=None):\n    await page.goto(\"{url}\")\n    if query:\n        await page.fill(\"input[name=q]\", query)\n        await page.press(\"input[name=q]\", \"Enter\")\n    await page.wait_for_timeout(500)\n"""
+            # convert_to_action_format でテンプレ整形（重複 goto も許容）
+            return True, convert_to_action_format(stub)
         fd, temp_path = tempfile.mkstemp(suffix='.py')
         os.close(fd)
         
