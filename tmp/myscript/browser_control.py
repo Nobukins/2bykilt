@@ -53,6 +53,7 @@ def test_browser_control(page: Page):
         page.goto("https://www.google.com")
         expect(page.locator("#APjFqb")).to_be_visible(timeout=10000)
         locator = page.locator("#APjFqb")  # input box
+        expect(locator).to_be_visible(timeout=10000)
         locator.fill("NEW_METHOD browser-control")
         page.keyboard.press("Enter")
     except Exception as e:
@@ -63,7 +64,5 @@ def test_browser_control(page: Page):
             try:
                 page.screenshot(path="error.png")  # fallback legacy
             except Exception as legacy_exc:
-                print(
-                    f"Screenshot capture failed (legacy fallback also failed): {legacy_exc}; primary: {primary_exc}"
-                )
+                print(f"Screenshot capture failed (legacy fallback also failed): {legacy_exc}; primary: {primary_exc}")
         raise e

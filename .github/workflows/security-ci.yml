@@ -71,7 +71,14 @@ jobs:
       - name: Pytest (ci_safe subset for stable coverage)
         run: |
           echo "Running pytest restricted to ci_safe tests to avoid environment-specific browser/profile failures in CI."
-          coverage run -m pytest -c tests/pytest.ini -m "ci_safe"
+          # Guard: fail fast if any workflow or script still references the deprecated tests/pytest.ini path
+          if grep -R "tests/pytest.ini" -n . | grep -v "scripts/ci_pytest.sh"; then
+            echo "[FATAL] Detected stale reference to tests/pytest.ini. Please remove it." >&2
+            exit 5
+          fi
+          # Use unified runner script for consistent local/CI behavior
+          chmod +x scripts/ci_pytest.sh
+          ./scripts/ci_pytest.sh ci
           coverage xml -i -o coverage.xml
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4

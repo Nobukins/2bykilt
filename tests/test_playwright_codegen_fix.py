@@ -13,37 +13,28 @@ from src.utils.playwright_codegen import run_playwright_codegen
 
 
 def test_playwright_codegen():
-    """修正後のplaywright_codegenをテスト"""
-    print("🎭 Playwright Codegen テスト")
-    print("=" * 50)
-    
-    # 現在の設定を表示
-    print("\n📋 Current Settings:")
-    print(f"  CHROME_PATH: {os.environ.get('CHROME_PATH', 'NOT SET')}")
-    print(f"  EDGE_PATH: {os.environ.get('EDGE_PATH', 'NOT SET')}")
-    
-    # Replaced unstable external endpoint with controlled blog content page
-    test_url = "https://nogtips.wordpress.com/2025/03/31/llms-txt%e3%81%ab%e3%81%a4%e3%81%84%e3%81%a6/"
-    
-    # Chromeテスト
-    print(f"\n🔴 Testing Chrome codegen with URL: {test_url}")
-    print("⚠️ Note: This will actually launch a browser for codegen")
-    print("   Close the browser window after a few seconds to continue the test")
-    
+    """playwright codegen のラッパーが自動化スタブモードと通常モードで動作することを検証"""
+    test_url = "https://example.com/"
+
+    # 1) AUTOMATE モード (ブラウザ非起動)
+    os.environ["PLAYWRIGHT_CODEGEN_AUTOMATE"] = "1"
+    auto_ok, auto_script = run_playwright_codegen(test_url, 'chrome')
+    assert auto_ok, f"自動化モード失敗: {auto_script}"
+    assert "await page.goto" in auto_script
+
+    # 2) 通常モード (環境によってはスキップ)
+    os.environ.pop("PLAYWRIGHT_CODEGEN_AUTOMATE", None)
     try:
-        success, result = run_playwright_codegen(test_url, 'chrome')
-        if success:
-            print("✅ Chrome codegen completed successfully")
-            print(f"📄 Generated script length: {len(result)} characters")
-        else:
-            print(f"❌ Chrome codegen failed: {result}")
-    except Exception as e:
-        print(f"❌ Chrome codegen error: {e}")
-    
-    print("\n" + "=" * 50)
-    print("🏁 Test completed")
-    print("💡 If you saw Google Chrome (not Chromium) launch, the fix is working!")
-    print("💡 If you saw Chromium launch, check your CHROME_PATH setting")
+        normal_ok, normal_result = run_playwright_codegen(test_url, 'chrome')
+    except Exception as e:  # 非GUI / CI などでの失敗を許容
+        normal_ok, normal_result = False, str(e)
+
+    # 非対話環境では失敗を許容するが、成功した場合は基本構造を確認
+    if normal_ok:
+        assert "run_actions" in normal_result
+    else:
+        # 失敗理由はログ用途として残す
+        print(f"[INFO] 通常モードはこの環境で失敗: {normal_result}")
 
 
 if __name__ == "__main__":
