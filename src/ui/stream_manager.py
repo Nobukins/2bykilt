@@ -37,7 +37,8 @@ async def run_with_stream(
     tool_calling_method: str,
     dev_mode: bool = False,
     maintain_browser_session: bool = False,  # Added parameter
-    tab_selection_strategy: str = "active_tab"  # Add parameter with default
+    tab_selection_strategy: str = "active_tab",  # Add parameter with default
+    browser_type: str = None  # Add browser_type parameter
 ):
     """
     Run browser agent with UI streaming of results

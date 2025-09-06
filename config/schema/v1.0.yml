@@ -1,0 +1,141 @@
+# Configuration Schema v1.0.0
+# Defines the structure and validation rules for 2bykilt configuration
+
+version: "1.0.0"
+
+properties:
+  config_version:
+    type: string
+    required: true
+    
+  agent:
+    type: object
+    properties:
+      type:
+        type: string
+        default: "custom"
+        environment_override: "BYKILT_AGENT_TYPE"
+      max_steps:
+        type: integer
+        minimum: 1
+        maximum: 1000
+        default: 100
+        environment_override: "BYKILT_MAX_STEPS"
+      max_actions_per_step:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+        environment_override: "BYKILT_MAX_ACTIONS_PER_STEP"
+      use_vision:
+        type: boolean
+        default: true
+        environment_override: "BYKILT_USE_VISION"
+      tool_calling_method:
+        type: string
+        default: "auto"
+        environment_override: "BYKILT_TOOL_CALLING_METHOD"
+
+  llm:
+    type: object
+    properties:
+      provider:
+        type: string
+        default: "openai"
+        environment_override: "BYKILT_LLM_PROVIDER"
+      model_name:
+        type: string
+        default: "gpt-4o"
+        environment_override: "BYKILT_LLM_MODEL"
+      num_ctx:
+        type: integer
+        minimum: 1000
+        maximum: 100000
+        default: 32000
+        environment_override: "BYKILT_LLM_CTX"
+      temperature:
+        type: float
+        minimum: 0.0
+        maximum: 2.0
+        default: 1.0
+        environment_override: "BYKILT_LLM_TEMPERATURE"
+      base_url:
+        type: string
+        default: ""
+        environment_override: "BYKILT_LLM_BASE_URL"
+      api_key:
+        type: string
+        default: ""
+        environment_override: "BYKILT_LLM_API_KEY"
+
+  browser:
+    type: object
+    properties:
+      use_own_browser:
+        type: boolean
+        default: false
+        environment_override: "BYKILT_USE_OWN_BROWSER"
+      keep_browser_open:
+        type: boolean
+        default: false
+        environment_override: "BYKILT_KEEP_BROWSER_OPEN"
+      headless:
+        type: boolean
+        default: false
+        environment_override: "BYKILT_HEADLESS"
+      disable_security:
+        type: boolean
+        default: true
+        environment_override: "BYKILT_DISABLE_SECURITY"
+      enable_recording:
+        type: boolean
+        default: true
+        environment_override: "BYKILT_ENABLE_RECORDING"
+      window_width:
+        type: integer
+        minimum: 800
+        maximum: 4000
+        default: 1280
+        environment_override: "BYKILT_WINDOW_WIDTH"
+      window_height:
+        type: integer
+        minimum: 600
+        maximum: 4000
+        default: 1100
+        environment_override: "BYKILT_WINDOW_HEIGHT"
+
+  storage:
+    type: object
+    properties:
+      save_recording_path:
+        type: string
+        default: "./tmp/record_videos"
+        environment_override: "BYKILT_RECORDING_PATH"
+      save_trace_path:
+        type: string
+        default: "./tmp/traces"
+        environment_override: "BYKILT_TRACE_PATH"
+      save_agent_history_path:
+        type: string
+        default: "./tmp/agent_history"
+        environment_override: "BYKILT_AGENT_HISTORY_PATH"
+
+  development:
+    type: object
+    properties:
+      dev_mode:
+        type: boolean
+        default: false
+        environment_override: "BYKILT_DEV_MODE"
+      debug_logging:
+        type: boolean
+        default: false
+        environment_override: "BYKILT_DEBUG_LOGGING"
+
+  task:
+    type: object
+    properties:
+      default:
+        type: string
+        default: ""
+        environment_override: "BYKILT_DEFAULT_TASK"

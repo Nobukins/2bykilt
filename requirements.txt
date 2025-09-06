@@ -1,32 +1,188 @@
-# Core dependencies
+# ============================================================================
+# 2bykilt - 完全版 Requirements
+# 全LLM機能とブラウザ自動化機能を含む完全インストール用
+# ============================================================================
+
+# Core Web Framework
+fastapi==0.115.11
+uvicorn==0.34.0
+starlette==0.46.1
+python-multipart==0.0.20
+
+# UI Framework
+gradio==5.10.0
+gradio_client==1.5.3
+
+# Browser Automation (Core)
 browser-use==0.1.37
-python-dotenv>=0.19.0
-pyyaml>=6.0
-gradio>=5.10.0  # Always installs latest compatible version
-requests>=2.28.0
-jsonschema>=4.0.0
-json-repair
-nest_asyncio>=1.5.6  # Required for nested async event loops
-
-# LLM integration
-langchain-core>=0.1.0
-langchain-mistralai==0.2.4
-langchain-ollama>=0.0.1
-
-# Browser automation
-playwright>=1.35.0
+playwright==1.51.0
 pyperclip==1.9.0
 
-# Testing and development
-psutil>=5.9.0  # Process management for browser control
-pytest>=7.0.0  # For running test scripts
-pytest-playwright>=0.4.0  # For browser testing
-pytest-asyncio>=0.18.0  # For async test support
+# HTTP & Network
+aiohttp==3.11.14
+httpx==0.28.1
+httpx-sse==0.4.0
+httpx-ws==0.7.1
+requests==2.32.3
+requests-toolbelt==1.0.0
+httpcore==1.0.7
+websockets==14.2
 
-# Installation notes:
-# Run: pip install -r requirements.txt --upgrade
-# After installing playwright, run: playwright install
-# Additional LLM providers can be installed as needed:
-# langchain-openai  # For OpenAI/Azure OpenAI
-# langchain-anthropic  # For Claude models
-# langchain-google-genai  # For Gemini models
+# LangChain Core (AI/LLM Foundation)
+langchain==0.3.14
+langchain-core==0.3.45
+langchain-text-splitters==0.3.6
+langsmith==0.2.11
+
+# LLM Providers
+langchain-openai==0.3.1        # OpenAI GPT-4, GPT-3.5, Azure OpenAI
+langchain-anthropic==0.3.3     # Claude 3 (Sonnet, Haiku, Opus)
+langchain-google-genai==2.0.8  # Google Gemini
+langchain-mistralai==0.2.4     # Mistral AI
+langchain-ollama==0.2.2        # Local Ollama models
+langchain-fireworks==0.2.7     # Fireworks AI
+langchain-aws==0.2.15          # AWS Bedrock
+
+# Direct LLM Client Libraries
+openai==1.66.3                 # Direct OpenAI API
+anthropic==0.49.0              # Direct Anthropic API
+google-generativeai==0.8.4     # Direct Google Gemini API
+ollama==0.4.7                  # Local Ollama client
+fireworks-ai==0.15.12          # Fireworks AI client
+
+# Data Processing & Analysis
+pandas==2.2.3
+numpy==2.2.4
+json_repair==0.39.1
+jsonschema==4.23.0
+jsonschema-specifications==2024.10.1
+
+# Content Extraction & Web Scraping
+beautifulsoup4==4.13.3
+trafilatura==2.0.0
+html2text==2024.2.26
+htmldate==1.9.3
+lxml==5.3.1
+lxml_html_clean==0.4.1
+MainContentExtractor==0.0.4
+courlan==1.3.2
+jusText==3.0.2
+markdownify==0.14.1
+
+# Configuration & Environment
+python-dotenv==1.0.1
+PyYAML==6.0.2
+ruamel.yaml
+tomlkit==0.13.2
+
+# Async & Concurrency
+anyio==4.9.0
+nest-asyncio==1.6.0
+aiofiles==23.2.1
+
+# Testing Framework
+pytest==8.3.5
+pytest-asyncio==0.25.3
+pytest-playwright==0.7.0
+pytest-base-url==2.1.0
+pytest-cov
+
+# System Monitoring & Process Management
+psutil==7.0.0
+pystray==0.19.5
+
+# Text Processing & Tokenization
+tiktoken==0.9.0                # OpenAI tokenizer
+tokenizers==0.21.1             # HuggingFace tokenizers
+text-unidecode==1.3
+python-slugify==8.0.4
+
+# Date & Time Processing
+python-dateutil==2.9.0.post0
+dateparser==1.2.1
+pytz==2025.1
+tzdata==2025.1
+tzlocal==5.3.1
+
+# Development & Code Quality
+ruff==0.11.0                   # Python linter & formatter
+rich==13.9.4                   # Beautiful terminal output
+
+# Media Processing
+pillow==11.1.0                 # Image processing
+pydub==0.25.1                  # Audio processing
+ffmpy==0.5.0                   # Video processing
+
+# Security & Authentication
+cryptography                   # For secure connections
+certifi==2025.1.31            # SSL certificates
+
+# Cloud Services (AWS)
+boto3==1.37.14
+botocore==1.37.14
+s3transfer==0.11.4
+
+# Google Cloud Services
+google-api-python-client==2.164.0
+google-auth==2.38.0
+google-auth-httplib2==0.2.0
+google-api-core==2.24.2
+googleapis-common-protos==1.69.2
+
+# Monitoring & Observability
+opentelemetry-api==1.31.0
+opentelemetry-sdk==1.31.0
+opentelemetry-instrumentation==0.52b0
+opentelemetry-instrumentation-langchain==0.38.12
+opentelemetry-instrumentation-requests==0.52b0
+opentelemetry-exporter-otlp-proto-grpc==1.31.0
+opentelemetry-exporter-otlp-proto-http==1.31.0
+lmnr==0.4.66                   # LangSmith monitoring
+posthog==3.21.0               # Analytics
+
+# Utility Libraries
+tqdm==4.67.1                   # Progress bars
+click==8.1.8                   # CLI framework
+typer==0.15.2                  # Modern CLI framework
+shellingham==1.5.4            # Shell detection
+filelock==3.18.0              # File locking
+packaging==24.2               # Version parsing
+semantic-version==2.10.0      # Semantic versioning
+
+# Required System Dependencies
+# These are automatically installed with main packages
+attrs==25.3.0
+certifi==2025.1.31
+charset-normalizer==3.4.1
+idna==3.10
+urllib3==2.3.0
+typing_extensions==4.12.2
+annotated-types==0.7.0
+pydantic==2.10.6
+pydantic_core==2.27.2
+
+# ============================================================================
+# Installation Instructions:
+# ============================================================================
+# 1. Create virtual environment:
+#    python3.12 -m venv venv
+#    source venv/bin/activate  # macOS/Linux
+#    # or: venv\Scripts\activate  # Windows
+#
+# 2. Install requirements:
+#    pip install -r requirements.txt --upgrade
+#
+# 3. Install Playwright browsers:
+#    playwright install
+#
+# 4. Setup environment:
+#    cp .env.example .env
+#    # Edit .env file with your API keys
+#
+# 5. Run application:
+#    export ENABLE_LLM=true
+#    python bykilt.py
+# ============================================================================
+
+# Note: For minimal installation without LLM features, use:
+# pip install -r requirements-minimal.txt

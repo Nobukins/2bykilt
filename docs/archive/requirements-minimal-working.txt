@@ -1,0 +1,46 @@
+# Minimal requirements for bykilt (non-LLM mode)
+# Core web framework
+fastapi>=0.115.0
+uvicorn>=0.34.0
+starlette>=0.46.0
+
+# UI Framework
+gradio>=5.10.0
+gradio_client>=1.5.0
+
+# Browser automation
+playwright>=1.51.0
+pyee>=12.1.0
+
+# Data processing
+pandas>=2.3.0
+numpy>=2.3.0
+pydantic>=2.11.0
+
+# Configuration and utilities
+python-dotenv>=1.0.0
+PyYAML>=6.0.0
+requests>=2.32.0
+psutil>=7.0.0
+
+# JSON processing
+jsonschema>=4.24.0
+json_repair>=0.47.0
+
+# System integration
+pyperclip>=1.9.0
+pystray>=0.19.0
+pyobjc-core>=11.0  # macOS specific
+pyobjc-framework-Cocoa>=11.0  # macOS specific
+pyobjc-framework-Quartz>=11.0  # macOS specific
+
+# Development and testing (optional)
+pytest>=8.3.0
+pytest-asyncio>=1.0.0
+pytest-playwright>=0.7.0
+ruff>=0.12.0
+
+# Media processing (for recording features)
+pillow>=11.1.0
+pydub>=0.25.0
+ffmpy>=0.6.0

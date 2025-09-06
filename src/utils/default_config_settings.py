@@ -3,9 +3,26 @@ import pickle
 import uuid
 import gradio as gr
 
+# Try to import multi-environment configuration support
+try:
+    from ..config.config_adapter import get_config_for_environment, is_multi_env_config_available
+    MULTI_ENV_AVAILABLE = is_multi_env_config_available()
+except ImportError:
+    MULTI_ENV_AVAILABLE = False
+
 
 def default_config():
     """Prepare the default configuration"""
+    # Try to use multi-environment configuration first
+    if MULTI_ENV_AVAILABLE:
+        try:
+            config = get_config_for_environment()
+            return config
+        except Exception as e:
+            print(f"Warning: Failed to load multi-env config: {e}")
+            print("Falling back to legacy configuration")
+    
+    # Fallback to legacy default configuration
     return {
         "agent_type": "custom",
         "max_steps": 100,

@@ -1,0 +1,23 @@
+# Development Environment Configuration
+# Inherits from base.yml and overrides specific settings for development
+
+# Development-specific browser settings
+browser:
+  headless: false  # Show browser in dev
+  enable_recording: true
+  disable_security: true
+
+# Development-specific paths
+storage:
+  save_recording_path: "./tmp/dev/record_videos"
+  save_trace_path: "./tmp/dev/traces"
+  save_agent_history_path: "./tmp/dev/agent_history"
+
+# Development settings
+development:
+  dev_mode: true
+  debug_logging: true
+
+# Development LLM settings
+llm:
+  temperature: 1.2  # More creative in dev

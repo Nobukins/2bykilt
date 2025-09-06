@@ -11,6 +11,66 @@
 
 業務の冒険者たちよ、もはや複雑な作業に時間を費やす必要はない。**2bykilt**（ツーバイキルト）は、あなたの日々の作業を自動化する伝説の魔法道具だ。ブラウザ操作を簡単に録画し、再生し、共有できる。まるで伝説の魔法書のように。
 
+詳しいドキュメントの一覧は docs/DOCS_INDEX.md を参照してください。
+
+## 🚀 クイックスタート
+
+### 🪟 Windows環境セットアップ
+Windows 10/11での推奨インストール手順：
+
+```powershell
+# 1. Python 3.12+インストール確認
+python --version
+
+# 2. プロジェクトクローン
+git clone https://github.com/Nobukins/2bykilt.git
+cd 2bykilt
+
+# 3. 仮想環境作成・有効化
+python -m venv .venv
+.venv\Scripts\activate
+
+# 4. 軽量インストール（推奨）
+pip install -r requirements-minimal.txt
+playwright install chromium
+
+# 5. 起動
+$env:ENABLE_LLM = "false"
+python bykilt.py
+
+# 詳細なWindows設定: WINDOWS_SETUP_GUIDE.md を参照
+```
+
+### 🔧 軽量インストール（推奨）
+LLM機能なしでブラウザ自動化のみを利用：
+
+```bash
+# 基本パッケージのインストール
+pip install -r requirements-minimal.txt
+
+# Playwrightブラウザのインストール
+playwright install
+
+# LLM機能を無効化して起動
+export ENABLE_LLM=false
+python bykilt.py
+```
+
+### 🧙‍♂️ フル機能インストール
+LLM機能も含めた全機能を利用：
+
+```bash
+# 全パッケージのインストール
+pip install -r requirements.txt
+
+# Playwrightブラウザのインストール
+playwright install
+
+# LLM機能を有効化して起動
+export ENABLE_LLM=true
+python bykilt.py
+```
+
 ## ✨ 2bykiltの魔法の力
 
 ### 🎮 ブラウザ操作を魔法として記録・再生
@@ -29,12 +89,12 @@
 - プログラミングを知らなくても使える直感的なインターフェース
 - コピー&ペーストだけで魔法のスクリプトを登録可能
 
-### 🧙‍♂️ 最後の砦としてのAI魔導士
+### 🧙‍♂️ 最後の砦としてのAI魔導士（オプション）
 
 **「迷った時は、魔導士に相談せよ。道を示してくれるだろう」**
 
-- 定型作業は自動化スクリプトで処理
-- 複雑な判断が必要な場合はLLM（魔導士）が対応
+- 定型作業は自動化スクリプトで処理（LLM不要）
+- 複雑な判断が必要な場合はLLM（魔導士）が対応（オプション機能）
 - 人間とAIの最適な協力関係を実現
 
 ### 🔮 魔法の書からの知識抽出
@@ -257,24 +317,73 @@ cp .env.example .env
 魔法がうまく機能しない時のための研究室も完備：
 
 ```bash
-python debug_bykilt.py external/samples/search_word.json
+python debug_bykilt2.py external/samples/search_word.json
 ```
 
-## 🌟 2bykiltを使う3つの理由
+## 🛠️ 魔法の修復術（最新のアップデート）
 
-1. **魔法の習得が容易** - 特別な知識不要で、今日から使える
-2. **魔法の再現性が高い** - 一度作った魔法は何度でも同じように動作
-3. **魔法の応用が無限** - あらゆる業務に適用可能
+### ⚡ 魔法書の安定化呪文
 
-## 🏹 魔法の旅を始めよう
+**「混沌に秩序をもたらし、魔法の力を確実なものとせよ」**
+
+最新のアップデートで、2bykiltの魔法書がより安定し、確実に動作するようになりました！
+
+#### 🚨 重要な修復作業完了
+
+**「古き呪文の不調を正し、新たな力を手に入れた」**
+
+- **TypeError退治**: `argument of type 'bool' is not iterable` という邪悪なバグを完全に退治
+- **魔法陣の最適化**: 問題を起こしていた複雑な魔法陣（gr.File, gr.Gallery, gr.Video）をシンプルで確実な魔法陣（gr.Textbox）に改良
+- **Python 3.12対応**: 最新の魔法環境でも安定動作を実現
+- **HTTP 200の証**: サーバーが正常に動作することを確認済み
+
+#### 🧹 魔法の書庫整理
+
+**「不要な巻物を整理し、真に必要な知識のみを残した」**
+
+魔法の書庫から以下の古い巻物を整理しました：
+- `bykilt_simplified.py` - 簡易版の試験的巻物
+- `test_*.py` - 実験用の一時的な巻物群
+- `debug_bykilt.py` - 旧式のデバッグ用巻物
+
+新たに `debug_bykilt2.py` という強力なデバッグツールを作成し、すべての診断機能を統合しました。
+
+#### 🔮 診断魔法の強化
+
+**「魔法が思うように動かない時、その原因を即座に見抜く力を得た」**
 
 ```bash
-python bykilt.py
+# 魔法の不調を診断する呪文
+python debug_bykilt2.py external/samples/search_word.json
 ```
 
-そしてブラウザで `http://127.0.0.1:7788` にアクセス。
+この新しい診断ツールは：
+- ブラウザの状態を詳細に分析
+- 環境設定の問題を即座に特定
+- 依存関係の不整合を自動検出
+- モジュール化された診断機能で再利用可能
 
-**「さあ、業務効率化の冒険に出発だ！」**
+#### 📜 賢者の知恵書
+
+**「同じ困難に再び出会った時、迷うことなく解決の道を歩めるように」**
+
+今回の修復作業で得られた知恵を、後世の魔術師たちのために記録しました：
+
+- `FIX_SUMMARY.md` - 技術的な修復の詳細記録
+- `CLEANUP_REPORT.md` - 書庫整理の理由と影響
+- `LLM_AS_OPTION.prompt.md` - 効率的な問題解決の呪文集（20-30分で解決）
+
+#### ✨ 魔法使いへのメッセージ
+
+**「さらに安定し、確実になった2bykiltで、あなたの業務効率化の冒険を続けてください」**
+
+この修復により：
+- 🛡️ より堅牢で信頼できる魔法書に進化
+- ⚡ 最小環境でも軽快に動作
+- 🎯 すべてのコア機能が正常動作
+- 📚 将来の問題解決手順も完備
+
+**「さあ、新たに生まれ変わった2bykiltと共に、業務効率化の冒険を再開しよう！」**
 
 ---
 

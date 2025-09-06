@@ -22,6 +22,7 @@ class BrowserDebugManager:
         self.chrome_process = None
         self.global_browser = None
         self.global_playwright = None
+        self.playwright = None  # 追加
         self.global_context = None
         self.global_page = None
         
@@ -35,284 +36,227 @@ class BrowserDebugManager:
             pass
         
         self.session_manager = SessionManager()
+
+    async def _ensure_playwright_initialized(self):
+        """Playwrightインスタンスの確実な初期化"""
+        if self.playwright is None or self.global_playwright is None:
+            try:
+                from playwright.async_api import async_playwright
+                self.playwright = await async_playwright().start()
+                self.global_playwright = self.playwright
+                logger.debug("✅ Playwrightインスタンスを初期化しました")
+            except Exception as e:
+                logger.error(f"❌ Playwright初期化エラー: {e}")
+                raise e
+        return self.playwright
+
+    def _detect_browser_path(self, browser_type):
+        """クロスプラットフォーム対応のブラウザパス自動検出"""
+        import platform
+        
+        system = platform.system()
+        logger.debug(f"🔍 OS検出: {system}")
+        
+        if browser_type == "chrome":
+            if system == "Darwin":  # macOS
+                paths = [
+                    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+                ]
+            elif system == "Windows":
+                paths = [
+                    "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+                    "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
+                ]
+            else:  # Linux
+                paths = [
+                    "/usr/bin/google-chrome",
+                    "/usr/bin/chromium-browser",
+                    "/opt/google/chrome/chrome"
+                ]
+        elif browser_type == "edge":
+            if system == "Darwin":  # macOS
+                paths = [
+                    "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"
+                ]
+            elif system == "Windows":
+                paths = [
+                    "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+                    "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe"
+                ]
+            else:  # Linux
+                paths = [
+                    "/usr/bin/microsoft-edge",
+                    "/opt/microsoft/msedge/msedge"
+                ]
+        else:
+            return None
+        
+        # パスの存在確認
+        for path in paths:
+            if os.path.exists(path):
+                logger.debug(f"✅ ブラウザパス検出成功: {path}")
+                return path
+        
+        logger.debug(f"❌ {browser_type}のパスが見つかりませんでした")
+        return None
+
+    async def _check_browser_running(self, port):
+        """指定ポートでブラウザが実行中かチェック"""
+        try:
+            import requests
+            response = requests.get(f"http://localhost:{port}/json/version", timeout=2)
+            logger.debug(f"✅ ポート{port}でブラウザが実行中: {response.status_code}")
+            return True
+        except Exception:
+            logger.debug(f"❌ ポート{port}でブラウザは実行されていません")
+            return False
+
+    async def _start_browser_process(self, browser_path, user_data_dir, debugging_port):
+        """ブラウザプロセスを起動"""
+        if not browser_path or not os.path.exists(browser_path):
+            raise Exception(f"ブラウザパスが無効です: {browser_path}")
+        
+        cmd_args = [
+            browser_path,
+            f"--remote-debugging-port={debugging_port}",
+            "--no-first-run",
+            "--no-default-browser-check"
+        ]
+        
+        if user_data_dir:
+            cmd_args.append(f"--user-data-dir={user_data_dir}")
+        
+        logger.info(f"🚀 ブラウザプロセス起動: {' '.join(cmd_args)}")
+        
+        try:
+            self.chrome_process = subprocess.Popen(cmd_args)
+            await asyncio.sleep(3)  # 起動待機
+            logger.info("✅ ブラウザプロセス起動完了")
+        except Exception as e:
+            logger.error(f"❌ ブラウザプロセス起動失敗: {e}")
+            raise e
     
     async def initialize_browser(self, use_own_browser=False, headless=False, browser_type=None):
-        """Initialize or reuse a browser instance with support for Chrome and Edge."""
+        """Initialize or reuse a browser instance with improved fallback logic."""
+        logger.debug(f"🔍 initialize_browser 呼び出し - use_own_browser: {use_own_browser}, headless: {headless}, browser_type: {browser_type}")
+        
+        # Playwrightを初期化（まだ初期化されていない場合）
+        await self._ensure_playwright_initialized()
+        
+        # ブラウザタイプの決定（UIで選択されたブラウザを優先）
+        if browser_type is None:
+            browser_type = browser_config.get_current_browser()
+            logger.info(f"🔍 UIで選択されたブラウザタイプを使用: {browser_type}")
+        
+        # 現在のブラウザが利用可能かチェック
+        if not browser_config.validate_current_browser():
+            logger.warning("⚠️ 現在のブラウザが利用できません。フォールバック処理が実行されました")
+            browser_type = browser_config.get_current_browser()  # フォールバック後の値を取得
+        
         settings = browser_config.get_browser_settings(browser_type)
         browser_path = settings["path"]
         user_data_dir = settings["user_data"]
         debugging_port = settings["debugging_port"]
+        
+        logger.info(f"🔍 ブラウザ初期化設定:")
+        logger.info(f"  - browser_type: {browser_type}")
+        logger.info(f"  - browser_path: {browser_path}")
+        logger.info(f"  - user_data_dir: {user_data_dir}")
+        logger.info(f"  - debugging_port: {debugging_port}")
 
         if use_own_browser:
-            cmd_args = [
-                browser_path,
-                f"--remote-debugging-port={debugging_port}",
-                "--no-first-run",
-                "--no-default-browser-check"
-            ]
-            if user_data_dir:
-                cmd_args.append(f"--user-data-dir={user_data_dir}")
-            chrome_process = subprocess.Popen(cmd_args)
-            await asyncio.sleep(3)
+            # 外部ブラウザプロセスに接続
+            logger.info(f"🔗 外部{browser_type}プロセスに接続を試行")
+            
+            # ブラウザプロセスが既に動いているかチェック
+            if not await self._check_browser_running(debugging_port):
+                logger.info(f"🚀 {browser_type}プロセスを起動")
+                await self._start_browser_process(browser_path, user_data_dir, debugging_port)
+            
             try:
                 browser = await self.playwright.chromium.connect_over_cdp(
                     endpoint_url=f'http://localhost:{debugging_port}'
                 )
                 self.global_browser = browser
-                return {"browser": browser, "status": "success"}
+                logger.info(f"✅ {browser_type}プロセスへの接続成功")
+                return {"browser": browser, "status": "success", "browser_type": browser_type}
             except Exception as e:
-                logger.error(f"Failed to connect to browser: {e}")
+                logger.error(f"❌ {browser_type}プロセスへの接続失敗: {e}")
+                return {"status": "error", "message": f"{browser_type}への接続に失敗: {e}"}
         else:
-            browser = await self.playwright.chromium.launch(headless=headless)
-            self.global_browser = browser
-            return {"browser": browser, "status": "success"}
-
-    @Logger.log_async_method_calls(logger)
-    async def initialize_custom_browser(self, use_own_browser=False, headless=False, tab_selection_strategy="new_tab"):
-        """カスタムプロファイル付きでブラウザインスタンスを初期化"""
-        # 完全なブラウザ設定診断を実行
-        from src.browser.browser_diagnostic import BrowserDiagnostic
-        debug_file = BrowserDiagnostic.capture_browser_state("browser_init_debug")
-        
-        # BrowserConfigの参照関係とインスタンスIDを出力
-        global browser_config
-        logger.info(f"BrowserConfig instance ID: {id(browser_config)}")
-        
-        # 現在設定されているブラウザの確認
-        current_browser = browser_config.config.get("current_browser", "chrome")
-        logger.info(f"Current browser in config: {current_browser}")
-        
-        # ブラウザ設定の詳細ログ
-        browser_settings = browser_config.get_browser_settings()
-        logger.info(f"🔍 DEBUG: ブラウザ初期化開始 - 設定されたブラウザタイプ: {current_browser}")
-        logger.info(f"🔍 DEBUG: BrowserConfig直接チェック: {browser_settings}")
-        
-        # すでにブラウザインスタンスが存在する場合はそれを返す
-        if self.global_browser is not None:
-            logger.info(f"✅ 既存のブラウザインスタンスを再利用します: {self.browser_type}")
-            return {"browser": self.global_browser, "playwright": self.global_playwright, "status": "success"}
-        
-        try:
-            # Playwrightインスタンスを先に初期化
-            from playwright.async_api import async_playwright
+            # Playwright管理ブラウザを起動
+            logger.info(f"� Playwright管理{browser_type}を起動")
+            launch_options = {"headless": headless}
             
-            playwright = await async_playwright().start()
-            self.global_playwright = playwright
-            
-            if use_own_browser:
-                # ブラウザタイプに応じた設定
-                if current_browser == "edge":
-                    browser_path = browser_settings.get("path")
-                    browser_user_data = browser_settings.get("user_data")
-                    browser_debug_port = browser_settings.get("debugging_port", 9223)
-                    logger.info(f"🔍 use_own_browser が有効です。Edge を探します...")
-                    logger.info(f"📁 ユーザーデータディレクトリ: {browser_user_data}")
-                    logger.info(f"🚀 Edge を起動します: {browser_path}")
-                    logger.info(f"🔌 デバッグポート: {browser_debug_port}")
-                    
-                    # Edge接続テスト
-                    import requests
-                    try:
-                        response = requests.get(f"http://localhost:{browser_debug_port}/json/version", timeout=5)
-                        logger.info(f"✅ Edgeデバッグエンドポイント接続成功: {response.status_code}")
-                    except Exception as e:
-                        logger.warning(f"⚠️ デバッグエンドポイントへの接続確認に失敗: {e}")
-                        
-                        # Edgeが実行中でない場合は起動を試みる
-                        if browser_path:
-                            import subprocess
-                            cmd = [
-                                browser_path,
-                                f"--remote-debugging-port={browser_debug_port}",
-                                "--no-first-run",
-                                "--no-default-browser-check"
-                            ]
-                            if browser_user_data:
-                                cmd.append(f"--user-data-dir={browser_user_data}")
-                            
-                            logger.info(f"🚀 Edge起動コマンド: {' '.join(cmd)}")
-                            subprocess.Popen(cmd)
-                            # 接続のために少し待機
-                            import asyncio
-                            await asyncio.sleep(3)
-                    
-                    try:
-                        # Playwrightインスタンスが正しく初期化されているか確認
-                        if self.global_playwright is None:
-                            logger.error("⚠️ Playwrightインスタンスが初期化されていません")
-                            from playwright.async_api import async_playwright
-                            self.global_playwright = await async_playwright().start()
-                            logger.info("✅ Playwrightインスタンスを再初期化しました")
-                        
-                        # EdgeにはPlaywrightのchromiumドライバーを使用
-                        if hasattr(self.global_playwright, 'chromium'):
-                            browser = await self.global_playwright.chromium.connect_over_cdp(f"http://localhost:{browser_debug_port}")
-                            self.global_browser = browser
-                            self.browser_type = "edge"
-                            logger.info("✅ 起動したEdgeインスタンスに接続しました")
-                            return {"browser": browser, "playwright": self.global_playwright, "status": "success"}
-                        else:
-                            logger.error("⚠️ Playwrightインスタンスにchromiumドライバーが見つかりません")
-                            return {"status": "error", "message": "Playwrightインスタンスにchromiumドライバーが見つかりません"}
-                    except Exception as e:
-                        logger.error(f"⚠️ Edge への接続に失敗しました: {e}")
-                        # 詳細な診断を実行
-                        diagnostic_file = BrowserDiagnostic.capture_browser_state(f"startup_issue_edge")
-                        logger.error(f"ブラウザ起動診断情報: {diagnostic_file}")
-                        return {"status": "error", "message": f"Edgeの初期化に失敗しました: {e}"}
-                else:
-                    # Chrome用の設定
-                    browser_path = browser_settings.get("path")
-                    browser_user_data = browser_settings.get("user_data")
-                    browser_debug_port = browser_settings.get("debugging_port", 9222)
-                    logger.info(f"🔍 use_own_browser が有効です。Chrome を探します...")
-                    logger.info(f"📁 ユーザーデータディレクトリ: {browser_user_data}")
-                    logger.info(f"🚀 Chrome を起動します: {browser_path}")
-                    logger.info(f"🔌 デバッグポート: {browser_debug_port}")
-                    
-                    # Chrome接続テスト
-                    import requests
-                    try:
-                        response = requests.get(f"http://localhost:{browser_debug_port}/json/version", timeout=5)
-                        logger.info(f"✅ Chromeデバッグエンドポイント接続成功: {response.status_code}")
-                    except Exception as e:
-                        logger.warning(f"⚠️ デバッグエンドポイントへの接続確認に失敗: {e}")
-                        
-                        # Chromeが実行中でない場合は起動を試みる
-                        if browser_path:
-                            import subprocess
-                            cmd = [
-                                browser_path,
-                                f"--remote-debugging-port={browser_debug_port}",
-                                "--no-first-run",
-                                "--no-default-browser-check"
-                            ]
-                            if browser_user_data:
-                                cmd.append(f"--user-data-dir={browser_user_data}")
-                            
-                            logger.info(f"🚀 Chrome起動コマンド: {' '.join(cmd)}")
-                            subprocess.Popen(cmd)
-                            # 接続のために少し待機
-                            import asyncio
-                            await asyncio.sleep(3)
-                    
-                    try:
-                        # ChromeにはPlaywrightのchromiumドライバーを使用
-                        browser = await self.global_playwright.chromium.connect_over_cdp(f"http://localhost:{browser_debug_port}")
-                        self.global_browser = browser
-                        self.browser_type = "chrome"
-                        logger.info("✅ 起動したChromeインスタンスに接続しました")
-                        return {"browser": browser, "playwright": self.global_playwright, "status": "success"}
-                    except Exception as e:
-                        logger.error(f"⚠️ Chrome への接続に失敗しました: {e}")
-                        # 詳細な診断を実行
-                        diagnostic_file = BrowserDiagnostic.capture_browser_state(f"startup_issue_chrome")
-                        logger.error(f"ブラウザ起動診断情報: {diagnostic_file}")
-                        return {"status": "error", "message": f"Chromeの初期化に失敗しました: {e}"}
-                    
+            # 指定されたブラウザパスを優先して使用
+            if browser_path and os.path.exists(browser_path):
+                launch_options["executable_path"] = browser_path
+                logger.info(f"✅ 指定されたブラウザパスを使用: {browser_path}")
             else:
-                # Playwright管理ブラウザを使用 - ブラウザタイプに基づき選択
-                if current_browser == "edge":
-                    logger.info("✅ Playwright管理のEdgeブラウザを起動します")
-                    browser = await self.global_playwright.chromium.launch(
-                        headless=headless,
-                        executable_path=browser_settings.get("path")
-                    )
+                # フォールバック: 自動検出を試行
+                detected_path = self._detect_browser_path(browser_type)
+                if detected_path:
+                    launch_options["executable_path"] = detected_path
+                    logger.info(f"✅ 自動検出されたブラウザパスを使用: {detected_path}")
                 else:
-                    logger.info("✅ Playwright管理のChromeブラウザを起動します")
-                    browser = await self.global_playwright.chromium.launch(headless=headless)
-                    
+                    logger.warning(f"⚠️ {browser_type}パスが見つかりません。デフォルトChromiumを使用")
+            
+            try:
+                browser = await self.playwright.chromium.launch(**launch_options)
                 self.global_browser = browser
-                self.browser_type = current_browser
-                logger.info(f"✅ Playwright管理{current_browser}ブラウザを起動しました")
-                return {"browser": browser, "playwright": playwright, "status": "success"}
                 
-        except Exception as e:
-            logger.error(f"⚠️ ブラウザセッションの初期化中にエラーが発生しました: {e}")
-            import traceback
-            logger.error(f"スタックトレース: {traceback.format_exc()}")
-            
-            # 詳細な診断情報を保存
-            diagnostic_file = BrowserDiagnostic.capture_browser_state(f"browser_init_error")
-            logger.error(f"詳細診断情報: {diagnostic_file}")
-            
-            return {"status": "error", "message": f"ブラウザセッションの初期化中にエラーが発生しました: {e}"}
+                # 成功時にブラウザ情報をログ
+                actual_path = launch_options.get("executable_path", "デフォルトChromium")
+                logger.info(f"✅ ブラウザ起動成功: {actual_path}")
+                
+                return {"browser": browser, "status": "success", "browser_type": browser_type}
+            except Exception as e:
+                logger.error(f"❌ {browser_type}起動失敗: {e}")
+                
+                # 最終フォールバック: デフォルトChromium
+                if "executable_path" in launch_options:
+                    logger.info("🔄 デフォルトChromiumでのフォールバックを実行")
+                    try:
+                        del launch_options["executable_path"]
+                        browser = await self.playwright.chromium.launch(**launch_options)
+                        self.global_browser = browser
+                        logger.info("✅ デフォルトChromiumでの起動成功")
+                        return {"browser": browser, "status": "success", "browser_type": "chromium"}
+                    except Exception as fallback_e:
+                        logger.error(f"❌ デフォルトChromiumでの起動も失敗: {fallback_e}")
+                
+                return {"status": "error", "message": f"ブラウザ起動失敗: {e}"}
 
     async def initialize_with_session(self, session_id=None, use_own_browser=False, headless=False):
-        """ブラウザセッションを初期化"""
+        """ブラウザセッションを初期化 - メインエントリーポイント"""
+        logger.debug(f"🔍 initialize_with_session 開始 - use_own_browser: {use_own_browser}, headless: {headless}")
+        
         try:
-            # グローバル設定を使用
-            global browser_config
-            direct_browser_type = browser_config.config.get("current_browser", "chrome")
-            settings_browser_type = browser_config.get_browser_settings()["browser_type"]
+            # ブラウザ初期化を呼び出す（新しい統一されたメソッド）
+            result = await self.initialize_browser(
+                use_own_browser=use_own_browser,
+                headless=headless,
+                browser_type=None  # UIで選択されたブラウザを自動使用
+            )
             
-            # 設定の不一致を検出
-            if direct_browser_type != settings_browser_type:
-                logger.error(f"⚠️ ブラウザ設定の不一致を検出: config={direct_browser_type}, settings={settings_browser_type}")
-                # 不一致を解決
-                browser_config.config["current_browser"] = settings_browser_type
-                logger.info(f"✅ ブラウザ設定を修正: {settings_browser_type}")
-            
-            if use_own_browser:
-                browser_settings = browser_config.get_browser_settings()
-                port = browser_settings["debugging_port"]
-                browser_path = browser_settings["path"]
-                user_data_dir = browser_settings["user_data"]
-                browser_name = "Edge" if settings_browser_type == "edge" else "Chrome"
+            if result.get("status") == "success":
+                # セッション情報を追加
+                session_id = session_id or str(uuid.uuid4())
+                result["session_id"] = session_id
                 
-                logger.info(f"🔍 use_own_browser が有効です。{browser_name} を探します...")
-                logger.info(f"🚀 {browser_name} を起動します: {browser_path}")
-                logger.info(f"📁 ユーザーデータディレクトリ: {user_data_dir}")
-                logger.info(f"🔌 デバッグポート: {port}")
-                
-                cmd_args = [
-                    browser_path,
-                    f"--remote-debugging-port={port}",
-                    "--no-first-run",
-                    "--no-default-browser-check"
-                ]
-                if user_data_dir:
-                    cmd_args.append(f"--user-data-dir={user_data_dir}")
-                
-                self.chrome_process = subprocess.Popen(cmd_args)
-                await asyncio.sleep(3)
-                
-                try:
-                    endpoint_url = f'http://localhost:{port}'
-                    browser = await self.global_playwright.chromium.connect_over_cdp(endpoint_url=endpoint_url)
-                    self.global_browser = browser
-                    logger.info(f"✅ {browser_name} に接続しました (ポート {port})")
-                    return {"browser": browser, "status": "success"}
-                except Exception as e:
-                    logger.error(f"⚠️ {browser_name} への接続に失敗しました: {e}")
-                    return {"status": "error", "message": f"{browser_name} への接続に失敗しました: {e}"}
+                current_browser = result.get("browser_type", "unknown")
+                logger.info(f"✅ ブラウザセッション初期化成功: {session_id} (ブラウザ: {current_browser})")
+                return result
             else:
-                # Playwright管理ブラウザを使用
-                browser = await self.global_playwright.chromium.launch(headless=headless)
-                self.global_browser = browser
-                logger.info("✅ Playwright管理ブラウザを起動しました")
-                return {"browser": browser, "status": "success"}
+                logger.error(f"❌ ブラウザセッション初期化失敗: {result.get('message')}")
+                return result
+            
         except Exception as e:
-            logger.error(f"⚠️ ブラウザセッションの初期化中にエラーが発生しました: {e}")
-            return {"status": "error", "message": f"ブラウザセッションの初期化中にエラーが発生しました: {e}"}
-
-    async def cleanup_resources(self, session_id=None, maintain_session=False):
-        """リソースのクリーンアップ"""
-        if not maintain_session:
-            if self._global_browser:
-                try:
-                    await self._global_browser.close()
-                    self._global_browser = None
-                    
-                    # セッションを削除
-                    if session_id:
-                        self.session_manager.remove_session(session_id)
-                except Exception as e:
-                    logger.error(f"ブラウザクリーンアップエラー: {e}")
-        else:
-            # セッションを維持する場合は最小限のクリーンアップのみ
-            pass
-    
+            logger.error(f"⚠️ ブラウザセッション初期化中の例外: {e}")
+            import traceback
+            logger.debug(f"スタックトレース: {traceback.format_exc()}")
+            return {"status": "error", "message": f"ブラウザセッション初期化中の例外: {e}"}
+                
     def _get_browser_info(self, browser):
         """ブラウザから識別情報を抽出"""
         try:
@@ -324,36 +268,6 @@ class BrowserDebugManager:
         except Exception as e:
             logger.error(f"ブラウザ情報取得エラー: {e}")
             return {"error": str(e)}
-    
-    async def cleanup_resources(self, session_id=None, maintain_session=False):
-        """
-        Clean up browser resources.
-        
-        Args:
-            session_id: Optional session ID to close.
-            maintain_session: Whether to keep the session open.
-        """
-        if not maintain_session and session_id:
-            # Close the session
-            if session_id in browser_sessions:
-                del browser_sessions[session_id]
-            await self.browser.close()
-        elif not maintain_session:
-            # Close the browser only
-            await self.browser.close()
-        if self.global_browser:
-            print("🧹 ブラウザインスタンスをクリーンアップしています...")
-            try:
-                # 明示的に接続を閉じないでリソースのみ解放
-                # これによりChromeウィンドウは開いたままになる
-                await self.global_playwright.stop()
-            except Exception as e:
-                print(f"クリーンアップ中にエラーが発生しました: {e}")
-            
-            self.global_browser = None
-            self.global_playwright = None
-            self.global_context = None
-            self.global_page = None
 
     async def get_active_tab(self, browser):
         """
@@ -485,3 +399,63 @@ class BrowserDebugManager:
                 }
             }, 3000);
         }""")
+
+    async def cleanup_resources(self, session_id=None, maintain_session=False):
+        """リソースのクリーンアップ"""
+        if not maintain_session:
+            logger.info("🧹 ブラウザリソースをクリーンアップします")
+            try:
+                if self.global_browser:
+                    await self.global_browser.close()
+                    self.global_browser = None
+                    logger.debug("✅ ブラウザインスタンスをクローズしました")
+                    
+                if self.global_playwright:
+                    await self.global_playwright.stop()
+                    self.global_playwright = None
+                    self.playwright = None
+                    logger.debug("✅ Playwrightインスタンスを停止しました")
+                    
+                # Chrome外部プロセスのクリーンアップ
+                if self.chrome_process and self.have_psutil:
+                    try:
+                        process = self.psutil.Process(self.chrome_process.pid)
+                        if process.is_running():
+                            process.terminate()
+                            logger.debug("✅ Chrome外部プロセスを終了しました")
+                    except Exception as e:
+                        logger.warning(f"⚠️ Chrome外部プロセス終了中にエラー: {e}")
+                    finally:
+                        self.chrome_process = None
+                
+                # セッション管理
+                if session_id:
+                    self.session_manager.remove_session(session_id)
+                    logger.debug(f"✅ セッション {session_id} を削除しました")
+                
+                logger.info("✅ リソースクリーンアップ完了")
+            except Exception as e:
+                logger.error(f"❌ クリーンアップ中にエラー: {e}")
+        else:
+            logger.debug("ℹ️ セッション維持モード - 最小限のクリーンアップのみ実行")
+
+    # ---------------------------------------------------------------------
+    # Compatibility / Legacy Adapter Methods
+    # ---------------------------------------------------------------------
+    async def initialize_custom_browser(self, use_own_browser=False, headless=False, tab_selection_strategy="new_tab", browser_type=None, **kwargs):
+        """Legacy wrapper expected by older code paths.
+
+        The modern implementation consolidates logic in initialize_browser. We
+        keep this thin wrapper to avoid AttributeError until all callers are
+        migrated. Additional params (tab_selection_strategy, **kwargs) are
+        currently ignored but accepted for forward compatibility.
+        """
+        logger.debug(
+            "🔄 initialize_custom_browser wrapper呼び出し - use_own_browser=%s headless=%s tab_selection=%s browser_type=%s", 
+            use_own_browser, headless, tab_selection_strategy, browser_type
+        )
+        return await self.initialize_browser(
+            use_own_browser=use_own_browser,
+            headless=headless,
+            browser_type=browser_type,
+        )

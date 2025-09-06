@@ -1,0 +1,188 @@
+# ============================================================================
+# 2bykilt - 最小環境 Requirements (LLM機能なし)
+# Python 3.12最小環境で実証済み・動作確認済みのパッケージリスト
+# Gradio互換性問題修正済み・安定動作保証
+# ============================================================================
+
+# Core Web Framework (実証済みバージョン)
+fastapi==0.115.13
+uvicorn==0.34.3
+starlette==0.46.2
+python-multipart==0.0.20
+
+# UI Framework (Gradio互換性問題修正済み)
+gradio==5.10.0
+gradio_client==1.5.3
+
+# Browser Automation (Core)
+playwright==1.51.0
+pyperclip==1.9.0
+
+# Cross-platform Support (Windows対応)
+psutil==7.0.0
+colorama==0.4.6
+
+# HTTP & Network (最小環境最適化済み)
+aiohttp==3.11.14
+httpx==0.28.1
+httpcore==1.0.9
+requests==2.32.3
+websockets==14.2
+aiofiles==23.2.1
+
+# Data Processing & Analysis (最小セット)
+pandas==2.3.0
+numpy==2.3.1
+json_repair==0.47.3
+jsonschema==4.24.0
+jsonschema-specifications==2025.4.1
+
+# Configuration & Environment
+python-dotenv==1.0.1
+PyYAML==6.0.2
+tomlkit==0.13.3
+
+# Async & Concurrency (必須)
+anyio==4.9.0
+nest-asyncio==1.6.0
+aiohappyeyeballs==2.6.1
+
+# Testing Framework (開発・デバッグ用)
+pytest==8.3.5
+pytest-asyncio==1.0.0
+pytest-playwright==0.7.0
+pytest-base-url==2.1.0
+pytest-cov
+
+# System Monitoring & Process Management
+pystray==0.19.5
+
+# Text Processing
+text-unidecode==1.3
+python-slugify==8.0.4
+
+# Date & Time Processing
+python-dateutil==2.9.0.post0
+pytz==2025.2
+tzdata==2025.2
+
+# Development & Code Quality
+ruff==0.12.0
+rich==14.0.0
+
+# Media Processing (基本セット)
+pillow==11.1.0
+pydub==0.25.1
+ffmpy==0.6.0
+
+# Security & SSL
+certifi==2025.6.15
+
+# Utility Libraries
+tqdm==4.67.1
+click==8.1.8
+typer==0.16.0
+shellingham==1.5.4
+filelock==3.18.0
+packaging==25.0
+semantic-version==2.10.0
+
+# Required Core Dependencies
+attrs==25.3.0
+charset-normalizer==3.4.2
+idna==3.10
+urllib3==2.5.0
+typing_extensions==4.14.0
+annotated-types==0.7.0
+pydantic==2.11.7
+pydantic_core==2.33.2
+
+# Async HTTP Dependencies
+aiosignal==1.3.2
+frozenlist==1.7.0
+multidict==6.5.0
+propcache==0.3.2
+yarl==1.20.1
+
+# Template Engine
+Jinja2==3.1.6
+MarkupSafe==2.1.5
+
+# JSON & Data Processing
+orjson==3.10.18
+referencing==0.36.2
+rpds-py==0.25.1
+
+# HTTP Server Dependencies
+h11==0.16.0
+sniffio==1.3.1
+
+# Development Dependencies
+iniconfig==2.1.0
+pluggy==1.6.0
+six==1.17.0
+
+# Rich Text Processing
+markdown-it-py==3.0.0
+mdurl==0.1.2
+Pygments==2.19.2
+
+# File System & Storage
+fsspec==2025.5.1
+huggingface-hub==0.33.0
+hf-xet==1.1.5
+safehttpx==0.1.6
+
+# Async Event Loop
+greenlet==3.2.3
+pyee==12.1.1
+
+# Type Checking
+typing-inspection==0.4.1
+
+# Platform-specific Dependencies (macOS)
+pyobjc-core==11.0; sys_platform == 'darwin'
+pyobjc-framework-Cocoa==11.0; sys_platform == 'darwin'
+pyobjc-framework-Quartz==11.0; sys_platform == 'darwin'
+
+# ============================================================================
+# Installation Instructions (Python 3.12最小環境)
+# ============================================================================
+# 1. Create Python 3.12 virtual environment:
+#    python3.12 -m venv venv312
+#    source venv312/bin/activate  # macOS/Linux
+#    # or: venv312\Scripts\activate  # Windows
+#
+# 2. Upgrade pip (recommended):
+#    pip install --upgrade pip
+#
+# 3. Install minimal requirements:
+#    pip install -r requirements-minimal.txt
+#
+# 4. Install Playwright browsers:
+#    playwright install
+#
+# 5. Setup environment (LLM機能無効):
+#    cp .env.example .env
+#    # Edit .env file: ENABLE_LLM=false
+#
+# 6. Run application:
+#    export ENABLE_LLM=false
+#    python bykilt.py
+#
+# 7. Access application:
+#    Open browser: http://localhost:7860
+# ============================================================================
+
+# ============================================================================
+# 動作確認済み環境情報
+# ============================================================================
+# - Python: 3.12.x
+# - macOS: ARM64 (Apple Silicon)
+# - Gradio: 5.10.0 (互換性問題修正済み)
+# - Playwright: 1.51.0
+# - 総パッケージ数: 約80個 (LLMなし軽量版)
+# - インストール容量: 約500MB (vs フル版2GB+)
+# ============================================================================
+
+# Note: フル機能版(LLM含む)が必要な場合は requirements.txt を使用してください

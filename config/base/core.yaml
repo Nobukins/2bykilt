@@ -1,0 +1,46 @@
+# Base Configuration for 2bykilt
+# This file contains common settings used across all environments
+
+config_version: "1.0.0"
+
+# Agent Configuration
+agent:
+  type: "custom"
+  max_steps: 100
+  max_actions_per_step: 10
+  use_vision: true
+  tool_calling_method: "auto"
+
+# LLM Configuration 
+llm:
+  provider: "openai"
+  model_name: "gpt-4o"
+  num_ctx: 32000
+  temperature: 1.0
+  base_url: ""
+  api_key: ""
+
+# Browser Configuration
+browser:
+  use_own_browser: false
+  keep_browser_open: false
+  headless: false
+  disable_security: true
+  enable_recording: true
+  window_width: 1280
+  window_height: 1100
+
+# Storage Paths
+storage:
+  save_recording_path: "./tmp/record_videos"
+  save_trace_path: "./tmp/traces"
+  save_agent_history_path: "./tmp/agent_history"
+
+# Development Settings
+development:
+  dev_mode: false
+  debug_logging: false
+
+# Default Task
+task:
+  default: "search-linkedin query=Personal_AI_Assistant"
