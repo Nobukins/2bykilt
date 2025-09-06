@@ -4,11 +4,13 @@
 Issue / PR に付与するラベルの意味と適用ルールを明確化し、優先度・リスク・進行状況の判断と自動化 (Actions/Bot) を一貫させる。
 
 対象読者:
+
 - 外部/内部コントリビューター
 - Triage / メンテナ
 - ロードマップ作成担当
 
 関連資料:
+
 - 依存グラフ: docs/roadmap/DEPENDENCY_GRAPH.md
 - 依存定義 YAML: docs/roadmap/ISSUE_DEPENDENCIES.yml
 - CONTRIBUTING.md (初期参加手順)
@@ -19,6 +21,7 @@ Issue / PR に付与するラベルの意味と適用ルールを明確化し、
 ## 1. ラベル分類体系 (Taxonomy)
 
 ### Priority
+
 | ラベル | 意味 | 目安対応 SLA / 期待反応 |
 |-------|------|-------------------------|
 | priority:critical | ブロッカー。開発/運用が停止する | 24h 内アクション |
@@ -27,7 +30,9 @@ Issue / PR に付与するラベルの意味と適用ルールを明確化し、
 | priority:low | 後回し可 | バックログ整理時 |
 
 ### Size
+
 (1 つのみ付与。推定実装コスト/複雑度指標)
+
 | ラベル | 目安（純実装時間 / LoE） |
 |--------|---------------------------|
 | size:XS | < 0.5d |
@@ -37,6 +42,7 @@ Issue / PR に付与するラベルの意味と適用ルールを明確化し、
 | size:XL | > 1 週間 / Epic へ再評価 |
 
 ### Phase
+
 | ラベル | 意味 |
 |-------|------|
 | phase:discovery | 要件探索/PoC |
@@ -46,6 +52,7 @@ Issue / PR に付与するラベルの意味と適用ルールを明確化し、
 | phase:release | リリース準備/直前タスク |
 
 ### Type
+
 | ラベル | 用途 |
 |-------|------|
 | type:feature | 機能追加 |
@@ -58,6 +65,7 @@ Issue / PR に付与するラベルの意味と適用ルールを明確化し、
 | type:infra | ビルド/運用・環境 |
 
 ### Area (ドメイン/モジュール例)
+
 | ラベル | 範囲例 |
 |-------|--------|
 | area:api | 公開/内部 API 層 |
@@ -69,7 +77,33 @@ Issue / PR に付与するラベルの意味と適用ルールを明確化し、
 | area:build | ビルド/パッケージ |
 | area:ci | CI / ワークフロー |
 
+### Quality / Testing / Workflow (拡張)
+
+| ラベル | 用途 |
+|--------|------|
+| quality | 品質改善 (Gate, 静的品質, hygiene) |
+| coverage | テストカバレッジ向上タスク |
+| tests | テスト安定化 / 層分離 / フレーク削減 |
+| regression | 回帰テスト（既存機能の恒常確認） |
+| hardening | 異常系追加・堅牢化フォローアップ |
+| automation | スクリプト / 自動生成 / Bot |
+| roadmap | 依存グラフ / Wave / ロードマップ整備 |
+| browser-control | Browser-control 実行モード関連 |
+| tech-debt | 技術的負債返済（内部構造・命名・不要コード） |
+| ci | CI 構成 / Guard / ワークフロー |
+
+### Status / Process (任意メタ)
+
+| ラベル | 意味 / 使い所 |
+|--------|-------------|
+| status/planning | 計画中 (実装未開始) |
+| status/in-progress | 実装着手済み |
+| status/blocked | 依存 or 外部要因で停止 |
+| status/review | PR レビュー中 / 調整中 |
+| status/ready | 実装済み (マージ/クローズ待ち) |
+
 ### Stability
+
 | ラベル | 意味 |
 |-------|------|
 | stability:experimental | 試験的 / 非互換変更の可能性 |
@@ -78,12 +112,15 @@ Issue / PR に付与するラベルの意味と適用ルールを明確化し、
 | stability:deprecated | 廃止予定 (後継リンク必須) |
 
 ### Risk
+
 (ISSUE_DEPENDENCIES.yml の summary.high_risk と同期)
+
 | ラベル | 意味 | 対応 |
 |-------|------|------|
 | risk:high | 失敗時影響大 (高額再工数 / クリティカル品質) | 詳細設計レビュー必須 |
 | risk:medium | 中程度影響 | 通常レビュー |
 | risk:low | 低リスク | 迅速マージ可 |
+
 
 ---
 
@@ -96,9 +133,16 @@ Issue / PR に付与するラベルの意味と適用ルールを明確化し、
 - Area: 複数可 (最大 3 推奨)
 - Stability: feature 系 Issue/PR のみ該当
 - Risk: high を付与する場合は説明欄に「リスク要因 / 緩和策」を最低 1 行書く
+- Quality/Testing 系 (quality / coverage / tests / regression / hardening) は必要に応じ複数併用可。ただし `tests` + `regression` 同時付与は「回帰テスト自体の安定化」を示す場合のみに限定。
+
+
+- Status 系ラベルは進行に応じて都度入れ替え（履歴保持不要）。
+
 
 補助ラベル (例):
+
 - blocked / needs-info / security-review / design-review
+
 (必要に応じて拡張)
 
 ---
@@ -118,6 +162,8 @@ Issue / PR に付与するラベルの意味と適用ルールを明確化し、
 
 ---
 
+
+
 ## 4. Size 見積り指針
 
 | Size | 典型指標 |
@@ -129,10 +175,14 @@ Issue / PR に付与するラベルの意味と適用ルールを明確化し、
 | XL | 仕様再設計 / 依存大規模更新 |
 
 再見積り条件:
+
 - 実装途中で 1 ランク以上乖離が判明
 - 仕様拡張で要素追加 (コメントで理由明記)
 
 ---
+
+
+
 
 ## 5. Risk ラベルと依存グラフ
 
@@ -140,17 +190,23 @@ Issue / PR に付与するラベルの意味と適用ルールを明確化し、
 - high_risk ノードを先行着手することでクリティカルパス遅延を軽減
 - 依存グラフ再生成時 (scripts/gen_mermaid.py) に highrisk クラスで視覚化
 
+
+
 ---
+
 
 ## 6. ラベル追加・変更のガバナンス
 
+
+
+
 手順:
+
 1. 提案: 新規 Issue (Type=chore / label-governance) に動機・用途・衝突懸念を記述
 2. レビュー: メンテナ 2 名以上 + 24h 意見募集
 3. 承認後:
    - 実際にラベル作成 (UI / API)
    - 本ガイド更新 (カテゴリ / 定義)
-   - 関連自動化（Actions/Bot スクリプト）更新
 4. Deprecated 運用:
    - deprecated ラベル付与 + ガイド内「Deprecated セクション」追記
    - 新 label への移行方針明記
@@ -170,8 +226,8 @@ Issue / PR に付与するラベルの意味と適用ルールを明確化し、
 
 ## 8. 参考リンク
 
-- GitHub ラベル管理 Docs (公式): https://docs.github.com/
-- Mermaid ドキュメント: https://mermaid.js.org/
+- GitHub ラベル管理 Docs (公式): <https://docs.github.com/>
+- Mermaid ドキュメント: <https://mermaid.js.org/>
 
 ---
 
