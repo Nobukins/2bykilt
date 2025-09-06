@@ -1,6 +1,6 @@
 # 2bykilt 開発ロードマップ (Baseline v1)
 
-最終更新: 2025-09-04
+最終更新: 2025-09-07
 
 対象リポジトリ: <https://github.com/Nobukins/2bykilt>
 
@@ -47,14 +47,14 @@
 |------|--------|--------|------|
 | A1 | #64 #65 #63 | ✅ Done | Feature Flags / Multi-env Loader / llms.txt Validator 実装完了 (PR #20 由来) |
 | A2 | #32 ✅ #31 ✅ #56 ✅ #57 ✅ | ✅ Done | #56 / #57 実装完了 (PR #83) |
-| A3 | #28 ✅ #30 ✅ #33 ✅ #35 ✅ #36 ✅ #34 ✅ #37 ✅ #38 #87 ✅ #88 ✅ #89 ✅ #91 ✅ | In Progress | #91 完了 (flag default=true + tests + async 安定化) / #38 regression suite 拡張 (#103) 継続 |
+| A3 | #28 ✅ #30 ✅ #33 ✅ #35 ✅ #36 ✅ #34 ✅ #37 ✅ #38 ✅ #87 ✅ #88 ✅ #89 ✅ #91 ✅ | ✅ Done | 全 A3 アーティファクト系 Issue 完了 (#38 PR #103 反映) / Hardening follow-up (非機能) は別 Issue 検討 |
 | A4 | #25 #44 #45 #50 (#55) | Planned | Runner Reliability / git_script 系統 |
 | A5 | #60 #61 | Planned | Security Base (Mask / Scan) |
 | A6 | #58 #59 | Planned | Metrics 基盤 & Run API |
 | A7 | #43 | Planned | LLM Toggle パリティ |
 | Docs | #66 → #67 | In Progress | Doc Sync >90% 維持方針 |
 
-Progress Summary (Phase 1): Wave A1 100% / Wave A2 100% / Wave A3 更新 (#34 PR #93, #35 実装, #87 PR #96, #88 PR #97, #89 PR #98, #37 PR #99 完了, #38 着手) 残: #28, #38 継続。Draft/試行 PR は進捗計測に含めず。
+Progress Summary (Phase 1): Wave A1 100% / Wave A2 100% / Wave A3 100% ( #34 PR #93, #35 PR #94, #36 PR #95, #87 PR #96, #88 PR #97, #89 PR #98, #37 PR #99, #91 PR #105, #28 PR #112, #38 PR #103 ) 残: A4 以降へ移行。Draft/試行 PR は進捗計測に含めず。
 
 ### Group B (Phase 2 – 拡張 / 高度化)
 
@@ -167,6 +167,8 @@ Flags / 後方互換 Schema / 追加専用ログ→削除遅延 / Sandbox enforc
 | 1.0.11 | 2025-09-03 | #89 screenshot logging events 完了 (PR #98) / #37 着手 | Copilot Agent |
 | 1.0.12 | 2025-09-04 | #37 完了 (PR #99) / #38 regression suite 着手 | Copilot Agent |
 | 1.0.13 | 2025-09-04 | #91 統一録画パス rollout 完了 (flag default 有効化, legacy path warn, async loop 安定化, flaky tests 正常化) | Copilot Agent |
+| 1.0.14 | 2025-09-06 | #28 録画ファイル保存パス統一 完了 (PR #112) / ISSUE_DEPENDENCIES 進捗同期 / Progress Summary 更新 | Copilot Agent |
+| 1.0.15 | 2025-09-07 | #38 回帰スイート完了 (PR #103) / A3 Wave 全完了反映 / 次アクション A4 移行準備 | Copilot Agent |
 
 ---
 
