@@ -15,6 +15,10 @@ flags:
     description: "録画ファイル保存パス統一 (#28,#91) (true=artifacts/runs/<run>-art/videos, false=legacy ./tmp/record_videos)"
     type: bool
     default: true
+  artifacts.force_recording_migration:
+    description: "レガシー ./tmp/record_videos を強制無効化し常に統一パスへマイグレーション (#28 phase-2)"
+    type: bool
+    default: false
   artifacts.enable_manifest_v2:
     description: "アーティファクト manifest v2 (#35) の生成を有効化"
     type: bool

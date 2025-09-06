@@ -7,6 +7,7 @@ from pathlib import Path
 
 from src.utils.globals_manager import get_globals
 from src.core.artifact_manager import ArtifactManager
+from src.utils.recording_dir_resolver import create_or_get_recording_dir
 from src.browser.browser_config import BrowserConfig
 from src.browser.browser_debug_manager import BrowserDebugManager
 
@@ -255,7 +256,8 @@ def prepare_recording_path(enable_recording: bool, save_recording_path: Optional
     if not enable_recording:
         return None
     try:
-        path = ArtifactManager.resolve_recording_dir(save_recording_path)
+        # Centralized resolver (Issue #28 refactor): explicit UI value passed as save_recording_path
+        path = create_or_get_recording_dir(save_recording_path if save_recording_path else None)
         logger.info(f"Recording directory prepared: {path}")
         return str(path)
     except Exception as e:  # noqa: BLE001

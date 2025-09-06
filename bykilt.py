@@ -45,6 +45,7 @@ from src.utils.utils import update_model_dropdown, get_latest_files
 from src.script.script_manager import run_script
 from src.browser.browser_manager import close_global_browser, prepare_recording_path, initialize_browser
 from src.browser.browser_config import BrowserConfig
+from src.utils.recording_dir_resolver import create_or_get_recording_dir
 
 # 常に利用可能なモジュール
 from src.config.standalone_prompt_evaluator import (
@@ -712,12 +713,17 @@ def create_ui(config, theme_name="Ocean"):
         tab_selection_strategy = gr.Radio(["new_tab", "reuse_tab"], label="タブ選択戦略", 
                                            value=config.get('tab_selection_strategy', "new_tab"), visible=False)
         # Windows対応: 録画保存パスを環境変数と設定から取得
-        default_recording_path = os.getenv('RECORDING_PATH')
-        if not default_recording_path:
-            if platform.system() == "Windows":
-                default_recording_path = str(Path.home() / "Documents" / "2bykilt" / "recordings")
-            else:
-                default_recording_path = './tmp/record_videos'
+        # Resolve initial recording path via unified resolver (Issue #28 step 2)
+        try:
+            default_recording_path = str(create_or_get_recording_dir())
+        except Exception:
+            # Fallback to legacy logic if resolver fails very early
+            default_recording_path = os.getenv('RECORDING_PATH')
+            if not default_recording_path:
+                if platform.system() == "Windows":
+                    default_recording_path = str(Path.home() / "Documents" / "2bykilt" / "recordings")
+                else:
+                    default_recording_path = './tmp/record_videos'
         
         save_recording_path = gr.Textbox(label="録画保存パス", value=config.get('save_recording_path', default_recording_path), visible=False)
         # Windows対応: トレースと履歴パスを設定

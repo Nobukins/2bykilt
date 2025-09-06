@@ -51,14 +51,18 @@ def browser_type_launch_args(browser_type_launch_args):
 def test_browser_control(page: Page):
     try:
         page.goto("https://www.google.com")
-        locator = page.locator("#APjFqb")
+        expect(page.locator("#APjFqb")).to_be_visible(timeout=10000)
+        locator = page.locator("#APjFqb")  # input box
         expect(locator).to_be_visible(timeout=10000)
-        locator.click()
-        page.wait_for_load_state("networkidle")
-        locator = page.locator("#APjFqb")
-        expect(locator).to_be_visible(timeout=10000)
-        locator.fill("google")
+        locator.fill("NEW_METHOD browser-control")
         page.keyboard.press("Enter")
     except Exception as e:
-        page.screenshot(path="error.png")
+        try:
+            from src.core.screenshot_manager import capture_page_screenshot
+            _p, _b = capture_page_screenshot(page, prefix="error")
+        except Exception as primary_exc:
+            try:
+                page.screenshot(path="error.png")  # fallback legacy
+            except Exception as legacy_exc:
+                print(f"Screenshot capture failed (legacy fallback also failed): {legacy_exc}; primary: {primary_exc}")
         raise e

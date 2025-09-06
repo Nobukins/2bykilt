@@ -31,11 +31,8 @@ def test_json_serialization():
     print(f"JSON deserialized: {parsed_args}")
     
     # Verify they match
-    if args == parsed_args:
-        print("✅ JSON serialization/deserialization successful!")
-    else:
-        print("❌ JSON serialization/deserialization failed!")
-        return False
+    assert args == parsed_args, "JSON serialization/deserialization failed"
+    print("✅ JSON serialization/deserialization successful!")
     
     # Test what would happen with comma-split (the old way)
     comma_split = json_str.split(',')
@@ -49,12 +46,11 @@ def test_json_serialization():
         if window_size_arg in parsed_args:
             print("✅ Problematic argument survived JSON roundtrip!")
         else:
-            print("❌ Problematic argument lost in JSON roundtrip!")
-            return False
+            assert False, "Problematic argument lost in JSON roundtrip"
     else:
         print(f"⚠️ Test argument {window_size_arg} not found in optimized args")
     
-    return True
+    # No return (pytest function should return None)
 
 def test_env_variable_simulation():
     """Simulate setting and reading the environment variable"""
@@ -79,19 +75,13 @@ def test_env_variable_simulation():
             print(f"✅ Comma-containing arguments preserved: {comma_args}")
         else:
             print("ℹ️ No comma-containing arguments found")
-            
-        return True
+        # success implicitly
     except json.JSONDecodeError as e:
-        print(f"❌ Failed to parse arguments from environment: {e}")
-        return False
+        raise AssertionError(f"Failed to parse arguments from environment: {e}")
 
 if __name__ == "__main__":
+    # Manual run helper (still uses assertions internally)
     print("🔧 Testing JSON-based browser argument serialization\n")
-    
-    test1_ok = test_json_serialization()
-    test2_ok = test_env_variable_simulation()
-    
-    if test1_ok and test2_ok:
-        print("\n✅ All tests passed! JSON serialization should fix the Playwright argument issue.")
-    else:
-        print("\n❌ Some tests failed!")
+    test_json_serialization()
+    test_env_variable_simulation()
+    print("\n✅ All tests passed! JSON serialization should fix the Playwright argument issue.")

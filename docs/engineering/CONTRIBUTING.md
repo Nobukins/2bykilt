@@ -220,6 +220,16 @@ def monitor_performance(func):
 - Security scan クリア
 - Performance regression なし
 
+### 3. Pytest / CI 実行統一 (追加ガイド)
+
+以下変更を含む PR では必ずチェックしてください:
+
+- [ ] `pytest.ini` / `pyproject.toml` で test 設定を移動・改名した → `.github/workflows/` で旧パス参照が残っていないか `grep -R "tests/pytest.ini" .` で確認
+- [ ] CI / ローカルで pytest 実行コマンドを分岐させていない (`scripts/ci_pytest.sh` を利用)
+- [ ] 新しいマーカーを追加した場合は `pytest.ini` の markers セクションに追記
+- [ ] `ci_safe` マーカー対象に含める/含めない理由を PR 説明に 1 行記載
+- [ ] 旧ファイル削除後に残存パス参照で失敗しないか `scripts/ci_pytest.sh full` を一度実行
+
 ## Issue ラベル管理
 
 ### 1. 必須ラベル
@@ -314,6 +324,7 @@ python -c "import pstats; pstats.Stats('profile.stats').sort_stats('cumulative')
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
 | 1.0.0 | 2025-08-26 | 初期ドラフト作成 | Copilot Agent |
+| 1.1.0 | 2025-09-06 | CI pytest 実行統一/ドリフト防止チェックリスト追加 | Copilot Agent |
 
 ---
 

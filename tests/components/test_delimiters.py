@@ -42,7 +42,8 @@ def test_delimiters():
     print(f"Space ( ): {space_split == args} - {'✅' if space_split == args else '❌'}")
     
     print(f"\nBest option appears to be: pipe (|) or semicolon (;)")
-    return '|'  # Return recommended delimiter
+    # Recommend pipe and assert round-trip correctness instead of returning a value (pytest best practice)
+    assert pipe_split == args
 
 if __name__ == "__main__":
-    recommended = test_delimiters()
+    test_delimiters()
