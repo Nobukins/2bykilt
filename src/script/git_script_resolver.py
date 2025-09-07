@@ -8,6 +8,7 @@ This module provides functionality to resolve git-script references by:
 4. Providing proper error handling and logging
 
 Part of Issue #44 implementation for git_script bug fix.
+Enhanced with Issue #45 authentication and proxy support.
 """
 
 import os
@@ -20,6 +21,7 @@ from typing import Dict, Any, Optional, Tuple, List
 from urllib.parse import urlparse
 
 from src.utils.app_logger import logger
+from src.utils.git_auth_manager import GitAuthenticationManager
 
 
 class GitScriptCandidate:
@@ -42,11 +44,14 @@ class GitScriptResolver:
     DEFAULT_CACHE_DIR_NAME = 'bykilt_gitscripts'
     DEFAULT_GIT_TIMEOUT = 10  # seconds
 
-    def __init__(self, cache_dir_name: Optional[str] = None, git_timeout: Optional[int] = None):
+    def __init__(self, cache_dir_name: Optional[str] = None, git_timeout: Optional[int] = None, run_id: Optional[str] = None):
         self.cache_dir_name = cache_dir_name or self.DEFAULT_CACHE_DIR_NAME
         self.git_timeout = git_timeout or self.DEFAULT_GIT_TIMEOUT
         self.cache_dir = os.path.join(tempfile.gettempdir(), self.cache_dir_name)
         os.makedirs(self.cache_dir, exist_ok=True)
+
+        # Initialize authentication manager
+        self.auth_manager = GitAuthenticationManager(run_id=run_id)
 
     async def resolve_git_script(self, script_name: str, params: Optional[Dict[str, str]] = None) -> Optional[Dict[str, Any]]:
         """
@@ -121,7 +126,7 @@ class GitScriptResolver:
                 '.',  # Current directory
                 'scripts',  # Scripts directory
                 'src/scripts',  # Source scripts directory
-                'tmp/myscript',  # Temp scripts directory
+                'myscript',  # User scripts directory
             ]
 
             for base_path in search_paths:
@@ -361,7 +366,7 @@ class GitScriptResolver:
 
     async def fetch_script_from_github(self, git_url: str, script_path: str, version: str = 'main') -> Optional[str]:
         """
-        Fetch a script from GitHub repository
+        Fetch a script from GitHub repository with authentication and proxy support
 
         Args:
             git_url: GitHub repository URL
@@ -399,18 +404,39 @@ class GitScriptResolver:
                 return None
 
             repo_dir = os.path.join(self.cache_dir, repo_name)
+            repo_path = Path(repo_dir)
 
-            # Clone or update repository
+            # Clone or update repository with authentication
             if os.path.exists(repo_dir):
                 # Update existing repository
                 logger.info(f"Updating existing repository: {repo_dir}")
-                subprocess.run(['git', 'fetch', '--all'], cwd=repo_dir, check=True)
-                subprocess.run(['git', 'reset', '--hard', f'origin/{version}'], cwd=repo_dir, check=True)
+                try:
+                    # Configure authentication for existing repo
+                    self.auth_manager.configure_git_for_repo(git_url, repo_path)
+
+                    # Fetch with authentication
+                    subprocess.run(['git', 'fetch', '--all'], cwd=repo_dir, check=True)
+                    subprocess.run(['git', 'reset', '--hard', f'origin/{version}'], cwd=repo_dir, check=True)
+                except subprocess.SubprocessError as e:
+                    logger.warning(f"Failed to update existing repo, re-cloning: {e}")
+                    # Remove and re-clone if update fails
+                    import shutil
+                    shutil.rmtree(repo_dir)
+                    raise FileNotFoundError("Repository needs re-clone")
             else:
-                # Clone new repository
+                # Clone new repository with authentication
                 logger.info(f"Cloning repository to: {repo_dir}")
-                subprocess.run(['git', 'clone', git_url, repo_dir], check=True)
-                subprocess.run(['git', 'checkout', version], cwd=repo_dir, check=True)
+                try:
+                    self.auth_manager.clone_with_auth(git_url, repo_dir, version)
+                except Exception as e:
+                    logger.error(f"Failed to clone with authentication: {e}")
+                    # Fallback to regular clone without auth
+                    logger.info("Attempting fallback clone without authentication")
+                    subprocess.run(['git', 'clone', git_url, repo_dir], check=True)
+                    subprocess.run(['git', 'checkout', version], cwd=repo_dir, check=True)
+
+            # Configure repository settings after clone/update
+            self.auth_manager.configure_git_for_repo(git_url, repo_path)
 
             # Verify script exists
             full_script_path = os.path.join(repo_dir, script_path)
@@ -517,7 +543,7 @@ class GitScriptResolver:
 _git_script_resolver = None
 _resolver_lock = None
 
-def get_git_script_resolver(cache_dir_name: Optional[str] = None, git_timeout: Optional[int] = None) -> GitScriptResolver:
+def get_git_script_resolver(cache_dir_name: Optional[str] = None, git_timeout: Optional[int] = None, run_id: Optional[str] = None) -> GitScriptResolver:
     """Get global git script resolver instance (thread-safe)"""
     global _git_script_resolver, _resolver_lock
 
@@ -531,6 +557,6 @@ def get_git_script_resolver(cache_dir_name: Optional[str] = None, git_timeout: O
         with _resolver_lock:
             # Double-check pattern
             if _git_script_resolver is None:
-                _git_script_resolver = GitScriptResolver(cache_dir_name=cache_dir_name, git_timeout=git_timeout)
+                _git_script_resolver = GitScriptResolver(cache_dir_name=cache_dir_name, git_timeout=git_timeout, run_id=run_id)
 
     return _git_script_resolver

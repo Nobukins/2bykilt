@@ -41,7 +41,7 @@ async def test_action_runner_template():
                 'default': 'LLMs.txt'
             }
         ],
-        'command': 'python ./tmp/myscript/unified_action_launcher.py --action ${action_script} --query ${params.query|LLMs.txt} --slowmo 2500 --countdown 3'
+        'command': 'python ./myscript/unified_action_launcher.py --action ${action_script} --query ${params.query|LLMs.txt} --slowmo 2500 --countdown 3'
     }
     
     params = {'query': 'テストクエリ'}

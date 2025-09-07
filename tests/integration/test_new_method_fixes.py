@@ -50,7 +50,7 @@ async def test_new_method_final_verification():
     script_info_2 = {
         "type": "action_runner_template",
         "action_script": "nogtips_search",
-        "command": "python ./tmp/myscript/unified_action_launcher.py --action ${action_script} --query ${params.query|LLMs.txt} --slowmo 2500 --countdown 1",
+        "command": "python ./myscript/unified_action_launcher.py --action ${action_script} --query ${params.query|LLMs.txt} --slowmo 2500 --countdown 1",
         "slowmo": 2500
     }
     params_2 = {"query": "NEW_METHOD action_runner"}

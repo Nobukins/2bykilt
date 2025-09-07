@@ -2,7 +2,7 @@
 import re
 
 # 修正されたパターンでテスト
-command_template = 'python ./tmp/myscript/unified_action_launcher.py --action nogtips_search --query "${params.query|LLMs.txt}" --slowmo 2500 --countdown 3'
+command_template = 'python ./myscript/unified_action_launcher.py --action nogtips_search --query "${params.query|LLMs.txt}" --slowmo 2500 --countdown 3'
 params = {}
 
 # エスケープなしのパターン
