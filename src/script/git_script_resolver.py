@@ -204,8 +204,9 @@ class GitScriptResolver:
             normalized_path = os.path.normpath(file_path)
             if os.path.isabs(normalized_path):
                 # For absolute paths, ensure they don't contain suspicious patterns
-                if any(part in ['..', '.', ''] for part in normalized_path.split(os.sep)):
-                    logger.warning(f"Potentially unsafe absolute path: {file_path}")
+                is_safe, error_msg = self._validate_path_safety(file_path, allow_absolute=True)
+                if not is_safe:
+                    logger.warning(f"Potentially unsafe absolute path: {error_msg}")
                     return None
 
             # Get directory containing the file
@@ -319,28 +320,44 @@ class GitScriptResolver:
 
         return True
 
-    def _is_safe_script_path(self, path: str) -> bool:
-        """Check if script path is safe"""
+    def _validate_path_safety(self, path: str, allow_absolute: bool = False) -> Tuple[bool, str]:
+        """
+        Validate path safety with configurable absolute path handling
+
+        Args:
+            path: Path to validate
+            allow_absolute: Whether to allow absolute paths
+
+        Returns:
+            Tuple of (is_safe, error_message)
+        """
         if not path or not isinstance(path, str):
-            return False
+            return False, "Invalid path: empty or not a string"
 
         # Normalize path
         normalized = os.path.normpath(path)
 
-        # No absolute paths
-        if os.path.isabs(normalized):
-            return False
+        # Check absolute path policy
+        if os.path.isabs(normalized) and not allow_absolute:
+            return False, "Absolute paths not allowed"
+        elif not os.path.isabs(normalized) and allow_absolute:
+            return False, "Relative paths not allowed in this context"
 
-        # No directory traversal
-        if '..' in normalized.split(os.sep):
-            return False
+        # Check for directory traversal
+        if any(part == '..' for part in normalized.split(os.sep)):
+            return False, "Directory traversal detected"
 
-        # No dangerous characters
+        # Check for dangerous characters
         dangerous_chars = [';', '&', '|', '`', '$', '(', ')', '<', '>', '\n', '\r']
         if any(char in path for char in dangerous_chars):
-            return False
+            return False, "Dangerous characters detected"
 
-        return True
+        return True, "Path is safe"
+
+    def _is_safe_script_path(self, path: str) -> bool:
+        """Check if script path is safe (relative paths only)"""
+        is_safe, _ = self._validate_path_safety(path, allow_absolute=False)
+        return is_safe
 
     async def fetch_script_from_github(self, git_url: str, script_path: str, version: str = 'main') -> Optional[str]:
         """
@@ -440,11 +457,9 @@ class GitScriptResolver:
                 return False, f"Not a valid GitHub URL: {git_url}"
 
             # Validate script path (comprehensive security check)
-            normalized_path = os.path.normpath(script_path)
-            if (os.path.isabs(normalized_path) or
-                normalized_path.startswith('..') or
-                any(part == '..' for part in normalized_path.split(os.sep))):
-                return False, f"Potentially unsafe script path: {script_path}"
+            is_safe, error_msg = self._validate_path_safety(script_path, allow_absolute=False)
+            if not is_safe:
+                return False, f"Potentially unsafe script path: {error_msg}"
 
             return True, "Valid"
 

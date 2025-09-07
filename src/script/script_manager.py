@@ -518,10 +518,6 @@ markers =
                     logger.error(f"❌ Invalid git-script configuration: {error_msg}")
                     raise ValueError(f"Invalid git-script configuration: {error_msg}")
                 
-                if 'git' not in script_info or 'script_path' not in script_info:
-                    logger.error("Git-script type requires 'git' and 'script_path' fields")
-                    raise ValueError("Missing required fields for git-script type")
-                
                 git_url = script_info['git']
                 script_path = script_info['script_path']
                 version = script_info.get('version', 'main')
