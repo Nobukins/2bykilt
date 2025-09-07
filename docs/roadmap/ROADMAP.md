@@ -1,10 +1,8 @@
 # 2bykilt 開発ロードマップ (Baseline v1)
 
 最終更新: 2025-09-07
-
 対象リポジトリ: <https://github.com/Nobukins/2bykilt>
 
-本ロードマップは以下を目的とする:
 
 - 基盤 (設定/Flag/ID/Logging/Artifacts/Security/Observability/Docs) を Phase 1 (Group A) で確立
 - Phase 2 (Group B) で拡張 (Runner 高度化 / Batch / Plugins / Sandbox 強化 / Hardening)
