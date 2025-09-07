@@ -164,18 +164,16 @@ class TestGitScriptAutomator:
             
             result = await automator.execute_git_script_workflow(
                 workspace_dir=temp_workspace,
-                test_url="https://example.com"
+                script_path="/bin/echo",
+                command='echo "test"',
+                params={}
             )
             
             # 検証
             assert result["success"] is True
             assert result["browser_type"] == "edge"
             assert "selenium_profile" in result
-            assert "page_title" in result
-            
-            # ブラウザ操作の確認
-            mock_page.goto.assert_called_once_with("https://example.com")
-            mock_context.close.assert_called_once()
+            assert "stdout" in result
     
     def test_cleanup_selenium_profile(self, mock_edge_profile, temp_workspace):
         """SeleniumProfileのクリーンアップ"""
@@ -224,7 +222,9 @@ class TestGitScriptAutomator:
             
             result = await automator.execute_git_script_workflow(
                 workspace_dir=temp_workspace,
-                test_url="https://example.com"
+                script_path="/bin/echo",
+                command='echo "test"',
+                params={}
             )
             
             # エラーが適切に処理されることを確認

@@ -4,8 +4,7 @@
 issues:
   "25": {title: "git_script が llms.txt で指定したスクリプトを正しく解決するよう修正", meta: {area: 
         runner, type: bug, priority: P0, phase: "1", stability: core}, depends: [],
-    dependents: ["44", "45", "49", "50"], progress: {primary_pr: 27, coverage: 
-        partial}, risk: null, critical_path_rank: 3}
+    dependents: ["44", "45", "49", "50"], progress: {state: done, primary_pr: 118}, risk: null, critical_path_rank: 3}
   "28": {title: "録画ファイル保存パス統一", meta: {area: artifacts, type: bug, priority: P0, 
         phase: "1", stability: core}, depends: ["32"], dependents: ["30"], risk: 
   null, progress: {state: done, primary_pr: 112}, critical_path_rank: 4}
