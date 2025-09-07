@@ -195,10 +195,28 @@ class GitScriptResolver:
     def _extract_git_info_from_path(self, file_path: str) -> Optional[Dict[str, str]]:
         """Extract git repository information from file path"""
         try:
+            # Validate file_path to prevent command injection
+            if not file_path or not isinstance(file_path, str):
+                logger.warning(f"Invalid file_path provided: {file_path}")
+                return None
+
+            # Normalize path and check for potentially unsafe patterns
+            normalized_path = os.path.normpath(file_path)
+            if os.path.isabs(normalized_path):
+                # For absolute paths, ensure they don't contain suspicious patterns
+                if any(part in ['..', '.', ''] for part in normalized_path.split(os.sep)):
+                    logger.warning(f"Potentially unsafe absolute path: {file_path}")
+                    return None
+
+            # Get directory containing the file
+            file_dir = os.path.dirname(normalized_path)
+            if not file_dir or file_dir == '.':
+                file_dir = '.'
+
             # Check if the file is inside a git repository
             result = subprocess.run(
                 ['git', 'rev-parse', '--show-toplevel'],
-                cwd=os.path.dirname(file_path),
+                cwd=file_dir,
                 capture_output=True,
                 text=True,
                 timeout=self.git_timeout
@@ -206,6 +224,11 @@ class GitScriptResolver:
 
             if result.returncode == 0:
                 repo_root = result.stdout.strip()
+
+                # Validate repo_root is safe
+                if not repo_root or not os.path.isabs(repo_root):
+                    logger.warning(f"Invalid repository root: {repo_root}")
+                    return None
 
                 # Get remote URL
                 result = subprocess.run(
@@ -219,6 +242,11 @@ class GitScriptResolver:
                 if result.returncode == 0:
                     git_url = result.stdout.strip()
 
+                    # Validate git URL format
+                    if not self._is_safe_git_url(git_url):
+                        logger.warning(f"Potentially unsafe git URL: {git_url}")
+                        return None
+
                     # Get current branch/version
                     result = subprocess.run(
                         ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
@@ -231,9 +259,18 @@ class GitScriptResolver:
                     version = 'main'
                     if result.returncode == 0:
                         version = result.stdout.strip()
+                        # Validate version string
+                        if not self._is_safe_git_ref(version):
+                            logger.warning(f"Potentially unsafe git ref: {version}")
+                            version = 'main'
 
                     # Calculate relative script path
-                    script_path = os.path.relpath(file_path, repo_root)
+                    script_path = os.path.relpath(normalized_path, repo_root)
+
+                    # Validate script path
+                    if not self._is_safe_script_path(script_path):
+                        logger.warning(f"Potentially unsafe script path: {script_path}")
+                        return None
 
                     return {
                         'git_url': git_url,
@@ -241,10 +278,69 @@ class GitScriptResolver:
                         'version': version
                     }
 
-        except (subprocess.TimeoutExpired, subprocess.SubprocessError, FileNotFoundError) as e:
+        except (subprocess.TimeoutExpired, subprocess.SubprocessError, FileNotFoundError, ValueError) as e:
             logger.debug(f"Could not extract git info from {file_path}: {e}")
 
         return None
+
+    def _is_safe_git_url(self, url: str) -> bool:
+        """Check if git URL is safe to use"""
+        if not url or not isinstance(url, str):
+            return False
+
+        # Only allow GitHub URLs
+        if not url.startswith(('https://github.com/', 'git@github.com:')):
+            return False
+
+        # Basic validation - no shell metacharacters
+        dangerous_chars = [';', '&', '|', '`', '$', '(', ')', '<', '>', '\n', '\r']
+        if any(char in url for char in dangerous_chars):
+            return False
+
+        return True
+
+    def _is_safe_git_ref(self, ref: str) -> bool:
+        """Check if git reference (branch/tag) is safe"""
+        if not ref or not isinstance(ref, str):
+            return False
+
+        # Limit length
+        if len(ref) > 100:
+            return False
+
+        # No dangerous characters
+        dangerous_chars = [';', '&', '|', '`', '$', '(', ')', '<', '>', '\n', '\r', '..']
+        if any(char in ref for char in dangerous_chars):
+            return False
+
+        # No absolute paths
+        if ref.startswith('/'):
+            return False
+
+        return True
+
+    def _is_safe_script_path(self, path: str) -> bool:
+        """Check if script path is safe"""
+        if not path or not isinstance(path, str):
+            return False
+
+        # Normalize path
+        normalized = os.path.normpath(path)
+
+        # No absolute paths
+        if os.path.isabs(normalized):
+            return False
+
+        # No directory traversal
+        if '..' in normalized.split(os.sep):
+            return False
+
+        # No dangerous characters
+        dangerous_chars = [';', '&', '|', '`', '$', '(', ')', '<', '>', '\n', '\r']
+        if any(char in path for char in dangerous_chars):
+            return False
+
+        return True
 
     async def fetch_script_from_github(self, git_url: str, script_path: str, version: str = 'main') -> Optional[str]:
         """
@@ -259,6 +355,19 @@ class GitScriptResolver:
             Local path to fetched script, or None if failed
         """
         try:
+            # Validate inputs
+            if not self._is_safe_git_url(git_url):
+                logger.error(f"Unsafe git URL: {git_url}")
+                return None
+
+            if not self._is_safe_script_path(script_path):
+                logger.error(f"Unsafe script path: {script_path}")
+                return None
+
+            if not self._is_safe_git_ref(version):
+                logger.error(f"Unsafe git ref: {version}")
+                return None
+
             logger.info(f"📥 Fetching script from {git_url}@{version}:{script_path}")
 
             # Parse repository name from URL
@@ -268,6 +377,10 @@ class GitScriptResolver:
                 return None
 
             repo_name = Path(parsed_url.path).stem
+            if not repo_name:
+                logger.error(f"Could not extract repository name from URL: {git_url}")
+                return None
+
             repo_dir = os.path.join(self.cache_dir, repo_name)
 
             # Clone or update repository
@@ -385,12 +498,24 @@ class GitScriptResolver:
         return candidates
 
 
-# Global resolver instance
+# Global resolver instance with thread safety
 _git_script_resolver = None
+_resolver_lock = None
 
 def get_git_script_resolver(cache_dir_name: Optional[str] = None, git_timeout: Optional[int] = None) -> GitScriptResolver:
-    """Get global git script resolver instance"""
-    global _git_script_resolver
+    """Get global git script resolver instance (thread-safe)"""
+    global _git_script_resolver, _resolver_lock
+
+    # Initialize lock if not already done
+    if _resolver_lock is None:
+        import threading
+        _resolver_lock = threading.Lock()
+
+    # Thread-safe singleton pattern
     if _git_script_resolver is None:
-        _git_script_resolver = GitScriptResolver(cache_dir_name=cache_dir_name, git_timeout=git_timeout)
+        with _resolver_lock:
+            # Double-check pattern
+            if _git_script_resolver is None:
+                _git_script_resolver = GitScriptResolver(cache_dir_name=cache_dir_name, git_timeout=git_timeout)
+
     return _git_script_resolver

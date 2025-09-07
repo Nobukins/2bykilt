@@ -499,21 +499,15 @@ markers =
                 from src.script.git_script_resolver import get_git_script_resolver
                 resolver = get_git_script_resolver()
                 
-                # Check if script_info already has git and script_path
-                git_url = script_info.get('git')
-                script_path = script_info.get('script_path')
-                
                 # If not provided, try to resolve from script name
-                if not git_url or not script_path:
+                if not script_info.get('git') or not script_info.get('script_path'):
                     script_name = script_info.get('name') or script_info.get('script')
                     if script_name:
                         logger.info(f"🔍 Resolving git-script from name: {script_name}")
                         resolved_info = await resolver.resolve_git_script(script_name, params)
                         if resolved_info:
                             script_info.update(resolved_info)
-                            git_url = script_info.get('git')
-                            script_path = script_info.get('script_path')
-                            logger.info(f"✅ Resolved git-script: {git_url} -> {script_path}")
+                            logger.info(f"✅ Resolved git-script: {script_info.get('git')} -> {script_info.get('script_path')}")
                         else:
                             logger.error(f"❌ Could not resolve git-script: {script_name}")
                             raise ValueError(f"Could not resolve git-script: {script_name}")
