@@ -38,8 +38,14 @@ class GitScriptCandidate:
 class GitScriptResolver:
     """Resolves git-script references from various sources"""
 
-    def __init__(self):
-        self.cache_dir = os.path.join(tempfile.gettempdir(), 'bykilt_gitscripts')
+    # Class constants for configuration
+    DEFAULT_CACHE_DIR_NAME = 'bykilt_gitscripts'
+    DEFAULT_GIT_TIMEOUT = 10  # seconds
+
+    def __init__(self, cache_dir_name: Optional[str] = None, git_timeout: Optional[int] = None):
+        self.cache_dir_name = cache_dir_name or self.DEFAULT_CACHE_DIR_NAME
+        self.git_timeout = git_timeout or self.DEFAULT_GIT_TIMEOUT
+        self.cache_dir = os.path.join(tempfile.gettempdir(), self.cache_dir_name)
         os.makedirs(self.cache_dir, exist_ok=True)
 
     async def resolve_git_script(self, script_name: str, params: Optional[Dict[str, str]] = None) -> Optional[Dict[str, Any]]:
@@ -195,7 +201,7 @@ class GitScriptResolver:
                 cwd=os.path.dirname(file_path),
                 capture_output=True,
                 text=True,
-                timeout=10
+                timeout=self.git_timeout
             )
 
             if result.returncode == 0:
@@ -207,7 +213,7 @@ class GitScriptResolver:
                     cwd=repo_root,
                     capture_output=True,
                     text=True,
-                    timeout=10
+                    timeout=self.git_timeout
                 )
 
                 if result.returncode == 0:
@@ -219,7 +225,7 @@ class GitScriptResolver:
                         cwd=repo_root,
                         capture_output=True,
                         text=True,
-                        timeout=10
+                        timeout=self.git_timeout
                     )
 
                     version = 'main'
@@ -317,11 +323,14 @@ class GitScriptResolver:
 
             # Validate GitHub URL format
             parsed_url = urlparse(git_url)
-            if 'github.com' not in parsed_url.netloc:
+            if parsed_url.netloc != 'github.com':
                 return False, f"Not a valid GitHub URL: {git_url}"
 
-            # Validate script path (basic security check)
-            if '..' in script_path or script_path.startswith('/'):
+            # Validate script path (comprehensive security check)
+            normalized_path = os.path.normpath(script_path)
+            if (os.path.isabs(normalized_path) or
+                normalized_path.startswith('..') or
+                any(part == '..' for part in normalized_path.split(os.sep))):
                 return False, f"Potentially unsafe script path: {script_path}"
 
             return True, "Valid"
@@ -379,9 +388,9 @@ class GitScriptResolver:
 # Global resolver instance
 _git_script_resolver = None
 
-def get_git_script_resolver() -> GitScriptResolver:
+def get_git_script_resolver(cache_dir_name: Optional[str] = None, git_timeout: Optional[int] = None) -> GitScriptResolver:
     """Get global git script resolver instance"""
     global _git_script_resolver
     if _git_script_resolver is None:
-        _git_script_resolver = GitScriptResolver()
+        _git_script_resolver = GitScriptResolver(cache_dir_name=cache_dir_name, git_timeout=git_timeout)
     return _git_script_resolver
