@@ -24,7 +24,7 @@ if [[ ! -f "${CFG_FILE}" ]]; then
   exit 2
 fi
 
-COVERAGE_CMD=(coverage run -m pytest -c "${CFG_FILE}")
+COVERAGE_CMD=(python -m pytest -c "${CFG_FILE}")
 BASE_ARGS=()
 
 case "$MODE" in
@@ -64,7 +64,11 @@ else
 fi
 set +x
 
-# Generate/refresh coverage xml
-coverage xml -i -o coverage.xml
+# Generate/refresh coverage xml if coverage data exists
+if command -v coverage >/dev/null 2>&1 && [ -f .coverage ]; then
+    coverage xml -i -o coverage.xml
+else
+    echo "[INFO] Coverage data not found, skipping XML generation"
+fi
 
 echo "[INFO] Done." >&2

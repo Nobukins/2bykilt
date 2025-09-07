@@ -82,7 +82,12 @@ jobs:
           # Use unified runner script for consistent local/CI behavior
           chmod +x scripts/ci_pytest.sh
           ./scripts/ci_pytest.sh ci
-          coverage xml -i -o coverage.xml
+          # Generate coverage XML if coverage data exists
+          if [ -f .coverage ]; then
+            coverage xml -i -o coverage.xml
+          else
+            echo "Coverage data not found, skipping XML generation"
+          fi
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
