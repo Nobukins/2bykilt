@@ -1,10 +1,10 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-09-02T23:04:25+00:00
+Generated at (UTC): 2025-09-07T13:13:55+00:00
 
 ## 1. メタサマリー
 
-- Total Issues: 46
+- Total Issues: 47
 - High Risk (declared): 5 → 31, 46, 49, 54, 62
 - Cycle Detected: false (none)
 - Strict Orphans: 4
@@ -13,33 +13,33 @@ Generated at (UTC): 2025-09-02T23:04:25+00:00
 ## 2. 分布 (Distribution)
 
 ### Priority
-- P0: 14 (30.4%)
-- P1: 15 (32.6%)
-- P2: 16 (34.8%)
-- P3: 1 (2.2%)
+- P0: 15 (31.9%)
+- P1: 15 (31.9%)
+- P2: 16 (34.0%)
+- P3: 1 (2.1%)
 
 ### Phase
-- (none): 1 (2.2%)
-- 1: 18 (39.1%)
-- 1-late: 11 (23.9%)
-- 2: 16 (34.8%)
+- (none): 1 (2.1%)
+- 1: 18 (38.3%)
+- 1-late: 12 (25.5%)
+- 2: 16 (34.0%)
 
 ### Area
-- (none): 1 (2.2%)
-- artifacts: 10 (21.7%)
-- automation: 1 (2.2%)
-- batch: 4 (8.7%)
-- config: 3 (6.5%)
+- (none): 1 (2.1%)
+- artifacts: 11 (23.4%)
+- automation: 1 (2.1%)
+- batch: 4 (8.5%)
+- config: 3 (6.4%)
 - docs: 2 (4.3%)
-- logging: 3 (6.5%)
-- observability: 3 (6.5%)
-- plugins: 1 (2.2%)
-- runner: 15 (32.6%)
-- security: 3 (6.5%)
+- logging: 3 (6.4%)
+- observability: 3 (6.4%)
+- plugins: 1 (2.1%)
+- runner: 15 (31.9%)
+- security: 3 (6.4%)
 
 ### Risk
-- high: 5 (10.9%)
-- none: 41 (89.1%)
+- high: 5 (10.6%)
+- none: 42 (89.4%)
 
 ## 3. リスク詳細 (High / Medium / etc.)
 
@@ -97,17 +97,17 @@ Sorted By: critical_path_rank
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 32 | Run/Job ID 基盤 | P0 | 1 | runner |  | 5 | 0 | 0 | 10 | #79 |
 | 65 | マルチ環境設定ローダ | P0 | 1 | config |  | 5 | 0 | 0 | 4 |  |
-| 28 | 録画ファイル保存パス統一 | P0 | 1 | artifacts |  | 4 | 1 | 1 | 1 |  |
+| 28 | 録画ファイル保存パス統一 | P0 | 1 | artifacts |  | 4 | 1 | 1 | 1 | #112 |
 | 64 | フィーチャーフラグフレームワーク | P0 | 1 | config |  | 4 | 1 | 1 | 3 |  |
-| 25 | git_script が llms.txt で指定したスクリプトを正しく解決するよう修正 | P0 | 1 | runner |  | 3 | 0 | 0 | 4 | #27 |
+| 25 | git_script が llms.txt で指定したスクリプトを正しく解決するよう修正 | P0 | 1 | runner |  | 3 | 0 | 0 | 4 | #118 |
 | 30 | 録画タイプ間不整合是正 | P0 | 1 | artifacts |  | 3 | 2 | 1 | 2 |  |
 | 31 | 統一ログ設計 (JSON Lines) | P0 | 1 | logging | high | 3 | 1 | 1 | 1 | #80 |
-| 35 | アーティファクト manifest v2 | P0 | 1 | artifacts |  | 3 | 1 | 1 | 3 |  |
+| 35 | アーティファクト manifest v2 | P0 | 1 | artifacts |  | 3 | 1 | 1 | 3 | #94 |
 | 46 | Run/Job タイムアウト & キャンセル | P2 | 2 | runner | high | 3 | 1 | 1 | 1 |  |
 | 63 | llms.txt スキーマ & バリデータ | P0 | 1-late | config |  | 3 | 2 | 2 | 1 |  |
 | 33 | スクリーンショット取得ユーティリティ | P0 | 1 | artifacts |  | 2 | 1 | 1 | 3 |  |
-| 36 | アーティファクト一覧 API | P1 | 1 | artifacts |  | 2 | 2 | 1 | 1 |  |
-| 37 | 動画アーティファクト保持期間 | P1 | 1 | artifacts |  | 2 | 3 | 1 | 1 |  |
+| 36 | アーティファクト一覧 API | P1 | 1 | artifacts |  | 2 | 2 | 1 | 1 | #95 |
+| 37 | 動画アーティファクト保持期間 | P1 | 1 | artifacts |  | 2 | 3 | 1 | 1 | #99 |
 | 39 | CSV 駆動バッチエンジンコア | P1 | 2 | batch |  | 2 | 1 | 1 | 3 |  |
 | 44 | git_script 解決ロジック不具合修正 | P0 | 1 | runner |  | 2 | 1 | 1 | 1 |  |
 | 47 | 並列実行キュー & 制限 | P2 | 2 | runner |  | 2 | 2 | 1 | 1 |  |
@@ -119,7 +119,7 @@ Sorted By: critical_path_rank
 | 76 | 依存更新自動化パイプライン (PR 起票時の ISSUE_DEPENDENCIES.yml 自動更新) | P1 | 1-late | automation |  | 2 | 2 | 1 | 0 |  |
 | 81 | Async/Browser テスト安定化計画 | P1 | 1 | runner |  | 2 | 0 | 0 | 0 |  |
 | 34 | 要素値キャプチャ & エクスポート | P1 | 1 | artifacts |  | 1 | 2 | 2 | 0 | #93 |
-| 38 | 録画統一後回帰テストスイート | P2 | 1-late | artifacts |  | 1 | 4 | 5 | 0 |  |
+| 38 | 録画統一後回帰テストスイート | P2 | 1-late | artifacts |  | 1 | 4 | 5 | 0 | #103 |
 | 40 | CSV D&D UI 連携 | P2 | 2 | batch |  | 1 | 2 | 1 | 0 |  |
 | 41 | バッチ進捗・サマリー | P2 | 2 | batch |  | 1 | 3 | 2 | 0 |  |
 | 42 | バッチ部分リトライ | P2 | 2 | batch |  | 1 | 2 | 1 | 0 |  |
@@ -137,9 +137,10 @@ Sorted By: critical_path_rank
 | 60 | シークレットマスキング拡張 | P1 | 1-late | security |  | 1 | 3 | 1 | 0 |  |
 | 61 | 依存セキュリティスキャン最適化 | P1 | 2 | security |  | 1 | 0 | 0 | 0 |  |
 | 67 | ドキュメント整備 第2弾 | P2 | 1-late | docs |  | 1 | 4 | 1 | 0 |  |
-| 87 | スクリーンショット重複保存フラグ導入 | P1 | 1-late | artifacts |  | 1 | 2 | 2 | 1 |  |
-| 88 | スクリーンショット例外分類と特定例外キャッチ | P2 | 1-late | artifacts |  | 1 | 2 | 2 | 0 |  |
-| 89 | Screenshot ログイベント整備 (metrics 連携準備) | P2 | 1-late | observability |  | 1 | 2 | 2 | 0 |  |
+| 87 | スクリーンショット重複保存フラグ導入 | P1 | 1-late | artifacts |  | 1 | 2 | 2 | 1 | #96 |
+| 88 | スクリーンショット例外分類と特定例外キャッチ | P2 | 1-late | artifacts |  | 1 | 2 | 2 | 0 | #97 |
+| 89 | Screenshot ログイベント整備 (metrics 連携準備) | P2 | 1-late | observability |  | 1 | 2 | 2 | 0 | #98 |
+| 91 | 統一録画パス Rollout (flag default 有効化 & legacy 廃止) | P0 | 1-late | artifacts |  | 1 | 2 | 1 | 0 | #105 |
 | 90 | Temp test issue for enrichment | P2 |  |  |  |  | 0 | 0 | 0 |  |
 
 ## 7. 依存詳細 (Fan-in / Fan-out)
@@ -168,6 +169,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 1
 - Depends (1): 32
 - Dependents (1): 30
+- Progress: {"state": "done", "primary_pr": 112}
 
 ### Issue 64: フィーチャーフラグフレームワーク
 - Priority: P0, Phase: 1, Area: config
@@ -184,7 +186,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 0
 - Depends (0): (none)
 - Dependents (4): 44, 45, 49, 50
-- Progress: {"primary_pr": 27, "coverage": "partial"}
+- Progress: {"state": "done", "primary_pr": 118}
 
 ### Issue 30: 録画タイプ間不整合是正
 - Priority: P0, Phase: 1, Area: artifacts
@@ -210,6 +212,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 1
 - Depends (1): 32
 - Dependents (3): 34, 36, 38
+- Progress: {"state": "done", "primary_pr": 94}
 
 ### Issue 46: Run/Job タイムアウト & キャンセル
 - Priority: P2, Phase: 2, Area: runner
@@ -242,6 +245,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 2
 - Depends (1): 35
 - Dependents (1): 38
+- Progress: {"state": "done", "primary_pr": 95}
 
 ### Issue 37: 動画アーティファクト保持期間
 - Priority: P1, Phase: 1, Area: artifacts
@@ -250,6 +254,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 3
 - Depends (1): 30
 - Dependents (1): 38
+- Progress: {"state": "done", "primary_pr": 99}
 
 ### Issue 39: CSV 駆動バッチエンジンコア
 - Priority: P1, Phase: 2, Area: batch
@@ -348,6 +353,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 4
 - Depends (5): 30, 33, 35, 36, 37
 - Dependents (0): (none)
+- Progress: {"state": "done", "primary_pr": 103}
 
 ### Issue 40: CSV D&D UI 連携
 - Priority: P2, Phase: 2, Area: batch
@@ -493,6 +499,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 2
 - Depends (2): 33, 35
 - Dependents (1): 83
+- Progress: {"state": "done", "primary_pr": 96}
 
 ### Issue 88: スクリーンショット例外分類と特定例外キャッチ
 - Priority: P2, Phase: 1-late, Area: artifacts
@@ -501,6 +508,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 2
 - Depends (2): 33, 35
 - Dependents (0): (none)
+- Progress: {"state": "done", "primary_pr": 97}
 
 ### Issue 89: Screenshot ログイベント整備 (metrics 連携準備)
 - Priority: P2, Phase: 1-late, Area: observability
@@ -509,6 +517,16 @@ Sorted By: critical_path_rank
 - LongestDistance: 2
 - Depends (2): 33, 58
 - Dependents (0): (none)
+- Progress: {"state": "done", "primary_pr": 98}
+
+### Issue 91: 統一録画パス Rollout (flag default 有効化 & legacy 廃止)
+- Priority: P0, Phase: 1-late, Area: artifacts
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 2
+- Depends (1): 28
+- Dependents (0): (none)
+- Progress: {"state": "done", "primary_pr": 105}
 
 ### Issue 90: Temp test issue for enrichment
 - Priority: P2, Phase: None, Area: None
