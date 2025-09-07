@@ -12,6 +12,7 @@ from playwright.async_api import BrowserContext
 
 from .profile_manager import ProfileManager, EdgeProfileManager, ChromeProfileManager
 from .browser_launcher import BrowserLauncher, EdgeLauncher, ChromeLauncher
+from .git_script_path import GitScriptPathValidator, validate_git_script_path, GitScriptPathNotFound, GitScriptPathDenied
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +79,7 @@ class GitScriptAutomator:
             
             # 最低限のファイルがあれば継続可能
             if essential_count < 2:
-                logger.error(f"❌ Insufficient essential files in source profile")
+                logger.error("❌ Insufficient essential files in source profile")
                 return False
             
             return True
@@ -140,7 +141,7 @@ class GitScriptAutomator:
             else:
                 context = await self.browser_launcher.launch_with_profile(self.current_selenium_profile)
             
-            logger.info(f"✅ Browser launched successfully")
+            logger.info("✅ Browser launched successfully")
             logger.info(f"📄 Initial pages: {len(context.pages)}")
             
             return context
@@ -183,13 +184,15 @@ class GitScriptAutomator:
                 except Exception as e:
                     logger.warning(f"⚠️ Error stopping playwright instance: {e}")
     
-    async def execute_git_script_workflow(self, workspace_dir: str, test_url: str = "https://example.com", headless: bool = False) -> Dict[str, Any]:
+    async def execute_git_script_workflow(self, workspace_dir: str, script_path: str, command: str, params: Dict[str, str]) -> Dict[str, Any]:
         """
-        完全なgit-scriptワークフローを実行
+        完全なgit-scriptワークフローを実行（実際のスクリプト実行）
         
         Args:
             workspace_dir: 作業ディレクトリ
-            test_url: テスト用URL
+            script_path: 実行するスクリプトのパス
+            command: 実行コマンドテンプレート
+            params: パラメータ辞書
             headless: ヘッドレスモードで実行するか
             
         Returns:
@@ -199,13 +202,17 @@ class GitScriptAutomator:
             "success": False,
             "browser_type": self.browser_type,
             "workspace_dir": workspace_dir,
-            "test_url": test_url,
-            "selenium_profile": None,
+            "script_path": script_path,
+            "command": command,
+            "params": params,
             "error": None
         }
         
         try:
             logger.info(f"🏁 Starting git-script workflow for {self.browser_type}")
+            logger.info(f"📄 Script: {script_path}")
+            logger.info(f"📄 Command: {command}")
+            logger.info(f"📄 Params: {params}")
             
             # Step 1: ソースプロファイルの検証
             if not self.validate_source_profile():
@@ -215,29 +222,76 @@ class GitScriptAutomator:
             selenium_profile = self.prepare_selenium_profile(workspace_dir)
             result["selenium_profile"] = selenium_profile
             
-            # Step 3: ブラウザ起動とテスト実行
-            async with self.browser_context(workspace_dir, headless) as context:
-                # 新しいページを作成または既存ページを使用
-                if context.pages:
-                    page = context.pages[0]
-                    logger.info(f"📄 Using existing page: {page.url}")
-                else:
-                    page = await context.new_page()
-                    logger.info(f"📄 Created new page")
-                
-                # テストURL に移動
-                await page.goto(test_url)
-                page_title = await page.title()
-                result["page_title"] = page_title
-                
-                logger.info(f"✅ Successfully navigated to {test_url}")
-                logger.info(f"📄 Page title: {page_title}")
-                
-                # 2秒待機（動作確認）
-                await page.wait_for_timeout(2000)
+            # Step 3: コマンドテンプレートの処理
+            processed_command = command.replace('${script_path}', script_path)
             
-            result["success"] = True
-            logger.info(f"🎉 Git-script workflow completed successfully")
+            # パラメータの置換
+            for param_name, param_value in params.items():
+                placeholder = f"${{params.{param_name}}}"
+                processed_command = processed_command.replace(placeholder, str(param_value))
+            
+            logger.info(f"🔧 Processed command: {processed_command}")
+            
+            # Step 4: スクリプトの実行（subprocessを使用）
+            import subprocess
+            import shlex
+            
+            # コマンドを引数リストに分割
+            command_parts = shlex.split(processed_command)
+            
+            # 作業ディレクトリを設定
+            cwd = workspace_dir
+            
+            # 環境変数の設定
+            env = os.environ.copy()
+            env['PYTHONPATH'] = workspace_dir
+            
+            # 非同期でサブプロセスを実行
+            process = await asyncio.create_subprocess_exec(
+                *command_parts,
+                cwd=cwd,
+                env=env,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            
+            # 出力の取得
+            stdout, stderr = await process.communicate()
+            
+            # エンコーディングの処理
+            def safe_decode(data):
+                if not data:
+                    return ""
+                encodings = ['utf-8', 'cp932', 'shift_jis', 'latin1']
+                for encoding in encodings:
+                    try:
+                        return data.decode(encoding)
+                    except UnicodeDecodeError:
+                        continue
+                return data.decode('utf-8', errors='replace')
+            
+            stdout_text = safe_decode(stdout)
+            stderr_text = safe_decode(stderr)
+            
+            result["exit_code"] = process.returncode
+            result["stdout"] = stdout_text
+            result["stderr"] = stderr_text
+            
+            # ログ出力
+            logger.info("git_script: start")
+            if stdout_text:
+                logger.info(f"git_script stdout: {stdout_text}")
+            if stderr_text:
+                logger.error(f"git_script stderr: {stderr_text}")
+            logger.info("git_script: end")
+            
+            # 成功判定
+            if process.returncode == 0:
+                result["success"] = True
+                logger.info("🎉 Git-script workflow completed successfully")
+            else:
+                result["error"] = f"Script execution failed with exit code {process.returncode}"
+                logger.error(f"❌ Git-script workflow failed: {result['error']}")
             
         except Exception as e:
             error_msg = str(e)
@@ -284,11 +338,16 @@ class GitScriptAutomator:
         logger.info(f"🧪 Testing automation setup in: {test_workspace}")
         
         try:
+            # テスト用のスクリプト情報
+            test_script_path = "/test_script.py"
+            test_command = "python ${script_path} --test"
+            test_params = {"test": "value"}
+            
             result = await self.execute_git_script_workflow(
                 workspace_dir=test_workspace,
-                # Replaced httpbin (external dependency) with owned content page for stability
-                test_url="https://nogtips.wordpress.com/2025/03/31/llms-txt%e3%81%ab%e3%81%a4%e3%81%84%e3%81%a6/",
-                headless=True  # テストはヘッドレスで実行
+                script_path=test_script_path,
+                command=test_command,
+                params=test_params
             )
             
             return result

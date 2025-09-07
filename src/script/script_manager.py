@@ -1291,7 +1291,23 @@ async def execute_git_script_new_method(
         repo_dir = os.path.join(tempfile.gettempdir(), 'bykilt_gitscripts', Path(git_url).stem)
         os.makedirs(os.path.dirname(repo_dir), exist_ok=True)
         repo_dir = await clone_git_repo(git_url, version, repo_dir)
-        full_script_path = os.path.join(repo_dir, script_path)
+        
+        # Step 2: Validate and normalize script path (GIT_SCRIPT_V2 feature flag)
+        git_script_v2_enabled = os.getenv('GIT_SCRIPT_V2', 'false').lower() == 'true'
+        
+        if git_script_v2_enabled:
+            from src.utils.git_script_path import validate_git_script_path
+            try:
+                full_script_path, validation_result = validate_git_script_path(repo_dir, script_path)
+                logger.info(f"✅ Script path validated (V2): {script_path} -> {full_script_path}")
+                if validation_result.security_warnings:
+                    logger.warning(f"⚠️ Security warnings: {validation_result.security_warnings}")
+            except Exception as e:
+                raise ValueError(f"Script path validation failed: {e}")
+        else:
+            # Legacy path handling
+            full_script_path = os.path.join(repo_dir, script_path)
+            logger.info(f"ℹ️ Using legacy path handling: {script_path} -> {full_script_path}")
         
         if not os.path.exists(full_script_path):
             raise FileNotFoundError(f"Script not found at path: {full_script_path}")
@@ -1337,8 +1353,9 @@ async def execute_git_script_new_method(
         # Execute complete automation workflow
         result = await automator.execute_git_script_workflow(
             workspace_dir=workspace_dir,
-            test_url="https://example.com",  # Will be overridden by script
-            headless=actual_headless
+            script_path=full_script_path,
+            command=script_info.get('command', f'python {script_path}'),
+            params=params
         )
         
         if result["success"]:
