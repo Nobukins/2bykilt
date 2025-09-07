@@ -379,7 +379,7 @@ def save_as_action_file(script_content, file_name, action_name=None):
             
         # Get the actions directory path
         root_dir = Path(__file__).parent.parent.parent
-        actions_dir = root_dir / 'tmp/myscript/actions'
+        actions_dir = root_dir / 'myscript' / 'actions'
         
         # Create actions directory if it doesn't exist
         if not actions_dir.exists():
@@ -403,7 +403,7 @@ def save_as_action_file(script_content, file_name, action_name=None):
         required: true
         type: string
         description: "検索クエリ"
-    command: python ./tmp/myscript/unified_action_launcher.py --action ${{action_script}} --query "${{params.query}}" --slowmo 1500 --countdown 3
+    command: python ./myscript/unified_action_launcher.py --action ${{action_script}} --query "${{params.query}}" --slowmo 1500 --countdown 3
 """
         if llms_path.exists():
             # Read existing content

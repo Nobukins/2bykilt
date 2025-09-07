@@ -10,6 +10,22 @@ from src.utils.app_logger import logger
 from src.utils.git_script_automator import GitScriptAutomator, EdgeAutomator, ChromeAutomator
 from typing import Dict as _DictReturn
 
+# Initialize directory migration on module import
+try:
+    from src.runner.migration_tool import migrate_user_scripts
+    logger.info("🔄 Checking for user script directory migration...")
+    migration_result = migrate_user_scripts()
+    if migration_result['success'] and migration_result['migrated_files']:
+        logger.info(f"✅ Migration completed: {len(migration_result['migrated_files'])} files migrated")
+    elif migration_result['needs_migration']:
+        logger.warning("⚠️ Migration needed but failed - check logs for details")
+    else:
+        logger.info("✅ No migration needed")
+except ImportError:
+    logger.warning("⚠️ Migration tool not available, skipping directory migration")
+except Exception as e:
+    logger.error(f"❌ Migration initialization failed: {e}")
+
 
 async def execute_git_script(
     url: str,
@@ -344,7 +360,7 @@ async def run_script(
             
             if script_type == 'browser-control':
                 # Ensure directories exist
-                script_dir = os.path.join('tmp', 'myscript')
+                script_dir = os.path.join('myscript')
                 os.makedirs(script_dir, exist_ok=True)
                 
                 # Log the parameters being used
@@ -497,7 +513,9 @@ markers =
                 
                 # NEW: Use git_script_resolver to resolve script information
                 from src.script.git_script_resolver import get_git_script_resolver
-                resolver = get_git_script_resolver()
+                from src.runtime.run_context import RunContext
+                run_context = RunContext.get()
+                resolver = get_git_script_resolver(run_id=run_context.run_id_base)
                 
                 # If not provided, try to resolve from script name
                 if not script_info.get('git') or not script_info.get('script_path'):
@@ -775,7 +793,7 @@ markers =
                     return error_msg, None
                 
                 # Ensure script directory exists
-                script_dir = os.path.join('tmp', 'myscript')
+                script_dir = os.path.join('myscript')
                 os.makedirs(script_dir, exist_ok=True)
                 
                 # Construct script path

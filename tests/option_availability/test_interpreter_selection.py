@@ -34,7 +34,7 @@ async def test_replace_python_with_sys_executable(monkeypatch, tmp_path):
     monkeypatch.setattr(sm, 'process_execution', fake_process_execution)
 
     # Prepare isolated working directory and dummy script
-    workdir = tmp_path / 'tmp' / 'myscript'
+    workdir = tmp_path / 'myscript'
     workdir.mkdir(parents=True, exist_ok=True)
     (workdir / 'dummy.py').write_text('print("ok")', encoding='utf-8')
     monkeypatch.chdir(tmp_path)
