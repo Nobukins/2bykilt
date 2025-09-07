@@ -493,9 +493,30 @@ markers =
                     return success_msg, script_path
             elif script_type == 'git-script':
                 # Handle git-script type with NEW 2024+ METHOD
-                if 'git' not in script_info or 'script_path' not in script_info:
-                    logger.error("Git-script type requires 'git' and 'script_path' fields")
-                    raise ValueError("Missing required fields for git-script type")
+                logger.info(f"🔍 Processing git-script: {script_info.get('name', 'unknown')}")
+                
+                # NEW: Use git_script_resolver to resolve script information
+                from src.script.git_script_resolver import get_git_script_resolver
+                resolver = get_git_script_resolver()
+                
+                # If not provided, try to resolve from script name
+                if not script_info.get('git') or not script_info.get('script_path'):
+                    script_name = script_info.get('name') or script_info.get('script')
+                    if script_name:
+                        logger.info(f"🔍 Resolving git-script from name: {script_name}")
+                        resolved_info = await resolver.resolve_git_script(script_name, params)
+                        if resolved_info:
+                            script_info.update(resolved_info)
+                            logger.info(f"✅ Resolved git-script: {script_info.get('git')} -> {script_info.get('script_path')}")
+                        else:
+                            logger.error(f"❌ Could not resolve git-script: {script_name}")
+                            raise ValueError(f"Could not resolve git-script: {script_name}")
+                
+                # Validate resolved script info
+                is_valid, error_msg = await resolver.validate_script_info(script_info)
+                if not is_valid:
+                    logger.error(f"❌ Invalid git-script configuration: {error_msg}")
+                    raise ValueError(f"Invalid git-script configuration: {error_msg}")
                 
                 git_url = script_info['git']
                 script_path = script_info['script_path']
