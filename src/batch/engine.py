@@ -9,6 +9,7 @@ import csv
 import json
 import logging
 import uuid
+import os
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Union
 from dataclasses import dataclass, asdict
@@ -21,6 +22,27 @@ logger = logging.getLogger(__name__)
 
 # Type aliases for better type hints
 ConfigType = Dict[str, Union[str, int, float, bool]]
+
+
+class BatchEngineError(Exception):
+    """Base exception for BatchEngine errors."""
+    pass
+
+
+class ConfigurationError(BatchEngineError):
+    """Raised when configuration is invalid."""
+    pass
+
+
+class FileProcessingError(BatchEngineError):
+    """Raised when file processing fails."""
+    pass
+
+
+class SecurityError(BatchEngineError):
+    """Raised when security violations are detected."""
+    pass
+
 
 # Constants
 BATCH_MANIFEST_FILENAME = "batch_manifest.json"
@@ -128,42 +150,113 @@ class BatchEngine:
             'allow_path_traversal': True, # Security setting (default: allow for compatibility)
             'validate_headers': True, # Validate CSV headers exist
             'skip_empty_rows': True, # Skip empty rows automatically
+            'log_level': 'INFO',     # Logging level (DEBUG, INFO, WARNING, ERROR)
         }
 
-        # Update with user configuration
+        # Load configuration from environment variables first
+        env_config = self._load_config_from_env()
+        self.config.update(env_config)
+
+        # Update with user configuration (overrides environment variables)
         if config:
             self.config.update(config)
 
         # Validate configuration values
         self._validate_config()
 
+        # Configure logging level
+        self._configure_logging()
+
+    def _configure_logging(self):
+        """Configure logging level based on configuration."""
+        log_level = getattr(logging, self.config['log_level'], logging.INFO)
+        self.logger.setLevel(log_level)
+
+        # Also configure the module-level logger if needed
+        module_logger = logging.getLogger(__name__)
+        module_logger.setLevel(log_level)
+
+    def _load_config_from_env(self) -> Dict[str, Any]:
+        """
+        Load configuration values from environment variables.
+
+        Returns:
+            Dictionary of configuration values from environment variables
+        """
+        env_config = {}
+
+        # Mapping of environment variables to config keys
+        env_mapping = {
+            'BATCH_MAX_FILE_SIZE_MB': ('max_file_size_mb', float),
+            'BATCH_CHUNK_SIZE': ('chunk_size', int),
+            'BATCH_ENCODING': ('encoding', str),
+            'BATCH_DELIMITER_FALLBACK': ('delimiter_fallback', str),
+            'BATCH_ALLOW_PATH_TRAVERSAL': ('allow_path_traversal', lambda x: x.lower() in ('true', '1', 'yes')),
+            'BATCH_VALIDATE_HEADERS': ('validate_headers', lambda x: x.lower() in ('true', '1', 'yes')),
+            'BATCH_SKIP_EMPTY_ROWS': ('skip_empty_rows', lambda x: x.lower() in ('true', '1', 'yes')),
+            'BATCH_LOG_LEVEL': ('log_level', str),
+        }
+
+        for env_var, (config_key, converter) in env_mapping.items():
+            env_value = os.getenv(env_var)
+            if env_value is not None:
+                try:
+                    env_config[config_key] = converter(env_value)
+                    self.logger.debug(f"Loaded {config_key} from environment: {env_config[config_key]}")
+                except (ValueError, TypeError) as e:
+                    self.logger.warning(f"Invalid value for {env_var}: {env_value}. Using default value. Error: {e}")
+
+        return env_config
+
     def _validate_config(self):
         """
         Validate configuration values to ensure they are within acceptable ranges.
 
         Raises:
-            ValueError: If any configuration value is invalid
+            ConfigurationError: If any configuration value is invalid
         """
-        # Validate max_file_size_mb
-        if not isinstance(self.config['max_file_size_mb'], (int, float)) or self.config['max_file_size_mb'] <= 0:
-            raise ValueError(f"max_file_size_mb must be a positive number, got: {self.config['max_file_size_mb']}")
+        try:
+            # Validate max_file_size_mb
+            max_size = self.config['max_file_size_mb']
+            if not isinstance(max_size, (int, float)) or max_size <= 0:
+                raise ConfigurationError(f"max_file_size_mb must be a positive number, got: {max_size}")
+            if max_size > 10000:  # Reasonable upper limit
+                raise ConfigurationError(f"max_file_size_mb too large: {max_size}MB. Maximum allowed: 10000MB")
 
-        # Validate chunk_size
-        if not isinstance(self.config['chunk_size'], int) or self.config['chunk_size'] <= 0:
-            raise ValueError(f"chunk_size must be a positive integer, got: {self.config['chunk_size']}")
+            # Validate chunk_size
+            chunk_size = self.config['chunk_size']
+            if not isinstance(chunk_size, int) or chunk_size <= 0:
+                raise ConfigurationError(f"chunk_size must be a positive integer, got: {chunk_size}")
+            if chunk_size > 100000:  # Reasonable upper limit
+                raise ConfigurationError(f"chunk_size too large: {chunk_size}. Maximum allowed: 100000")
 
-        # Validate encoding
-        if not isinstance(self.config['encoding'], str) or not self.config['encoding']:
-            raise ValueError(f"encoding must be a non-empty string, got: {self.config['encoding']}")
+            # Validate encoding
+            encoding = self.config['encoding']
+            if not isinstance(encoding, str) or not encoding.strip():
+                raise ConfigurationError(f"encoding must be a non-empty string, got: {encoding}")
 
-        # Validate delimiter_fallback
-        if not isinstance(self.config['delimiter_fallback'], str) or len(self.config['delimiter_fallback']) != 1:
-            raise ValueError(f"delimiter_fallback must be a single character, got: {self.config['delimiter_fallback']}")
+            # Validate delimiter_fallback
+            delimiter = self.config['delimiter_fallback']
+            if not isinstance(delimiter, str) or len(delimiter) != 1:
+                raise ConfigurationError(f"delimiter_fallback must be a single character, got: {delimiter}")
 
-        # Validate boolean settings
-        for bool_key in ['allow_path_traversal', 'validate_headers', 'skip_empty_rows']:
-            if not isinstance(self.config[bool_key], bool):
-                raise ValueError(f"{bool_key} must be a boolean, got: {self.config[bool_key]}")
+            # Validate boolean settings
+            for bool_key in ['allow_path_traversal', 'validate_headers', 'skip_empty_rows']:
+                value = self.config[bool_key]
+                if not isinstance(value, bool):
+                    raise ConfigurationError(f"{bool_key} must be a boolean, got: {value} ({type(value).__name__})")
+
+            # Validate log_level
+            valid_log_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+            log_level = self.config['log_level'].upper()
+            if log_level not in valid_log_levels:
+                raise ConfigurationError(f"log_level must be one of {valid_log_levels}, got: {self.config['log_level']}")
+            self.config['log_level'] = log_level  # Normalize to uppercase
+
+        except KeyError as e:
+            raise ConfigurationError(f"Missing required configuration key: {e}")
+        except Exception as e:
+            raise ConfigurationError(f"Configuration validation failed: {e}")
 
     def parse_csv(self, csv_path: str, chunk_size: int = 1000) -> List[Dict[str, Any]]:
         """
@@ -202,18 +295,21 @@ class BatchEngine:
                 try:
                     csv_path_obj.relative_to(cwd)
                 except ValueError:
-                    raise ValueError(f"Access denied: {csv_path} is outside allowed directory")
+                    raise SecurityError(f"Access denied: '{csv_path}' is outside allowed directory. "
+                                      f"Path traversal detected. To allow access to files outside the current "
+                                      f"working directory, set 'allow_path_traversal' to True in configuration.")
 
         if not csv_path_obj.exists():
             raise FileNotFoundError(f"CSV file not found: '{csv_path}'. Please verify the file path and ensure the file exists.")
 
         if csv_path_obj.stat().st_size == 0:
-            raise ValueError(f"CSV file is empty: '{csv_path}'. The file contains no data to process.")
+            raise FileProcessingError(f"CSV file is empty: '{csv_path}'. The file contains no data to process.")
 
         # Check file size for memory considerations
         file_size_mb = csv_path_obj.stat().st_size / (1024 * 1024)
         if file_size_mb > self.config['max_file_size_mb']:
-            raise ValueError(f"CSV file too large ({file_size_mb:.1f}MB). Maximum allowed: {self.config['max_file_size_mb']}MB")
+            raise FileProcessingError(f"CSV file too large ({file_size_mb:.1f}MB). Maximum allowed: {self.config['max_file_size_mb']}MB. "
+                                    f"Consider splitting the file or increasing 'max_file_size_mb' in configuration.")
 
         if file_size_mb > 100:  # Warn for files larger than 100MB
             self.logger.warning(f"Large CSV file detected ({file_size_mb:.1f}MB). Consider using streaming processing.")
@@ -223,7 +319,7 @@ class BatchEngine:
                 # Check if file has content
                 content = f.read()
                 if not content.strip():
-                    raise ValueError(f"CSV file contains no data: {csv_path}")
+                    raise FileProcessingError(f"CSV file contains no data: '{csv_path}'. The file is empty or contains only whitespace.")
 
                 f.seek(0)
 
@@ -260,22 +356,22 @@ class BatchEngine:
                         self.logger.debug(f"Processed {processed_rows} rows from {csv_path}")
 
                 if not rows:
-                    raise ValueError(f"No valid data rows found in CSV file: {csv_path}")
+                    raise FileProcessingError(f"No valid data rows found in CSV file: '{csv_path}'. "
+                                            f"The file may contain only headers or all rows were filtered out.")
 
                 self.logger.info(f"Successfully parsed {len(rows)} valid rows from {csv_path}")
                 return rows
 
         except UnicodeDecodeError as e:
-            raise UnicodeDecodeError(e.encoding, e.object, e.start, e.end,
-                                   f"Invalid file encoding in '{csv_path}'. Expected '{self.config['encoding']}' encoding. "
-                                   f"Try saving the file with UTF-8 encoding or specify a different encoding in config. "
-                                   f"Original error: {e}")
+            raise FileProcessingError(f"Invalid file encoding in '{csv_path}'. Expected '{self.config['encoding']}' encoding. "
+                                    f"Try saving the file with UTF-8 encoding or specify a different encoding in config. "
+                                    f"Original error: {e}")
         except csv.Error as e:
-            raise ValueError(f"Invalid CSV format in '{csv_path}': {e}. "
-                           f"Please ensure the file is a valid CSV with proper formatting.")
+            raise FileProcessingError(f"Invalid CSV format in '{csv_path}': {e}. "
+                                    f"Please ensure the file is a valid CSV with proper formatting and consistent delimiters.")
         except Exception as e:
-            raise ValueError(f"Failed to parse CSV file '{csv_path}': {e}. "
-                           f"Please check the file format and contents.")
+            raise FileProcessingError(f"Failed to parse CSV file '{csv_path}': {e}. "
+                                    f"Please check the file format, encoding, and contents.")
 
     def create_batch_jobs(self, csv_path: str) -> BatchManifest:
         """
@@ -308,7 +404,8 @@ class BatchEngine:
         rows = self.parse_csv(csv_path)
 
         if not rows:
-            raise ValueError(f"No valid rows found in CSV file: {csv_path}")
+            raise FileProcessingError(f"No valid rows found in CSV file: '{csv_path}'. "
+                                    f"The file may be empty or contain only invalid data.")
 
         # Create jobs directory
         jobs_dir = self.run_context.artifact_dir("jobs")

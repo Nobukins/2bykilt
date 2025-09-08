@@ -8,7 +8,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from src.batch.engine import BatchEngine, BatchJob, BatchManifest, start_batch
+from src.batch.engine import BatchEngine, BatchJob, BatchManifest, start_batch, ConfigurationError, FileProcessingError, SecurityError
 from src.runtime.run_context import RunContext
 
 
@@ -161,7 +161,7 @@ class TestBatchEngine:
         csv_file = temp_dir / "empty.csv"
         csv_file.write_text("")
 
-        with pytest.raises(ValueError, match="CSV file is empty"):
+        with pytest.raises(FileProcessingError, match="CSV file is empty"):
             engine.parse_csv(str(csv_file))
 
     def test_parse_csv_no_data_rows(self, engine, temp_dir):
@@ -170,7 +170,7 @@ class TestBatchEngine:
         csv_file = temp_dir / "header_only.csv"
         csv_file.write_text(csv_content)
 
-        with pytest.raises(ValueError, match="No valid data rows found"):
+        with pytest.raises(FileProcessingError, match="No valid data rows found"):
             engine.parse_csv(str(csv_file))
 
     def test_parse_csv_special_characters(self, engine, temp_dir):
@@ -241,19 +241,19 @@ class TestBatchEngine:
         mock_context = Mock()
         mock_context.run_id_base = "test_run"
         
-        # Create engine with very small file size limit
+        # Create engine with very small file size limit (1 byte)
         custom_config = {
-            'max_file_size_mb': 0.00001,  # Extremely small limit (10 bytes)
+            'max_file_size_mb': 1e-6,  # 1 byte in MB
             'allow_path_traversal': True
         }
         engine = BatchEngine(mock_context, custom_config)
         
-        # Create a small CSV file
+        # Create a small CSV file that exceeds the limit
         csv_content = "name,value\ntest,data\n"
         csv_file = temp_dir / "small.csv"
         csv_file.write_text(csv_content)
 
-        with pytest.raises(ValueError, match="CSV file too large"):
+        with pytest.raises(FileProcessingError, match="CSV file too large"):
             engine.parse_csv(str(csv_file))
 
     def test_parse_csv_path_traversal_prevention(self, temp_dir):
@@ -268,14 +268,13 @@ class TestBatchEngine:
         # Create engine with path traversal prevention enabled
         custom_config = {
             'allow_path_traversal': False,
-            'max_file_size_mb': 500
         }
         engine = BatchEngine(mock_context, custom_config)
         
         # Try to access file outside allowed directory
         malicious_path = "/etc/passwd"
         
-        with pytest.raises(ValueError, match="Access denied"):
+        with pytest.raises(SecurityError, match="Access denied"):
             engine.parse_csv(malicious_path)
 
     def test_parse_csv_invalid_delimiter_detection(self, engine, temp_dir):
@@ -329,7 +328,7 @@ class TestBatchEngine:
         
         invalid_config = {'max_file_size_mb': -1}
         
-        with pytest.raises(ValueError, match="max_file_size_mb must be a positive number"):
+        with pytest.raises(ConfigurationError, match="max_file_size_mb must be a positive number"):
             BatchEngine(run_context, invalid_config)
 
     def test_config_validation_invalid_chunk_size(self, run_context):
@@ -338,7 +337,7 @@ class TestBatchEngine:
         
         invalid_config = {'chunk_size': 0}
         
-        with pytest.raises(ValueError, match="chunk_size must be a positive integer"):
+        with pytest.raises(ConfigurationError, match="chunk_size must be a positive integer"):
             BatchEngine(run_context, invalid_config)
 
     def test_config_validation_invalid_encoding(self, run_context):
@@ -347,7 +346,7 @@ class TestBatchEngine:
         
         invalid_config = {'encoding': ''}
         
-        with pytest.raises(ValueError, match="encoding must be a non-empty string"):
+        with pytest.raises(ConfigurationError, match="encoding must be a non-empty string"):
             BatchEngine(run_context, invalid_config)
 
     def test_config_validation_invalid_delimiter(self, run_context):
@@ -356,7 +355,7 @@ class TestBatchEngine:
         
         invalid_config = {'delimiter_fallback': ';;'}
         
-        with pytest.raises(ValueError, match="delimiter_fallback must be a single character"):
+        with pytest.raises(ConfigurationError, match="delimiter_fallback must be a single character"):
             BatchEngine(run_context, invalid_config)
 
     def test_config_validation_invalid_boolean(self, run_context):
@@ -365,8 +364,68 @@ class TestBatchEngine:
         
         invalid_config = {'allow_path_traversal': 'true'}
         
-        with pytest.raises(ValueError, match="allow_path_traversal must be a boolean"):
+        with pytest.raises(ConfigurationError, match="allow_path_traversal must be a boolean"):
             BatchEngine(run_context, invalid_config)
+
+    def test_config_validation_invalid_log_level(self, run_context):
+        """Test configuration validation for invalid log level."""
+        from src.batch.engine import BatchEngine
+        
+        invalid_config = {'log_level': 'INVALID'}
+        
+        with pytest.raises(ConfigurationError, match="log_level must be one of"):
+            BatchEngine(run_context, invalid_config)
+
+    def test_config_validation_env_vars(self, run_context, monkeypatch):
+        """Test configuration loading from environment variables."""
+        from src.batch.engine import BatchEngine
+        
+        # Set environment variables
+        monkeypatch.setenv('BATCH_MAX_FILE_SIZE_MB', '200')
+        monkeypatch.setenv('BATCH_CHUNK_SIZE', '500')
+        monkeypatch.setenv('BATCH_ENCODING', 'utf-8')
+        monkeypatch.setenv('BATCH_ALLOW_PATH_TRAVERSAL', 'false')
+        monkeypatch.setenv('BATCH_LOG_LEVEL', 'DEBUG')
+        
+        # Create engine without explicit config
+        engine = BatchEngine(run_context)
+        
+        # Verify environment variables were loaded
+        assert engine.config['max_file_size_mb'] == 200.0
+        assert engine.config['chunk_size'] == 500
+        assert engine.config['encoding'] == 'utf-8'
+        assert engine.config['allow_path_traversal'] is False
+        assert engine.config['log_level'] == 'DEBUG'
+
+    def test_parse_csv_file_processing_error_empty_content(self, engine, temp_dir):
+        """Test FileProcessingError for empty content."""
+        # Create file with only whitespace
+        csv_file = temp_dir / "whitespace.csv"
+        csv_file.write_text("   \n  \n\t\n")
+        
+        with pytest.raises(FileProcessingError, match="CSV file contains no data"):
+            engine.parse_csv(str(csv_file))
+
+    def test_parse_csv_security_error_path_traversal(self, temp_dir):
+        """Test SecurityError for path traversal."""
+        from src.runtime.run_context import RunContext
+        from unittest.mock import Mock
+        
+        # Create mock run context
+        mock_context = Mock()
+        mock_context.run_id_base = "test_run"
+        
+        # Create engine with path traversal prevention
+        custom_config = {
+            'allow_path_traversal': False,
+        }
+        engine = BatchEngine(mock_context, custom_config)
+        
+        # Try to access file outside allowed directory
+        malicious_path = "/etc/passwd"
+        
+        with pytest.raises(SecurityError, match="Access denied.*Path traversal detected"):
+            engine.parse_csv(malicious_path)
 
     def test_create_batch_jobs(self, engine, temp_dir, run_context):
         """Test batch job creation."""
@@ -404,7 +463,7 @@ class TestBatchEngine:
         csv_file = temp_dir / "empty.csv"
         csv_file.write_text(csv_content)
 
-        with pytest.raises(ValueError, match="No valid data rows found"):
+        with pytest.raises(FileProcessingError, match="Failed to parse CSV file"):
             engine.create_batch_jobs(str(csv_file))
 
     def test_update_job_status(self, engine, temp_dir, run_context):
