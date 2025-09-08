@@ -1,6 +1,6 @@
 # 2bykilt 開発ロードマップ (Baseline v1)
 
-最終更新: 2025-09-07
+最終更新: 2025-09-08
 対象リポジトリ: <https://github.com/Nobukins/2bykilt>
 
 
@@ -51,17 +51,20 @@
 | A6 | #58 #59 | Planned | Metrics 基盤 & Run API |
 | A7 | #43 | Planned | LLM Toggle パリティ |
 | Docs | #66 → #67 | In Progress | Doc Sync >90% 維持方針 |
+| A8 | #81 #92 #102 #104 #106 #107 #108 #109 #110 #111 #113 #114 #115 | Planned | 追加Issueの評価とスケジュール反映 |
 
 Progress Summary (Phase 1): Wave A1 100% / Wave A2 100% / Wave A3 100% / Wave A4 100% ( #25 PR #118, #44/#45/#50 PR #120 ) 残: A5 Security Base へ移行。Draft/試行 PR は進捗計測に含めず。
 
 ### Group B (Phase 2 – 拡張 / 高度化)
 
-- Wave B1: #46 → #47 → #48
-- Wave B2: #52 → (#62 PoC) → (#62 Enforce) → #54 → #55
-- Wave B3: #51
-- Wave B4: #39(part1/part2) → #41 → #42 → #40
-- Wave B5: #53 → #49(part1/part2)
-- Wave B6: Hardening / Cleanup
+| Wave | Issues | Status | 備考 |
+|------|--------|--------|------|
+| B1 | #46 → #47 → #48 | Planned | Run/Job タイムアウト & キャンセル → 並列実行キュー & 制限 → 環境変数バリデーション & 診断 |
+| B2 | #52 → (#62 PoC) → (#62 Enforce) → #54 → #55 | Planned | サンドボックス allow/deny パス → 実行サンドボックス機能制限 → cdp-use デュアルエンジン抽象レイヤ → browser_control pytest パス修正 |
+| B3 | #51 | Planned | Windows プロファイル永続化 |
+| B4 | #39(part1/part2) → #41 → #42 → #40 | Planned | CSV 駆動バッチエンジンコア → バッチ進捗・サマリー → バッチ部分リトライ → CSV D&D UI 連携 |
+| B5 | #53 → #49(part1/part2) | Planned | cdp-use 追加タイプ調査 → ユーザースクリプト プラグインアーキテクチャ |
+| B6 | Hardening / Cleanup | Planned | 全体のHardeningとCleanup |
 
 Gate 条件:
 
@@ -143,6 +146,7 @@ Wave A4 は完了。Group A 基盤機能が完了したため、Phase 2 (Group B
 2. **新機能開発開始**: #39 CSV駆動バッチエンジンコア (Phase 2 先頭)
 3. **Metrics 基盤準備**: #58 メトリクス計測基盤 (A6 先行準備)
 4. **LLM Toggle 完了**: #43 ENABLE_LLM パリティ (A7 早期完了)
+5. **追加Issue評価**: #81 (A2テスト安定化), #92 (Phase 3エンリッチメント), #102-#115 (A3/A8 各種改善) の優先順位付けとスケジュール反映
 
 ### 中期 (Phase 2 展開)
 
@@ -191,7 +195,7 @@ Wave A4 は完了。Group A 基盤機能が完了したため、Phase 2 (Group B
 | 1.0.12 | 2025-09-04 | #37 完了 (PR #99) / #38 regression suite 着手 | Copilot Agent |
 | 1.0.13 | 2025-09-04 | #91 統一録画パス rollout 完了 (flag default 有効化, legacy path warn, async loop 安定化, flaky tests 正常化) | Copilot Agent |
 | 1.0.14 | 2025-09-06 | #28 録画ファイル保存パス統一 完了 (PR #112) / ISSUE_DEPENDENCIES 進捗同期 / Progress Summary 更新 | Copilot Agent |
-| 1.0.16 | 2025-09-08 | Wave A4 完了反映 / 次アクション Group B 移行準備 / 優先順位付け方針追加 | Copilot Agent |
+| 1.0.16 | 2025-09-08 | Wave A4 完了反映 / 次アクション Group B 移行準備 / 優先順位付け方針追加 / 新規Issue評価反映 / Group Bテーブル化 | Copilot Agent |
 
 ---
 
