@@ -331,15 +331,14 @@ class BatchEngine:
 
         # Security check: prevent path traversal (configurable)
         if self.config.get('allow_path_traversal', True) is False:
-            if not csv_path_obj.is_relative_to(Path.cwd()):
-                # Allow access to current working directory and subdirectories only
-                cwd = Path.cwd().resolve()
-                try:
-                    csv_path_obj.relative_to(cwd)
-                except ValueError:
-                    raise SecurityError(f"Access denied: '{csv_path}' is outside allowed directory. "
-                                      f"Path traversal detected. To allow access to files outside the current "
-                                      f"working directory, set 'allow_path_traversal' to True in configuration.")
+            # Allow access to current working directory and subdirectories only
+            cwd = Path.cwd().resolve()
+            try:
+                csv_path_obj.relative_to(cwd)
+            except ValueError:
+                raise SecurityError(f"Access denied: '{csv_path}' is outside allowed directory. "
+                                  f"Path traversal detected. To allow access to files outside the current "
+                                  f"working directory, set 'allow_path_traversal' to True in configuration.")
 
             # Additional security check: prevent access to sensitive system directories
             resolved_path = csv_path_obj.resolve()
@@ -386,16 +385,15 @@ class BatchEngine:
 
         try:
             with open(csv_path_obj, 'r', encoding=self.config['encoding']) as f:
-                # Check if file has content
-                content = f.read()
-                if not content.strip():
+                # Check if file has content by reading a small sample first
+                sample = f.read(1024)  # Read first 1KB to check if empty
+                if not sample.strip():
                     raise FileProcessingError(f"CSV file contains no data: '{csv_path}'. The file is empty or contains only whitespace.")
+                
+                f.seek(0)  # Reset to beginning
 
-                f.seek(0)
-
-                # Detect delimiter and handle various CSV formats
+                # Detect delimiter using the sample
                 try:
-                    sample = content[:1024] if len(content) > 1024 else content
                     sniffer = csv.Sniffer()
                     delimiter = sniffer.sniff(sample).delimiter
                 except csv.Error:
@@ -403,6 +401,8 @@ class BatchEngine:
                     delimiter = self.config['delimiter_fallback']
                     self.logger.warning(f"Could not detect delimiter for {csv_path}, using '{delimiter}'")
 
+                # Reset to beginning and start actual parsing
+                f.seek(0)
                 reader = csv.DictReader(f, delimiter=delimiter)
                 rows = []
                 processed_rows = 0

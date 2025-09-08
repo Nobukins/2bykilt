@@ -1946,10 +1946,6 @@ from src.api.app import create_fastapi_app, run_app
 
 def main():
     """Main entry point for both CLI and UI."""
-    # Handle batch commands before Gradio import to avoid argument conflicts
-    if len(sys.argv) > 1 and sys.argv[1] == 'batch':
-        return handle_batch_commands()
-
     # For UI or default case, proceed with Gradio
     parser = argparse.ArgumentParser(description="Gradio UI for 2Bykilt Agent")
     parser.add_argument("--ip", type=str, default="127.0.0.1", help="IP address to bind to")
@@ -2178,7 +2174,7 @@ Examples:
     # batch start
     start_parser = subparsers.add_parser('start', help='Start batch execution from CSV')
     start_parser.add_argument('csv_path', help='Path to CSV file')
-    start_parser.add_argument('--template', help='Template ID for job configuration')
+    start_parser.add_argument('--template', help='Template ID for job configuration (not implemented yet)')
 
     # batch status
     status_parser = subparsers.add_parser('status', help='Get batch execution status')
@@ -2262,6 +2258,17 @@ def handle_batch_command(args):
             print("✅ Job status updated successfully!")
             return 0
 
+        else:
+            print("❌ Unknown batch command")
+            return 1
+
+    except ImportError as e:
+        print(f"❌ Import Error: {e}")
+        print("   Ensure all required dependencies are installed")
+        return 1
+    except FileNotFoundError as e:
+        print(f"❌ File Not Found: {e}")
+        return 1
     except Exception as e:
         print(f"❌ Error: {e}")
         import traceback
