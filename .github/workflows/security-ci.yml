@@ -98,28 +98,45 @@ jobs:
     name: SonarCloud / SAST
     runs-on: ubuntu-latest
     needs: test
-    if: ${{ github.event_name != 'schedule' && github.actor != 'dependabot[bot]' && env.SONAR_TOKEN != '' }}
+    if: ${{ github.event_name != 'schedule' && github.actor != 'dependabot[bot]' }}
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
+      - name: Check SonarCloud token
+        id: check_token
+        run: |
+          if [ -z "$SONAR_TOKEN" ]; then
+            echo "SONAR_TOKEN not set, skipping SonarCloud analysis"
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "SONAR_TOKEN is set, proceeding with SonarCloud analysis"
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       - uses: actions/checkout@v4
+        if: steps.check_token.outputs.skip == 'false'
         with:
           fetch-depth: 0
       - name: Setup Python (for analyzers)
+        if: steps.check_token.outputs.skip == 'false'
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Download coverage
+        if: steps.check_token.outputs.skip == 'false'
         uses: actions/download-artifact@v4
         with:
           name: coverage-xml
       - name: Normalize coverage path
+        if: steps.check_token.outputs.skip == 'false'
         shell: bash
         run: |
           if [ -f coverage-xml/coverage.xml ]; then
             cp coverage-xml/coverage.xml coverage.xml
           fi
       - name: SonarCloud Scan
+        if: steps.check_token.outputs.skip == 'false'
         uses: SonarSource/sonarcloud-github-action@v2
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -129,7 +146,7 @@ jobs:
             -Dsonar.python.coverage.reportPaths=coverage.xml
             ${{ github.event_name == 'pull_request' && format('-Dsonar.pullrequest.key={0} -Dsonar.pullrequest.branch={1} -Dsonar.pullrequest.base={2}', github.event.pull_request.number, github.head_ref, github.base_ref) || '' }}
       - name: Quality Gate (PR only)
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' && steps.check_token.outputs.skip == 'false' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
