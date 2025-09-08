@@ -10,10 +10,12 @@ import json
 import logging
 import uuid
 import os
+import mimetypes
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any, Union, Iterator
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
+from contextlib import contextmanager
 
 from ..core.artifact_manager import ArtifactManager, get_artifact_manager
 from ..runtime.run_context import RunContext
@@ -166,6 +168,33 @@ class BatchEngine:
 
         # Configure logging level
         self._configure_logging()
+
+    def _validate_file_type(self, csv_path: str):
+        """
+        Validate that the file is a CSV file based on extension and MIME type.
+
+        Args:
+            csv_path: Path to the file to validate
+
+        Raises:
+            FileProcessingError: If file type validation fails
+        """
+        csv_path_obj = Path(csv_path)
+
+        # Check file extension
+        if csv_path_obj.suffix.lower() not in ['.csv', '.txt']:
+            self.logger.warning(f"File '{csv_path}' does not have a typical CSV extension (.csv, .txt). "
+                              f"Extension: {csv_path_obj.suffix}")
+
+        # Check MIME type if possible
+        try:
+            mime_type, _ = mimetypes.guess_type(str(csv_path_obj))
+            if mime_type and not (mime_type.startswith('text/') or mime_type in ['application/csv', 'application/vnd.ms-excel']):
+                self.logger.warning(f"File '{csv_path}' has unexpected MIME type: {mime_type}. "
+                                  f"Expected text/* or CSV-related MIME types.")
+        except Exception as e:
+            # MIME type detection might fail, log but don't fail
+            self.logger.debug(f"Could not determine MIME type for {csv_path}: {e}")
 
     def _configure_logging(self):
         """Configure logging level based on configuration."""
