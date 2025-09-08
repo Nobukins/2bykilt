@@ -1,0 +1,41 @@
+flags:
+  enable_llm:
+    description: "LLM 機能全体の有効化 (legacy ENABLE_LLM env 置換準備)"
+    type: bool
+    default: false
+  engine.cdp_use:
+    description: "Browser engine cdp-use 実験フラグ"
+    type: bool
+    default: true
+  ui.experimental_panel:
+    description: "Experimental UI パネル表示"
+    type: bool
+    default: false
+  artifacts.unified_recording_path:
+    description: "録画ファイル保存パス統一 (#28,#91) (true=artifacts/runs/<run>-art/videos, false=legacy ./tmp/record_videos)"
+    type: bool
+    default: true
+  artifacts.force_recording_migration:
+    description: "レガシー ./tmp/record_videos を強制無効化し常に統一パスへマイグレーション (#28 phase-2)"
+    type: bool
+    default: false
+  artifacts.enable_manifest_v2:
+    description: "アーティファクト manifest v2 (#35) の生成を有効化"
+    type: bool
+    default: true
+  artifacts.video_retention_days:
+    description: "動画アーティファクト保持期間(日) (#37) 0=無効"
+    type: int
+    default: 7
+  artifacts.video_target_container:
+    description: "録画動画ターゲットコンテナ (#30) 'auto' or 'mp4'"
+    type: str
+    default: auto
+  artifacts.video_transcode_enabled:
+    description: "webm→mp4 変換を有効化 (ffmpeg 必須, #30)"
+    type: bool
+    default: false
+  artifacts.screenshot.user_named_copy_enabled:
+    description: "スクリーンショット重複 (ユーザー指定名) 保存を有効化 (#87)"
+    type: bool
+    default: true

@@ -1,0 +1,24 @@
+# Production Environment Configuration
+# Inherits from base.yml and overrides specific settings for production
+
+# Production-specific browser settings
+browser:
+  headless: true  # Always headless in production
+  enable_recording: false  # Disable recording for performance
+  disable_security: false
+  keep_browser_open: false
+
+# Production-specific paths
+storage:
+  save_recording_path: "./tmp/prod/record_videos"
+  save_trace_path: "./tmp/prod/traces" 
+  save_agent_history_path: "./tmp/prod/agent_history"
+
+# Production settings
+development:
+  dev_mode: false
+  debug_logging: false
+
+# Production LLM settings
+llm:
+  temperature: 0.8  # More conservative in production

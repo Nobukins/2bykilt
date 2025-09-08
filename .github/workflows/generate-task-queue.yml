@@ -1,0 +1,152 @@
+name: Generate Task Queue
+
+on:
+  # Daily generation at 3 AM UTC
+  schedule:
+    - cron: '0 3 * * *'
+  
+  # Manual trigger
+  workflow_dispatch:
+  
+  # Trigger on changes to dependencies or scripts
+  push:
+    paths:
+      - 'docs/roadmap/ISSUE_DEPENDENCIES.yml'
+      - 'scripts/generate_task_queue.py'
+      - 'scripts/validate_task_queue.py'
+      - '.github/workflows/generate-task-queue.yml'
+  
+  # Trigger on issue and PR events for real-time updates
+  issues:
+    types: [opened, closed, reopened, labeled, unlabeled]
+  pull_request:
+    types: [opened, closed, reopened, ready_for_review, converted_to_draft]
+
+permissions:
+  contents: write
+  issues: read
+  pull-requests: read
+
+jobs:
+  generate-task-queue:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Use default branch for now, can be configured later
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install PyYAML requests
+      
+      - name: Get current commit hashes
+        id: commits
+        run: |
+          echo "roadmap_commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          echo "dependencies_commit=$(git log -1 --format="%H" -- docs/roadmap/ISSUE_DEPENDENCIES.yml)" >> $GITHUB_OUTPUT
+      
+      - name: Generate task queue
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python scripts/generate_task_queue.py \
+            --repo ${{ github.repository }} \
+            --input docs/roadmap/ISSUE_DEPENDENCIES.yml \
+            --output docs/roadmap/TASK_QUEUE.yml \
+            --wip-limit 5 \
+            --max-parallel-per-area 2 \
+            --ordering critical_path_rank priority longest_distance \
+            --critical-path-higher-is-prior \
+            --verbose
+      
+      - name: Update commit hashes in generated file
+        run: |
+          sed -i 's/roadmap_commit: REPLACE_ME/roadmap_commit: ${{ steps.commits.outputs.roadmap_commit }}/' docs/roadmap/TASK_QUEUE.yml
+          sed -i 's/dependencies_commit: REPLACE_ME/dependencies_commit: ${{ steps.commits.outputs.dependencies_commit }}/' docs/roadmap/TASK_QUEUE.yml
+      
+      - name: Validate generated task queue
+        run: |
+          python scripts/validate_task_queue.py --verbose
+      
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet docs/roadmap/TASK_QUEUE.yml; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "No changes detected in TASK_QUEUE.yml"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Changes detected in TASK_QUEUE.yml"
+            git diff --stat docs/roadmap/TASK_QUEUE.yml
+          fi
+      
+      - name: Commit and push changes
+        # Avoid pushing from pull_request (detached HEAD) and only push when file changed
+        if: steps.changes.outputs.changed == 'true' && github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action (Task Queue Bot)"
+          git add docs/roadmap/TASK_QUEUE.yml
+          BRANCH_NAME="${GITHUB_REF_NAME:-}" 
+          if [ -z "$BRANCH_NAME" ]; then
+            BRANCH_NAME="${{ github.event.repository.default_branch || 'LLM_AS_OPTION' }}"
+          fi
+          echo "Preparing to push to $BRANCH_NAME"
+          git checkout -B "$BRANCH_NAME"
+          COMMIT_TS=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          git commit -m "docs: auto-update task queue" \
+                     -m "Generated at: $COMMIT_TS" \
+                     -m "Roadmap commit: ${{ steps.commits.outputs.roadmap_commit }}" \
+                     -m "Dependencies commit: ${{ steps.commits.outputs.dependencies_commit }}" \
+                     -m "[skip ci]" || echo "Nothing to commit (race)"
+          git push origin "$BRANCH_NAME"
+
+      - name: Skip push (PR context)
+        if: steps.changes.outputs.changed == 'true' && github.event_name == 'pull_request'
+        run: |
+          echo "Skip committing task queue updates on pull_request (detached HEAD)" | tee -a "$GITHUB_STEP_SUMMARY"
+      
+      - name: Output summary
+        run: |
+          echo "## Task Queue Generation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Repository**: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Base branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Roadmap commit**: ${{ steps.commits.outputs.roadmap_commit }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Dependencies commit**: ${{ steps.commits.outputs.dependencies_commit }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Changes detected**: ${{ steps.changes.outputs.changed }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ steps.changes.outputs.changed }}" == "true" ]]; then
+            echo "✅ **Task queue updated and committed**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "ℹ️ **No changes required - task queue is up to date**" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Add generation statistics
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Generation Statistics" >> $GITHUB_STEP_SUMMARY
+          python -c "
+          import yaml
+          with open('docs/roadmap/TASK_QUEUE.yml', 'r') as f:
+              data = yaml.safe_load(f)
+          print(f'- **Total issues**: {data.get(\"diagnostics\", {}).get(\"total_issues\", \"unknown\")}')
+          print(f'- **Ready**: {len(data.get(\"ready\", []))} issues')
+          print(f'- **Blocked**: {len(data.get(\"blocked\", []))} issues') 
+          print(f'- **In Progress**: {len(data.get(\"in_progress\", []))} issues')
+          print(f'- **Done**: {len(data.get(\"done\", []))} issues')
+          violations = data.get('diagnostics', {}).get('constraint_violations', [])
+          if violations:
+              print(f'- **⚠️ Constraint violations**: {len(violations)}')
+          " >> $GITHUB_STEP_SUMMARY

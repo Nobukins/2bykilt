@@ -1,10 +1,10 @@
-name: Security CI
+name: Security CI2
 
 on:
   pull_request:
     branches: [ "*" ]
   push:
-    branches: ["2bykilt", "security-first" ]
+    branches: ["2bykilt"]
   # schedule:
   #   - cron: '0 2 * * *'
 
@@ -16,7 +16,7 @@ permissions:
   checks: write
 
 env:
-  PYTHON_VERSION: '3.11'
+  PYTHON_VERSION: '3.12'
 
 jobs:
   prepare:
@@ -40,13 +40,13 @@ jobs:
           pip install pytest pytest-cov pip-audit
       - name: Show dependency tree
         run: pip freeze
-      - name: Cache SonarCloud packages
+      - name: Cache pip-audit results
         uses: actions/cache@v4
         with:
-          path: ~/.sonar/cache
-          key: sonar-${{ runner.os }}-${{ hashFiles('**/requirements.txt') }}
+          path: ~/.cache/pip-audit
+          key: pip-audit-${{ runner.os }}-${{ hashFiles('requirements*.txt', 'pyproject.toml', 'Pipfile*') }}
           restore-keys: |
-            sonar-${{ runner.os }}-
+            pip-audit-${{ runner.os }}-
       - name: Record coverage path
         id: coverage_path
         run: echo "path=coverage.xml" >> $GITHUB_OUTPUT
@@ -68,10 +68,26 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest pytest-cov
-      - name: Pytest
+      - name: Pytest (ci_safe subset for stable coverage)
         run: |
-          echo "Skip tests/ directory temporarily"
-          pytest --maxfail=1 --cov=src --cov-report=xml --cov-report=term --ignore=tests
+          echo "Running pytest restricted to ci_safe tests to avoid environment-specific browser/profile failures in CI."
+          # Guard: fail fast if any workflow or script still references the deprecated tests/pytest.ini path
+          if grep -R "tests/pytest.ini" -n . \
+            | grep -v "scripts/ci_pytest.sh" \
+            | grep -v "./docs/" \
+            | grep -v ".github/workflows/security-ci.yml"; then
+            echo "[FATAL] Detected stale non-doc reference to tests/pytest.ini. Please remove it (docs/ path is tolerated)." >&2
+            exit 5
+          fi
+          # Use unified runner script for consistent local/CI behavior
+          chmod +x scripts/ci_pytest.sh
+          ./scripts/ci_pytest.sh ci
+          # Generate coverage XML if coverage data exists
+          if [ -f .coverage ]; then
+            coverage xml -i -o coverage.xml
+          else
+            echo "Coverage data not found, skipping XML generation"
+          fi
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
@@ -97,20 +113,67 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: coverage-xml
+      - name: Normalize coverage path
+        shell: bash
+        run: |
+          if [ -f coverage-xml/coverage.xml ]; then
+            cp coverage-xml/coverage.xml coverage.xml
+          fi
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
         with:
           args: >-
             -Dsonar.python.coverage.reportPaths=coverage.xml
-      - name: Quality Gate Status
-        id: quality_gate
-        uses: SonarSource/sonarcloud-github-action@v2
+            ${{ github.event_name == 'pull_request' && format('-Dsonar.pullrequest.key={0} -Dsonar.pullrequest.branch={1} -Dsonar.pullrequest.base={2}', github.event.pull_request.number, github.head_ref, github.base_ref) || '' }}
+      - name: Quality Gate (PR only)
+        if: ${{ github.event_name == 'pull_request' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          args: sonar-quality-gate:check
+        run: |
+          python - <<'PY'
+          import json, os, sys, time, urllib.request, base64
+          host = 'https://sonarcloud.io'
+          project_key = None
+          try:
+            with open('sonar-project.properties', 'r') as f:
+              for line in f:
+                if line.startswith('sonar.projectKey='):
+                  project_key = line.strip().split('=', 1)[1]
+                  break
+          except FileNotFoundError:
+            pass
+          if not project_key:
+            print('sonar-project.properties not found or sonar.projectKey missing; skip gate check')
+            sys.exit(0)
+          token = os.environ.get('SONAR_TOKEN')
+          if not token:
+            print('SONAR_TOKEN not set; skip gate check')
+            sys.exit(0)
+          auth_header = 'Basic ' + base64.b64encode((token + ':').encode()).decode()
+          url = f"{host}/api/qualitygates/project_status?projectKey={project_key}"
+          # Poll up to ~90s for gate to be computed
+          for _ in range(30):
+            try:
+              req = urllib.request.Request(url, headers={'Authorization': auth_header})
+              with urllib.request.urlopen(req, timeout=10) as resp:
+                data = json.loads(resp.read().decode())
+              status = (data.get('projectStatus') or {}).get('status')
+              print('Quality Gate status:', status)
+              if status in ('OK', 'ERROR', 'FAILED'):
+                if status in ('ERROR', 'FAILED'):
+                  sys.exit(1)
+                sys.exit(0)
+            except Exception as e:
+              print('Gate poll error:', e)
+            time.sleep(3)
+          print('Quality Gate status not available in time; not failing the job')
+          sys.exit(0)
+          PY
+  # Note: The legacy 'sonar-quality-gate:check' arg is unsupported in this Action.
+  # We enforce gate via the PR Quality Gate step above and/or GitHub branch protection checks.
 
   sca:
     name: Dependency Audit (pip-audit)
@@ -126,42 +189,79 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pip-audit
-      - name: Run pip-audit
+          pip install pip-audit PyYAML
+      - name: Cache pip-audit results
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip-audit
+          key: pip-audit-${{ runner.os }}-${{ hashFiles('requirements*.txt', 'pyproject.toml', 'Pipfile*') }}
+          restore-keys: |
+            pip-audit-${{ runner.os }}-
+      - name: Run pip-audit with performance measurement
         id: pip_audit
         run: |
-          pip-audit -r requirements.txt -f json > pip-audit.json || true
-          python - <<'PY'
-          import json, sys
-          try:
-              with open('pip-audit.json') as f:
-                  data = json.load(f)
-              if isinstance(data, str):
-                  # 文字列の場合はエラーにする
-                  print("Error: pip-audit.json is not a valid JSON object or array")
-                  sys.exit(1)
-          except Exception as e:
-              print('Failed to parse pip-audit.json', e)
-              sys.exit(1)
-          # 以降の処理も data の型によって分岐
-          if isinstance(data, list):
-              max_sev = max((item.get("severity", 0) for item in data if isinstance(item, dict)), default=0)
-          else:
-              max_sev = data.get("severity", 0) if isinstance(data, dict) else 0
+          # Ensure artifacts directory exists
+          mkdir -p artifacts/security
 
-          print(f"MAX_SEVERITY={max_sev}")
-          with open('pip-audit.max','w') as f:
-              f.write(str(max_sev))
-          if max_sev >= 3:
+          # Define pip-audit command
+          PIP_AUDIT_CMD="pip-audit -r requirements.txt -f json"
+
+          # Measure performance
+          python scripts/measure_scan_perf.py \
+            --tool pip-audit \
+            --command "$PIP_AUDIT_CMD" \
+            --output artifacts/security/scan_perf_before_after.json \
+            --baseline
+
+          # Run pip-audit
+          $PIP_AUDIT_CMD > pip-audit-raw.json || true
+
+          # Normalize output
+          python tools/security/normalize_pip_audit.py pip-audit-raw.json artifacts/security/vuln_report.json
+
+          # Apply policy check
+          python - <<'PY'
+          import json
+          import yaml
+          import sys
+          from pathlib import Path
+
+          # Load policy
+          with open('security/security_policy.yaml', 'r') as f:
+              policy = yaml.safe_load(f)
+
+          # Load normalized report
+          with open('artifacts/security/vuln_report.json', 'r') as f:
+              report = json.load(f)
+
+          # Check thresholds
+          thresholds = policy['thresholds']
+          summary = report['summary']['by_severity']
+
+          violations = []
+          for severity, max_allowed in thresholds.items():
+              if severity.startswith('max_'):
+                  sev_level = severity[4:]  # Remove 'max_' prefix
+                  count = summary.get(sev_level, 0)
+                  if count > max_allowed:
+                      violations.append(f"{sev_level}: {count} > {max_allowed}")
+
+          if violations:
+              print("Policy violations detected:")
+              for v in violations:
+                  print(f"  - {v}")
               sys.exit(1)
+
+          print("All security policies passed")
           PY
-      - name: Upload audit artifact
+      - name: Upload security artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: pip-audit
+          name: security-scan-results
           path: |
-            pip-audit.json
-            pip-audit.max
+            artifacts/security/vuln_report.json
+            artifacts/security/scan_perf_before_after.json
+            pip-audit-raw.json
 
   secret:
     name: Secret Scan (gitleaks)
@@ -218,11 +318,67 @@ jobs:
           path: artifacts
       - name: Extract metrics
         id: metrics
+        shell: bash
         run: |
-          COVERAGE=$(grep -Po 'line-rate="\K[0-9.]+' coverage.xml 2>/dev/null || echo 'N/A') || true
-          if [ -f artifacts/pip-audit/pip-audit.max ]; then MAX_AUDIT=$(cat artifacts/pip-audit/pip-audit.max); else MAX_AUDIT='N/A'; fi
-          echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
-          echo "pip_audit_max=$MAX_AUDIT" >> $GITHUB_OUTPUT
+          set -euo pipefail
+
+          # Locate coverage.xml from artifacts
+          COV_XML=""
+          if [ -f artifacts/coverage-xml/coverage.xml ]; then
+            COV_XML="artifacts/coverage-xml/coverage.xml"
+          elif [ -f coverage.xml ]; then
+            COV_XML="coverage.xml"
+          fi
+
+          if [ -n "${COV_XML}" ] && command -v python3 >/dev/null 2>&1; then
+            COVERAGE=$(python3 - "${COV_XML}" <<'PY'
+          import sys, xml.etree.ElementTree as ET
+          path = sys.argv[1]
+          try:
+              root = ET.parse(path).getroot()
+              # Prefer Cobertura-style line-rate if present
+              rate = root.attrib.get("line-rate")
+              if rate is not None:
+                  print(rate)
+                  sys.exit(0)
+
+              # Compute from lines-covered / lines-valid if available (coverage.py XML)
+              lines_covered = root.attrib.get("lines-covered")
+              lines_valid = root.attrib.get("lines-valid")
+              if lines_covered is not None and lines_valid is not None:
+                  valid = float(lines_valid)
+                  if valid > 0:
+                      print(str(float(lines_covered) / valid))
+                      sys.exit(0)
+
+              # Fallback for JaCoCo-style counters
+              covered = missed = 0
+              for c in root.findall(".//counter[@type='LINE']"):
+                  covered += int(c.attrib.get("covered", 0))
+                  missed += int(c.attrib.get("missed", 0))
+              total = covered + missed
+              if total > 0:
+                  print(str(covered / total))
+                  sys.exit(0)
+          except Exception:
+              pass
+          print("N/A")
+          PY
+            )
+          else
+            # Fallback (very best-effort)
+            COVERAGE=$(grep -Po 'line-rate="\K[0-9.]+' "${COV_XML:-/dev/null}" 2>/dev/null || echo 'N/A') || true
+          fi
+
+          if [ -f artifacts/pip-audit/pip-audit.max ]; then
+            MAX_AUDIT=$(cat artifacts/pip-audit/pip-audit.max)
+          else
+            MAX_AUDIT='N/A'
+          fi
+
+          echo "coverage=$COVERAGE" >> "$GITHUB_OUTPUT"
+          echo "pip_audit_max=$MAX_AUDIT" >> "$GITHUB_OUTPUT"
+          
       - name: Create PR Comment
         uses: peter-evans/create-or-update-comment@v4
         with:

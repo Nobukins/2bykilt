@@ -2,28 +2,117 @@ import os
 import logging
 import traceback
 import glob
+from pathlib import Path
 from typing import Tuple, Optional, Dict, Any
 
 import gradio as gr
-from browser_use.agent.service import Agent
-from browser_use.agent.views import AgentHistoryList
-from browser_use.browser.browser import Browser, BrowserConfig
-from browser_use.browser.context import BrowserContextConfig, BrowserContextWindowSize
 
-from src.browser.custom_browser import CustomBrowser
-from src.browser.custom_context import BrowserContextConfig as CustomBrowserContextConfig
-from src.controller.custom_controller import CustomController
-from src.agent.custom_agent import CustomAgent
-from src.agent.custom_prompts import CustomSystemPrompt, CustomAgentMessagePrompt
+# LLM機能の有効/無効を制御 (migrated to feature flag framework)
+try:
+    from src.config.feature_flags import is_llm_enabled
+    ENABLE_LLM = is_llm_enabled()
+except Exception:  # fallback safety
+    ENABLE_LLM = os.getenv("ENABLE_LLM", "false").lower() == "true"
+
+# 条件付きインポート
+if ENABLE_LLM:
+    try:
+        from browser_use.agent.service import Agent
+        from browser_use.agent.views import AgentHistoryList
+        from browser_use.browser.browser import Browser, BrowserConfig
+        from browser_use.browser.context import BrowserContextConfig, BrowserContextWindowSize
+        
+        from src.browser.custom_browser import CustomBrowser
+        from src.browser.custom_context import BrowserContextConfig as CustomBrowserContextConfig
+        from src.controller.custom_controller import CustomController
+        from src.agent.custom_agent import CustomAgent
+        from src.agent.custom_prompts import CustomSystemPrompt, CustomAgentMessagePrompt
+        
+        from src.config.llms_parser import pre_evaluate_prompt, extract_params, resolve_sensitive_env_variables
+        
+        LLM_AGENT_AVAILABLE = True
+        print("✅ LLM agent modules loaded successfully")
+    except ImportError as e:
+        print(f"⚠️ Warning: LLM agent imports failed: {e}")
+        LLM_AGENT_AVAILABLE = False
+else:
+    LLM_AGENT_AVAILABLE = False
+    print("ℹ️ LLM functionality is disabled (ENABLE_LLM=false)")
+
+# 常に利用可能なモジュール
 from src.utils.utils import get_latest_files
-from src.config.llms_parser import pre_evaluate_prompt, extract_params, resolve_sensitive_env_variables
 from src.script.script_manager import run_script
 from src.browser.browser_manager import prepare_recording_path
+from src.core.artifact_manager import get_artifact_manager
 from src.utils import utils
 from src.utils.globals_manager import get_globals, _global_browser, _global_browser_context, _global_agent, _global_agent_state
 
+# LLM非依存のプロンプト評価機能をインポート
+from src.config.standalone_prompt_evaluator import (
+    pre_evaluate_prompt_standalone, 
+    extract_params_standalone, 
+    resolve_sensitive_env_variables_standalone
+)
+
 # Configure logging
 logger = logging.getLogger(__name__)
+
+def evaluate_prompt_unified(prompt: str) -> Optional[Dict[str, Any]]:
+    """
+    統一されたプロンプト評価機能
+    LLM有効/無効に関わらず、事前登録されたコマンドの評価を行う
+    """
+    # まず、LLM非依存の評価を実行（常に実行）
+    standalone_result = pre_evaluate_prompt_standalone(prompt)
+    if standalone_result:
+        print(f"✅ Command found via standalone evaluator: {standalone_result.get('name')}")
+        return standalone_result
+    
+    # LLM機能が有効で、standaloneで見つからなかった場合のみLLM評価を実行
+    if ENABLE_LLM and LLM_AGENT_AVAILABLE:
+        try:
+            llm_result = pre_evaluate_prompt(prompt)
+            if llm_result:
+                print(f"✅ Command found via LLM evaluator: {llm_result.get('name')}")
+                return llm_result
+        except Exception as e:
+            print(f"⚠️ LLM evaluation failed: {e}")
+    
+    return None
+
+def extract_params_unified(prompt: str, param_names) -> Dict[str, str]:
+    """
+    統一されたパラメータ抽出機能
+    """
+    # まず、LLM非依存の抽出を実行
+    standalone_params = extract_params_standalone(prompt, param_names)
+    if standalone_params:
+        return standalone_params
+    
+    # LLM機能が有効な場合のみLLM抽出を実行
+    if ENABLE_LLM and LLM_AGENT_AVAILABLE:
+        try:
+            return extract_params(prompt, param_names)
+        except Exception as e:
+            print(f"⚠️ LLM parameter extraction failed: {e}")
+    
+    return {}
+
+def resolve_env_variables_unified(text: str) -> str:
+    """
+    統一された環境変数解決機能
+    """
+    # まず、LLM非依存の解決を実行
+    result = resolve_sensitive_env_variables_standalone(text)
+    
+    # LLM機能が有効な場合のみLLM解決を実行
+    if ENABLE_LLM and LLM_AGENT_AVAILABLE:
+        try:
+            return resolve_sensitive_env_variables(result)
+        except Exception as e:
+            print(f"⚠️ LLM environment variable resolution failed: {e}")
+    
+    return result
 
 # Global state variables are now imported from globals_manager
 
@@ -300,18 +389,44 @@ async def run_browser_agent(
     agent_state.clear_stop()
 
     try:
-        # Pre-evaluate prompt for script matching
-        script_info = pre_evaluate_prompt(task)
+        # 統一されたプロンプト評価を使用（LLM有効/無効に関わらず動作）
+        script_info = evaluate_prompt_unified(task)
         if script_info:
-            params = extract_params(task, script_info.get('params', ''))
-            script_output, script_path = await run_script(script_info, params, headless=headless, 
+            print(f"🎯 Executing registered command: {script_info.get('command_name')}")
+            
+            # Get the action definition and parameters from the script_info
+            action_def = script_info.get('action_def', {})
+            params = script_info.get('params', {})
+            
+            print(f"📋 Action definition: {action_def}")
+            print(f"🔧 Parameters: {params}")
+            
+            script_output, script_path = await run_script(action_def, params, headless=headless, 
                                                          save_recording_path=save_recording_path if enable_recording else None)
             return (
                 script_output,
                 "",
-                f"Executed script: {script_path}",
-                "",
+                f"✅ Executed registered command: {script_info.get('command_name')}",
+                f"Script path: {script_path}",
                 script_path if enable_recording else None,
+                None,
+                None,
+                gr.update(value="Stop", interactive=True),
+                gr.update(interactive=True)
+            )
+
+        # LLM機能が無効で、登録済みコマンドでもない場合は制限的な動作
+        if not ENABLE_LLM or not LLM_AGENT_AVAILABLE:
+            return (
+                "⚠️ LLM機能が無効のため、自然言語による指示は処理できません。\n\n" +
+                "以下のオプションを使用してください:\n" +
+                "1. 事前登録されたコマンド（例: @search-linkedin query=test）\n" +
+                "2. 直接URL（例: https://www.google.com）\n" +
+                "3. JSON形式のアクション定義",
+                "LLM機能が無効です",
+                "制限モードで動作中",
+                "LLM機能を有効にするには ENABLE_LLM=true を設定してください",
+                None,
                 None,
                 None,
                 gr.update(value="Stop", interactive=True),
@@ -326,7 +441,7 @@ async def run_browser_agent(
                                  glob.glob(os.path.join(recording_path, "*.[wW][eE][bB][mM]")))
 
         # Resolve sensitive variables and initialize LLM
-        task = resolve_sensitive_env_variables(task)
+        task = resolve_env_variables_unified(task)
         llm = utils.get_llm_model(
             provider=llm_provider, model_name=llm_model_name, num_ctx=llm_num_ctx,
             temperature=llm_temperature, base_url=llm_base_url, api_key=llm_api_key,
@@ -373,6 +488,11 @@ async def run_browser_agent(
                            glob.glob(os.path.join(recording_path, "*.[wW][eE][bB][mM]")))
             if new_videos - existing_videos:
                 latest_video = list(new_videos - existing_videos)[0]
+                # Register artifact (Issue #30 integration)
+                try:
+                    get_artifact_manager().register_video_file(Path(latest_video))
+                except Exception:
+                    pass
 
         return (
             final_result, errors, model_actions, model_thoughts, latest_video, trace_file, history_file,

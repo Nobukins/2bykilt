@@ -131,7 +131,7 @@ env.bak/
 venv.bak/
 test_env/
 myenv
-
+venv*/
 
 # Spyder project settings
 .spyderproject
@@ -208,5 +208,39 @@ logs/*
 
 # temporally cleanup for dynamically generated files
 assets/fonts/
-tmp/myscript/pytest.ini
-tmp/myscript/browser_control.py
+# tmp/myscript/pytest.ini
+# tmp/myscript/browser_control.py
+tmp/test_*
+
+
+# test_*
+
+# Archive directory (keep local, do not track)
+.archive/
+
+# Recorded videos (artifacts)
+record_videos/
+
+# Selenium user data profiles (temporary copies / test artifacts)
+SeleniumProfile/
+**/SeleniumProfile/
+**/SeleniumProfile/**
+
+# Run artifacts (auto-generated flag snapshots, etc.)
+artifacts/runs/
+
+# Test run artifacts
+tests/artifacts/runs/
+
+# Temporary browser test settings output
+tests/browser/tmp/webui_settings_test/
+
+# Browser test logs
+tests/browser/logs/
+
+# Multi-environment config artifacts
+effective_config*.json
+config_comparison*.json
+
+# ignore generated enrichment summaries
+enrich_summary.json

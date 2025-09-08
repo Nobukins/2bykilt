@@ -1,0 +1,23 @@
+# Staging Environment Configuration
+# Inherits from base.yml and overrides specific settings for staging
+
+# Staging-specific browser settings
+browser:
+  headless: true  # Run headless in staging
+  enable_recording: true
+  disable_security: false
+
+# Staging-specific paths  
+storage:
+  save_recording_path: "./tmp/staging/record_videos"
+  save_trace_path: "./tmp/staging/traces"
+  save_agent_history_path: "./tmp/staging/agent_history"
+
+# Staging settings
+development:
+  dev_mode: false
+  debug_logging: true  # Keep logging for troubleshooting
+
+# Staging LLM settings
+llm:
+  temperature: 1.0  # Standard temperature

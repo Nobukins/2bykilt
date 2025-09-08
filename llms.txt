@@ -2,7 +2,6 @@ actions:
   - name: search-linkedin
     type: script
     script: search_script.py
-    description: "nogtipsにてブログ記事内検索"
     params:
       - name: query
         required: true
@@ -11,16 +10,16 @@ actions:
     command: pytest ./tmp/myscript/search_script.py --query ${params.query}
     slowmo: 2500
 
-  - name: action-runner-nogtips
-    type: action_runner_template
-    action_script: nogtips_search
-    description: "保存済みのブラウザ操作魔法を唱える"
+  - name: search-beatport
+    type: script
+    script: search_script_music.py
     params:
       - name: query
         required: true
         type: string
         description: "検索クエリ"
-    command: python ./tmp/myscript/action_runner.py --action ${action_script} --query "${params.query}" --slowmo 2500 --countdown 3
+    command: pytest ./tmp/myscript/search_script_music.py --query ${params.query}
+    slowmo: 2500
 
   - name: phrase-search
     type: browser-control
@@ -30,7 +29,6 @@ actions:
         type: string
         description: "Search query to execute"
     slowmo: 1000
-    description: "browser-controlを利用したplaywrightベーススクリプト実行　その１"
     flow:
       - action: command
         url: "https://www.google.com"
@@ -53,7 +51,6 @@ actions:
         type: string
         description: "Search query to execute"
     slowmo: 1000
-    description: "browser-controlを利用したplaywrightベーススクリプト実行　その２"
     flow:
       - action: command
         url: "https://nogtips.wordpress.com/"
@@ -73,7 +70,6 @@ actions:
     git: https://github.com/Nobukins/sample-tests.git
     script_path: search_script.py
     version: main
-    description: "git管理でのブラウザ操作のコマンド管理"
     params:
       - name: query
         required: true
@@ -86,7 +82,6 @@ actions:
   - name: search-jsonpayload
     type: unlock-future
     keep_tab_open: true
-    description: "unlock-futureを利用したインタラクティブセッション　その１"
     params:
       - name: query
         required: true
@@ -112,13 +107,11 @@ actions:
     flow:
       - action: keyboard_press
         key: "Enter"
-    description: "unlock-futureを利用したインタラクティブセッション　その２（クリック）"
 
   - name: nogtips-jsonpayload
     type: unlock-future
     keep_tab_open: True
     tab_selection_strategy: new_tab  # 明示的に新規タブを指定
-    description: "unlock-futureを利用したインタラクティブセッション　その３"
     params:
       - name: query
         required: true
