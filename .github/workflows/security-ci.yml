@@ -40,13 +40,13 @@ jobs:
           pip install pytest pytest-cov pip-audit
       - name: Show dependency tree
         run: pip freeze
-      - name: Cache SonarCloud packages
+      - name: Cache pip-audit results
         uses: actions/cache@v4
         with:
-          path: ~/.sonar/cache
-          key: sonar-${{ runner.os }}-${{ hashFiles('**/requirements.txt') }}
+          path: ~/.cache/pip-audit
+          key: pip-audit-${{ runner.os }}-${{ hashFiles('requirements*.txt', 'pyproject.toml', 'Pipfile*') }}
           restore-keys: |
-            sonar-${{ runner.os }}-
+            pip-audit-${{ runner.os }}-
       - name: Record coverage path
         id: coverage_path
         run: echo "path=coverage.xml" >> $GITHUB_OUTPUT
@@ -190,41 +190,69 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pip-audit
-      - name: Run pip-audit
+      - name: Cache pip-audit results
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip-audit
+          key: pip-audit-${{ runner.os }}-${{ hashFiles('requirements*.txt', 'pyproject.toml', 'Pipfile*') }}
+          restore-keys: |
+            pip-audit-${{ runner.os }}-
+      - name: Run pip-audit with performance measurement
         id: pip_audit
         run: |
-          pip-audit -r requirements.txt -f json > pip-audit.json || true
-          python - <<'PY'
-          import json, sys
-          try:
-              with open('pip-audit.json') as f:
-                  data = json.load(f)
-              if isinstance(data, str):
-                  # 文字列の場合はエラーにする
-                  print("Error: pip-audit.json is not a valid JSON object or array")
-                  sys.exit(1)
-          except Exception as e:
-              print('Failed to parse pip-audit.json', e)
-              sys.exit(1)
-          # 以降の処理も data の型によって分岐
-          if isinstance(data, list):
-              max_sev = max((item.get("severity", 0) for item in data if isinstance(item, dict)), default=0)
-          else:
-              max_sev = data.get("severity", 0) if isinstance(data, dict) else 0
+          # Measure performance
+          python scripts/measure_scan_perf.py \
+            --tool pip-audit \
+            --command "pip-audit -r requirements.txt -f json" \
+            --output artifacts/security/scan_perf_before_after.json
 
-          print(f"MAX_SEVERITY={max_sev}")
-          with open('pip-audit.max','w') as f:
-              f.write(str(max_sev))
-          if max_sev >= 3:
+          # Run pip-audit
+          pip-audit -r requirements.txt -f json > pip-audit-raw.json || true
+
+          # Normalize output
+          python tools/security/normalize_pip_audit.py pip-audit-raw.json artifacts/security/vuln_report.json
+
+          # Apply policy check
+          python - <<'PY'
+          import json, yaml, sys
+          from pathlib import Path
+
+          # Load policy
+          with open('security/security_policy.yaml', 'r') as f:
+              policy = yaml.safe_load(f)
+
+          # Load normalized report
+          with open('artifacts/security/vuln_report.json', 'r') as f:
+              report = json.load(f)
+
+          # Check thresholds
+          thresholds = policy['thresholds']
+          summary = report['summary']['by_severity']
+
+          violations = []
+          for severity, max_allowed in thresholds.items():
+              if severity.startswith('max_'):
+                  sev_level = severity[4:]  # Remove 'max_' prefix
+                  count = summary.get(sev_level, 0)
+                  if count > max_allowed:
+                      violations.append(f"{sev_level}: {count} > {max_allowed}")
+
+          if violations:
+              print("Policy violations detected:")
+              for v in violations:
+                  print(f"  - {v}")
               sys.exit(1)
+
+          print("All security policies passed")
           PY
-      - name: Upload audit artifact
+      - name: Upload security artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: pip-audit
+          name: security-scan-results
           path: |
-            pip-audit.json
-            pip-audit.max
+            artifacts/security/vuln_report.json
+            artifacts/security/scan_perf_before_after.json
+            pip-audit-raw.json
 
   secret:
     name: Secret Scan (gitleaks)

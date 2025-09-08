@@ -1,0 +1,31 @@
+# Security Scan Policy Configuration
+# This file defines the policies for security scanning operations
+
+# Thresholds for vulnerability severity levels
+thresholds:
+  # Maximum allowed vulnerabilities by severity
+  max_critical: 0      # No critical vulnerabilities allowed
+  max_high: 0          # No high vulnerabilities allowed
+  max_medium: 5        # Allow up to 5 medium vulnerabilities
+  max_low: 10          # Allow up to 10 low vulnerabilities
+  max_info: 20         # Allow up to 20 info-level findings
+
+# Scan behavior settings
+scan_settings:
+  # Whether to fail CI on tool errors (network issues, etc.)
+  fail_on_tool_error: true
+
+  # Cache settings for performance optimization
+  cache:
+    # Cache key components for pip-audit
+    pip_audit_cache_key: "pip-audit-${{ hashFiles('requirements*.txt', 'pyproject.toml') }}"
+    # Cache key components for SonarCloud
+    sonar_cache_key: "sonar-${{ hashFiles('**/*.py', 'sonar-project.properties') }}"
+
+  # Job dependencies and ordering
+  job_dependencies:
+    - security_scan
+    - dependency_audit
+
+# Suppression rules for known false positives
+# Note: Individual suppressions are managed in suppressions.yaml
