@@ -41,6 +41,7 @@ from datetime import datetime, timezone
 import io
 
 from src.runtime.run_context import RunContext
+from src.security.secret_masker import mask_text, mask_dict, is_masking_enabled
 
 Hook = Callable[[dict], dict]
 
@@ -107,6 +108,13 @@ class JsonlLogger:
         rc = RunContext.get()
         with self._c.lock:
             self._c.seq += 1
+
+            # Apply secret masking if enabled
+            if is_masking_enabled():
+                msg = mask_text(msg)
+                if extra:
+                    extra = mask_dict(extra)
+
             record: Dict[str, Any] = {
                 "ts": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
                 "seq": self._c.seq,
