@@ -305,6 +305,69 @@ class TestBatchEngine:
         rows = engine.parse_csv(str(csv_file))
         assert len(rows) >= 1  # At least the first valid row
 
+    def test_config_validation_valid(self, run_context):
+        """Test that valid configuration passes validation."""
+        from src.batch.engine import BatchEngine
+        
+        valid_config = {
+            'max_file_size_mb': 100,
+            'chunk_size': 500,
+            'encoding': 'utf-8',
+            'delimiter_fallback': ';',
+            'allow_path_traversal': False,
+            'validate_headers': True,
+            'skip_empty_rows': False
+        }
+        
+        # Should not raise exception
+        engine = BatchEngine(run_context, valid_config)
+        assert engine.config['max_file_size_mb'] == 100
+
+    def test_config_validation_invalid_max_file_size(self, run_context):
+        """Test configuration validation for invalid max_file_size_mb."""
+        from src.batch.engine import BatchEngine
+        
+        invalid_config = {'max_file_size_mb': -1}
+        
+        with pytest.raises(ValueError, match="max_file_size_mb must be a positive number"):
+            BatchEngine(run_context, invalid_config)
+
+    def test_config_validation_invalid_chunk_size(self, run_context):
+        """Test configuration validation for invalid chunk_size."""
+        from src.batch.engine import BatchEngine
+        
+        invalid_config = {'chunk_size': 0}
+        
+        with pytest.raises(ValueError, match="chunk_size must be a positive integer"):
+            BatchEngine(run_context, invalid_config)
+
+    def test_config_validation_invalid_encoding(self, run_context):
+        """Test configuration validation for invalid encoding."""
+        from src.batch.engine import BatchEngine
+        
+        invalid_config = {'encoding': ''}
+        
+        with pytest.raises(ValueError, match="encoding must be a non-empty string"):
+            BatchEngine(run_context, invalid_config)
+
+    def test_config_validation_invalid_delimiter(self, run_context):
+        """Test configuration validation for invalid delimiter_fallback."""
+        from src.batch.engine import BatchEngine
+        
+        invalid_config = {'delimiter_fallback': ';;'}
+        
+        with pytest.raises(ValueError, match="delimiter_fallback must be a single character"):
+            BatchEngine(run_context, invalid_config)
+
+    def test_config_validation_invalid_boolean(self, run_context):
+        """Test configuration validation for invalid boolean values."""
+        from src.batch.engine import BatchEngine
+        
+        invalid_config = {'allow_path_traversal': 'true'}
+        
+        with pytest.raises(ValueError, match="allow_path_traversal must be a boolean"):
+            BatchEngine(run_context, invalid_config)
+
     def test_create_batch_jobs(self, engine, temp_dir, run_context):
         """Test batch job creation."""
         csv_content = "name,value\ntest1,data1\ntest2,data2\n"
