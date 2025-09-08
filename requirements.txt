@@ -39,13 +39,13 @@ httpcore==1.0.7
 websockets==14.2
 
 # LangChain Core (AI/LLM Foundation)
-langchain==0.3.14
+langchain==0.3.21
 langchain-core==0.3.49
 langchain-text-splitters==0.3.6
 langsmith==0.2.11
 
 # LLM Providers
-langchain-openai==0.3.1        # OpenAI GPT-4, GPT-3.5, Azure OpenAI
+langchain-openai==0.3.11       # OpenAI GPT-4, GPT-3.5, Azure OpenAI
 langchain-anthropic==0.3.3     # Claude 3 (Sonnet, Haiku, Opus)
 langchain-google-genai==2.1.2  # Google Gemini
 langchain-mistralai==0.2.4     # Mistral AI
