@@ -2034,15 +2034,12 @@ def main():
     # Check if this is a batch command (before Gradio import)
     if len(sys.argv) > 1 and sys.argv[1] == 'batch':
         # Handle batch commands before importing Gradio
-        if len(sys.argv) == 2 or (len(sys.argv) > 2 and sys.argv[2] in ['--help', '-h']):
-            # Show batch help
-            parser = create_batch_parser()
-            parser.print_help()
-            return 1
-
         parser = create_batch_parser()
         try:
-            args = parser.parse_args()
+            args = parser.parse_args(sys.argv[2:])  # Skip 'bykilt.py batch' part
+            if args.batch_command is None:
+                parser.print_help()
+                return 1
             return handle_batch_command(args)
         except SystemExit:
             # argparse prints help and exits, we want to continue
@@ -2270,29 +2267,22 @@ Examples:
         """
     )
 
-    subparsers = parser.add_subparsers(dest='command', help='Available commands')
-
-    # Batch commands
-    batch_parser = subparsers.add_parser('batch', help='Batch execution commands')
-    batch_subparsers = batch_parser.add_subparsers(dest='batch_command', help='Batch subcommands')
+    subparsers = parser.add_subparsers(dest='batch_command', help='Batch subcommands')
 
     # batch start
-    start_parser = batch_subparsers.add_parser('start', help='Start batch execution from CSV')
+    start_parser = subparsers.add_parser('start', help='Start batch execution from CSV')
     start_parser.add_argument('csv_path', help='Path to CSV file')
     start_parser.add_argument('--template', help='Template ID for job configuration')
 
     # batch status
-    status_parser = batch_subparsers.add_parser('status', help='Get batch execution status')
+    status_parser = subparsers.add_parser('status', help='Get batch execution status')
     status_parser.add_argument('batch_id', help='Batch ID to check')
 
     # batch update-job
-    update_parser = batch_subparsers.add_parser('update-job', help='Update job status')
+    update_parser = subparsers.add_parser('update-job', help='Update job status')
     update_parser.add_argument('job_id', help='Job ID to update')
     update_parser.add_argument('status', choices=['completed', 'failed'], help='New status')
     update_parser.add_argument('--error', help='Error message for failed jobs')
-
-    # UI command
-    ui_parser = subparsers.add_parser('ui', help='Launch web UI (default)')
 
     return parser
 
