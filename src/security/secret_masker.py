@@ -97,7 +97,7 @@ class SecretMasker:
             # Slack tokens
             MaskingRule(
                 name="slack_token",
-                pattern=re.compile(r'\b(xox[p|b|a]-[0-9]-[0-9]{12}-[0-9]{12}-[a-zA-Z0-9]{24,})\b'),
+                pattern=re.compile(r'\b(xox[pba]-[0-9]-[0-9]{12}-[0-9]{12}-[a-zA-Z0-9]{24,})\b'),
                 replacement="xox*-****-****-****-****",
                 description="Slack bot/user tokens"
             ),
