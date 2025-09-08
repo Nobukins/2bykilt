@@ -46,13 +46,13 @@
 | A1 | #64 #65 #63 | ✅ Done | Feature Flags / Multi-env Loader / llms.txt Validator 実装完了 (PR #20 由来) |
 | A2 | #32 ✅ #31 ✅ #56 ✅ #57 ✅ | ✅ Done | #56 / #57 実装完了 (PR #83) |
 | A3 | #28 ✅ #30 ✅ #33 ✅ #35 ✅ #36 ✅ #34 ✅ #37 ✅ #38 ✅ #87 ✅ #88 ✅ #89 ✅ #91 ✅ | ✅ Done | 全 A3 アーティファクト系 Issue 完了 (#38 PR #103 反映) / Hardening follow-up (非機能) は別 Issue 検討 |
-| A4 | #25 #44 #45 #50 (#55) | Planned | Runner Reliability / git_script 系統 |
+| A4 | #25 ✅ #44 ✅ #45 ✅ #50 ✅ (#55) | ✅ Done | Runner Reliability / git_script 系統 完了 (PR #118, #120) |
 | A5 | #60 #61 | Planned | Security Base (Mask / Scan) |
 | A6 | #58 #59 | Planned | Metrics 基盤 & Run API |
 | A7 | #43 | Planned | LLM Toggle パリティ |
 | Docs | #66 → #67 | In Progress | Doc Sync >90% 維持方針 |
 
-Progress Summary (Phase 1): Wave A1 100% / Wave A2 100% / Wave A3 100% ( #34 PR #93, #35 PR #94, #36 PR #95, #87 PR #96, #88 PR #97, #89 PR #98, #37 PR #99, #91 PR #105, #28 PR #112, #38 PR #103 ) 残: A4 以降へ移行。Draft/試行 PR は進捗計測に含めず。
+Progress Summary (Phase 1): Wave A1 100% / Wave A2 100% / Wave A3 100% / Wave A4 100% ( #25 PR #118, #44/#45/#50 PR #120 ) 残: A5 Security Base へ移行。Draft/試行 PR は進捗計測に含めず。
 
 ### Group B (Phase 2 – 拡張 / 高度化)
 
@@ -129,34 +129,46 @@ Flags / 後方互換 Schema / 追加専用ログ→削除遅延 / Sandbox enforc
 
 ## I. 次アクション
 
-Wave A3 は rev 1.0.15 で完了。以下は Wave A4 (Runner Reliability) へのトランジション計画と、後続 Metrics (A6) へ向けた先行整備。
+Wave A4 は完了。Group A 基盤機能が完了したため、Phase 2 (Group B) の新機能開発へ移行。
 
-### 短期 (Wave A4 Kickoff / 直近 1–2 PR)
+### 優先順位付け方針
 
-1. Runner Reliability Core 着手: #25 再検証 (git_script 解決), 続いて #44 バグ拡張, #45 認証/プロキシ設計スコープ確定, #50 ディレクトリ移行アナウンス草案。
-2. 録画パス移行フェーズ 2 警告 (#106): legacy 強制利用時の一度きり警告 (構造化ログ) 実装で drift 防止。
-3. Browser-control 録画未生成バグ (#110): enable_recording 伝播 & video オプション設定修正、回帰テスト追加。
-4. Resolver 委譲リファクタ (#111): ArtifactManager.resolve_recording_dir → 統一 resolver 呼び出しへ移行し重複除去。
-5. 回帰ハードニング (#115): 破損動画 / 強制移行 / portability / flags 再生成 テストのうち ci_safe 適用可能 subset を統合。
-6. Docs / Guard 整理 (#113, #114): tests/pytest.ini 旧参照除去 & guard スコープ方針決定 (スクリプト化是非)。
+- **基盤機能完了**: Group A (A1-A4) の全Waveが完了したため、新機能開発を優先
+- **ユーザーインパクト重視**: #39 (CSV駆動バッチエンジン) はユーザー体験向上効果が高いため優先
+- **セキュリティ重視**: #60 (シークレットマスキング拡張) はセキュリティ強化のため優先
 
-### 中期 (A4 中盤 / Metrics 先行準備)
+### 短期 (A5 Security Base / 新機能開発並行)
 
-1. Metrics 基盤 事前作業 (#58): イベントタクソノミ (flag.resolve, artifact.video.register, screenshot.capture) 草案 + コード内 TODO 埋め込み (実装は A6 本番)。
-2. カバレッジ改善 (#109): 新規行 >80% 目標で Quality Gate PASS 再挑戦 (信頼性改修前にベースライン安定)。
-3. FeatureFlags アーティファクト補助 (#102): eager 生成 API / テストヘルパ設計確定 (実装は信頼性改修に影響しない範囲)。
+1. **Security Base 着手**: #60 シークレットマスキング拡張 → #61 依存セキュリティスキャン最適化
+2. **新機能開発開始**: #39 CSV駆動バッチエンジンコア (Phase 2 先頭)
+3. **Metrics 基盤準備**: #58 メトリクス計測基盤 (A6 先行準備)
+4. **LLM Toggle 完了**: #43 ENABLE_LLM パリティ (A7 早期完了)
 
-### 長期 / バックログ (A4 後半～)
+### 中期 (Phase 2 展開)
 
-1. Async / Browser 安定化 (#81, #101, #108): Edge flake (#108) 50-run 安定後 xfail 除去、統一 TEST_STRATEGY.md 完了。
-2. Guard スクリプト化・差分限定走査 (#114) 実装 (方針が "実装する" になった場合)。
-3. Sandbox / Security 強化 (#62 事前検討) は Runner 基盤の安定後に着手。
+1. **Batch Processing 展開**: #39 → #40 → #41 → #42 (CSV駆動一連)
+2. **Runner Enhancement**: #46 → #47 → #48 (タイムアウト/並列/診断)
+3. **Security Hardening**: #62 → #52 (サンドボックス強化)
+4. **Plugins Architecture**: #49 (ユーザースクリプト拡張)
 
-### メモ / ポリシー
+### 長期 (Phase 2 後半)
 
-- A4 期間中に Metrics (#58) の instrumentation コードは "NO-OP + TODO" コメントに留め、本番エクスポータ / API (#59) は A6 で実装。
-- ハードニング (#115) のうち高負荷/非 determinism リスクのあるシナリオは nightly へ分離する方針を検討。
-- 依存自動更新 (#76) は A4 初期の負荷を鑑み後半再評価。
+1. **Observability 完了**: #58 → #59 (メトリクスAPI)
+2. **Advanced Features**: #53 → #54 (CDPデュアルエンジン)
+3. **Documentation**: #66 → #67 (最終仕様文書化)
+
+### 完了基準 (Group A → Group B 移行)
+
+- ✅ Group A: 全Wave完了 (A1-A4 100%)
+- ✅ Security Base: 最低限のセキュリティ対策完了
+- ✅ 新機能: 少なくとも1つのユーザー価値提供機能稼働
+- ⏳ Docs: 同期率維持 (90%+)
+
+### リスク管理
+
+- **新機能リスク**: #39 は experimental だが、Phase 2 先頭として慎重に実装
+- **セキュリティ優先**: #60 を A5 と並行して早期完了
+- **後方互換**: Flag ベースの段階的導入を徹底
 
 ---
 
@@ -179,7 +191,7 @@ Wave A3 は rev 1.0.15 で完了。以下は Wave A4 (Runner Reliability) への
 | 1.0.12 | 2025-09-04 | #37 完了 (PR #99) / #38 regression suite 着手 | Copilot Agent |
 | 1.0.13 | 2025-09-04 | #91 統一録画パス rollout 完了 (flag default 有効化, legacy path warn, async loop 安定化, flaky tests 正常化) | Copilot Agent |
 | 1.0.14 | 2025-09-06 | #28 録画ファイル保存パス統一 完了 (PR #112) / ISSUE_DEPENDENCIES 進捗同期 / Progress Summary 更新 | Copilot Agent |
-| 1.0.15 | 2025-09-07 | #38 回帰スイート完了 (PR #103) / A3 Wave 全完了反映 / 次アクション A4 移行準備 | Copilot Agent |
+| 1.0.16 | 2025-09-08 | Wave A4 完了反映 / 次アクション Group B 移行準備 / 優先順位付け方針追加 | Copilot Agent |
 
 ---
 

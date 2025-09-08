@@ -54,10 +54,10 @@ issues:
       risk: null, critical_path_rank: 1}
   "44": {title: "git_script 解決ロジック不具合修正", meta: {area: runner, type: bug, 
         priority: P0, phase: "1", stability: core}, depends: ["25"], dependents: [
-      "45"], risk: null, critical_path_rank: 2}
+      "45"], risk: null, progress: {state: done, primary_pr: 120}, critical_path_rank: 2}
   "45": {title: "git_script 認証 & プロキシ", meta: {area: runner, type: feat, 
         priority: P1, phase: "1", stability: core}, depends: ["25", "44"], 
-      dependents: [], risk: null, critical_path_rank: 1}
+      dependents: [], risk: null, progress: {state: done, primary_pr: 120}, critical_path_rank: 1}
   "46": {title: "Run/Job タイムアウト & キャンセル", meta: {area: runner, type: feat, 
         priority: P2, phase: "2", stability: core}, depends: ["32"], dependents: [
       "47"], risk: high, critical_path_rank: 3}
@@ -72,7 +72,7 @@ issues:
     dependents: [], risk: high, critical_path_rank: 1}
   "50": {title: "ディレクトリ名変更 & 移行", meta: {area: runner, type: chore, priority: P1,
       phase: "1", stability: core}, depends: ["25"], dependents: [], risk: null, 
-      critical_path_rank: 1}
+      progress: {state: done, primary_pr: 120}, critical_path_rank: 1}
   "51": {title: "Windows プロファイル永続化", meta: {area: runner, type: feat, priority: 
         P2, phase: "2", stability: core}, depends: ["47"], dependents: [], risk: 
       null, critical_path_rank: 1}
