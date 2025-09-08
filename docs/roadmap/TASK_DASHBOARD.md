@@ -1,6 +1,6 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-09-07T14:11:47+00:00
+Generated at (UTC): 2025-09-08T00:36:24+00:00
 
 ## 1. メタサマリー
 
@@ -109,7 +109,7 @@ Sorted By: critical_path_rank
 | 36 | アーティファクト一覧 API | P1 | 1 | artifacts |  | 2 | 2 | 1 | 1 | #95 |
 | 37 | 動画アーティファクト保持期間 | P1 | 1 | artifacts |  | 2 | 3 | 1 | 1 | #99 |
 | 39 | CSV 駆動バッチエンジンコア | P1 | 2 | batch |  | 2 | 1 | 1 | 3 |  |
-| 44 | git_script 解決ロジック不具合修正 | P0 | 1 | runner |  | 2 | 1 | 1 | 1 |  |
+| 44 | git_script 解決ロジック不具合修正 | P0 | 1 | runner |  | 2 | 1 | 1 | 1 | #120 |
 | 47 | 並列実行キュー & 制限 | P2 | 2 | runner |  | 2 | 2 | 1 | 1 |  |
 | 53 | cdp-use 追加タイプ調査 | P2 | 2 | runner |  | 2 | 0 | 0 | 1 |  |
 | 56 | 統一 JSON Lines ロギング実装 | P0 | 1 | logging |  | 2 | 2 | 2 | 3 | #83 |
@@ -124,10 +124,10 @@ Sorted By: critical_path_rank
 | 41 | バッチ進捗・サマリー | P2 | 2 | batch |  | 1 | 3 | 2 | 0 |  |
 | 42 | バッチ部分リトライ | P2 | 2 | batch |  | 1 | 2 | 1 | 0 |  |
 | 43 | ENABLE_LLM パリティ | P1 | 1-late | runner |  | 1 | 2 | 2 | 0 |  |
-| 45 | git_script 認証 & プロキシ | P1 | 1 | runner |  | 1 | 2 | 2 | 0 |  |
+| 45 | git_script 認証 & プロキシ | P1 | 1 | runner |  | 1 | 2 | 2 | 0 | #120 |
 | 48 | 環境変数バリデーション & 診断 | P2 | 2 | runner |  | 1 | 1 | 1 | 0 |  |
 | 49 | ユーザースクリプト プラグインアーキテクチャ | P3 | 2 | plugins | high | 1 | 2 | 2 | 0 |  |
-| 50 | ディレクトリ名変更 & 移行 | P1 | 1 | runner |  | 1 | 1 | 1 | 0 |  |
+| 50 | ディレクトリ名変更 & 移行 | P1 | 1 | runner |  | 1 | 1 | 1 | 0 | #120 |
 | 51 | Windows プロファイル永続化 | P2 | 2 | runner |  | 1 | 3 | 1 | 0 |  |
 | 52 | サンドボックス allow/deny パス | P2 | 2 | runner |  | 1 | 2 | 1 | 0 |  |
 | 54 | cdp-use デュアルエンジン抽象レイヤ | P1 | 2 | runner | high | 1 | 1 | 2 | 0 |  |
@@ -271,6 +271,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 1
 - Depends (1): 25
 - Dependents (1): 45
+- Progress: {"state": "done", "primary_pr": 120}
 
 ### Issue 47: 並列実行キュー & 制限
 - Priority: P2, Phase: 2, Area: runner
@@ -394,6 +395,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 2
 - Depends (2): 25, 44
 - Dependents (0): (none)
+- Progress: {"state": "done", "primary_pr": 120}
 
 ### Issue 48: 環境変数バリデーション & 診断
 - Priority: P2, Phase: 2, Area: runner
@@ -418,6 +420,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 1
 - Depends (1): 25
 - Dependents (0): (none)
+- Progress: {"state": "done", "primary_pr": 120}
 
 ### Issue 51: Windows プロファイル永続化
 - Priority: P2, Phase: 2, Area: runner
