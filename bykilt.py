@@ -13,6 +13,118 @@ import subprocess
 import asyncio
 import json  # Added to fix missing import
 
+# ============================================================================
+# CLI Interface for Batch Execution (Issue #39) - CHECK BEFORE GRADIO IMPORT
+# ============================================================================
+
+def handle_batch_commands():
+    """Handle batch commands before Gradio import to avoid argument conflicts."""
+    if len(sys.argv) > 1 and sys.argv[1] == 'batch':
+        # Handle batch commands completely separately from Gradio
+        if len(sys.argv) < 3:
+            print("Available batch commands:")
+            print("  start <csv_path>    Start batch execution from CSV")
+            print("  status <batch_id>   Get batch execution status")
+            print("  update-job <job_id> <status>  Update job status")
+            print("\nExample: python bykilt.py batch start data.csv")
+            sys.exit(1)
+
+        batch_command = sys.argv[2]
+
+        if batch_command == 'start':
+            if len(sys.argv) < 4:
+                print("❌ Error: CSV path required")
+                print("Usage: python bykilt.py batch start <csv_path>")
+                sys.exit(1)
+            csv_path = sys.argv[3]
+
+            print(f"🚀 Starting batch execution from {csv_path}")
+
+            # Create run context
+            from src.runtime.run_context import RunContext
+            run_context = RunContext.get()
+
+            # Start batch
+            from src.batch.engine import start_batch
+            manifest = start_batch(csv_path, run_context)
+
+            print("✅ Batch created successfully!")
+            print(f"   Batch ID: {manifest.batch_id}")
+            print(f"   Run ID: {manifest.run_id}")
+            print(f"   Total jobs: {manifest.total_jobs}")
+            print(f"   Jobs directory: {run_context.artifact_dir('jobs')}")
+            print(f"   Manifest: {run_context.artifact_dir('batch')}/batch_manifest.json")
+
+        elif batch_command == 'status':
+            if len(sys.argv) < 4:
+                print("❌ Error: Batch ID required")
+                print("Usage: python bykilt.py batch status <batch_id>")
+                sys.exit(1)
+            batch_id = sys.argv[3]
+
+            print(f"📊 Getting status for batch {batch_id}")
+
+            # Create run context and engine
+            from src.runtime.run_context import RunContext
+            from src.batch.engine import BatchEngine
+            run_context = RunContext.get()
+            engine = BatchEngine(run_context)
+
+            # Get batch status
+            manifest = engine.get_batch_status(batch_id)
+
+            if manifest is None:
+                print(f"❌ Batch {batch_id} not found")
+                sys.exit(1)
+
+            print("✅ Batch status:")
+            print(f"   Batch ID: {manifest.batch_id}")
+            print(f"   Run ID: {manifest.run_id}")
+            print(f"   CSV Path: {manifest.csv_path}")
+            print(f"   Total jobs: {manifest.total_jobs}")
+            print(f"   Completed: {manifest.completed_jobs}")
+            print(f"   Failed: {manifest.failed_jobs}")
+            print(f"   Created: {manifest.created_at}")
+
+            print("\n📋 Job details:")
+            for job in manifest.jobs:
+                status_icon = "✅" if job.status == "completed" else "❌" if job.status == "failed" else "⏳"
+                print(f"   {status_icon} {job.job_id}: {job.status}")
+                if job.error_message:
+                    print(f"      Error: {job.error_message}")
+
+        elif batch_command == 'update-job':
+            if len(sys.argv) < 5:
+                print("❌ Error: Job ID and status required")
+                print("Usage: python bykilt.py batch update-job <job_id> <status>")
+                sys.exit(1)
+            job_id = sys.argv[3]
+            status = sys.argv[4]
+
+            print(f"🔄 Updating job {job_id} to {status}")
+
+            # Create run context and engine
+            from src.runtime.run_context import RunContext
+            from src.batch.engine import BatchEngine
+            run_context = RunContext.get()
+            engine = BatchEngine(run_context)
+
+            # Update job status
+            engine.update_job_status(job_id, status)
+
+            print("✅ Job status updated successfully!")
+
+        else:
+            print(f"❌ Unknown batch command: {batch_command}")
+            print("Available commands: start, status, update-job")
+            sys.exit(1)
+
+        sys.exit(0)
+
+# Check for batch commands BEFORE importing Gradio
+handle_batch_commands()
+
+# Now safe to import Gradio
 import gradio as gr
 from gradio.themes import Citrus, Default, Glass, Monochrome, Ocean, Origin, Soft, Base
 
@@ -2112,3 +2224,165 @@ async def on_run_agent_click(task, add_infos, llm_provider, llm_model_name, llm_
         import traceback
         error_msg = f"エラーが発生しました: {e}\n{traceback.format_exc()}"
         return error_msg, "", gr.update(value="実行", interactive=True), gr.update(interactive=True)
+
+
+# ============================================================================
+# CLI Interface for Batch Execution (Issue #39)
+# ============================================================================
+
+def create_batch_parser():
+    """Create argument parser for batch commands."""
+    parser = argparse.ArgumentParser(
+        description="bykilt - Browser automation with batch execution support",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Start batch execution from CSV
+  python bykilt.py batch start data.csv
+
+  # Get batch status
+  python bykilt.py batch status batch_123
+
+  # Update job status
+  python bykilt.py batch update-job job_0001 completed
+
+  # Launch web UI (default)
+  python bykilt.py ui
+        """
+    )
+
+    subparsers = parser.add_subparsers(dest='command', help='Available commands')
+
+    # Batch commands
+    batch_parser = subparsers.add_parser('batch', help='Batch execution commands')
+    batch_subparsers = batch_parser.add_subparsers(dest='batch_command', help='Batch subcommands')
+
+    # batch start
+    start_parser = batch_subparsers.add_parser('start', help='Start batch execution from CSV')
+    start_parser.add_argument('csv_path', help='Path to CSV file')
+    start_parser.add_argument('--template', help='Template ID for job configuration')
+
+    # batch status
+    status_parser = batch_subparsers.add_parser('status', help='Get batch execution status')
+    status_parser.add_argument('batch_id', help='Batch ID to check')
+
+    # batch update-job
+    update_parser = batch_subparsers.add_parser('update-job', help='Update job status')
+    update_parser.add_argument('job_id', help='Job ID to update')
+    update_parser.add_argument('status', choices=['completed', 'failed'], help='New status')
+    update_parser.add_argument('--error', help='Error message for failed jobs')
+
+    # UI command
+    ui_parser = subparsers.add_parser('ui', help='Launch web UI (default)')
+
+    return parser
+
+
+def handle_batch_command(args):
+    """Handle batch-related CLI commands."""
+    try:
+        from src.batch.engine import BatchEngine, start_batch
+        from src.runtime.run_context import RunContext
+
+        if args.batch_command == 'start':
+            print(f"🚀 Starting batch execution from {args.csv_path}")
+
+            # Create run context
+            run_context = RunContext.create()
+
+            # Start batch
+            manifest = start_batch(args.csv_path, run_context)
+
+            print("✅ Batch created successfully!")
+            print(f"   Batch ID: {manifest.batch_id}")
+            print(f"   Run ID: {manifest.run_id}")
+            print(f"   Total jobs: {manifest.total_jobs}")
+            print(f"   Jobs directory: {run_context.artifact_dir}/jobs")
+            print(f"   Manifest: {run_context.artifact_dir}/batch_manifest.json")
+
+            return 0
+
+        elif args.batch_command == 'status':
+            print(f"📊 Getting status for batch {args.batch_id}")
+
+            # Create run context and engine
+            run_context = RunContext.create()
+            engine = BatchEngine(run_context)
+
+            # Get batch status
+            manifest = engine.get_batch_status(args.batch_id)
+
+            if manifest is None:
+                print(f"❌ Batch {args.batch_id} not found")
+                return 1
+
+            print("✅ Batch status:")
+            print(f"   Batch ID: {manifest.batch_id}")
+            print(f"   Run ID: {manifest.run_id}")
+            print(f"   CSV Path: {manifest.csv_path}")
+            print(f"   Total jobs: {manifest.total_jobs}")
+            print(f"   Completed: {manifest.completed_jobs}")
+            print(f"   Failed: {manifest.failed_jobs}")
+            print(f"   Created: {manifest.created_at}")
+
+            print("\n📋 Job details:")
+            for job in manifest.jobs:
+                status_icon = "✅" if job.status == "completed" else "❌" if job.status == "failed" else "⏳"
+                print(f"   {status_icon} {job.job_id}: {job.status}")
+                if job.error_message:
+                    print(f"      Error: {job.error_message}")
+
+            return 0
+
+        elif args.batch_command == 'update-job':
+            print(f"🔄 Updating job {args.job_id} to {args.status}")
+
+            # Create run context and engine
+            run_context = RunContext.create()
+            engine = BatchEngine(run_context)
+
+            # Update job status
+            engine.update_job_status(args.job_id, args.status, args.error)
+
+            print("✅ Job status updated successfully!")
+            return 0
+
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
+
+
+def main():
+    """Main CLI entry point."""
+    parser = create_batch_parser()
+    args = parser.parse_args()
+
+    # Handle batch commands
+    if args.command == 'batch':
+        if args.batch_command is None:
+            parser.parse_args(['batch', '--help'])
+            return 1
+        return handle_batch_command(args)
+
+    # Default: launch web UI
+    elif args.command == 'ui' or args.command is None:
+        print("🚀 Launching bykilt web UI...")
+        # Web UI is launched by the Gradio app defined above
+        return 0
+
+    else:
+        parser.print_help()
+        return 1
+
+
+if __name__ == "__main__":
+    # Since batch commands are handled before Gradio import,
+    # only UI commands reach here
+    if len(sys.argv) > 1 and sys.argv[1] == 'ui':
+        print("🚀 Launching bykilt web UI...")
+        main()
+    else:
+        # Default: launch web UI (Gradio)
+        main()
