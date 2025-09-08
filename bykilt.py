@@ -2034,12 +2034,15 @@ def main():
     # Check if this is a batch command (before Gradio import)
     if len(sys.argv) > 1 and sys.argv[1] == 'batch':
         # Handle batch commands before importing Gradio
+        if len(sys.argv) == 2 or (len(sys.argv) > 2 and sys.argv[2] in ['--help', '-h']):
+            # Show batch help
+            parser = create_batch_parser()
+            parser.print_help()
+            return 1
+
         parser = create_batch_parser()
         try:
             args = parser.parse_args()
-            if args.batch_command is None:
-                parser.print_help()
-                return 1
             return handle_batch_command(args)
         except SystemExit:
             # argparse prints help and exits, we want to continue
