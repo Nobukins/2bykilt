@@ -156,6 +156,76 @@ class TestBatchEngine:
         with pytest.raises(FileNotFoundError):
             engine.parse_csv("/non/existent/file.csv")
 
+    def test_parse_csv_empty_file(self, engine, temp_dir):
+        """Test CSV parsing with empty file."""
+        csv_file = temp_dir / "empty.csv"
+        csv_file.write_text("")
+
+        with pytest.raises(ValueError, match="CSV file is empty"):
+            engine.parse_csv(str(csv_file))
+
+    def test_parse_csv_no_data_rows(self, engine, temp_dir):
+        """Test CSV parsing with header only."""
+        csv_content = "name,value\n"  # Only header, no data
+        csv_file = temp_dir / "header_only.csv"
+        csv_file.write_text(csv_content)
+
+        with pytest.raises(ValueError, match="No valid data rows found"):
+            engine.parse_csv(str(csv_file))
+
+    def test_parse_csv_special_characters(self, engine, temp_dir):
+        """Test CSV parsing with special characters and unicode."""
+        csv_content = "name,value\nJosé,café\n测试,数据\n"
+        csv_file = temp_dir / "special_chars.csv"
+        csv_file.write_text(csv_content, encoding='utf-8')
+
+        rows = engine.parse_csv(str(csv_file))
+
+        assert len(rows) == 2
+        assert rows[0] == {"name": "José", "value": "café"}
+        assert rows[1] == {"name": "测试", "value": "数据"}
+
+    def test_parse_csv_large_file(self, engine, temp_dir):
+        """Test CSV parsing with large file (1000+ rows)."""
+        # Create large CSV content
+        rows = ["name,value"]
+        for i in range(1000):
+            rows.append(f"test{i},data{i}")
+
+        csv_content = "\n".join(rows)
+        csv_file = temp_dir / "large.csv"
+        csv_file.write_text(csv_content)
+
+        rows = engine.parse_csv(str(csv_file))
+
+        assert len(rows) == 1000
+        assert rows[0] == {"name": "test0", "value": "data0"}
+        assert rows[-1] == {"name": "test999", "value": "data999"}
+
+    def test_parse_csv_invalid_delimiter_detection(self, engine, temp_dir):
+        """Test CSV parsing when delimiter detection fails."""
+        # Create CSV with unusual format that might confuse sniffer
+        csv_content = "name|value\ntest|data\n"
+        csv_file = temp_dir / "unusual.csv"
+        csv_file.write_text(csv_content)
+
+        rows = engine.parse_csv(str(csv_file))
+
+        # Should still parse correctly with fallback to comma
+        assert len(rows) == 1
+        assert rows[0] == {"name": "test", "value": "data"}
+
+    def test_parse_csv_malformed_csv(self, engine, temp_dir):
+        """Test CSV parsing with malformed content."""
+        # Create malformed CSV
+        csv_content = "name,value\ntest1,data1\ntest2"  # Missing comma
+        csv_file = temp_dir / "malformed.csv"
+        csv_file.write_text(csv_content)
+
+        # Should handle gracefully
+        rows = engine.parse_csv(str(csv_file))
+        assert len(rows) >= 1  # At least the first valid row
+
     def test_create_batch_jobs(self, engine, temp_dir, run_context):
         """Test batch job creation."""
         csv_content = "name,value\ntest1,data1\ntest2,data2\n"

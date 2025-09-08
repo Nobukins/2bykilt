@@ -105,18 +105,33 @@ class BatchEngine:
         Raises:
             FileNotFoundError: If CSV file doesn't exist
             ValueError: If CSV parsing fails
+            UnicodeDecodeError: If file encoding is invalid
         """
         csv_path_obj = Path(csv_path)
         if not csv_path_obj.exists():
             raise FileNotFoundError(f"CSV file not found: {csv_path}")
 
+        if csv_path_obj.stat().st_size == 0:
+            raise ValueError(f"CSV file is empty: {csv_path}")
+
         try:
             with open(csv_path, 'r', encoding='utf-8') as f:
-                # Detect delimiter and handle various CSV formats
-                sample = f.read(1024)
+                # Check if file has content
+                content = f.read()
+                if not content.strip():
+                    raise ValueError(f"CSV file contains no data: {csv_path}")
+
                 f.seek(0)
-                sniffer = csv.Sniffer()
-                delimiter = sniffer.sniff(sample).delimiter
+
+                # Detect delimiter and handle various CSV formats
+                try:
+                    sample = content[:1024] if len(content) > 1024 else content
+                    sniffer = csv.Sniffer()
+                    delimiter = sniffer.sniff(sample).delimiter
+                except csv.Error:
+                    # Fallback to comma if delimiter detection fails
+                    delimiter = ','
+                    self.logger.warning(f"Could not detect delimiter for {csv_path}, using comma")
 
                 reader = csv.DictReader(f, delimiter=delimiter)
                 rows = []
@@ -134,9 +149,17 @@ class BatchEngine:
 
                     rows.append(row)
 
+                if not rows:
+                    raise ValueError(f"No valid data rows found in CSV file: {csv_path}")
+
                 self.logger.info(f"Parsed {len(rows)} valid rows from {csv_path}")
                 return rows
 
+        except UnicodeDecodeError as e:
+            raise UnicodeDecodeError(e.encoding, e.object, e.start, e.end,
+                                   f"Invalid file encoding in {csv_path}. Expected UTF-8: {e}")
+        except csv.Error as e:
+            raise ValueError(f"Invalid CSV format in {csv_path}: {e}")
         except Exception as e:
             raise ValueError(f"Failed to parse CSV file {csv_path}: {e}")
 
