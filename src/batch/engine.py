@@ -304,9 +304,6 @@ class BatchEngine:
         """
         Parse CSV file and return list of row dictionaries.
 
-        This method handles various CSV formats, encoding issues, and provides
-        memory-efficient processing for large files through chunked reading.
-
         Args:
             csv_path: Path to CSV file (absolute or relative)
             chunk_size: Number of rows to process at once (for memory efficiency)
@@ -316,139 +313,225 @@ class BatchEngine:
 
         Raises:
             FileNotFoundError: If CSV file doesn't exist
-            ValueError: If CSV parsing fails or file is invalid
-            UnicodeDecodeError: If file encoding is invalid
+            FileProcessingError: If CSV parsing fails or file is invalid
             SecurityError: If path traversal is detected (when enabled)
-
-        Example:
-            ```python
-            rows = engine.parse_csv('data.csv')
-            for row in rows:
-                print(f"Name: {row['name']}, Value: {row['value']}")
-            ```
         """
+        csv_path_obj = self._validate_and_resolve_path(csv_path)
+        self._validate_file_basic_properties(csv_path_obj)
+        
+        try:
+            return self._parse_csv_content(csv_path_obj)
+        except UnicodeDecodeError as e:
+            raise FileProcessingError(
+                f"Invalid file encoding in '{csv_path}'. Expected '{self.config['encoding']}' encoding. "
+                f"Try saving the file with UTF-8 encoding or specify a different encoding in config. "
+                f"Original error: {e}"
+            )
+        except csv.Error as e:
+            raise FileProcessingError(
+                f"Invalid CSV format in '{csv_path}': {e}. "
+                f"Please ensure the file is a valid CSV with proper formatting and consistent delimiters."
+            )
+        except FileProcessingError:
+            # Re-raise FileProcessingError as-is
+            raise
+        except Exception as e:
+            raise FileProcessingError(
+                f"Failed to parse CSV file '{csv_path}': {e}. "
+                f"Please check the file format, encoding, and contents."
+            )
+
+    def _validate_and_resolve_path(self, csv_path: str) -> Path:
+        """Validate and resolve the CSV file path with security checks."""
         csv_path_obj = Path(csv_path).resolve()
+        
+        if not self.config.get('allow_path_traversal', True):
+            self._check_path_traversal_security(csv_path, csv_path_obj)
+        
+        return csv_path_obj
 
-        # Security check: prevent path traversal (configurable)
-        if self.config.get('allow_path_traversal', True) is False:
-            if not csv_path_obj.is_relative_to(Path.cwd()):
-                # Allow access to current working directory and subdirectories only
-                cwd = Path.cwd().resolve()
-                try:
-                    csv_path_obj.relative_to(cwd)
-                except ValueError:
-                    raise SecurityError(f"Access denied: '{csv_path}' is outside allowed directory. "
-                                      f"Path traversal detected. To allow access to files outside the current "
-                                      f"working directory, set 'allow_path_traversal' to True in configuration.")
+    def _check_path_traversal_security(self, original_path: str, resolved_path: Path) -> None:
+        """Check for path traversal security issues."""
+        cwd = Path.cwd().resolve()
+        
+        # Check if path is outside current working directory
+        try:
+            resolved_path.relative_to(cwd)
+        except ValueError:
+            raise SecurityError(
+                f"Access denied: '{original_path}' is outside allowed directory. "
+                f"Path traversal detected. To allow access to files outside the current "
+                f"working directory, set 'allow_path_traversal' to True in configuration."
+            )
+        
+        # Check for access to sensitive system directories
+        self._check_sensitive_directory_access(original_path, resolved_path)
 
-            # Additional security check: prevent access to sensitive system directories
-            resolved_path = csv_path_obj.resolve()
-            sensitive_paths = [
-                Path('/etc'),
-                Path('/usr'),
-                Path('/bin'),
-                Path('/sbin'),
-                Path('/System'),  # macOS system directory
-                Path('/Library/Preferences'),  # macOS preferences
-                Path('/private/var'),  # macOS private directory
-                Path('C:\\Windows'),  # Windows system directory
-                Path('C:\\Program Files'),  # Windows program files
-                Path('C:\\Users'),  # Windows user directories (if running as system)
-            ]
+    def _check_sensitive_directory_access(self, original_path: str, resolved_path: Path) -> None:
+        """Check if path attempts to access sensitive system directories."""
+        sensitive_paths = [
+            Path('/etc'), Path('/usr'), Path('/bin'), Path('/sbin'),
+            Path('/System'), Path('/Library/Preferences'), Path('/private/var'),
+            Path('C:\\Windows'), Path('C:\\Program Files'), Path('C:\\Users'),
+        ]
 
-            for sensitive_path in sensitive_paths:
-                try:
-                    if sensitive_path.exists() and resolved_path.is_relative_to(sensitive_path):
-                        raise SecurityError(
-                            f"Access denied: '{csv_path}' points to a sensitive system directory. "
-                            f"Resolved path: '{resolved_path}'. "
-                            f"Sensitive directory: '{sensitive_path}'. "
-                            f"This access is blocked for security reasons."
-                        )
-                except (OSError, ValueError):
-                    # Path might not exist on this system, continue checking
-                    continue
+        for sensitive_path in sensitive_paths:
+            try:
+                if sensitive_path.exists() and resolved_path.is_relative_to(sensitive_path):
+                    raise SecurityError(
+                        f"Access denied: '{original_path}' points to a sensitive system directory. "
+                        f"Resolved path: '{resolved_path}'. "
+                        f"Sensitive directory: '{sensitive_path}'. "
+                        f"This access is blocked for security reasons."
+                    )
+            except (OSError, ValueError):
+                # Path might not exist on this system, continue checking
+                continue
 
+    def _validate_file_basic_properties(self, csv_path_obj: Path) -> None:
+        """Validate basic file properties like existence and size."""
         if not csv_path_obj.exists():
-            raise FileNotFoundError(f"CSV file not found: '{csv_path}'. Please verify the file path and ensure the file exists.")
+            raise FileNotFoundError(
+                f"CSV file not found: '{csv_path_obj}'. Please verify the file path and ensure the file exists."
+            )
 
         if csv_path_obj.stat().st_size == 0:
-            raise FileProcessingError(f"CSV file is empty: '{csv_path}'. The file contains no data to process.")
+            raise FileProcessingError(
+                f"CSV file is empty: '{csv_path_obj}'. The file contains no data to process."
+            )
 
         # Check file size for memory considerations
         file_size_mb = csv_path_obj.stat().st_size / (1024 * 1024)
         if file_size_mb > self.config['max_file_size_mb']:
-            raise FileProcessingError(f"CSV file too large ({file_size_mb:.1f}MB). Maximum allowed: {self.config['max_file_size_mb']}MB. "
-                                    f"Consider splitting the file or increasing 'max_file_size_mb' in configuration.")
+            raise FileProcessingError(
+                f"CSV file too large ({file_size_mb:.1f}MB). "
+                f"Maximum allowed: {self.config['max_file_size_mb']}MB. "
+                f"Consider splitting the file or increasing 'max_file_size_mb' in configuration."
+            )
 
         if file_size_mb > 100:  # Warn for files larger than 100MB
             self.logger.warning(f"Large CSV file detected ({file_size_mb:.1f}MB). Consider using streaming processing.")
 
+    def _parse_csv_content(self, csv_path_obj: Path) -> List[Dict[str, Any]]:
+        """Parse the actual CSV content and return rows."""
+        with open(csv_path_obj, 'r', encoding=self.config['encoding']) as f:
+            # For large files, use a streaming approach to avoid memory issues
+            file_size_mb = csv_path_obj.stat().st_size / (1024 * 1024)
+            if file_size_mb > 50:  # Use streaming for files larger than 50MB
+                return self._parse_csv_streaming(f, csv_path_obj)
+            else:
+                return self._parse_csv_in_memory(f, csv_path_obj)
+
+    def _parse_csv_in_memory(self, file_handle, csv_path_obj: Path) -> List[Dict[str, Any]]:
+        """Parse CSV content in memory (for smaller files)."""
+        # Check if file has content (using a small read first)
+        first_chunk = file_handle.read(1024)
+        if not first_chunk.strip():
+            raise FileProcessingError(
+                f"CSV file contains no data: '{csv_path_obj}'. The file is empty or contains only whitespace."
+            )
+        
+        file_handle.seek(0)
+        delimiter = self._detect_csv_delimiter(first_chunk, csv_path_obj)
+        
+        reader = csv.DictReader(file_handle, delimiter=delimiter)
+        rows = []
+        processed_rows = 0
+
+        for row_num, row in enumerate(reader, start=2):  # Start from 2 (header is 1)
+            if self._should_skip_row(row, row_num, csv_path_obj):
+                continue
+
+            rows.append(row)
+            processed_rows += 1
+
+            # Process in chunks to avoid memory issues with very large files
+            if processed_rows % self.config['chunk_size'] == 0:
+                self.logger.debug(f"Processed {processed_rows} rows from {csv_path_obj}")
+
+        if not rows:
+            raise FileProcessingError(
+                f"No valid data rows found in CSV file: '{csv_path_obj}'. "
+                f"The file may contain only headers or all rows were filtered out."
+            )
+
+        self.logger.info(f"Successfully parsed {len(rows)} valid rows from {csv_path_obj}")
+        return rows
+
+    def _parse_csv_streaming(self, file_handle, csv_path_obj: Path) -> List[Dict[str, Any]]:
+        """Parse CSV content using streaming approach (for larger files)."""
+        # Read only first chunk to detect delimiter and check content
+        first_chunk = file_handle.read(8192)  # Larger chunk for better delimiter detection
+        if not first_chunk.strip():
+            raise FileProcessingError(
+                f"CSV file contains no data: '{csv_path_obj}'. The file is empty or contains only whitespace."
+            )
+        
+        file_handle.seek(0)
+        delimiter = self._detect_csv_delimiter(first_chunk, csv_path_obj)
+        
+        reader = csv.DictReader(file_handle, delimiter=delimiter)
+        rows = []
+        processed_rows = 0
+        
+        self.logger.info(f"Using streaming mode for large file: {csv_path_obj}")
+
         try:
-            with open(csv_path_obj, 'r', encoding=self.config['encoding']) as f:
-                # Check if file has content
-                content = f.read()
-                if not content.strip():
-                    raise FileProcessingError(f"CSV file contains no data: '{csv_path}'. The file is empty or contains only whitespace.")
+            for row_num, row in enumerate(reader, start=2):  # Start from 2 (header is 1)
+                if self._should_skip_row(row, row_num, csv_path_obj):
+                    continue
 
-                f.seek(0)
+                rows.append(row)
+                processed_rows += 1
 
-                # Detect delimiter and handle various CSV formats
-                try:
-                    sample = content[:1024] if len(content) > 1024 else content
-                    sniffer = csv.Sniffer()
-                    delimiter = sniffer.sniff(sample).delimiter
-                except csv.Error:
-                    # Fallback to configured delimiter if detection fails
-                    delimiter = self.config['delimiter_fallback']
-                    self.logger.warning(f"Could not detect delimiter for {csv_path}, using '{delimiter}'")
+                # More frequent progress updates for large files
+                if processed_rows % (self.config['chunk_size'] // 4) == 0:
+                    self.logger.info(f"Streamed {processed_rows} rows from {csv_path_obj}")
 
-                reader = csv.DictReader(f, delimiter=delimiter)
-                rows = []
-                processed_rows = 0
+        except MemoryError:
+            raise FileProcessingError(
+                f"File '{csv_path_obj}' is too large to process in available memory. "
+                f"Consider reducing the file size or increasing available memory."
+            )
 
-                for row_num, row in enumerate(reader, start=2):  # Start from 2 (header is 1)
-                    # Skip empty rows if configured
-                    if self.config['skip_empty_rows'] and not any(row.values()):
-                        self.logger.debug(f"Skipping empty row {row_num} in {csv_path}")
-                        continue
+        if not rows:
+            raise FileProcessingError(
+                f"No valid data rows found in CSV file: '{csv_path_obj}'. "
+                f"The file may contain only headers or all rows were filtered out."
+            )
 
-                    # Validate row has required fields (customize based on needs)
-                    if not row:
-                        self.logger.debug(f"Skipping invalid row {row_num} in {csv_path}")
-                        continue
+        self.logger.info(f"Successfully streamed {len(rows)} valid rows from {csv_path_obj}")
+        return rows
 
-                    rows.append(row)
-                    processed_rows += 1
+    def _detect_csv_delimiter(self, sample_content: str, csv_path_obj: Path) -> str:
+        """Detect the CSV delimiter from sample content."""
+        try:
+            sniffer = csv.Sniffer()
+            delimiter = sniffer.sniff(sample_content).delimiter
+            return delimiter
+        except csv.Error:
+            # Fallback to configured delimiter if detection fails
+            delimiter = self.config['delimiter_fallback']
+            self.logger.warning(f"Could not detect delimiter for {csv_path_obj}, using '{delimiter}'")
+            return delimiter
 
-                    # Process in chunks to avoid memory issues with very large files
-                    if processed_rows % self.config['chunk_size'] == 0:
-                        self.logger.debug(f"Processed {processed_rows} rows from {csv_path}")
+    def _should_skip_row(self, row: Dict[str, Any], row_num: int, csv_path_obj: Path) -> bool:
+        """Determine if a row should be skipped during processing."""
+        # Skip empty rows if configured
+        if self.config['skip_empty_rows'] and not any(row.values()):
+            self.logger.debug(f"Skipping empty row {row_num} in {csv_path_obj}")
+            return True
 
-                if not rows:
-                    raise FileProcessingError(f"No valid data rows found in CSV file: '{csv_path}'. "
-                                            f"The file may contain only headers or all rows were filtered out.")
+        # Validate row has required fields (customize based on needs)
+        if not row:
+            self.logger.debug(f"Skipping invalid row {row_num} in {csv_path_obj}")
+            return True
 
-                self.logger.info(f"Successfully parsed {len(rows)} valid rows from {csv_path}")
-                return rows
-
-        except UnicodeDecodeError as e:
-            raise FileProcessingError(f"Invalid file encoding in '{csv_path}'. Expected '{self.config['encoding']}' encoding. "
-                                    f"Try saving the file with UTF-8 encoding or specify a different encoding in config. "
-                                    f"Original error: {e}")
-        except csv.Error as e:
-            raise FileProcessingError(f"Invalid CSV format in '{csv_path}': {e}. "
-                                    f"Please ensure the file is a valid CSV with proper formatting and consistent delimiters.")
-        except Exception as e:
-            raise FileProcessingError(f"Failed to parse CSV file '{csv_path}': {e}. "
-                                    f"Please check the file format, encoding, and contents.")
+        return False
 
     def create_batch_jobs(self, csv_path: str) -> BatchManifest:
         """
         Create batch jobs from CSV file.
-
-        Parses the CSV file and creates individual job files for each row.
-        Generates a unique batch ID and creates a manifest file tracking all jobs.
 
         Args:
             csv_path: Path to CSV file to process
@@ -457,49 +540,55 @@ class BatchEngine:
             BatchManifest containing all generated jobs and batch metadata
 
         Raises:
-            ValueError: If CSV file has no valid rows or parsing fails
+            FileProcessingError: If CSV parsing fails or no valid rows found
             FileNotFoundError: If CSV file doesn't exist
-
-        Example:
-            ```python
-            manifest = engine.create_batch_jobs('customers.csv')
-            print(f"Created batch {manifest.batch_id} with {manifest.total_jobs} jobs")
-            ```
         """
-        # Generate unique IDs
+        # Generate unique IDs and parse CSV
         batch_id = str(uuid.uuid4())
         run_id = self.run_context.run_id_base
-
-        # Parse CSV
         rows = self.parse_csv(csv_path)
 
         if not rows:
-            raise FileProcessingError(f"No valid rows found in CSV file: '{csv_path}'. "
-                                    f"The file may be empty or contain only invalid data.")
+            raise FileProcessingError(
+                f"No valid rows found in CSV file: '{csv_path}'. "
+                f"The file may be empty or contain only invalid data."
+            )
 
-        # Create jobs directory
+        # Create job files and collect job objects
+        jobs = self._create_individual_job_files(rows, run_id)
+        
+        # Create and save batch manifest
+        manifest = self._create_and_save_manifest(batch_id, run_id, csv_path, jobs)
+        
+        self.logger.info(f"Created batch with {len(jobs)} jobs (batch_id: {batch_id})")
+        return manifest
+
+    def _create_individual_job_files(self, rows: List[Dict[str, Any]], run_id: str) -> List[BatchJob]:
+        """Create individual job files for each CSV row."""
         jobs_dir = self.run_context.artifact_dir("jobs")
         jobs_dir.mkdir(exist_ok=True)
 
-        # Create individual job files
         jobs = []
         for i, row_data in enumerate(rows):
             job_id = f"{run_id}_{i+1:04d}"
-            job = BatchJob(
-                job_id=job_id,
-                run_id=run_id,
-                row_data=row_data
-            )
+            job = BatchJob(job_id=job_id, run_id=run_id, row_data=row_data)
 
             # Save individual job file
             job_file = jobs_dir / f"{job_id}.json"
-            with open(job_file, 'w', encoding='utf-8') as f:
-                json.dump(job.to_dict(), f, indent=2, ensure_ascii=False)
+            self._save_job_file(job_file, job)
 
             jobs.append(job)
             self.logger.info(f"Created job {job_id} for row {i+1}")
 
-        # Create batch manifest
+        return jobs
+
+    def _save_job_file(self, job_file: Path, job: BatchJob) -> None:
+        """Save a single job to its JSON file."""
+        with open(job_file, 'w', encoding='utf-8') as f:
+            json.dump(job.to_dict(), f, indent=2, ensure_ascii=False)
+
+    def _create_and_save_manifest(self, batch_id: str, run_id: str, csv_path: str, jobs: List[BatchJob]) -> BatchManifest:
+        """Create the batch manifest and save it to file."""
         manifest = BatchManifest(
             batch_id=batch_id,
             run_id=run_id,
@@ -513,7 +602,6 @@ class BatchEngine:
         with open(manifest_file, 'w', encoding='utf-8') as f:
             json.dump(manifest.to_dict(), f, indent=2, ensure_ascii=False)
 
-        self.logger.info(f"Created batch with {len(jobs)} jobs (batch_id: {batch_id})")
         return manifest
 
     def get_batch_status(self, batch_id: str) -> Optional[BatchManifest]:
@@ -659,13 +747,28 @@ class BatchEngine:
 
     def _load_manifest(self, manifest_file: Path) -> Optional[BatchManifest]:
         """Load batch manifest from file."""
+        if not manifest_file.exists():
+            return None
+            
         try:
             with open(manifest_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 return BatchManifest.from_dict(data)
         except Exception as e:
-            self.logger.error(f"Failed to load batch manifest: {e}")
+            self.logger.error(f"Failed to load batch manifest {manifest_file}: {e}")
             return None
+
+    def _save_manifest(self, manifest_file: Path, manifest: BatchManifest) -> None:
+        """Save manifest to file."""
+        try:
+            # Ensure parent directory exists
+            manifest_file.parent.mkdir(parents=True, exist_ok=True)
+            
+            with open(manifest_file, 'w', encoding='utf-8') as f:
+                json.dump(manifest.to_dict(), f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            self.logger.error(f"Failed to save batch manifest to {manifest_file}: {e}")
+            raise
 
     def _find_job_by_id(self, manifest: BatchManifest, job_id: str) -> Optional[BatchJob]:
         """Find job by ID in manifest."""
@@ -674,11 +777,6 @@ class BatchEngine:
                 return job
         self.logger.warning(f"Job {job_id} not found in manifest")
         return None
-
-    def _save_manifest(self, manifest_file: Path, manifest: BatchManifest):
-        """Save manifest to file."""
-        with open(manifest_file, 'w', encoding='utf-8') as f:
-            json.dump(manifest.to_dict(), f, indent=2, ensure_ascii=False)
 
 
 def start_batch(csv_path: str, run_context: Optional[RunContext] = None, config: Optional[ConfigType] = None) -> BatchManifest:

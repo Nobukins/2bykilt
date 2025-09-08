@@ -463,7 +463,7 @@ class TestBatchEngine:
         csv_file = temp_dir / "empty.csv"
         csv_file.write_text(csv_content)
 
-        with pytest.raises(FileProcessingError, match="Failed to parse CSV file"):
+        with pytest.raises(FileProcessingError, match="No valid data rows found"):
             engine.create_batch_jobs(str(csv_file))
 
     def test_update_job_status(self, engine, temp_dir, run_context):
