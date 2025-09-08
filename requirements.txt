@@ -47,7 +47,7 @@ langsmith==0.2.11
 # LLM Providers
 langchain-openai==0.3.1        # OpenAI GPT-4, GPT-3.5, Azure OpenAI
 langchain-anthropic==0.3.3     # Claude 3 (Sonnet, Haiku, Opus)
-langchain-google-genai==2.0.8  # Google Gemini
+langchain-google-genai==2.1.2  # Google Gemini
 langchain-mistralai==0.2.4     # Mistral AI
 langchain-ollama==0.2.2        # Local Ollama models
 langchain-fireworks==0.2.7     # Fireworks AI
