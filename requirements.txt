@@ -1,29 +1,40 @@
 # ============================================================================
 # 2bykilt - 完全版 Requirements
 # 全LLM機能とブラウザ自動化機能を含む完全インストール用
-# ============================================================================
+# ==========# Required System Dependencies
+# These are automatically installed with main packages
+attrs==25.3.0
+certifi==2025.1.31
+charset-normalizer==3.4.1
+h11==0.16.0
+idna==3.10
+urllib3==2.5.0
+typing_extensions==4.12.2
+annotated-types==0.7.0
+pydantic==2.10.6
+pydantic_core==2.27.2=======================================================
 
 # Core Web Framework
 fastapi==0.115.11
 uvicorn==0.34.0
-starlette==0.46.1
+starlette==0.47.2
 python-multipart==0.0.20
 
 # UI Framework
-gradio==5.10.0
+gradio==5.11.0
 gradio_client==1.5.3
 
 # Browser Automation (Core)
-browser-use==0.1.37
+browser-use==0.1.45
 playwright==1.51.0
 pyperclip==1.9.0
 
 # HTTP & Network
-aiohttp==3.11.14
+aiohttp==3.12.14
 httpx==0.28.1
 httpx-sse==0.4.0
 httpx-ws==0.7.1
-requests==2.32.3
+requests==2.32.4
 requests-toolbelt==1.0.0
 httpcore==1.0.7
 websockets==14.2
@@ -155,7 +166,7 @@ attrs==25.3.0
 certifi==2025.1.31
 charset-normalizer==3.4.1
 idna==3.10
-urllib3==2.3.0
+urllib3==2.5.0
 typing_extensions==4.12.2
 annotated-types==0.7.0
 pydantic==2.10.6

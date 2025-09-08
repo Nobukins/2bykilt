@@ -28,7 +28,9 @@ def normalize_severity(severity: str) -> str:
         'MEDIUM': 'medium',
         'LOW': 'low',
         'INFO': 'info',
-        'UNKNOWN': 'unknown'
+        'UNKNOWN': 'unknown',
+        # Handle pip-audit specific severity levels
+        'unknown': 'unknown'
     }
     return severity_map.get(severity.upper(), 'unknown')
 
@@ -38,26 +40,35 @@ def parse_pip_audit_json(data: Dict[str, Any]) -> Dict[str, Any]:
     vulnerabilities = []
     suppressed_count = 0
 
-    # Process each vulnerability
-    for vuln in data.get('vulnerabilities', []):
-        # Check if vulnerability is suppressed
-        if is_suppressed(vuln):
-            suppressed_count += 1
-            continue
+    # Process each dependency and its vulnerabilities
+    for dep in data.get('dependencies', []):
+        dep_name = dep.get('name', '')
+        dep_version = dep.get('version', '')
 
-        normalized_vuln = {
-            'id': vuln.get('id', ''),
-            'package': vuln.get('package', ''),
-            'version': vuln.get('version', ''),
-            'severity': normalize_severity(vuln.get('severity', 'unknown')),
-            'description': vuln.get('description', ''),
-            'cve': vuln.get('cve', ''),
-            'urls': vuln.get('urls', []),
-            'fix_available': vuln.get('fix_available', False),
-            'fix_version': vuln.get('fix_version'),
-            'source': 'pip-audit'
-        }
-        vulnerabilities.append(normalized_vuln)
+        for vuln in dep.get('vulns', []):
+            # Create a vulnerability dict that matches our expected format
+            vuln_dict = {
+                'id': vuln.get('id', ''),
+                'package': dep_name,
+                'version': dep_version,
+                'severity': vuln.get('severity', 'unknown'),
+                'description': vuln.get('description', ''),
+                'cve': vuln.get('aliases', [None])[0] if vuln.get('aliases') else '',
+                'urls': vuln.get('urls', []),
+                'fix_available': bool(vuln.get('fix_versions')),
+                'fix_version': vuln.get('fix_versions', [None])[0] if vuln.get('fix_versions') else None,
+                'source': 'pip-audit'
+            }
+
+            # Check if vulnerability is suppressed
+            if is_suppressed(vuln_dict):
+                suppressed_count += 1
+                continue
+
+            # Normalize severity
+            vuln_dict['severity'] = normalize_severity(vuln_dict['severity'])
+
+            vulnerabilities.append(vuln_dict)
 
     # Build normalized report
     report = {
@@ -103,17 +114,24 @@ def is_suppressed(vulnerability: Dict[str, Any], project_root: Optional[Path] = 
         vuln_package = vulnerability.get('package', '')
         vuln_version = vulnerability.get('version', '')
 
-        for suppression in suppressions:
-            # Check by CVE ID
-            if suppression.get('id') == vuln_cve:
+        for suppression_key, suppression_info in suppressions.items():
+            # suppression_key is the vulnerability ID (e.g., "GHSA-5cpq-9538-jm2j")
+            # suppression_info is the dict with reason, added_at, etc.
+
+            # Check by vulnerability ID
+            if suppression_key == vuln_id:
+                return True
+
+            # Check by CVE ID (if available)
+            if suppression_key == vuln_cve:
                 return True
 
             # Check by package@version
-            if suppression.get('id') == f"{vuln_package}@{vuln_version}":
+            if suppression_key == f"{vuln_package}@{vuln_version}":
                 return True
 
             # Check by package name only
-            if suppression.get('id') == vuln_package:
+            if suppression_key == vuln_package:
                 return True
 
         return False
