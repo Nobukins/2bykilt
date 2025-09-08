@@ -90,7 +90,6 @@ class BatchEngine:
 
     def __init__(self, run_context: RunContext):
         self.run_context = run_context
-        self.artifact_manager = get_artifact_manager()
         self.logger = logging.getLogger(f"{__name__}.BatchEngine")
 
     def parse_csv(self, csv_path: str) -> List[Dict[str, Any]]:
@@ -211,8 +210,44 @@ class BatchEngine:
             BatchManifest if found, None otherwise
         """
         # First try the current run context
+        manifest = self._load_manifest_from_current_context(batch_id)
+        if manifest is not None:
+            return manifest
+
+        # Search through all batch manifest files in artifacts/runs
+        return self._search_batch_manifest_in_artifacts(batch_id)
+
+    def _load_manifest_from_current_context(self, batch_id: str) -> Optional[BatchManifest]:
+        """Load batch manifest from current run context."""
         manifest_file = self.run_context.artifact_dir("batch") / BATCH_MANIFEST_FILENAME
-        if manifest_file.exists():
+        if not manifest_file.exists():
+            return None
+
+        try:
+            with open(manifest_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                manifest = BatchManifest.from_dict(data)
+
+                if manifest.batch_id == batch_id:
+                    return manifest
+        except Exception as e:
+            self.logger.error(f"Failed to load batch manifest: {e}")
+
+        return None
+
+    def _search_batch_manifest_in_artifacts(self, batch_id: str) -> Optional[BatchManifest]:
+        """Search for batch manifest in artifacts/runs directory."""
+        artifacts_root = Path("artifacts") / "runs"
+
+        if not artifacts_root.exists():
+            return None
+
+        # Look for batch manifest files in all run directories
+        for batch_dir in artifacts_root.glob("*-batch"):
+            manifest_file = batch_dir / BATCH_MANIFEST_FILENAME
+            if not manifest_file.exists():
+                continue
+
             try:
                 with open(manifest_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
@@ -220,28 +255,9 @@ class BatchEngine:
 
                     if manifest.batch_id == batch_id:
                         return manifest
+
             except Exception as e:
-                self.logger.error(f"Failed to load batch manifest: {e}")
-
-        # Search through all batch manifest files in artifacts/runs
-        from pathlib import Path
-        artifacts_root = Path("artifacts") / "runs"
-
-        if artifacts_root.exists():
-            # Look for batch manifest files in all run directories
-            for batch_dir in artifacts_root.glob("*-batch"):
-                manifest_file = batch_dir / BATCH_MANIFEST_FILENAME
-                if manifest_file.exists():
-                    try:
-                        with open(manifest_file, 'r', encoding='utf-8') as f:
-                            data = json.load(f)
-                            manifest = BatchManifest.from_dict(data)
-
-                            if manifest.batch_id == batch_id:
-                                return manifest
-
-                    except Exception as e:
-                        self.logger.error(f"Failed to load batch manifest {manifest_file}: {e}")
+                self.logger.error(f"Failed to load batch manifest {manifest_file}: {e}")
 
         return None
 
@@ -297,7 +313,6 @@ class BatchEngine:
             return manifest_file
 
         # Search through all batch manifest files in artifacts/runs
-        from pathlib import Path
         artifacts_root = Path("artifacts") / "runs"
 
         if not artifacts_root.exists():
