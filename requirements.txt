@@ -40,7 +40,7 @@ websockets==14.2
 
 # LangChain Core (AI/LLM Foundation)
 langchain==0.3.14
-langchain-core==0.3.45
+langchain-core==0.3.49
 langchain-text-splitters==0.3.6
 langsmith==0.2.11
 
