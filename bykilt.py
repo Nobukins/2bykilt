@@ -20,6 +20,23 @@ import json  # Added to fix missing import
 def handle_batch_commands():
     """Handle batch commands before Gradio import to avoid argument conflicts."""
     if len(sys.argv) > 1 and sys.argv[1] == 'batch':
+        # Special handling for help
+        if len(sys.argv) == 2 or (len(sys.argv) > 2 and sys.argv[2] in ['--help', '-h']):
+            print("bykilt - Browser automation with batch execution support")
+            print()
+            print("Available batch commands:")
+            print("  start <csv_path>    Start batch execution from CSV")
+            print("  status <batch_id>   Get batch execution status")
+            print("  update-job <job_id> <status>  Update job status")
+            print()
+            print("Examples:")
+            print("  python bykilt.py batch start data.csv")
+            print("  python bykilt.py batch status batch_123")
+            print("  python bykilt.py batch update-job job_0001 completed")
+            print()
+            print("For general help: python bykilt.py --help")
+            sys.exit(0)
+
         # Handle batch commands completely separately from Gradio
         if len(sys.argv) < 3:
             print("Available batch commands:")
@@ -2254,6 +2271,7 @@ def create_batch_parser():
     parser = argparse.ArgumentParser(
         description="bykilt - Browser automation with batch execution support",
         formatter_class=argparse.RawDescriptionHelpFormatter,
+        add_help=False,  # Disable automatic --help handling
         epilog="""
 Examples:
   # Start batch execution from CSV
