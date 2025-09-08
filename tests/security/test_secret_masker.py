@@ -22,6 +22,7 @@ from src.security.secret_masker import (
 )
 
 
+@pytest.mark.ci_safe
 class TestSecretMasker:
     """Test suite for SecretMasker class."""
 
@@ -338,6 +339,7 @@ class TestSecretMasker:
         assert result["nested"]["normal"] == 123
 
 
+@pytest.mark.ci_safe
 class TestConvenienceFunctions:
     """Test convenience functions."""
 
@@ -365,6 +367,7 @@ class TestConvenienceFunctions:
         assert is_masking_enabled() is False
 
 
+@pytest.mark.ci_safe
 class TestIntegrationWithLogging:
     """Integration tests with logging functionality."""
 
@@ -413,9 +416,10 @@ class TestIntegrationWithLogging:
         SecretMasker._instance = None
 
         with patch('src.logging.jsonl_logger.RunContext.get') as mock_run_context:
+            from pathlib import Path
             mock_rc = mock_run_context.return_value
             mock_rc.run_id_base = "test_run"
-            mock_rc.artifact_dir.return_value = "/tmp/test_logs"
+            mock_rc.artifact_dir.return_value = Path("/tmp/test_logs")
 
             logger = JsonlLogger.get("test_component")
 
@@ -426,5 +430,5 @@ class TestIntegrationWithLogging:
 
                 # Verify that masking was NOT applied
                 call_args = mock_append.call_args[0][0]
-                assert "sk-1234567890abcdef1234567890abcdef" in call_args
+                assert "sk-TESTKEY1234567890abcdef1234567890abcdef" in call_args
                 assert "sk-****" not in call_args

@@ -186,7 +186,7 @@ class SecretMasker:
         Returns:
             Text with secrets masked
         """
-        if not self._enabled or not text:
+        if not (self._get_env_enabled() and self._enabled) or not text:
             return text
 
         masked_text = text
@@ -210,7 +210,7 @@ class SecretMasker:
         Returns:
             Dictionary with secrets masked
         """
-        if not self._enabled or not data:
+        if not (self._get_env_enabled() and self._enabled) or not data:
             return data
 
         def _mask_value(value: Any) -> Any:
@@ -227,7 +227,7 @@ class SecretMasker:
 
     def is_enabled(self) -> bool:
         """Check if secret masking is currently enabled."""
-        return self._enabled
+        return self._get_env_enabled() and self._enabled
 
     def set_enabled(self, enabled: bool) -> None:
         """Enable or disable secret masking."""
