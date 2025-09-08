@@ -81,9 +81,44 @@ def parse_pip_audit_json(data: Dict[str, Any]) -> Dict[str, Any]:
 
 def is_suppressed(vulnerability: Dict[str, Any]) -> bool:
     """Check if a vulnerability should be suppressed based on suppressions.yaml."""
-    # TODO: Implement suppression logic
-    # For now, return False (no suppressions)
-    return False
+    try:
+        import yaml
+        from pathlib import Path
+
+        suppressions_file = Path(__file__).parent.parent.parent / "security" / "suppressions.yaml"
+        if not suppressions_file.exists():
+            return False
+
+        with open(suppressions_file, 'r', encoding='utf-8') as f:
+            suppressions_data = yaml.safe_load(f) or {}
+
+        suppressions = suppressions_data.get('suppressions', [])
+
+        # Check various suppression criteria
+        vuln_id = vulnerability.get('id', '')
+        vuln_cve = vulnerability.get('cve', '')
+        vuln_package = vulnerability.get('package', '')
+        vuln_version = vulnerability.get('version', '')
+
+        for suppression in suppressions:
+            # Check by CVE ID
+            if suppression.get('id') == vuln_cve:
+                return True
+
+            # Check by package@version
+            if suppression.get('id') == f"{vuln_package}@{vuln_version}":
+                return True
+
+            # Check by package name only
+            if suppression.get('id') == vuln_package:
+                return True
+
+        return False
+
+    except Exception as e:
+        # If suppression check fails, don't suppress (fail-safe)
+        print(f"Warning: Suppression check failed: {e}", file=sys.stderr)
+        return False
 
 
 def count_by_severity(vulnerabilities: List[Dict[str, Any]]) -> Dict[str, int]:

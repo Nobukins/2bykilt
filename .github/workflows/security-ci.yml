@@ -189,7 +189,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pip-audit
+          pip install pip-audit PyYAML
       - name: Cache pip-audit results
         uses: actions/cache@v4
         with:
@@ -200,6 +200,9 @@ jobs:
       - name: Run pip-audit with performance measurement
         id: pip_audit
         run: |
+          # Ensure artifacts directory exists
+          mkdir -p artifacts/security
+
           # Measure performance
           python scripts/measure_scan_perf.py \
             --tool pip-audit \
