@@ -53,7 +53,6 @@ class SecretMasker:
         self._rules: List[MaskingRule] = []
         self._rules_lock: Lock = Lock()
         self._enabled: bool = self._get_env_enabled()
-        self._compiled_patterns: Dict[str, Pattern[str]] = {}
 
         # Initialize default patterns
         self._initialize_default_patterns()

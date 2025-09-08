@@ -275,7 +275,7 @@ class TestSecretMasker:
         def worker_thread(thread_id):
             try:
                 # Each thread performs masking operations
-                test_text = f"Thread {thread_id} API key: sk-{thread_id}TESTKEY234567890abcdef1234567890abcdef"
+                test_text = f"Thread {thread_id} API key: sk-TESTKEY{thread_id}234567890abcdef1234567890abcdef"
                 result = masker.mask_text(test_text)
                 results.append((thread_id, result))
             except Exception as e:
