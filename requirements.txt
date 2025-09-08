@@ -14,7 +14,7 @@ annotated-types==0.7.0
 pydantic==2.10.6
 
 # Core Web Framework
-fastapi==0.115.11
+fastapi==0.116.1
 uvicorn==0.34.0
 starlette==0.47.2
 python-multipart==0.0.20
