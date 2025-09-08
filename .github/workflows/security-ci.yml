@@ -210,7 +210,8 @@ jobs:
           python scripts/measure_scan_perf.py \
             --tool pip-audit \
             --command "$PIP_AUDIT_CMD" \
-            --output artifacts/security/scan_perf_before_after.json
+            --output artifacts/security/scan_perf_before_after.json \
+            --baseline
 
           # Run pip-audit
           $PIP_AUDIT_CMD > pip-audit-raw.json || true

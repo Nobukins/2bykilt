@@ -14,7 +14,7 @@ import json
 import sys
 import argparse
 from datetime import datetime, timezone
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from pathlib import Path
 import yaml
 
@@ -80,22 +80,13 @@ def parse_pip_audit_json(data: Dict[str, Any]) -> Dict[str, Any]:
     return report
 
 
-def is_suppressed(vulnerability: Dict[str, Any]) -> bool:
+def is_suppressed(vulnerability: Dict[str, Any], project_root: Optional[Path] = None) -> bool:
     """Check if a vulnerability should be suppressed based on suppressions.yaml."""
     try:
-        # Find project root by looking for common markers
-        current_path = Path(__file__).resolve()
-        project_root = None
-
-        # Try to find project root by traversing up until we find a marker
-        for parent in current_path.parents:
-            if (parent / "pyproject.toml").exists() or (parent / "requirements.txt").exists():
-                project_root = parent
-                break
-
-        if not project_root:
-            # Fallback to going up 3 levels from current file
-            project_root = current_path.parent.parent.parent
+        # Use provided project root or find it automatically
+        if project_root is None:
+            current_path = Path(__file__).resolve()
+            project_root = find_project_root(current_path)
 
         suppressions_file = project_root / "security" / "suppressions.yaml"
         if not suppressions_file.exists():
@@ -131,6 +122,17 @@ def is_suppressed(vulnerability: Dict[str, Any]) -> bool:
         # If suppression check fails, don't suppress (fail-safe)
         print(f"Warning: Suppression check failed: {e}", file=sys.stderr)
         return False
+
+
+def find_project_root(start_path: Path) -> Path:
+    """Find project root by looking for common markers."""
+    # Try to find project root by traversing up until we find a marker
+    for parent in start_path.parents:
+        if (parent / "pyproject.toml").exists() or (parent / "requirements.txt").exists():
+            return parent
+
+    # Fallback to going up 3 levels from current file
+    return start_path.parent.parent.parent
 
 
 def count_by_severity(vulnerabilities: List[Dict[str, Any]]) -> Dict[str, int]:

@@ -128,6 +128,11 @@ def main():
         default=3600,
         help='Command execution timeout in seconds (default: 3600)'
     )
+    parser.add_argument(
+        '--baseline',
+        action='store_true',
+        help='Mark this measurement as a baseline'
+    )
 
     args = parser.parse_args()
 

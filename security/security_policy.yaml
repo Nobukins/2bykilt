@@ -1,4 +1,9 @@
-# Security Scan Policy Configuration
+# Security Scan P  # Cache settings for performance optimization
+  cache:
+    # Cache key components for pip-audit
+    pip_audit_cache_key: "pip-audit-cache"
+    # Cache key components for SonarCloud
+    sonar_cache_key: "sonar-cache"Configuration
 # This file defines the policies for security scanning operations
 
 # Thresholds for vulnerability severity levels
