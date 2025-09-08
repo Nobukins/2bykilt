@@ -2293,7 +2293,7 @@ def handle_batch_command(args):
         from src.batch.engine import BatchEngine, start_batch
         from src.runtime.run_context import RunContext
 
-        if args.batch_command == 'start':
+        if hasattr(args, 'batch_command') and args.batch_command == 'start':
             print(f"🚀 Starting batch execution from {args.csv_path}")
 
             # Create run context
@@ -2311,7 +2311,7 @@ def handle_batch_command(args):
 
             return 0
 
-        elif args.batch_command == 'status':
+        elif hasattr(args, 'batch_command') and args.batch_command == 'status':
             print(f"📊 Getting status for batch {args.batch_id}")
 
             # Create run context and engine
@@ -2343,7 +2343,7 @@ def handle_batch_command(args):
 
             return 0
 
-        elif args.batch_command == 'update-job':
+        elif hasattr(args, 'batch_command') and args.batch_command == 'update-job':
             print(f"🔄 Updating job {args.job_id} to {args.status}")
 
             # Create run context and engine
