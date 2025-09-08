@@ -39,3 +39,7 @@ flags:
     description: "スクリーンショット重複 (ユーザー指定名) 保存を有効化 (#87)"
     type: bool
     default: true
+  security.secret_masking_enabled:
+    description: "秘密情報マスキング機能を有効化 (#60)"
+    type: bool
+    default: true
