@@ -2267,7 +2267,7 @@ Examples:
         """
     )
 
-    subparsers = parser.add_subparsers(dest='batch_command', help='Batch subcommands')
+    subparsers = parser.add_subparsers(dest='batch_command', help='Batch subcommands', required=True)
 
     # batch start
     start_parser = subparsers.add_parser('start', help='Start batch execution from CSV')
