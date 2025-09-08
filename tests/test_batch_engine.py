@@ -522,6 +522,52 @@ class TestBatchEngine:
         engine.update_job_status("non_existent_job", "completed")
         # Should not raise exception, just log warning
 
+    def test_parse_csv_security_error_sensitive_directory_access(self):
+        """Test that access to sensitive system directories is blocked."""
+        from pathlib import Path
+        import tempfile
+
+        # Create a temporary CSV file
+        with tempfile.TemporaryDirectory() as temp_dir:
+            csv_file = Path(temp_dir) / "test.csv"
+            csv_file.write_text("name,value\ntest,123\n")
+
+            # Mock the sensitive path check by patching Path methods
+            with patch.object(Path, 'exists', return_value=True), \
+                 patch.object(Path, 'is_relative_to', return_value=True), \
+                 patch.object(Path, 'resolve', return_value=Path('/etc/passwd')):
+
+                config = {'allow_path_traversal': False}
+                engine = BatchEngine(self.run_context, config)
+
+                with pytest.raises(SecurityError) as exc_info:
+                    engine.parse_csv(str(csv_file))
+
+                assert "sensitive system directory" in str(exc_info.value)
+                assert "/etc/passwd" in str(exc_info.value)
+
+    def test_parse_csv_security_error_sensitive_directory_access_allowed(self):
+        """Test that access to sensitive directories is allowed when path traversal is enabled."""
+        from pathlib import Path
+        import tempfile
+
+        # Create a temporary CSV file
+        with tempfile.TemporaryDirectory() as temp_dir:
+            csv_file = Path(temp_dir) / "test.csv"
+            csv_file.write_text("name,value\ntest,123\n")
+
+            # With allow_path_traversal=True, sensitive directory checks should be bypassed
+            config = {'allow_path_traversal': True}
+            engine = BatchEngine(self.run_context, config)
+
+            # Mock the path resolution to return a safe path, not a sensitive one
+            with patch.object(Path, 'resolve', return_value=csv_file):
+                # Should work normally since path traversal is allowed
+                rows = engine.parse_csv(str(csv_file))
+                assert len(rows) == 1
+                assert rows[0]['name'] == 'test'
+                assert rows[0]['value'] == '123'
+
 
 class TestStartBatch:
     """Test start_batch function."""

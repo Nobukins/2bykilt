@@ -328,6 +328,34 @@ class BatchEngine:
                                       f"Path traversal detected. To allow access to files outside the current "
                                       f"working directory, set 'allow_path_traversal' to True in configuration.")
 
+            # Additional security check: prevent access to sensitive system directories
+            resolved_path = csv_path_obj.resolve()
+            sensitive_paths = [
+                Path('/etc'),
+                Path('/usr'),
+                Path('/bin'),
+                Path('/sbin'),
+                Path('/System'),  # macOS system directory
+                Path('/Library/Preferences'),  # macOS preferences
+                Path('/private/var'),  # macOS private directory
+                Path('C:\\Windows'),  # Windows system directory
+                Path('C:\\Program Files'),  # Windows program files
+                Path('C:\\Users'),  # Windows user directories (if running as system)
+            ]
+
+            for sensitive_path in sensitive_paths:
+                try:
+                    if sensitive_path.exists() and resolved_path.is_relative_to(sensitive_path):
+                        raise SecurityError(
+                            f"Access denied: '{csv_path}' points to a sensitive system directory. "
+                            f"Resolved path: '{resolved_path}'. "
+                            f"Sensitive directory: '{sensitive_path}'. "
+                            f"This access is blocked for security reasons."
+                        )
+                except (OSError, ValueError):
+                    # Path might not exist on this system, continue checking
+                    continue
+
         if not csv_path_obj.exists():
             raise FileNotFoundError(f"CSV file not found: '{csv_path}'. Please verify the file path and ensure the file exists.")
 
