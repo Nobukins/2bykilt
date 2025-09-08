@@ -24,7 +24,7 @@ gradio==5.11.0
 gradio_client==1.5.3
 
 # Browser Automation (Core)
-browser-use==0.1.45
+browser-use==0.7.5
 playwright==1.51.0
 pyperclip==1.9.0
 
