@@ -2030,6 +2030,22 @@ URLを入力してPlaywright codegenを起動し、ブラウザ操作を記録�
 from src.api.app import create_fastapi_app, run_app
 
 def main():
+    """Main entry point for both CLI and UI."""
+    # Check if this is a batch command (before Gradio import)
+    if len(sys.argv) > 1 and sys.argv[1] == 'batch':
+        # Handle batch commands before importing Gradio
+        parser = create_batch_parser()
+        try:
+            args = parser.parse_args()
+            if args.batch_command is None:
+                parser.print_help()
+                return 1
+            return handle_batch_command(args)
+        except SystemExit:
+            # argparse prints help and exits, we want to continue
+            return 1
+
+    # For UI or default case, proceed with Gradio
     parser = argparse.ArgumentParser(description="Gradio UI for 2Bykilt Agent")
     parser.add_argument("--ip", type=str, default="127.0.0.1", help="IP address to bind to")
     parser.add_argument("--port", type=int, default=7788, help="Port to listen on")
@@ -2042,22 +2058,22 @@ def main():
 
     config_dict = default_config()
     demo = create_ui(config_dict, theme_name=args.theme)
-    
+
     # Create the asset directories if they don't exist
     assets_dir = os.path.join(os.path.dirname(__file__), "assets")
     css_dir = os.path.join(assets_dir, "css")
     js_dir = os.path.join(assets_dir, "js")
     fonts_dir = os.path.join(assets_dir, "fonts")
-    
+
     os.makedirs(css_dir, exist_ok=True)
     os.makedirs(js_dir, exist_ok=True)
     os.makedirs(fonts_dir, exist_ok=True)
-    
+
     # Create font family directories
     for family in ["ui-sans-serif", "system-ui"]:
         family_dir = os.path.join(fonts_dir, family)
         os.makedirs(family_dir, exist_ok=True)
-        
+
         # Create placeholder font files if they don't exist
         for weight in ["Regular", "Bold"]:
             font_path = os.path.join(family_dir, f"{family}-{weight}.woff2")
@@ -2065,7 +2081,7 @@ def main():
                 # Create an empty file as placeholder
                 with open(font_path, 'wb') as f:
                     pass
-    
+
     # GradioとFastAPIを統合 - モジュール化版
     app = create_fastapi_app(demo, args)
     run_app(app, args)
@@ -2288,7 +2304,7 @@ def handle_batch_command(args):
             print(f"🚀 Starting batch execution from {args.csv_path}")
 
             # Create run context
-            run_context = RunContext.create()
+            run_context = RunContext.get()
 
             # Start batch
             manifest = start_batch(args.csv_path, run_context)
@@ -2297,8 +2313,8 @@ def handle_batch_command(args):
             print(f"   Batch ID: {manifest.batch_id}")
             print(f"   Run ID: {manifest.run_id}")
             print(f"   Total jobs: {manifest.total_jobs}")
-            print(f"   Jobs directory: {run_context.artifact_dir}/jobs")
-            print(f"   Manifest: {run_context.artifact_dir}/batch_manifest.json")
+            print(f"   Jobs directory: {run_context.artifact_dir('jobs')}")
+            print(f"   Manifest: {os.path.join(run_context.artifact_dir('batch'), 'batch_manifest.json')}")
 
             return 0
 
@@ -2306,7 +2322,7 @@ def handle_batch_command(args):
             print(f"📊 Getting status for batch {args.batch_id}")
 
             # Create run context and engine
-            run_context = RunContext.create()
+            run_context = RunContext.get()
             engine = BatchEngine(run_context)
 
             # Get batch status
@@ -2338,7 +2354,7 @@ def handle_batch_command(args):
             print(f"🔄 Updating job {args.job_id} to {args.status}")
 
             # Create run context and engine
-            run_context = RunContext.create()
+            run_context = RunContext.get()
             engine = BatchEngine(run_context)
 
             # Update job status
@@ -2354,35 +2370,5 @@ def handle_batch_command(args):
         return 1
 
 
-def main():
-    """Main CLI entry point."""
-    parser = create_batch_parser()
-    args = parser.parse_args()
-
-    # Handle batch commands
-    if args.command == 'batch':
-        if args.batch_command is None:
-            parser.parse_args(['batch', '--help'])
-            return 1
-        return handle_batch_command(args)
-
-    # Default: launch web UI
-    elif args.command == 'ui' or args.command is None:
-        print("🚀 Launching bykilt web UI...")
-        # Web UI is launched by the Gradio app defined above
-        return 0
-
-    else:
-        parser.print_help()
-        return 1
-
-
-if __name__ == "__main__":
-    # Since batch commands are handled before Gradio import,
-    # only UI commands reach here
-    if len(sys.argv) > 1 and sys.argv[1] == 'ui':
-        print("🚀 Launching bykilt web UI...")
-        main()
-    else:
-        # Default: launch web UI (Gradio)
-        main()
+if __name__ == '__main__':
+    main()

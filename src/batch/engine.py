@@ -14,7 +14,7 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 
-from ..core.artifact_manager import ArtifactManager
+from ..core.artifact_manager import ArtifactManager, get_artifact_manager
 from ..runtime.run_context import RunContext
 
 logger = logging.getLogger(__name__)
@@ -90,7 +90,6 @@ class BatchEngine:
 
     def __init__(self, run_context: RunContext):
         self.run_context = run_context
-        from src.core.artifact_manager import get_artifact_manager
         self.artifact_manager = get_artifact_manager()
         self.logger = logging.getLogger(f"{__name__}.BatchEngine")
 
