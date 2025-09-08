@@ -202,6 +202,82 @@ class TestBatchEngine:
         assert rows[0] == {"name": "test0", "value": "data0"}
         assert rows[-1] == {"name": "test999", "value": "data999"}
 
+    def test_parse_csv_custom_config(self, temp_dir):
+        """Test CSV parsing with custom configuration."""
+        from src.runtime.run_context import RunContext
+        from unittest.mock import Mock
+        
+        # Create mock run context
+        mock_context = Mock()
+        mock_context.run_id_base = "test_run"
+        
+        # Create engine with custom config
+        custom_config = {
+            'encoding': 'utf-8',
+            'delimiter_fallback': ';',
+            'skip_empty_rows': True,
+            'chunk_size': 500,
+            'allow_path_traversal': True  # Allow access to temp directory for testing
+        }
+        engine = BatchEngine(mock_context, custom_config)
+        
+        # Create CSV with semicolon delimiter
+        csv_content = "name;value\ntest1;data1\ntest2;data2\n"
+        csv_file = temp_dir / "custom.csv"
+        csv_file.write_text(csv_content)
+
+        rows = engine.parse_csv(str(csv_file))
+
+        assert len(rows) == 2
+        assert rows[0] == {"name": "test1", "value": "data1"}
+        assert rows[1] == {"name": "test2", "value": "data2"}
+
+    def test_parse_csv_file_too_large(self, temp_dir):
+        """Test CSV parsing with file exceeding size limit."""
+        from src.runtime.run_context import RunContext
+        from unittest.mock import Mock
+        
+        # Create mock run context
+        mock_context = Mock()
+        mock_context.run_id_base = "test_run"
+        
+        # Create engine with very small file size limit
+        custom_config = {
+            'max_file_size_mb': 0.00001,  # Extremely small limit (10 bytes)
+            'allow_path_traversal': True
+        }
+        engine = BatchEngine(mock_context, custom_config)
+        
+        # Create a small CSV file
+        csv_content = "name,value\ntest,data\n"
+        csv_file = temp_dir / "small.csv"
+        csv_file.write_text(csv_content)
+
+        with pytest.raises(ValueError, match="CSV file too large"):
+            engine.parse_csv(str(csv_file))
+
+    def test_parse_csv_path_traversal_prevention(self, temp_dir):
+        """Test that path traversal attacks are prevented."""
+        from src.runtime.run_context import RunContext
+        from unittest.mock import Mock
+        
+        # Create mock run context
+        mock_context = Mock()
+        mock_context.run_id_base = "test_run"
+        
+        # Create engine with path traversal prevention enabled
+        custom_config = {
+            'allow_path_traversal': False,
+            'max_file_size_mb': 500
+        }
+        engine = BatchEngine(mock_context, custom_config)
+        
+        # Try to access file outside allowed directory
+        malicious_path = "/etc/passwd"
+        
+        with pytest.raises(ValueError, match="Access denied"):
+            engine.parse_csv(malicious_path)
+
     def test_parse_csv_invalid_delimiter_detection(self, engine, temp_dir):
         """Test CSV parsing when delimiter detection fails."""
         # Create CSV with unusual format that might confuse sniffer
@@ -376,4 +452,35 @@ class TestStartBatch:
             result = start_batch(str(csv_file), mock_context)
 
             assert result == mock_manifest
+            mock_engine.create_batch_jobs.assert_called_once_with(str(csv_file))
+
+    def test_start_batch_with_config(self, tmp_path):
+        """Test start_batch with custom configuration."""
+        mock_context = Mock()
+        mock_context.run_id_base = "test_run"
+        mock_context.artifact_dir = Mock(return_value=tmp_path)
+
+        # Create test CSV
+        csv_content = "name,value\ntest,data\n"
+        csv_file = tmp_path / "test.csv"
+        csv_file.write_text(csv_content)
+
+        custom_config = {
+            'max_file_size_mb': 100, 
+            'encoding': 'utf-8',
+            'allow_path_traversal': True
+        }
+
+        # Mock BatchEngine
+        with patch('src.batch.engine.BatchEngine') as mock_engine_class:
+            mock_engine = Mock()
+            mock_manifest = Mock()
+            mock_engine.create_batch_jobs.return_value = mock_manifest
+            mock_engine_class.return_value = mock_engine
+
+            result = start_batch(str(csv_file), mock_context, custom_config)
+
+            assert result == mock_manifest
+            # Verify BatchEngine was created with config
+            mock_engine_class.assert_called_once_with(mock_context, custom_config)
             mock_engine.create_batch_jobs.assert_called_once_with(str(csv_file))

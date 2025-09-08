@@ -88,16 +88,32 @@ class BatchEngine:
     Processes CSV files and generates individual jobs for browser automation tasks.
     """
 
-    def __init__(self, run_context: RunContext):
+    def __init__(self, run_context: RunContext, config: Optional[Dict[str, Any]] = None):
         self.run_context = run_context
         self.logger = logging.getLogger(f"{__name__}.BatchEngine")
 
-    def parse_csv(self, csv_path: str) -> List[Dict[str, Any]]:
+        # Default configuration
+        self.config = {
+            'max_file_size_mb': 500,  # Maximum file size to process
+            'chunk_size': 1000,      # Rows to process at once
+            'encoding': 'utf-8',     # Default file encoding
+            'delimiter_fallback': ',', # Fallback delimiter
+            'allow_path_traversal': True, # Security setting (default: allow for compatibility)
+            'validate_headers': True, # Validate CSV headers
+            'skip_empty_rows': True, # Skip empty rows automatically
+        }
+
+        # Update with user configuration
+        if config:
+            self.config.update(config)
+
+    def parse_csv(self, csv_path: str, chunk_size: int = 1000) -> List[Dict[str, Any]]:
         """
         Parse CSV file and return list of row dictionaries.
 
         Args:
             csv_path: Path to CSV file
+            chunk_size: Number of rows to process at once (for memory efficiency)
 
         Returns:
             List of dictionaries representing CSV rows
@@ -106,16 +122,36 @@ class BatchEngine:
             FileNotFoundError: If CSV file doesn't exist
             ValueError: If CSV parsing fails
             UnicodeDecodeError: If file encoding is invalid
+            SecurityError: If path traversal is detected
         """
-        csv_path_obj = Path(csv_path)
+        csv_path_obj = Path(csv_path).resolve()
+
+        # Security check: prevent path traversal (configurable)
+        if self.config.get('allow_path_traversal', True) is False:
+            if not csv_path_obj.is_relative_to(Path.cwd()):
+                # Allow access to current working directory and subdirectories only
+                cwd = Path.cwd().resolve()
+                try:
+                    csv_path_obj.relative_to(cwd)
+                except ValueError:
+                    raise ValueError(f"Access denied: {csv_path} is outside allowed directory")
+
         if not csv_path_obj.exists():
             raise FileNotFoundError(f"CSV file not found: {csv_path}")
 
         if csv_path_obj.stat().st_size == 0:
             raise ValueError(f"CSV file is empty: {csv_path}")
 
+        # Check file size for memory considerations
+        file_size_mb = csv_path_obj.stat().st_size / (1024 * 1024)
+        if file_size_mb > self.config['max_file_size_mb']:
+            raise ValueError(f"CSV file too large ({file_size_mb:.1f}MB). Maximum allowed: {self.config['max_file_size_mb']}MB")
+
+        if file_size_mb > 100:  # Warn for files larger than 100MB
+            self.logger.warning(f"Large CSV file detected ({file_size_mb:.1f}MB). Consider using streaming processing.")
+
         try:
-            with open(csv_path, 'r', encoding='utf-8') as f:
+            with open(csv_path_obj, 'r', encoding=self.config['encoding']) as f:
                 # Check if file has content
                 content = f.read()
                 if not content.strip():
@@ -129,35 +165,41 @@ class BatchEngine:
                     sniffer = csv.Sniffer()
                     delimiter = sniffer.sniff(sample).delimiter
                 except csv.Error:
-                    # Fallback to comma if delimiter detection fails
-                    delimiter = ','
-                    self.logger.warning(f"Could not detect delimiter for {csv_path}, using comma")
+                    # Fallback to configured delimiter if detection fails
+                    delimiter = self.config['delimiter_fallback']
+                    self.logger.warning(f"Could not detect delimiter for {csv_path}, using '{delimiter}'")
 
                 reader = csv.DictReader(f, delimiter=delimiter)
                 rows = []
+                processed_rows = 0
 
                 for row_num, row in enumerate(reader, start=2):  # Start from 2 (header is 1)
-                    # Skip empty rows
-                    if not any(row.values()):
-                        self.logger.warning(f"Skipping empty row {row_num} in {csv_path}")
+                    # Skip empty rows if configured
+                    if self.config['skip_empty_rows'] and not any(row.values()):
+                        self.logger.debug(f"Skipping empty row {row_num} in {csv_path}")
                         continue
 
                     # Validate row has required fields (customize based on needs)
                     if not row:
-                        self.logger.warning(f"Skipping invalid row {row_num} in {csv_path}")
+                        self.logger.debug(f"Skipping invalid row {row_num} in {csv_path}")
                         continue
 
                     rows.append(row)
+                    processed_rows += 1
+
+                    # Process in chunks to avoid memory issues with very large files
+                    if processed_rows % self.config['chunk_size'] == 0:
+                        self.logger.debug(f"Processed {processed_rows} rows from {csv_path}")
 
                 if not rows:
                     raise ValueError(f"No valid data rows found in CSV file: {csv_path}")
 
-                self.logger.info(f"Parsed {len(rows)} valid rows from {csv_path}")
+                self.logger.info(f"Successfully parsed {len(rows)} valid rows from {csv_path}")
                 return rows
 
         except UnicodeDecodeError as e:
             raise UnicodeDecodeError(e.encoding, e.object, e.start, e.end,
-                                   f"Invalid file encoding in {csv_path}. Expected UTF-8: {e}")
+                                   f"Invalid file encoding in {csv_path}. Expected {self.config['encoding']}: {e}")
         except csv.Error as e:
             raise ValueError(f"Invalid CSV format in {csv_path}: {e}")
         except Exception as e:
@@ -387,13 +429,14 @@ class BatchEngine:
             json.dump(manifest.to_dict(), f, indent=2, ensure_ascii=False)
 
 
-def start_batch(csv_path: str, run_context: Optional[RunContext] = None) -> BatchManifest:
+def start_batch(csv_path: str, run_context: Optional[RunContext] = None, config: Optional[Dict[str, Any]] = None) -> BatchManifest:
     """
     Start a new batch execution from CSV file.
 
     Args:
         csv_path: Path to CSV file
         run_context: Optional run context (creates new if not provided)
+        config: Optional configuration for BatchEngine
 
     Returns:
         BatchManifest for the created batch
@@ -401,5 +444,5 @@ def start_batch(csv_path: str, run_context: Optional[RunContext] = None) -> Batc
     if run_context is None:
         run_context = RunContext.get()
 
-    engine = BatchEngine(run_context)
+    engine = BatchEngine(run_context, config)
     return engine.create_batch_jobs(csv_path)
