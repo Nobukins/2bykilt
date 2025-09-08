@@ -2034,16 +2034,19 @@ def main():
     # Check if this is a batch command (before Gradio import)
     if len(sys.argv) > 1 and sys.argv[1] == 'batch':
         # Handle batch commands before importing Gradio
+        # Special handling for help
+        if len(sys.argv) == 2 or (len(sys.argv) > 2 and sys.argv[2] in ['--help', '-h']):
+            parser = create_batch_parser()
+            parser.print_help()
+            return 0
+
         parser = create_batch_parser()
         try:
             args = parser.parse_args(sys.argv[2:])  # Skip 'bykilt.py batch' part
-            if args.batch_command is None:
-                parser.print_help()
-                return 1
             return handle_batch_command(args)
-        except SystemExit:
-            # argparse prints help and exits, we want to continue
-            return 1
+        except SystemExit as e:
+            # argparse prints help and exits, return the exit code
+            return e.code if hasattr(e, 'code') else 1
 
     # For UI or default case, proceed with Gradio
     parser = argparse.ArgumentParser(description="Gradio UI for 2Bykilt Agent")
