@@ -22,121 +22,19 @@ def handle_batch_commands():
     if len(sys.argv) > 1 and sys.argv[1] == 'batch':
         # Special handling for help
         if len(sys.argv) == 2 or (len(sys.argv) > 2 and sys.argv[2] in ['--help', '-h']):
-            print("bykilt - Browser automation with batch execution support")
-            print()
-            print("Available batch commands:")
-            print("  start <csv_path>    Start batch execution from CSV")
-            print("  status <batch_id>   Get batch execution status")
-            print("  update-job <job_id> <status>  Update job status")
-            print()
-            print("Examples:")
-            print("  python bykilt.py batch start data.csv")
-            print("  python bykilt.py batch status batch_123")
-            print("  python bykilt.py batch update-job job_0001 completed")
-            print()
-            print("For general help: python bykilt.py --help")
+            parser = create_batch_parser()
+            parser.print_help()
             sys.exit(0)
 
-        # Handle batch commands completely separately from Gradio
-        if len(sys.argv) < 3:
-            print("Available batch commands:")
-            print("  start <csv_path>    Start batch execution from CSV")
-            print("  status <batch_id>   Get batch execution status")
-            print("  update-job <job_id> <status>  Update job status")
-            print("\nExample: python bykilt.py batch start data.csv")
-            sys.exit(1)
-
-        batch_command = sys.argv[2]
-
-        if batch_command == 'start':
-            if len(sys.argv) < 4:
-                print("❌ Error: CSV path required")
-                print("Usage: python bykilt.py batch start <csv_path>")
-                sys.exit(1)
-            csv_path = sys.argv[3]
-
-            print(f"🚀 Starting batch execution from {csv_path}")
-
-            # Create run context
-            from src.runtime.run_context import RunContext
-            run_context = RunContext.get()
-
-            # Start batch
-            from src.batch.engine import start_batch
-            manifest = start_batch(csv_path, run_context)
-
-            print("✅ Batch created successfully!")
-            print(f"   Batch ID: {manifest.batch_id}")
-            print(f"   Run ID: {manifest.run_id}")
-            print(f"   Total jobs: {manifest.total_jobs}")
-            print(f"   Jobs directory: {run_context.artifact_dir('jobs')}")
-            print(f"   Manifest: {run_context.artifact_dir('batch')}/batch_manifest.json")
-
-        elif batch_command == 'status':
-            if len(sys.argv) < 4:
-                print("❌ Error: Batch ID required")
-                print("Usage: python bykilt.py batch status <batch_id>")
-                sys.exit(1)
-            batch_id = sys.argv[3]
-
-            print(f"📊 Getting status for batch {batch_id}")
-
-            # Create run context and engine
-            from src.runtime.run_context import RunContext
-            from src.batch.engine import BatchEngine
-            run_context = RunContext.get()
-            engine = BatchEngine(run_context)
-
-            # Get batch status
-            manifest = engine.get_batch_status(batch_id)
-
-            if manifest is None:
-                print(f"❌ Batch {batch_id} not found")
-                sys.exit(1)
-
-            print("✅ Batch status:")
-            print(f"   Batch ID: {manifest.batch_id}")
-            print(f"   Run ID: {manifest.run_id}")
-            print(f"   CSV Path: {manifest.csv_path}")
-            print(f"   Total jobs: {manifest.total_jobs}")
-            print(f"   Completed: {manifest.completed_jobs}")
-            print(f"   Failed: {manifest.failed_jobs}")
-            print(f"   Created: {manifest.created_at}")
-
-            print("\n📋 Job details:")
-            for job in manifest.jobs:
-                status_icon = "✅" if job.status == "completed" else "❌" if job.status == "failed" else "⏳"
-                print(f"   {status_icon} {job.job_id}: {job.status}")
-                if job.error_message:
-                    print(f"      Error: {job.error_message}")
-
-        elif batch_command == 'update-job':
-            if len(sys.argv) < 5:
-                print("❌ Error: Job ID and status required")
-                print("Usage: python bykilt.py batch update-job <job_id> <status>")
-                sys.exit(1)
-            job_id = sys.argv[3]
-            status = sys.argv[4]
-
-            print(f"🔄 Updating job {job_id} to {status}")
-
-            # Create run context and engine
-            from src.runtime.run_context import RunContext
-            from src.batch.engine import BatchEngine
-            run_context = RunContext.get()
-            engine = BatchEngine(run_context)
-
-            # Update job status
-            engine.update_job_status(job_id, status)
-
-            print("✅ Job status updated successfully!")
-
-        else:
-            print(f"❌ Unknown batch command: {batch_command}")
-            print("Available commands: start, status, update-job")
-            sys.exit(1)
-
-        sys.exit(0)
+        # Handle batch commands using the unified parser
+        parser = create_batch_parser()
+        try:
+            args = parser.parse_args(sys.argv[2:])  # Skip 'bykilt.py batch' part
+            exit_code = handle_batch_command(args)
+            sys.exit(exit_code)
+        except SystemExit as e:
+            # argparse prints help and exits, return the exit code
+            sys.exit(e.code if hasattr(e, 'code') else 1)
 
 # Check for batch commands BEFORE importing Gradio
 handle_batch_commands()
@@ -2048,22 +1946,9 @@ from src.api.app import create_fastapi_app, run_app
 
 def main():
     """Main entry point for both CLI and UI."""
-    # Check if this is a batch command (before Gradio import)
+    # Handle batch commands before Gradio import to avoid argument conflicts
     if len(sys.argv) > 1 and sys.argv[1] == 'batch':
-        # Handle batch commands before importing Gradio
-        # Special handling for help
-        if len(sys.argv) == 2 or (len(sys.argv) > 2 and sys.argv[2] in ['--help', '-h']):
-            parser = create_batch_parser()
-            parser.print_help()
-            return 0
-
-        parser = create_batch_parser()
-        try:
-            args = parser.parse_args(sys.argv[2:])  # Skip 'bykilt.py batch' part
-            return handle_batch_command(args)
-        except SystemExit as e:
-            # argparse prints help and exits, return the exit code
-            return e.code if hasattr(e, 'code') else 1
+        return handle_batch_commands()
 
     # For UI or default case, proceed with Gradio
     parser = argparse.ArgumentParser(description="Gradio UI for 2Bykilt Agent")

@@ -37,7 +37,20 @@ class ConfigurationError(BatchEngineError):
 
 
 class FileProcessingError(BatchEngineError):
-    """Raised when file processing fails."""
+    """
+    Raised when file processing fails.
+
+    This exception covers errors such as:
+    - CSV parsing errors (malformed rows, missing headers, etc.)
+    - File encoding issues (unsupported or invalid encoding)
+    - File size limits exceeded
+    - File not found or inaccessible
+    - Unsupported file format or MIME type
+    - Permission errors when reading files
+    - Any other errors encountered during file reading or processing
+
+    Catch this exception when handling file input/output operations in the batch engine.
+    """
     pass
 
 
@@ -678,7 +691,15 @@ def start_batch(csv_path: str, run_context: Optional[RunContext] = None, config:
     Args:
         csv_path: Path to CSV file to process
         run_context: Optional run context (creates new if not provided)
-        config: Optional configuration dictionary for BatchEngine
+        config: Optional configuration dictionary for BatchEngine. Available options:
+            - max_file_size_mb (float): Maximum file size in MB (default: 100)
+            - chunk_size (int): Number of rows to process at once (default: 1000)
+            - encoding (str): File encoding (default: 'utf-8')
+            - delimiter_fallback (str): Fallback delimiter if auto-detection fails (default: ',')
+            - allow_path_traversal (bool): Allow access to files outside current directory (default: True)
+            - validate_headers (bool): Validate CSV headers (default: True)
+            - skip_empty_rows (bool): Skip empty rows during processing (default: True)
+            - log_level (str): Logging level ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')
 
     Returns:
         BatchManifest for the created batch
@@ -686,6 +707,8 @@ def start_batch(csv_path: str, run_context: Optional[RunContext] = None, config:
     Raises:
         ValueError: If CSV parsing fails or configuration is invalid
         FileNotFoundError: If CSV file doesn't exist
+        ConfigurationError: If configuration values are invalid
+        SecurityError: If path traversal is detected and not allowed
 
     Example:
         ```python

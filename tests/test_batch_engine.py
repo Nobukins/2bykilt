@@ -522,7 +522,7 @@ class TestBatchEngine:
         engine.update_job_status("non_existent_job", "completed")
         # Should not raise exception, just log warning
 
-    def test_parse_csv_security_error_sensitive_directory_access(self):
+    def test_parse_csv_security_error_sensitive_directory_access(self, run_context):
         """Test that access to sensitive system directories is blocked."""
         from pathlib import Path
         import tempfile
@@ -538,7 +538,7 @@ class TestBatchEngine:
                  patch.object(Path, 'resolve', return_value=Path('/etc/passwd')):
 
                 config = {'allow_path_traversal': False}
-                engine = BatchEngine(self.run_context, config)
+                engine = BatchEngine(run_context, config)
 
                 with pytest.raises(SecurityError) as exc_info:
                     engine.parse_csv(str(csv_file))
@@ -546,7 +546,7 @@ class TestBatchEngine:
                 assert "sensitive system directory" in str(exc_info.value)
                 assert "/etc/passwd" in str(exc_info.value)
 
-    def test_parse_csv_security_error_sensitive_directory_access_allowed(self):
+    def test_parse_csv_security_error_sensitive_directory_access_allowed(self, run_context):
         """Test that access to sensitive directories is allowed when path traversal is enabled."""
         from pathlib import Path
         import tempfile
@@ -558,7 +558,7 @@ class TestBatchEngine:
 
             # With allow_path_traversal=True, sensitive directory checks should be bypassed
             config = {'allow_path_traversal': True}
-            engine = BatchEngine(self.run_context, config)
+            engine = BatchEngine(run_context, config)
 
             # Mock the path resolution to return a safe path, not a sensitive one
             with patch.object(Path, 'resolve', return_value=csv_file):
