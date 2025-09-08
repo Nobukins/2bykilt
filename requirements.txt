@@ -128,8 +128,8 @@ cryptography                   # For secure connections
 certifi==2025.1.31            # SSL certificates
 
 # Cloud Services (AWS)
-boto3==1.37.14
-botocore==1.37.14
+boto3==1.40.25
+botocore==1.40.25
 s3transfer==0.11.4
 
 # Google Cloud Services
