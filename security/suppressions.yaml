@@ -1,0 +1,22 @@
+# Security Scan Suppressions
+# This file contains suppressions for known false positives or accepted risks
+# Format: {id|package@version|cve: {reason, added_at, expires_at?}}
+
+# Example suppressions (to be populated based on actual scan results)
+suppressions:
+  # Example: Suppress a known false positive
+  # "CVE-2023-12345":
+  #   reason: "False positive - vulnerability does not affect our usage"
+  #   added_at: "2025-09-08"
+  #   expires_at: "2026-09-08"
+
+  # Example: Suppress based on package and version
+  # "package-name@1.2.3":
+  #   reason: "Accepted risk - no viable upgrade path"
+  #   added_at: "2025-09-08"
+
+# Suppression statistics (auto-updated by scan tools)
+summary:
+  total_suppressed: 0
+  by_reason: {}
+  last_updated: "2025-09-08T00:00:00Z"

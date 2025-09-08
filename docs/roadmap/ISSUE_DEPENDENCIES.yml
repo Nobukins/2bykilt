@@ -104,9 +104,9 @@ issues:
   "60": {title: "シークレットマスキング拡張", meta: {area: security, type: feat, priority: P1,
       phase: "1-late", stability: core}, depends: ["56"], dependents: [], risk: 
       null, critical_path_rank: 1}
-  "61": {title: "依存セキュリティスキャン最適化", meta: {area: security, type: chore, priority: 
-        P1, phase: "2", stability: core}, depends: [], dependents: [], risk: 
-      null, critical_path_rank: 1}
+  "61": {title: "[maint][security] 既存依存セキュリティスキャン基盤の最適化 & 運用強化", meta: {area: security, type: chore, priority: 
+        P1, phase: "2", stability: core}, depends: ["32"], dependents: [], risk: 
+      medium, critical_path_rank: 1}
   "62": {title: "実行サンドボックス機能制限", meta: {area: security, type: feat, priority: P0,
       phase: "2", stability: experimental}, depends: ["32"], dependents: ["52"], 
       risk: high, critical_path_rank: 2}
@@ -169,7 +169,6 @@ summary:
     - "57"
     - "59"
     - "60"
-    - "61"
     - "67"
     - "81"
     - '90'

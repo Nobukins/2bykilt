@@ -1,14 +1,14 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-09-08T00:36:24+00:00
+Generated at (UTC): 2025-09-08T04:40:16+00:00
 
 ## 1. メタサマリー
 
 - Total Issues: 47
 - High Risk (declared): 5 → 31, 46, 49, 54, 62
 - Cycle Detected: false (none)
-- Strict Orphans: 4
-- Curated Orphan List Count: 16
+- Strict Orphans: 3
+- Curated Orphan List Count: 15
 
 ## 2. 分布 (Distribution)
 
@@ -39,7 +39,8 @@ Generated at (UTC): 2025-09-08T00:36:24+00:00
 
 ### Risk
 - high: 5 (10.6%)
-- none: 42 (89.4%)
+- medium: 1 (2.1%)
+- none: 41 (87.2%)
 
 ## 3. リスク詳細 (High / Medium / etc.)
 
@@ -54,7 +55,6 @@ High Risk Issues:
 
 Strict Orphans (自動抽出 = 依存なし & 参照されず):
 - 55: browser_control pytest パス修正
-- 61: 依存セキュリティスキャン最適化
 - 81: Async/Browser テスト安定化計画
 - 90: Temp test issue for enrichment
 
@@ -71,7 +71,6 @@ Curated Orphan List (summary.data_quality_checks.orphan_issues_without_dependent
 - 57: ログ保持期間 & ローテーション
 - 59: Run メトリクス API
 - 60: シークレットマスキング拡張
-- 61: 依存セキュリティスキャン最適化
 - 67: ドキュメント整備 第2弾
 - 81: Async/Browser テスト安定化計画
 - 90: Temp test issue for enrichment
@@ -135,7 +134,7 @@ Sorted By: critical_path_rank
 | 57 | ログ保持期間 & ローテーション | P1 | 1-late | logging |  | 1 | 3 | 1 | 0 | #83 |
 | 59 | Run メトリクス API | P2 | 2 | observability |  | 1 | 2 | 1 | 0 |  |
 | 60 | シークレットマスキング拡張 | P1 | 1-late | security |  | 1 | 3 | 1 | 0 |  |
-| 61 | 依存セキュリティスキャン最適化 | P1 | 2 | security |  | 1 | 0 | 0 | 0 |  |
+| 61 | [maint][security] 既存依存セキュリティスキャン基盤の最適化 & 運用強化 | P1 | 2 | security | medium | 1 | 1 | 1 | 0 |  |
 | 67 | ドキュメント整備 第2弾 | P2 | 1-late | docs |  | 1 | 4 | 1 | 0 |  |
 | 87 | スクリーンショット重複保存フラグ導入 | P1 | 1-late | artifacts |  | 1 | 2 | 2 | 1 | #96 |
 | 88 | スクリーンショット例外分類と特定例外キャッチ | P2 | 1-late | artifacts |  | 1 | 2 | 2 | 0 | #97 |
@@ -479,12 +478,12 @@ Sorted By: critical_path_rank
 - Depends (1): 56
 - Dependents (0): (none)
 
-### Issue 61: 依存セキュリティスキャン最適化
+### Issue 61: [maint][security] 既存依存セキュリティスキャン基盤の最適化 & 運用強化
 - Priority: P1, Phase: 2, Area: security
-- Risk: (none)
+- Risk: medium
 - CriticalPathRank: 1
-- LongestDistance: 0
-- Depends (0): (none)
+- LongestDistance: 1
+- Depends (1): 32
 - Dependents (0): (none)
 
 ### Issue 67: ドキュメント整備 第2弾
