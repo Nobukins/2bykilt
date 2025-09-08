@@ -16,6 +16,7 @@ import argparse
 from datetime import datetime, timezone
 from typing import Dict, Any, List
 from pathlib import Path
+import yaml
 
 
 def normalize_severity(severity: str) -> str:
@@ -82,10 +83,21 @@ def parse_pip_audit_json(data: Dict[str, Any]) -> Dict[str, Any]:
 def is_suppressed(vulnerability: Dict[str, Any]) -> bool:
     """Check if a vulnerability should be suppressed based on suppressions.yaml."""
     try:
-        import yaml
-        from pathlib import Path
+        # Find project root by looking for common markers
+        current_path = Path(__file__).resolve()
+        project_root = None
 
-        suppressions_file = Path(__file__).parent.parent.parent / "security" / "suppressions.yaml"
+        # Try to find project root by traversing up until we find a marker
+        for parent in current_path.parents:
+            if (parent / "pyproject.toml").exists() or (parent / "requirements.txt").exists():
+                project_root = parent
+                break
+
+        if not project_root:
+            # Fallback to going up 3 levels from current file
+            project_root = current_path.parent.parent.parent
+
+        suppressions_file = project_root / "security" / "suppressions.yaml"
         if not suppressions_file.exists():
             return False
 

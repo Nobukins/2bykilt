@@ -203,21 +203,26 @@ jobs:
           # Ensure artifacts directory exists
           mkdir -p artifacts/security
 
+          # Define pip-audit command
+          PIP_AUDIT_CMD="pip-audit -r requirements.txt -f json"
+
           # Measure performance
           python scripts/measure_scan_perf.py \
             --tool pip-audit \
-            --command "pip-audit -r requirements.txt -f json" \
+            --command "$PIP_AUDIT_CMD" \
             --output artifacts/security/scan_perf_before_after.json
 
           # Run pip-audit
-          pip-audit -r requirements.txt -f json > pip-audit-raw.json || true
+          $PIP_AUDIT_CMD > pip-audit-raw.json || true
 
           # Normalize output
           python tools/security/normalize_pip_audit.py pip-audit-raw.json artifacts/security/vuln_report.json
 
           # Apply policy check
           python - <<'PY'
-          import json, yaml, sys
+          import json
+          import yaml
+          import sys
           from pathlib import Path
 
           # Load policy

@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Dict, Any
 
 
-def run_command_with_timing(command: str) -> Dict[str, Any]:
+def run_command_with_timing(command: str, timeout: int = 3600) -> Dict[str, Any]:
     """Run a command and measure its execution time."""
     start_time = time.time()
     start_datetime = datetime.now(timezone.utc)
@@ -30,7 +30,7 @@ def run_command_with_timing(command: str) -> Dict[str, Any]:
             shell=True,
             capture_output=True,
             text=True,
-            timeout=3600  # 1 hour timeout
+            timeout=timeout  # Use configurable timeout
         )
 
         end_time = time.time()
@@ -56,7 +56,7 @@ def run_command_with_timing(command: str) -> Dict[str, Any]:
             'start_time': start_datetime.isoformat(),
             'end_time': datetime.now(timezone.utc).isoformat(),
             'stdout': '',
-            'stderr': 'Command timed out after 3600 seconds',
+            'stderr': f'Command timed out after {timeout} seconds',
             'command': command
         }
 
@@ -123,9 +123,10 @@ def main():
         help='Output file path for performance metrics'
     )
     parser.add_argument(
-        '--baseline',
-        action='store_true',
-        help='Mark this measurement as a baseline'
+        '--timeout',
+        type=int,
+        default=3600,
+        help='Command execution timeout in seconds (default: 3600)'
     )
 
     args = parser.parse_args()
@@ -137,7 +138,7 @@ def main():
 
     # Run command and measure performance
     print(f"Running command: {args.command}")
-    result = run_command_with_timing(args.command)
+    result = run_command_with_timing(args.command, args.timeout)
 
     # Add measurement to metrics
     measurement = {
