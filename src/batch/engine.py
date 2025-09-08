@@ -14,7 +14,6 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 
-from ..core.artifact_manager import ArtifactManager, get_artifact_manager
 from ..runtime.run_context import RunContext
 
 logger = logging.getLogger(__name__)
@@ -128,13 +127,11 @@ class BatchEngine:
 
         # Security check: prevent path traversal (configurable)
         if self.config.get('allow_path_traversal', True) is False:
-            if not csv_path_obj.is_relative_to(Path.cwd()):
-                # Allow access to current working directory and subdirectories only
-                cwd = Path.cwd().resolve()
-                try:
-                    csv_path_obj.relative_to(cwd)
-                except ValueError:
-                    raise ValueError(f"Access denied: {csv_path} is outside allowed directory")
+            cwd = Path.cwd().resolve()
+            try:
+                csv_path_obj.relative_to(cwd)
+            except ValueError:
+                raise ValueError(f"Access denied: {csv_path} is outside allowed directory")
 
         if not csv_path_obj.exists():
             raise FileNotFoundError(f"CSV file not found: {csv_path}")
@@ -393,6 +390,9 @@ class BatchEngine:
 
     def _update_single_job_status(self, job: BatchJob, status: str, error_message: Optional[str], manifest: BatchManifest):
         """Update a single job's status and related counters."""
+        # Store previous status to correctly update counters
+        previous_status = job.status
+        
         job.status = status
         if error_message:
             job.error_message = error_message
@@ -400,10 +400,19 @@ class BatchEngine:
         if status in ['completed', 'failed']:
             job.completed_at = datetime.now(timezone.utc).isoformat()
 
-            if status == 'completed':
-                manifest.completed_jobs += 1
-            elif status == 'failed':
-                manifest.failed_jobs += 1
+            # Only increment counters if status actually changed
+            if previous_status != status:
+                # Decrement previous status counter if it was completed/failed
+                if previous_status == 'completed':
+                    manifest.completed_jobs = max(0, manifest.completed_jobs - 1)
+                elif previous_status == 'failed':
+                    manifest.failed_jobs = max(0, manifest.failed_jobs - 1)
+                
+                # Increment new status counter
+                if status == 'completed':
+                    manifest.completed_jobs += 1
+                elif status == 'failed':
+                    manifest.failed_jobs += 1
 
     def _load_manifest(self, manifest_file: Path) -> Optional[BatchManifest]:
         """Load batch manifest from file."""
