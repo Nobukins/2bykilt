@@ -81,7 +81,7 @@ class MetricSeries:
 
         return [
             v for v in self.values
-            if all(v.tags.get(k) == v for k, v in tags_filter.items())
+            if all(v.tags.get(k) == filter_value for k, filter_value in tags_filter.items())
         ]
 
     def get_latest_value(self, tags_filter: Optional[Dict[str, str]] = None) -> Optional[MetricValue]:
