@@ -97,7 +97,7 @@ issues:
       progress: {state: done, primary_pr: 83}, risk: null, critical_path_rank: 1}
   "58": {title: "メトリクス計測基盤", meta: {area: observability, type: feat, priority: 
         P1, phase: "2", stability: core}, depends: ["32"], dependents: ["59"], 
-      risk: null, critical_path_rank: 2}
+      risk: null, progress: {state: done, primary_pr: 155}, critical_path_rank: 2}
   "59": {title: "Run メトリクス API", meta: {area: observability, type: feat, 
         priority: P2, phase: "2", stability: core}, depends: ["58"], dependents: [],
     risk: null, critical_path_rank: 1}
@@ -157,19 +157,7 @@ summary:
   data_quality_checks:
     no_cycles_detected: true
     orphan_issues_without_dependents_or_depends:
-    - "34"
-    - "40"
-    - "41"
-    - "42"
-    - "45"
-    - "50"
-    - "51"
-    - "52"
     - "55"
-    - "57"
-    - "59"
-    - "60"
-    - "67"
     - "81"
     - '90'
   generated_at_utc: "2025-09-01T00:00:00Z"
