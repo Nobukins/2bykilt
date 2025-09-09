@@ -154,18 +154,32 @@ class MetricsCollector:
         return json_str
 
     def export_to_csv(self, base_filepath: Optional[str] = None) -> List[str]:
-        """Export all metrics to CSV files."""
+        """Export all metrics to CSV files.
+
+        Creates individual CSV files for each metric series and returns
+        the list of file paths created.
+
+        Args:
+            base_filepath: Base directory path for CSV files. If None, uses "artifacts/metrics".
+
+        Returns:
+            List of file paths for the created CSV files.
+        """
         exported_files = []
+
+        # Use default artifacts/metrics directory if no path specified
+        if base_filepath is None:
+            base_filepath = "artifacts/metrics"
 
         for name, series in self.series.items():
             if not series.values:
                 continue
 
             filename = f"{name}.csv"
-            if base_filepath:
-                filepath = Path(base_filepath) / filename
-            else:
-                filepath = Path(filename)
+            filepath = Path(base_filepath) / filename
+
+            # Ensure directory exists
+            filepath.parent.mkdir(parents=True, exist_ok=True)
 
             with open(filepath, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)

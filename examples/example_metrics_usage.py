@@ -98,11 +98,11 @@ def example_metrics_export():
     print(json_data[:200] + "..." if len(json_data) > 200 else json_data)
     print()
 
-    # Export to CSV files
-    csv_files = collector.export_to_csv()
-    print(f"📊 Exported {len(csv_files)} CSV files:")
+    # Export to CSV files (to artifacts/metrics directory)
+    csv_files = collector.export_to_csv("artifacts/metrics")
+    print(f"📊 Exported {len(csv_files)} CSV files to artifacts/metrics/:")
     for csv_file in csv_files:
-        print(f"   - {csv_file}")
+        print(f"   - {Path(csv_file).name}")
 
 def example_decorators():
     """Example of using metrics decorators."""

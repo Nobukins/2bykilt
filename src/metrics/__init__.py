@@ -8,7 +8,7 @@ with the main application.
 import os
 from typing import Dict, Any, Optional
 from pathlib import Path
-from .collector import MetricsCollector, get_metrics_collector
+from .collector import MetricsCollector, get_metrics_collector, MetricType
 
 
 class MetricsConfig:
@@ -168,13 +168,11 @@ def shutdown_metrics() -> None:
 
 # Import collector functions for convenience
 from .collector import (
-    get_metrics_collector,
     record_execution_time,
     record_memory_usage,
     record_job_status,
     get_system_metrics,
     record_system_metrics,
-    MetricType,
     MetricValue,
     MetricSeries
 )
