@@ -74,6 +74,7 @@ class BatchJob:
     error_message: Optional[str] = None
     created_at: Optional[str] = None
     completed_at: Optional[str] = None
+    batch_id: Optional[str] = None  # Add batch_id for better metrics tracking
 
     def __post_init__(self):
         if self.created_at is None:
@@ -503,7 +504,8 @@ class BatchEngine:
             job = BatchJob(
                 job_id=job_id,
                 run_id=run_id,
-                row_data=row_data
+                row_data=row_data,
+                batch_id=batch_id  # Set batch_id for metrics tracking
             )
 
             # Save individual job file
@@ -529,7 +531,46 @@ class BatchEngine:
             json.dump(manifest.to_dict(), f, indent=2, ensure_ascii=False)
 
         self.logger.info(f"Created batch with {len(jobs)} jobs (batch_id: {batch_id})")
+
+        # Record batch creation metrics
+        self._record_batch_creation_metrics(manifest)
+
         return manifest
+
+    def _record_batch_creation_metrics(self, manifest: BatchManifest):
+        """Record metrics for batch creation."""
+        try:
+            from ..metrics import get_metrics_collector, MetricType
+
+            collector = get_metrics_collector()
+            if collector is None:
+                return
+
+            # Record batch creation metric
+            collector.record_metric(
+                name="batch_created",
+                value=1,
+                metric_type=MetricType.COUNTER,
+                tags={
+                    "batch_id": manifest.batch_id,
+                    "run_id": manifest.run_id,
+                    "total_jobs": str(manifest.total_jobs)
+                }
+            )
+
+            # Record batch size metric
+            collector.record_metric(
+                name="batch_size",
+                value=manifest.total_jobs,
+                metric_type=MetricType.GAUGE,
+                tags={
+                    "batch_id": manifest.batch_id,
+                    "run_id": manifest.run_id
+                }
+            )
+
+        except Exception as e:
+            self.logger.debug(f"Failed to record batch creation metrics: {e}")
 
     def get_batch_status(self, batch_id: str) -> Optional[BatchManifest]:
         """
@@ -621,10 +662,75 @@ class BatchEngine:
 
             self._update_single_job_status(job, status, error_message, manifest)
             self._save_manifest(manifest_file, manifest)
+
+            # Record metrics for job completion
+            self._record_job_metrics(job, status, error_message)
+
             self.logger.info(f"Updated job {job_id} status to {status}")
 
         except Exception as e:
             self.logger.error(f"Failed to update job status: {e}")
+
+    def _record_job_metrics(self, job: BatchJob, status: str, error_message: Optional[str] = None):
+        """Record metrics for job execution."""
+        try:
+            from ..metrics import get_metrics_collector, MetricType
+
+            collector = get_metrics_collector()
+            if collector is None:
+                return
+
+            # Record job status metric
+            collector.record_metric(
+                name="job_status",
+                value=1,
+                metric_type=MetricType.COUNTER,
+                tags={
+                    "job_id": job.job_id,
+                    "run_id": job.run_id,
+                    "status": status,
+                    "batch_id": job.batch_id or "unknown"
+                }
+            )
+
+            # Record job duration if completed_at is available
+            if job.completed_at and job.created_at:
+                try:
+                    from datetime import datetime, timezone
+                    created_time = datetime.fromisoformat(job.created_at.replace('Z', '+00:00'))
+                    completed_time = datetime.fromisoformat(job.completed_at.replace('Z', '+00:00'))
+                    duration_seconds = (completed_time - created_time).total_seconds()
+
+                    collector.record_metric(
+                        name="job_duration_seconds",
+                        value=duration_seconds,
+                        metric_type=MetricType.HISTOGRAM,
+                        tags={
+                            "job_id": job.job_id,
+                            "run_id": job.run_id,
+                            "status": status,
+                            "batch_id": job.batch_id or "unknown"
+                        }
+                    )
+                except Exception as e:
+                    self.logger.debug(f"Failed to calculate job duration: {e}")
+
+            # Record error metrics if job failed
+            if status == "failed" and error_message:
+                collector.record_metric(
+                    name="job_errors",
+                    value=1,
+                    metric_type=MetricType.COUNTER,
+                    tags={
+                        "job_id": job.job_id,
+                        "run_id": job.run_id,
+                        "error_type": "execution_error",
+                        "batch_id": job.batch_id or "unknown"
+                    }
+                )
+
+        except Exception as e:
+            self.logger.debug(f"Failed to record job metrics: {e}")
 
     def _load_and_check_manifest(self, manifest_file: Path, job_id: str) -> bool:
         """Load manifest and check if it contains the specified job."""

@@ -48,12 +48,12 @@
 | A3 | #28 ✅ #30 ✅ #33 ✅ #35 ✅ #36 ✅ #34 ✅ #37 ✅ #38 ✅ #87 ✅ #88 ✅ #89 ✅ #91 ✅ | ✅ Done | 全 A3 アーティファクト系 Issue 完了 (#38 PR #103 反映) / Hardening follow-up (非機能) は別 Issue 検討 |
 | A4 | #25 ✅ #44 ✅ #45 ✅ #50 ✅ (#55) | ✅ Done | Runner Reliability / git_script 系統 完了 (PR #118, #120) |
 | A5 | #60 #61 | Planned | Security Base (Mask / Scan) |
-| A6 | #58 #59 | Planned | Metrics 基盤 & Run API |
+| A6 | #58 #59 | ✅ Done | Metrics 基盤 & Run API (Issue #155 として実装完了) |
 | A7 | #43 | Planned | LLM Toggle パリティ |
 | Docs | #66 → #67 | In Progress | Doc Sync >90% 維持方針 |
 | A8 | #81 #92 #102 #104 #106 #107 #108 #109 #110 #111 #113 #114 #115 | Planned | 追加Issueの評価とスケジュール反映 |
 
-Progress Summary (Phase 1): Wave A1 100% / Wave A2 100% / Wave A3 100% / Wave A4 100% ( #25 PR #118, #44/#45/#50 PR #120 ) 残: A5 Security Base へ移行。Draft/試行 PR は進捗計測に含めず。
+Progress Summary (Phase 1): Wave A1 100% / Wave A2 100% / Wave A3 100% / Wave A4 100% / Wave A6 100% ( #58 Metrics Foundation 完了) 残: A5 Security Base へ移行。Draft/試行 PR は進捗計測に含めず。
 
 ### Group B (Phase 2 – 拡張 / 高度化)
 

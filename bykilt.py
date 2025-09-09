@@ -2064,6 +2064,16 @@ from src.api.app import create_fastapi_app, run_app
 
 def main():
     """Main entry point for both CLI and UI."""
+    # Initialize metrics system
+    try:
+        from src.metrics import initialize_metrics
+        initialize_metrics()
+        print("📊 Metrics system initialized successfully")
+    except Exception as e:
+        print(f"⚠️  Failed to initialize metrics system: {e}")
+        import traceback
+        traceback.print_exc()
+
     # For UI or default case, proceed with Gradio
     parser = argparse.ArgumentParser(description="Gradio UI for 2Bykilt Agent")
     parser.add_argument("--ip", type=str, default="127.0.0.1", help="IP address to bind to")
@@ -2435,6 +2445,14 @@ Examples:
 def handle_batch_command(args):
     """Handle batch-related CLI commands."""
     try:
+        # Initialize metrics system for batch operations
+        try:
+            from src.metrics import initialize_metrics
+            initialize_metrics()
+            print("📊 Metrics system initialized for batch operation")
+        except Exception as e:
+            print(f"⚠️  Failed to initialize metrics system: {e}")
+
         from src.batch.engine import BatchEngine, start_batch
         from src.runtime.run_context import RunContext
 

@@ -1,0 +1,2 @@
+timestamp,value,batch_id,error_type,job_id,run_id
+2025-09-10T08:03:11.006736,1,104edb61-5640-4623-976b-4500de78941c,execution_error,20250909230311-d2ab9f_0003,20250909230311-d2ab9f

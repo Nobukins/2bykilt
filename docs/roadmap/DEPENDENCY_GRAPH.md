@@ -1,6 +1,6 @@
 ```mermaid
 %% Auto-generated dependency graph
-%% Generated at: 2025-09-08T00:36:07.707043+00:00
+%% Generated at: 2025-09-09T23:07:23.989306+00:00
 %% Edge方向: dependency --> dependent
 graph LR
 
@@ -53,7 +53,7 @@ subgraph R1[Rank 1]
   57["57 ログ保持期間 & ローテーション"]
   59["59 Run メトリクス API"]
   60["60 シークレットマスキング拡張"]
-  61["61 依存セキュリティスキャン最適化"]
+  61["61 [maint][security] 既…"]
   67["67 ドキュメント整備 第2弾"]
   87["87 スクリーンショット重複保存フラグ導入"]
   88["88 スクリーンショット例外分類と特定例外キ…"]
@@ -103,6 +103,7 @@ end
 32 --> 58
 58 --> 59
 56 --> 60
+32 --> 61
 32 --> 62
 64 --> 63
 65 --> 63
@@ -124,7 +125,7 @@ classDef progress fill:#e6f4ff,stroke:#0366d6,stroke-width:2px,color:#000;
 
 %% Class assignments
 class 31,46,49,54,62 highrisk;
-class 25,28,31,32,34,35,36,37,38,44,45,50,56,57,87,88,89,91 progress;
+class 25,28,31,32,34,35,36,37,38,39,44,45,50,56,57,58,87,88,89,91 progress;
 
 %% Legend (pseudo nodes)
 subgraph Legend[Legend]
