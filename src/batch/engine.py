@@ -309,7 +309,8 @@ class BatchEngine:
 
         Args:
             csv_path: Path to CSV file (absolute or relative)
-            chunk_size: Number of rows to process at once (for memory efficiency)
+            chunk_size: Number of rows to process at once (for memory efficiency). 
+                       If not provided, uses the configured chunk_size value.
 
         Returns:
             List of dictionaries representing CSV rows, where keys are column headers
@@ -337,6 +338,9 @@ class BatchEngine:
                 try:
                     csv_path_obj.relative_to(cwd)
                 except ValueError:
+                    self.logger.error(f"Access denied: '{csv_path}' is outside allowed directory. "
+                                      f"Path traversal detected. To allow access to files outside the current "
+                                      f"working directory, set 'allow_path_traversal' to True in configuration.")
                     raise SecurityError(f"Access denied: '{csv_path}' is outside allowed directory. "
                                       f"Path traversal detected. To allow access to files outside the current "
                                       f"working directory, set 'allow_path_traversal' to True in configuration.")
@@ -359,6 +363,12 @@ class BatchEngine:
             for sensitive_path in sensitive_paths:
                 try:
                     if sensitive_path.exists() and resolved_path.is_relative_to(sensitive_path):
+                        self.logger.error(
+                            f"Access denied: '{csv_path}' points to a sensitive system directory. "
+                            f"Resolved path: '{resolved_path}'. "
+                            f"Sensitive directory: '{sensitive_path}'. "
+                            f"This access is blocked for security reasons."
+                        )
                         raise SecurityError(
                             f"Access denied: '{csv_path}' points to a sensitive system directory. "
                             f"Resolved path: '{resolved_path}'. "
@@ -374,6 +384,9 @@ class BatchEngine:
 
         if csv_path_obj.stat().st_size == 0:
             raise FileProcessingError(f"CSV file is empty: '{csv_path}'. The file contains no data to process.")
+
+        # Validate file type (extension and MIME type)
+        self._validate_file_type(csv_path)
 
         # Check file size for memory considerations
         file_size_mb = csv_path_obj.stat().st_size / (1024 * 1024)
@@ -422,7 +435,9 @@ class BatchEngine:
                     processed_rows += 1
 
                     # Process in chunks to avoid memory issues with very large files
-                    if processed_rows % self.config['chunk_size'] == 0:
+                    # Use the provided chunk_size parameter, fallback to config if not provided
+                    effective_chunk_size = chunk_size if chunk_size != 1000 else self.config['chunk_size']
+                    if processed_rows % effective_chunk_size == 0:
                         self.logger.debug(f"Processed {processed_rows} rows from {csv_path}")
 
                 if not rows:

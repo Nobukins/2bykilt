@@ -17,6 +17,124 @@ import json  # Added to fix missing import
 # CLI Interface for Batch Execution (Issue #39) - CHECK BEFORE GRADIO IMPORT
 # ============================================================================
 
+def create_batch_parser():
+    """Create argument parser for batch commands."""
+    parser = argparse.ArgumentParser(
+        description="bykilt - Browser automation with batch execution support",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        add_help=False,  # Disable automatic --help handling
+        epilog="""
+Examples:
+  # Start batch execution from CSV
+  python bykilt.py batch start data.csv
+
+  # Get batch status
+  python bykilt.py batch status batch_123
+
+  # Update job status
+  python bykilt.py batch update-job job_0001 completed
+
+  # Launch web UI (default)
+  python bykilt.py ui
+        """
+    )
+
+    subparsers = parser.add_subparsers(dest='batch_command', help='Batch subcommands', required=True)
+
+    # batch start
+    start_parser = subparsers.add_parser('start', help='Start batch execution from CSV')
+    start_parser.add_argument('csv_path', help='Path to CSV file')
+    start_parser.add_argument('--template', help='Template ID for job configuration')
+
+    # batch status
+    status_parser = subparsers.add_parser('status', help='Get batch execution status')
+    status_parser.add_argument('batch_id', help='Batch ID to check')
+
+    # batch update-job
+    update_parser = subparsers.add_parser('update-job', help='Update job status')
+    update_parser.add_argument('job_id', help='Job ID to update')
+    update_parser.add_argument('status', choices=['completed', 'failed'], help='New status')
+    update_parser.add_argument('--error', help='Error message for failed jobs')
+
+    return parser
+
+
+def handle_batch_command(args):
+    """Handle batch-related CLI commands."""
+    try:
+        from src.batch.engine import BatchEngine, start_batch
+        from src.runtime.run_context import RunContext
+
+        if hasattr(args, 'batch_command') and args.batch_command == 'start':
+            print(f"🚀 Starting batch execution from {args.csv_path}")
+
+            # Create run context
+            run_context = RunContext.get()
+
+            # Start batch
+            manifest = start_batch(args.csv_path, run_context)
+
+            print("✅ Batch created successfully!")
+            print(f"   Batch ID: {manifest.batch_id}")
+            print(f"   Run ID: {manifest.run_id}")
+            print(f"   Total jobs: {manifest.total_jobs}")
+            print(f"   Jobs directory: {run_context.artifact_dir('jobs')}")
+            print(f"   Manifest: {os.path.join(run_context.artifact_dir('batch'), 'batch_manifest.json')}")
+
+            return 0
+
+        elif hasattr(args, 'batch_command') and args.batch_command == 'status':
+            print(f"📊 Getting status for batch {args.batch_id}")
+
+            # Create run context and engine
+            run_context = RunContext.get()
+            engine = BatchEngine(run_context)
+
+            # Get batch status
+            manifest = engine.get_batch_status(args.batch_id)
+
+            if manifest is None:
+                print(f"❌ Batch {args.batch_id} not found")
+                return 1
+
+            print("✅ Batch status:")
+            print(f"   Batch ID: {manifest.batch_id}")
+            print(f"   Run ID: {manifest.run_id}")
+            print(f"   CSV Path: {manifest.csv_path}")
+            print(f"   Total jobs: {manifest.total_jobs}")
+            print(f"   Completed: {manifest.completed_jobs}")
+            print(f"   Failed: {manifest.failed_jobs}")
+            print(f"   Created: {manifest.created_at}")
+
+            print("\n📋 Job details:")
+            for job in manifest.jobs:
+                status_icon = "✅" if job.status == "completed" else "❌" if job.status == "failed" else "⏳"
+                print(f"   {status_icon} {job.job_id}: {job.status}")
+                if job.error_message:
+                    print(f"      Error: {job.error_message}")
+
+            return 0
+
+        elif hasattr(args, 'batch_command') and args.batch_command == 'update-job':
+            print(f"🔄 Updating job {args.job_id} to {args.status}")
+
+            # Create run context and engine
+            run_context = RunContext.get()
+            engine = BatchEngine(run_context)
+
+            # Update job status
+            engine.update_job_status(args.job_id, args.status, args.error)
+
+            print("✅ Job status updated successfully!")
+            return 0
+
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
+
+
 def handle_batch_commands():
     """Handle batch commands before Gradio import to avoid argument conflicts."""
     if len(sys.argv) > 1 and sys.argv[1] == 'batch':
@@ -1946,10 +2064,6 @@ from src.api.app import create_fastapi_app, run_app
 
 def main():
     """Main entry point for both CLI and UI."""
-    # Handle batch commands before Gradio import to avoid argument conflicts
-    if len(sys.argv) > 1 and sys.argv[1] == 'batch':
-        return handle_batch_commands()
-
     # For UI or default case, proceed with Gradio
     parser = argparse.ArgumentParser(description="Gradio UI for 2Bykilt Agent")
     parser.add_argument("--ip", type=str, default="127.0.0.1", help="IP address to bind to")
@@ -2271,3 +2385,137 @@ def handle_batch_command(args):
 
 if __name__ == '__main__':
     main()
+
+# ============================================================================
+# CLI Interface for Batch Execution (Issue #39)
+# ============================================================================
+
+def create_batch_parser():
+    """Create argument parser for batch commands."""
+    parser = argparse.ArgumentParser(
+        description="bykilt - Browser automation with batch execution support",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        add_help=False,  # Disable automatic --help handling
+        epilog="""
+Examples:
+  # Start batch execution from CSV
+  python bykilt.py batch start data.csv
+
+  # Get batch status
+  python bykilt.py batch status batch_123
+
+  # Update job status
+  python bykilt.py batch update-job job_0001 completed
+
+  # Launch web UI (default)
+  python bykilt.py ui
+        """
+    )
+
+    subparsers = parser.add_subparsers(dest='batch_command', help='Batch subcommands', required=True)
+
+    # batch start
+    start_parser = subparsers.add_parser('start', help='Start batch execution from CSV')
+    start_parser.add_argument('csv_path', help='Path to CSV file')
+    start_parser.add_argument('--template', help='Template ID for job configuration')
+
+    # batch status
+    status_parser = subparsers.add_parser('status', help='Get batch execution status')
+    status_parser.add_argument('batch_id', help='Batch ID to check')
+
+    # batch update-job
+    update_parser = subparsers.add_parser('update-job', help='Update job status')
+    update_parser.add_argument('job_id', help='Job ID to update')
+    update_parser.add_argument('status', choices=['completed', 'failed'], help='New status')
+    update_parser.add_argument('--error', help='Error message for failed jobs')
+
+    return parser
+
+
+def handle_batch_command(args):
+    """Handle batch-related CLI commands."""
+    try:
+        from src.batch.engine import BatchEngine, start_batch
+        from src.runtime.run_context import RunContext
+
+        if hasattr(args, 'batch_command') and args.batch_command == 'start':
+            print(f"🚀 Starting batch execution from {args.csv_path}")
+
+            # Create run context
+            run_context = RunContext.get()
+
+            # Start batch
+            manifest = start_batch(args.csv_path, run_context)
+
+            print("✅ Batch created successfully!")
+            print(f"   Batch ID: {manifest.batch_id}")
+            print(f"   Run ID: {manifest.run_id}")
+            print(f"   Total jobs: {manifest.total_jobs}")
+            print(f"   Jobs directory: {run_context.artifact_dir('jobs')}")
+            print(f"   Manifest: {os.path.join(run_context.artifact_dir('batch'), 'batch_manifest.json')}")
+
+            return 0
+
+        elif hasattr(args, 'batch_command') and args.batch_command == 'status':
+            print(f"📊 Getting status for batch {args.batch_id}")
+
+            # Create run context and engine
+            run_context = RunContext.get()
+            engine = BatchEngine(run_context)
+
+            # Get batch status
+            manifest = engine.get_batch_status(args.batch_id)
+
+            if manifest is None:
+                print(f"❌ Batch {args.batch_id} not found")
+                return 1
+
+            print("✅ Batch status:")
+            print(f"   Batch ID: {manifest.batch_id}")
+            print(f"   Run ID: {manifest.run_id}")
+            print(f"   CSV Path: {manifest.csv_path}")
+            print(f"   Total jobs: {manifest.total_jobs}")
+            print(f"   Completed: {manifest.completed_jobs}")
+            print(f"   Failed: {manifest.failed_jobs}")
+            print(f"   Created: {manifest.created_at}")
+
+            print("\n📋 Job details:")
+            for job in manifest.jobs:
+                status_icon = "✅" if job.status == "completed" else "❌" if job.status == "failed" else "⏳"
+                print(f"   {status_icon} {job.job_id}: {job.status}")
+                if job.error_message:
+                    print(f"      Error: {job.error_message}")
+
+            return 0
+
+        elif hasattr(args, 'batch_command') and args.batch_command == 'update-job':
+            print(f"🔄 Updating job {args.job_id} to {args.status}")
+
+            # Create run context and engine
+            run_context = RunContext.get()
+            engine = BatchEngine(run_context)
+
+            # Update job status
+            engine.update_job_status(args.job_id, args.status, args.error)
+
+            print("✅ Job status updated successfully!")
+            return 0
+
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
+
+
+def handle_batch_commands():
+    """Check for batch commands and handle them before starting the UI."""
+    if len(sys.argv) > 1 and sys.argv[1] == 'batch':
+        parser = create_batch_parser()
+        try:
+            args = parser.parse_args(sys.argv[2:])  # Skip 'bykilt.py batch' part
+            exit_code = handle_batch_command(args)
+            sys.exit(exit_code)
+        except SystemExit as e:
+            # argparse prints help and exits, return the exit code
+            sys.exit(e.code if hasattr(e, 'code') else 1)
