@@ -6,8 +6,12 @@ from typing import Dict, Optional
 import requests
 import gradio as gr
 
-# LLM機能の有効/無効を制御
-ENABLE_LLM = os.getenv("ENABLE_LLM", "false").lower() == "true"
+# LLM機能の有効/無効を制御 (migrated to feature flag framework)
+try:
+    from src.config.feature_flags import is_llm_enabled
+    ENABLE_LLM = is_llm_enabled()
+except Exception:  # fallback safety
+    ENABLE_LLM = os.getenv("ENABLE_LLM", "false").lower() == "true"
 
 # 条件付きLLMインポート
 if ENABLE_LLM:
