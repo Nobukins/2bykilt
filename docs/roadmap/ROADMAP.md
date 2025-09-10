@@ -51,7 +51,7 @@
 | A6 | #58 #59 | ✅ Done | Metrics 基盤 & Run API (Issue #155 として実装完了) |
 | A7 | #43 | ✅ Done | LLM Toggle パリティ (PR #157 マージ完了) |
 | Docs | #66 → #67 | In Progress | Doc Sync >90% 維持方針 |
-| A8 | #81 #92 #102 #104 #106 #107 #108 #109 #110 #111 #113 #114 #115 | Planned | 追加Issueの評価とスケジュール反映 |
+| A8 | 後続の新規作成issue | Planned | 追加Issueの評価とスケジュール反映 |
 
 Progress Summary (Phase 1): Wave A1 100% / Wave A2 100% / Wave A3 100% / Wave A4 100% / Wave A5 100% / Wave A6 100% / Wave A7 100% ( #60 Security Base 完了) 残: Group B Phase 2 へ移行。Draft/試行 PR は進捗計測に含めず。
 Progress Summary (Phase 2): Wave B4 25% ( #39 CSV コア完了) 残: B1-B3, B5-B6 着手待ち。
@@ -164,7 +164,7 @@ Wave A4 は完了。Group A 基盤機能が完了したため、Phase 2 (Group B
 
 ### 完了基準 (Group A → Group B 移行)
 
-- ✅ Group A: 全Wave完了 (A1-A4 100%)
+- ✅ Group A: 全Wave完了 (A1-A7 100%)
 - ✅ Security Base: 最低限のセキュリティ対策完了
 - ✅ 新機能: 少なくとも1つのユーザー価値提供機能稼働
 - ⏳ Docs: 同期率維持 (90%+)
@@ -174,6 +174,48 @@ Wave A4 は完了。Group A 基盤機能が完了したため、Phase 2 (Group B
 - **新機能リスク**: #39 は experimental だが、Phase 2 先頭として慎重に実装
 - **セキュリティ優先**: #60 を A5 と並行して早期完了
 - **後方互換**: Flag ベースの段階的導入を徹底
+
+### 開発フロー (Mermaid)
+
+```mermaid
+graph TD
+    A[Group A 完了] --> B[Phase 2 移行]
+    B --> C[Batch Processing 優先]
+    C --> D[#39 CSVコア ✅]
+    D --> E[#41 進捗・サマリー]
+    E --> F[#42 部分リトライ]
+    F --> G[#40 UI連携]
+    
+    B --> H[Runner Enhancement]
+    H --> I[#46 タイムアウト]
+    I --> J[#47 並列実行]
+    J --> K[#48 診断]
+    
+    B --> L[Security Hardening]
+    L --> M[#62 サンドボックス]
+    M --> N[#52 強化]
+    
+    B --> O[Plugins Architecture]
+    O --> P[#49 ユーザースクリプト]
+    
+    C --> Q[長期目標]
+    Q --> R[#58/#59 Metrics API]
+    R --> S[#53/#54 CDPデュアル]
+    S --> T[#66/#67 Docs]
+```
+
+### Gitツリー表示 (開発ブランチ構造)
+
+```
+2bykilt (main)
+├── feature/issue-155-metrics-foundation (Metrics基盤)
+├── feature/issue-43-enable-llm-parity (LLM Toggle)
+├── feature/roadmap-update-wave-a-completion (Document更新)
+└── feature/batch-engine-core (Batch Processing)
+    ├── feature/batch-progress-summary (#41)
+    ├── feature/batch-partial-retry (#42)
+    └── feature/csv-ui-integration (#40)
+```
 
 ---
 
@@ -200,6 +242,7 @@ Wave A4 は完了。Group A 基盤機能が完了したため、Phase 2 (Group B
 | 1.0.17 | 2025-09-10 | Wave A7 #43 完了反映 (PR #157 マージ) / Progress Summary 更新 / 次アクション A5 Security Base 移行準備 | Copilot Agent |
 | 1.0.18 | 2025-09-10 | Wave A5 #60/#61 完了反映 (PR #123 マージ) / Issue #60 クローズ / Group B Phase 2 移行準備 | Copilot Agent |
 | 1.0.19 | 2025-09-10 | Group B B4 #39 完了反映 / Phase 2 進捗更新 / Batch Processing 展開準備 | Copilot Agent |
+| 1.0.20 | 2025-09-10 | Wave A8 抽象化 / 次アクションにMermaid/Gitツリー追加 / Wave A完了区切り | Copilot Agent |
 
 ---
 
