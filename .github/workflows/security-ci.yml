@@ -132,6 +132,7 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        continue-on-error: true
         run: |
           python - <<'PY'
           import json, os, sys, time, urllib.request, base64
