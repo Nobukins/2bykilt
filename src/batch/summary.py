@@ -181,7 +181,7 @@ def generate_batch_summary(manifest_path: Path, output_path: Path) -> BatchSumma
             from .engine import BatchManifest
             manifest = BatchManifest.from_dict(manifest_data)
     except Exception as e:
-        raise ValueError(f"Invalid batch manifest: {manifest_path}")
+        raise ValueError(f"Invalid batch manifest: {manifest_path} - {e}")
 
     # Generate and save summary
     generator = BatchSummaryGenerator()
