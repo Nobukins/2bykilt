@@ -67,6 +67,22 @@ Progress Summary (Phase 2): Wave B4 25% ( #39 CSV コア完了) 残: B1-B3, B5-B
 | B5 | #53 → #49(part1/part2) | Planned | cdp-use 追加タイプ調査 → ユーザースクリプト プラグインアーキテクチャ |
 | B6 | Hardening / Cleanup | Planned | 全体のHardeningとCleanup |
 
+### Group C (Phase 3 – 継続改善 / 品質向上)
+
+| Wave | Issues | Status | 備考 |
+|------|--------|--------|------|
+| C1 | #154 | OPEN | 🔴 CRITICAL: pip-audit dependency resolution failure in GitHub Actions |
+| C2 | #127 | OPEN | `[docs][batch]` CSVバッチエンジン統合ドキュメントの包括的改善 |
+| C3 | #115 | OPEN | `[A3][regression][hardening]` Post-#38 回帰スイート強化 |
+| C4 | #114 #113 | OPEN | CI/ドキュメント改善 (pytest.ini guard scope / archived references cleanup) |
+| C5 | #111 #110 | OPEN | アーティファクト統合・バグ修正 (recording_dir_resolver / browser-control録画未生成) |
+| C6 | #109 | OPEN | `[quality][coverage]` Sonar 新規行カバレッジ向上とQuality Gate再挑戦 |
+| C7 | #108 #107 | OPEN | テスト安定化 (Edge headless flake / PytestReturnNotNone warnings) |
+| C8 | #106 #104 | OPEN | Phase 2 enforcement (unified recording path flag / rollout) |
+| C9 | #102 #101 | OPEN | フラグ・テスト改善 (FeatureFlags アーティファクト / async browser起動安定化) |
+| C10 | #92 #81 | OPEN | 高度化 (Enrichment Phase 3 / 非同期ブラウザ統合テスト安定化) |
+| C11 | #67 #66 | OPEN | ドキュメント整備 (第2弾 / 第1弾) |
+
 Gate 条件:
 
 - Group A
@@ -243,6 +259,7 @@ graph TD
 | 1.0.18 | 2025-09-10 | Wave A5 #60/#61 完了反映 (PR #123 マージ) / Issue #60 クローズ / Group B Phase 2 移行準備 | Copilot Agent |
 | 1.0.19 | 2025-09-10 | Group B B4 #39 完了反映 / Phase 2 進捗更新 / Batch Processing 展開準備 | Copilot Agent |
 | 1.0.20 | 2025-09-10 | Wave A8 抽象化 / 次アクションにMermaid/Gitツリー追加 / Wave A完了区切り | Copilot Agent |
+| 1.0.21 | 2025-09-10 | Group C追加 / 未記載OPEN IssueをPhase 3として整理 | Copilot Agent |
 
 ---
 
