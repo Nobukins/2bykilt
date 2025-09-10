@@ -1,6 +1,6 @@
 # 2bykilt 開発ロードマップ (Baseline v1)
 
-最終更新: 2025-09-08
+最終更新: 2025-09-10
 対象リポジトリ: <https://github.com/Nobukins/2bykilt>
 
 
@@ -47,13 +47,14 @@
 | A2 | #32 ✅ #31 ✅ #56 ✅ #57 ✅ | ✅ Done | #56 / #57 実装完了 (PR #83) |
 | A3 | #28 ✅ #30 ✅ #33 ✅ #35 ✅ #36 ✅ #34 ✅ #37 ✅ #38 ✅ #87 ✅ #88 ✅ #89 ✅ #91 ✅ | ✅ Done | 全 A3 アーティファクト系 Issue 完了 (#38 PR #103 反映) / Hardening follow-up (非機能) は別 Issue 検討 |
 | A4 | #25 ✅ #44 ✅ #45 ✅ #50 ✅ (#55) | ✅ Done | Runner Reliability / git_script 系統 完了 (PR #118, #120) |
-| A5 | #60 #61 | Planned | Security Base (Mask / Scan) |
+| A5 | #60 ✅ #61 ✅ | ✅ Done | Security Base (Mask / Scan) (PR #123 マージ完了) |
 | A6 | #58 #59 | ✅ Done | Metrics 基盤 & Run API (Issue #155 として実装完了) |
-| A7 | #43 | Planned | LLM Toggle パリティ |
+| A7 | #43 | ✅ Done | LLM Toggle パリティ (PR #157 マージ完了) |
 | Docs | #66 → #67 | In Progress | Doc Sync >90% 維持方針 |
 | A8 | #81 #92 #102 #104 #106 #107 #108 #109 #110 #111 #113 #114 #115 | Planned | 追加Issueの評価とスケジュール反映 |
 
-Progress Summary (Phase 1): Wave A1 100% / Wave A2 100% / Wave A3 100% / Wave A4 100% / Wave A6 100% ( #58 Metrics Foundation 完了) 残: A5 Security Base へ移行。Draft/試行 PR は進捗計測に含めず。
+Progress Summary (Phase 1): Wave A1 100% / Wave A2 100% / Wave A3 100% / Wave A4 100% / Wave A5 100% / Wave A6 100% / Wave A7 100% ( #60 Security Base 完了) 残: Group B Phase 2 へ移行。Draft/試行 PR は進捗計測に含めず。
+Progress Summary (Phase 2): Wave B4 25% ( #39 CSV コア完了) 残: B1-B3, B5-B6 着手待ち。
 
 ### Group B (Phase 2 – 拡張 / 高度化)
 
@@ -62,7 +63,7 @@ Progress Summary (Phase 1): Wave A1 100% / Wave A2 100% / Wave A3 100% / Wave A4
 | B1 | #46 → #47 → #48 | Planned | Run/Job タイムアウト & キャンセル → 並列実行キュー & 制限 → 環境変数バリデーション & 診断 |
 | B2 | #52 → (#62 PoC) → (#62 Enforce) → #54 → #55 | Planned | サンドボックス allow/deny パス → 実行サンドボックス機能制限 → cdp-use デュアルエンジン抽象レイヤ → browser_control pytest パス修正 |
 | B3 | #51 | Planned | Windows プロファイル永続化 |
-| B4 | #39(part1/part2) → #41 → #42 → #40 | Planned | CSV 駆動バッチエンジンコア → バッチ進捗・サマリー → バッチ部分リトライ → CSV D&D UI 連携 |
+| B4 | #39 ✅ → #41 → #42 → #40 | In Progress | CSV 駆動バッチエンジンコア (part1 完了) → バッチ進捗・サマリー → バッチ部分リトライ → CSV D&D UI 連携 |
 | B5 | #53 → #49(part1/part2) | Planned | cdp-use 追加タイプ調査 → ユーザースクリプト プラグインアーキテクチャ |
 | B6 | Hardening / Cleanup | Planned | 全体のHardeningとCleanup |
 
@@ -140,17 +141,17 @@ Wave A4 は完了。Group A 基盤機能が完了したため、Phase 2 (Group B
 - **ユーザーインパクト重視**: #39 (CSV駆動バッチエンジン) はユーザー体験向上効果が高いため優先
 - **セキュリティ重視**: #60 (シークレットマスキング拡張) はセキュリティ強化のため優先
 
-### 短期 (A5 Security Base / 新機能開発並行)
+### 短期 (Group B Phase 2 移行 / 新機能開発開始)
 
-1. **Security Base 着手**: #60 シークレットマスキング拡張 → #61 依存セキュリティスキャン最適化
+1. **Group B 移行**: Phase 1 全Wave完了、Phase 2 へ移行開始
 2. **新機能開発開始**: #39 CSV駆動バッチエンジンコア (Phase 2 先頭)
-3. **Metrics 基盤準備**: #58 メトリクス計測基盤 (A6 先行準備)
-4. **LLM Toggle 完了**: #43 ENABLE_LLM パリティ (A7 早期完了)
+3. **Metrics 基盤準備**: #58 メトリクス計測基盤 (A6 完了済み)
+4. **Security Base 完了**: #60/#61 シークレットマスキング & スキャン最適化 (A5 完了済み)
 5. **追加Issue評価**: #81 (A2テスト安定化), #92 (Phase 3エンリッチメント), #102-#115 (A3/A8 各種改善) の優先順位付けとスケジュール反映
 
 ### 中期 (Phase 2 展開)
 
-1. **Batch Processing 展開**: #39 → #40 → #41 → #42 (CSV駆動一連)
+1. **Batch Processing 展開**: #39 ✅ (コア完了) → #41 バッチ進捗・サマリー → #42 バッチ部分リトライ → #40 CSV D&D UI 連携
 2. **Runner Enhancement**: #46 → #47 → #48 (タイムアウト/並列/診断)
 3. **Security Hardening**: #62 → #52 (サンドボックス強化)
 4. **Plugins Architecture**: #49 (ユーザースクリプト拡張)
@@ -196,6 +197,9 @@ Wave A4 は完了。Group A 基盤機能が完了したため、Phase 2 (Group B
 | 1.0.13 | 2025-09-04 | #91 統一録画パス rollout 完了 (flag default 有効化, legacy path warn, async loop 安定化, flaky tests 正常化) | Copilot Agent |
 | 1.0.14 | 2025-09-06 | #28 録画ファイル保存パス統一 完了 (PR #112) / ISSUE_DEPENDENCIES 進捗同期 / Progress Summary 更新 | Copilot Agent |
 | 1.0.16 | 2025-09-08 | Wave A4 完了反映 / 次アクション Group B 移行準備 / 優先順位付け方針追加 / 新規Issue評価反映 / Group Bテーブル化 | Copilot Agent |
+| 1.0.17 | 2025-09-10 | Wave A7 #43 完了反映 (PR #157 マージ) / Progress Summary 更新 / 次アクション A5 Security Base 移行準備 | Copilot Agent |
+| 1.0.18 | 2025-09-10 | Wave A5 #60/#61 完了反映 (PR #123 マージ) / Issue #60 クローズ / Group B Phase 2 移行準備 | Copilot Agent |
+| 1.0.19 | 2025-09-10 | Group B B4 #39 完了反映 / Phase 2 進捗更新 / Batch Processing 展開準備 | Copilot Agent |
 
 ---
 
