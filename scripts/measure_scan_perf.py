@@ -133,6 +133,11 @@ def main():
         action='store_true',
         help='Mark this measurement as a baseline'
     )
+    parser.add_argument(
+        '--ignore-exit-code',
+        action='store_true',
+        help='Do not propagate the measured command\'s exit code; always exit 0 (recorded in metrics regardless)'
+    )
 
     args = parser.parse_args()
 
@@ -172,8 +177,15 @@ def main():
     print(f"Success: {result['success']}")
     print(f"Results saved to {output_path}")
 
-    # Exit with the same code as the measured command
-    sys.exit(result['return_code'])
+    # Exit behavior: optionally ignore the measured command's exit code
+    if args.ignore_exit_code:
+        # Still provide visibility via stdout
+        if not result['success']:
+            print("Note: Non-zero exit code suppressed by --ignore-exit-code (see metrics for details)")
+        sys.exit(0)
+    else:
+        # Exit with the same code as the measured command
+        sys.exit(result['return_code'])
 
 
 if __name__ == '__main__':

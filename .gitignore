@@ -244,3 +244,10 @@ config_comparison*.json
 
 # ignore generated enrichment summaries
 enrich_summary.json
+
+# Security scan artifacts (local runs)
+pip-audit-raw.json
+pip-audit-normalized.json
+
+# Metrics artifacts (local runs)
+artifacts/metrics/*.csv

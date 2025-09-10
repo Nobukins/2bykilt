@@ -4,6 +4,20 @@
 
 # Example suppressions (to be populated based on actual scan results)
 suppressions:
+  "GHSA-pq67-6m6q-mj2v":
+    reason: "urllib3 redirect suppression at PoolManager level; fix requires urllib3>=2.5.0 which conflicts with botocore/boto3 (requires <2.4). Mitigation: we do not use PoolManager-level retries to disable redirects; requests-level redirect control applies."
+    added_at: "2025-09-10"
+    expires_at: "2026-03-31"
+
+  "GHSA-48p4-8xcf-vxj5":
+    reason: "urllib3 Pyodide/browser redirect control; not applicable to our server/runtime. Fix requires urllib3>=2.5.0 which conflicts with AWS SDK constraint (<2.4)."
+    added_at: "2025-09-10"
+    expires_at: "2026-03-31"
+
+  "GHSA-vqfr-h8mv-ghfj":
+    reason: "h11 chunked-coding leniency; fix requires h11>=0.15 but httpcore==1.0.7 requires h11<0.15. Our stack uses httpcore/httpx client, not a reverse proxy; combined exploit scenario not applicable. Will upgrade when httpcore relaxes pin."
+    added_at: "2025-09-10"
+    expires_at: "2026-03-31"
   # Example: Suppress a known false positive
   # "CVE-2023-12345":
   #   reason: "False positive - vulnerability does not affect our usage"
@@ -17,6 +31,8 @@ suppressions:
 
 # Suppression statistics (auto-updated by scan tools)
 summary:
-  total_suppressed: 0
-  by_reason: {}
-  last_updated: "2025-09-08T00:00:00Z"
+  total_suppressed: 3
+  by_reason:
+    urllib3-redirect-compat: 2
+    h11-parser-compat: 1
+  last_updated: "2025-09-10T00:00:00Z"

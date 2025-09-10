@@ -3,6 +3,7 @@ GitScriptAutomator - Complete Git-Script Automation Solution
 Integrates ProfileManager + BrowserLauncher for stable 2024+ browser automation
 """
 import os
+import sys
 import logging
 import asyncio
 from typing import Optional, Dict, Any
@@ -233,11 +234,14 @@ class GitScriptAutomator:
             logger.info(f"🔧 Processed command: {processed_command}")
             
             # Step 4: スクリプトの実行（subprocessを使用）
-            import subprocess
             import shlex
             
             # コマンドを引数リストに分割
             command_parts = shlex.split(processed_command)
+
+            # 先頭が 'python' の場合は現在のインタプリタに置き換え
+            if command_parts and command_parts[0] == 'python':
+                command_parts[0] = sys.executable or command_parts[0]
             
             # 作業ディレクトリを設定
             cwd = workspace_dir
