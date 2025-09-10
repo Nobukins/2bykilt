@@ -4,49 +4,57 @@
 # ============================================================================
 
 # Core Web Framework
-fastapi==0.115.11
+fastapi==0.116.1
 uvicorn==0.34.0
-starlette==0.46.1
+starlette==0.47.2
 python-multipart==0.0.20
 
 # UI Framework
-gradio==5.10.0
-gradio_client==1.5.3
+gradio==5.31.0
+gradio_client==1.10.1
 
 # Browser Automation (Core)
-browser-use==0.1.37
+browser-use==0.1.45
 playwright==1.51.0
 pyperclip==1.9.0
+# Pin transitive deps to reduce resolver backtracking
+faiss-cpu==1.12.0
+langchain-deepseek==0.1.3
+mem0ai==0.1.93
+textual==6.1.0
+psycopg2-binary==2.9.10
 
 # HTTP & Network
-aiohttp==3.11.14
+aiohttp==3.12.14
 httpx==0.28.1
 httpx-sse==0.4.0
 httpx-ws==0.7.1
-requests==2.32.3
+requests==2.32.4
 requests-toolbelt==1.0.0
 httpcore==1.0.7
 websockets==14.2
 
 # LangChain Core (AI/LLM Foundation)
-langchain==0.3.14
-langchain-core==0.3.45
-langchain-text-splitters==0.3.6
+# browser-use 0.1.45 requires langchain>=0.3.21
+langchain==0.3.21
+# Align with browser-use 0.1.45 which requires langchain-core==0.3.49
+langchain-core==0.3.49
+langchain-text-splitters==0.3.7
 langsmith==0.2.11
 
 # LLM Providers
-langchain-openai==0.3.1        # OpenAI GPT-4, GPT-3.5, Azure OpenAI
+langchain-openai==0.3.11       # OpenAI GPT-4, GPT-3.5, Azure OpenAI (align with browser-use)
 langchain-anthropic==0.3.3     # Claude 3 (Sonnet, Haiku, Opus)
-langchain-google-genai==2.0.8  # Google Gemini
+langchain-google-genai==2.1.2  # Google Gemini (align with browser-use 0.1.45)
 langchain-mistralai==0.2.4     # Mistral AI
-langchain-ollama==0.2.2        # Local Ollama models
+langchain-ollama==0.3.0        # Local Ollama models (align with browser-use)
 langchain-fireworks==0.2.7     # Fireworks AI
 langchain-aws==0.2.15          # AWS Bedrock
 
 # Direct LLM Client Libraries
-openai==1.66.3                 # Direct OpenAI API
+openai==1.68.2                 # Direct OpenAI API (align with langchain-openai 0.3.11)
 anthropic==0.49.0              # Direct Anthropic API
-google-generativeai==0.8.4     # Direct Google Gemini API
+# google-generativeai intentionally omitted; langchain-google-genai manages google-ai-generativelanguage
 ollama==0.4.7                  # Local Ollama client
 fireworks-ai==0.15.12          # Fireworks AI client
 
@@ -67,7 +75,7 @@ lxml_html_clean==0.4.1
 MainContentExtractor==0.0.4
 courlan==1.3.2
 jusText==3.0.2
-markdownify==0.14.1
+markdownify==1.1.0  # align with browser-use 0.1.45
 
 # Configuration & Environment
 python-dotenv==1.0.1
@@ -100,13 +108,13 @@ python-slugify==8.0.4
 # Date & Time Processing
 python-dateutil==2.9.0.post0
 dateparser==1.2.1
-pytz==2025.1
+pytz==2024.2
 tzdata==2025.1
 tzlocal==5.3.1
 
 # Development & Code Quality
 ruff==0.11.0                   # Python linter & formatter
-rich==13.9.4                   # Beautiful terminal output
+rich==14.0.0                   # Beautiful terminal output (align with browser-use)
 
 # Media Processing
 pillow==11.1.0                 # Image processing
@@ -118,11 +126,12 @@ cryptography                   # For secure connections
 certifi==2025.1.31            # SSL certificates
 
 # Cloud Services (AWS)
-boto3==1.37.14
-botocore==1.37.14
+boto3==1.37.23
+botocore==1.37.23
 s3transfer==0.11.4
 
 # Google Cloud Services
+google-ai-generativelanguage==0.6.18
 google-api-python-client==2.164.0
 google-auth==2.38.0
 google-auth-httplib2==0.2.0
@@ -155,6 +164,8 @@ attrs==25.3.0
 certifi==2025.1.31
 charset-normalizer==3.4.1
 idna==3.10
+# urllib3 pin must remain compatible with AWS SDK (botocore/boto3).
+# botocore==1.37.x currently requires urllib3 < 2.4; 2.5.0 causes resolver failure.
 urllib3==2.3.0
 typing_extensions==4.12.2
 annotated-types==0.7.0
