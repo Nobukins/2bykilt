@@ -73,6 +73,12 @@ def parse_pip_audit_json(data: Dict[str, Any]) -> Dict[str, Any]:
             version = dep.get('version', '')
             for dv in dep.get('vulns', []) or []:
                 # Align to the fields used above
+                # Safely extract CVE-like alias (first truthy value)
+                aliases = dv.get('aliases') or []
+                cve_alias = next((a for a in aliases if a), '')
+                # Safely extract first available fix version
+                fix_versions = dv.get('fix_versions') or []
+                first_fix = next((v for v in fix_versions if v), None)
                 vuln_obj = {
                     'id': dv.get('id', ''),  # often GHSA-...
                     'package': name,
@@ -80,11 +86,11 @@ def parse_pip_audit_json(data: Dict[str, Any]) -> Dict[str, Any]:
                     # Severity often missing in this format; leave unknown
                     'severity': 'unknown',
                     'description': dv.get('description', ''),
-                    # pip-audit may not provide CVE here; keep empty
-                    'cve': dv.get('aliases', [None])[0] if dv.get('aliases') else '',
+                    # pip-audit may not provide CVE here; use first alias if present
+                    'cve': cve_alias or '',
                     'urls': [],
-                    'fix_available': bool(dv.get('fix_versions')),
-                    'fix_version': (dv.get('fix_versions') or [None])[0],
+                    'fix_available': bool(fix_versions),
+                    'fix_version': first_fix,
                 }
 
                 if is_suppressed(vuln_obj):
