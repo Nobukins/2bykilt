@@ -9,7 +9,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Any, List, Optional, TYPE_CHECKING
+from typing import Dict, Any, List, Optional, TYPE_CHECKING, Union
 from dataclasses import dataclass, asdict
 
 if TYPE_CHECKING:
@@ -30,7 +30,7 @@ class BatchSummary:
     success_rate: float
     created_at: str
     completed_at: Optional[str] = None
-    jobs: List[Dict[str, Any]] = None
+    jobs: Optional[List[Dict[str, Any]]] = None
 
     def __post_init__(self):
         if self.jobs is None:
@@ -57,7 +57,7 @@ class BatchSummaryGenerator:
     def __init__(self):
         self.logger = logging.getLogger(f"{__name__}.BatchSummaryGenerator")
 
-    def generate_summary(self, manifest: 'BatchManifest') -> BatchSummary:
+    def generate_summary(self, manifest: 'BatchManifest') -> 'BatchSummary':
         """
         Generate batch summary from manifest.
 
@@ -171,7 +171,8 @@ def generate_batch_summary(manifest_path: Path, output_path: Path) -> BatchSumma
 
     Raises:
         FileNotFoundError: If manifest file doesn't exist
-        ValueError: If manifest is invalid
+        ValueError: If manifest is invalid or cannot be parsed
+        OSError: If file cannot be read due to permission issues
     """
     if not manifest_path.exists():
         raise FileNotFoundError(f"Batch manifest not found: {manifest_path}")
@@ -184,7 +185,8 @@ def generate_batch_summary(manifest_path: Path, output_path: Path) -> BatchSumma
             from .engine import BatchManifest
             manifest = BatchManifest.from_dict(manifest_data)
     except Exception as e:
-        raise ValueError(f"Invalid batch manifest: {manifest_path} - {e}")
+        error_msg = f"Invalid batch manifest: {manifest_path} - {type(e).__name__}: {e}"
+        raise ValueError(error_msg) from e
 
     # Generate and save summary
     generator = BatchSummaryGenerator()

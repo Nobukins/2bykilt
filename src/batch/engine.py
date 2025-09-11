@@ -601,7 +601,8 @@ class BatchEngine:
             return generator.generate_summary(manifest)
 
         except Exception as e:
-            self.logger.error(f"Failed to get batch summary for {batch_id}: {e}")
+            error_msg = f"Failed to get batch summary for {batch_id} - {type(e).__name__}: {e}"
+            self.logger.error(error_msg)
             return None
 
     def _load_manifest_from_current_context(self, batch_id: str) -> Optional[BatchManifest]:
