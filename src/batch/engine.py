@@ -1224,7 +1224,7 @@ class BatchEngine:
 
         # Re-raise the last exception to preserve the original error context
         if last_exception:
-            raise
+            raise last_exception from None
         else:
             raise RuntimeError(f"Job {job.job_id}: {error_summary}")
 
@@ -1280,7 +1280,8 @@ class BatchEngine:
         except Exception as e:
             error_msg = f"Job execution failed for {job.job_id}: {type(e).__name__}"
             self.logger.error(error_msg)
-            raise RuntimeError(f"Job {job.job_id}: {type(e).__name__}") from e
+            # Re-raise the original exception to preserve its type and context
+            raise
 
     def _simulate_job_execution(self, job: BatchJob, success_rate: Optional[float] = None,
                                max_random_delay: Optional[float] = None) -> str:
