@@ -1133,8 +1133,54 @@ class BatchEngine:
 
         return None
 
-    def _record_retry_metrics(self, batch_id: str, retry_count: int) -> None:
-        """Record metrics for batch retry operations."""
+    def stop_batch(self, batch_id: str) -> bool:
+        """
+        Stop a running batch by marking all pending/running jobs as stopped.
+
+        Args:
+            batch_id: Batch identifier to stop
+
+        Returns:
+            True if batch was stopped successfully, False otherwise
+        """
+        try:
+            # Load batch manifest
+            manifest = self._load_manifest_by_batch_id(batch_id)
+            if manifest is None:
+                self.logger.warning(f"Batch {batch_id} not found for stopping")
+                return False
+
+            # Find manifest file
+            manifest_file = self._find_manifest_file_for_batch(batch_id)
+            if manifest_file is None:
+                self.logger.warning(f"Manifest file not found for batch {batch_id}")
+                return False
+
+            # Update all pending/running jobs to stopped status
+            stopped_count = 0
+            for job in manifest.jobs:
+                if job.status in ['pending', 'running']:
+                    job.status = 'stopped'
+                    job.completed_at = datetime.now(timezone.utc).isoformat()
+                    job.error_message = "Batch stopped by user"
+                    stopped_count += 1
+
+            # Save updated manifest
+            self._save_manifest(manifest_file, manifest)
+
+            self.logger.info(f"Stopped batch {batch_id}: {stopped_count} jobs marked as stopped")
+
+            # Record stop metrics
+            self._record_batch_stop_metrics(batch_id, stopped_count)
+
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Failed to stop batch {batch_id}: {e}")
+            return False
+
+    def _record_batch_stop_metrics(self, batch_id: str, stopped_count: int):
+        """Record metrics for batch stop operations."""
         try:
             from ..metrics import get_metrics_collector, MetricType
 
@@ -1143,17 +1189,18 @@ class BatchEngine:
                 return
 
             collector.record_metric(
-                name="batch_retry_initiated",
-                value=retry_count,
+                name="batch_stopped",
+                value=1,
                 metric_type=MetricType.COUNTER,
                 tags={
                     "batch_id": batch_id,
-                    "run_id": self.run_context.run_id_base
+                    "run_id": self.run_context.run_id_base,
+                    "stopped_jobs": str(stopped_count)
                 }
             )
 
         except Exception as e:
-            self.logger.debug(f"Failed to record retry metrics: {e}")
+            self.logger.debug(f"Failed to record batch stop metrics: {e}")
 
     def execute_job_with_retry(self, job: BatchJob, max_retries: int = DEFAULT_MAX_RETRIES,
                               retry_delay: float = DEFAULT_RETRY_DELAY, backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
