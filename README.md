@@ -97,13 +97,45 @@ python bykilt.py
 - 複雑な判断が必要な場合はLLM（魔導士）が対応（オプション機能）
 - 人間とAIの最適な協力関係を実現
 
-### 🔮 魔法の書からの知識抽出
+### � 並行実行制御の魔法（Phase2-01）
 
-**「賢者は必要な知識のみを集め、混沌から秩序を生み出す」**
+**「複数の魔法を同時に唱え、時間を効率的に操れ」**
 
-- **魔法の目**: ウェブ上の情報を正確に見定め抽出
-- **知識の結晶化**: 集めた情報を整理して保存
-- **魔術の応用**: 抽出データを様々な形式で再利用
+- **並行実行制御**: 設定可能な同時実行数で複数のタスクを効率的に処理
+- **優先順位付け**: 重要な魔法を優先的に実行する賢い制御システム
+- **状態追跡**: 実行中の魔法の状態をリアルタイムで監視・記録
+- **自動負荷分散**: システムリソースを最適に活用する賢い配分
+
+#### 並行実行制御の基本魔法
+
+```python
+from src.runner.queue_manager import get_queue_manager
+
+# 魔法の実行制御装置を取得
+manager = get_queue_manager(max_concurrency=3)
+
+# 魔法を登録（優先順位付き）
+manager.enqueue("urgent-task", "緊急の業務処理", priority=5)
+manager.enqueue("normal-task", "通常の業務処理", priority=3)
+manager.enqueue("batch-task", "バッチ処理", priority=1)
+
+# 魔法の実行を開始
+await manager.execute_next()
+```
+
+#### 実行状態の監視魔法
+
+```python
+# 現在の実行状態を確認
+status = manager.get_queue_status()
+print(f"実行中: {status['running_count']}")
+print(f"待機中: {status['queue_length']}")
+print(f"完了済: {status['completed_count']}")
+
+# 統計情報を取得
+stats = manager.get_queue_stats()
+print(f"平均待ち時間: {stats['avg_wait_time']:.2f}秒")
+```
 
 ## 🧙‍♂️ データ抽出の秘術
 
