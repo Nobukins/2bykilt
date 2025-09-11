@@ -8,6 +8,8 @@ from typing import Dict, Any, List, Optional, Union
 from pathlib import Path
 from datetime import datetime
 
+from bs4 import BeautifulSoup
+
 from .models import ExtractionResult, ExtractionWarning
 from .schema import ExtractionSchema, FieldDefinition
 
@@ -162,8 +164,6 @@ class FieldExtractor:
         This provides proper CSS selector support and robust HTML parsing.
         """
         try:
-            from bs4 import BeautifulSoup
-
             soup = BeautifulSoup(html_content, 'html.parser')
 
             # Find element using CSS selector

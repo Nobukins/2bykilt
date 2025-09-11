@@ -13,10 +13,10 @@ class ExtractionWarning:
     field_name: str
     selector: str
     reason: str
-    timestamp: str
+    timestamp: Optional[str] = None
 
     def __post_init__(self):
-        if not self.timestamp:
+        if self.timestamp is None:
             self.timestamp = datetime.now().isoformat()
 
 
@@ -30,10 +30,10 @@ class ExtractionResult:
     success_count: int
     failure_count: int
     total_fields: int
-    extracted_at: str
+    extracted_at: Optional[str] = None
 
     def __post_init__(self):
-        if not self.extracted_at:
+        if self.extracted_at is None:
             self.extracted_at = datetime.now().isoformat()
         # Calculate success/failure counts
         self.success_count = len([v for v in self.extracted_fields.values() if v is not None])
