@@ -150,16 +150,16 @@ async def test_initialize_browser_calls_new_tab(fake_chrome_env, monkeypatch):
     assert called.get("tab_selection_strategy") == "new_tab"
 
 
-def test_execute_script_action_safe_path(monkeypatch):
+async def test_execute_script_action_safe_path(monkeypatch):
     m = BrowserAutomationManager(local_path="llms.txt")
     assert m.initialize() is True
     action = next(a for a in m.actions.values() if a.get("type") == "script")
     name = action["name"]
-    ok = m.execute_action(name, query="LLMs.txt")
+    ok = await m.execute_action(name, query="LLMs.txt")
     assert ok is True
 
 
-def test_execute_git_script_action_mocked(monkeypatch, tmp_path):
+async def test_execute_git_script_action_mocked(monkeypatch, tmp_path):
     m = BrowserAutomationManager(local_path="llms.txt")
     assert m.initialize() is True
     m.git_repos_dir = tmp_path / "git_scripts"
@@ -175,7 +175,7 @@ def test_execute_git_script_action_mocked(monkeypatch, tmp_path):
 
     action = next(a for a in m.actions.values() if a.get("type") == "git-script")
     name = action["name"]
-    ok = m.execute_action(name, query="LLMs.txt")
+    ok = await m.execute_action(name, query="LLMs.txt")
     assert ok is True
 
 
