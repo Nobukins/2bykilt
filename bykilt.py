@@ -2237,42 +2237,57 @@ Manifest: {run_context.artifact_dir('batch')}/batch_manifest.json
                 }}
                 
                 handleFiles(files) {{
+                    const feedbackEl = document.getElementById('csv-upload-feedback');
+                    const emitFeedback = (msg, level='info') => {{
+                        if (feedbackEl) {{
+                            feedbackEl.textContent = msg;
+                            feedbackEl.dataset.level = level;
+                        }}
+                        console[level === 'error' ? 'error' : 'log'](msg);
+                        const evt = new CustomEvent('csv-upload-feedback', {{ detail: {{ message: msg, level }} }});
+                        window.dispatchEvent(evt);
+                    }};
+
                     // Filter for CSV files only
                     const csvFiles = Array.from(files).filter(file => {{
                         return file.type === 'text/csv' ||
                                file.type === 'application/vnd.ms-excel' ||
                                file.name.toLowerCase().endsWith('.csv');
                     }});
-                    
+
                     if (csvFiles.length === 0) {{
-                        alert('Please drop a CSV file (.csv)');
+                        emitFeedback('Please drop a CSV file (.csv)', 'error');
                         return;
                     }}
-                    
+
                     if (csvFiles.length > 1) {{
-                        alert('Please drop only one CSV file at a time');
+                        emitFeedback('Please drop only one CSV file at a time', 'error');
                         return;
                     }}
-                    
+
                     const file = csvFiles[0];
-                    
-                    // Validate file size (max 500MB as per BatchEngine config)
-                    const maxSize = 500 * 1024 * 1024; // 500MB
+
+                    // Determine max size from data attribute if present (fallback 500MB)
+                    if (!this.dropZone.dataset.maxSize) {{
+                        this.dropZone.dataset.maxSize = String(500 * 1024 * 1024);
+                    }}
+                    const maxSize = parseInt(this.dropZone.dataset.maxSize, 10);
                     if (file.size > maxSize) {{
-                        alert('File size too large. Maximum size is 500MB.');
+                        const maxMB = (maxSize / (1024 * 1024)).toFixed(0);
+                        emitFeedback('File size too large. Maximum size is ' + maxMB + 'MB.', 'error');
                         return;
                     }}
-                    
+
                     // Create a DataTransfer object to set the file
                     const dt = new DataTransfer();
                     dt.items.add(file);
                     this.fileInput.files = dt.files;
-                    
+
                     // Trigger change event to notify Gradio
                     const event = new Event('change', {{ bubbles: true }});
                     this.fileInput.dispatchEvent(event);
-                    
-                    console.log('CSV file dropped:', file.name);
+
+                    emitFeedback('CSV file selected: ' + file.name, 'info');
                 }}
             }}
             
