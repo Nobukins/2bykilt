@@ -1,6 +1,6 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-09-09T23:07:24+00:00
+Generated at (UTC): 2025-09-11T00:54:58+00:00
 
 ## 1. メタサマリー
 
@@ -109,7 +109,7 @@ Sorted By: critical_path_rank
 | 38 | 録画統一後回帰テストスイート | P2 | 1-late | artifacts |  | 1 | 4 | 5 | 0 | #103 |
 | 40 | CSV D&D UI 連携 | P2 | 2 | batch |  | 1 | 2 | 1 | 0 |  |
 | 41 | バッチ進捗・サマリー | P2 | 2 | batch |  | 1 | 3 | 2 | 0 |  |
-| 42 | バッチ部分リトライ | P2 | 2 | batch |  | 1 | 2 | 1 | 0 |  |
+| 42 | バッチ部分リトライ | P2 | 2 | batch |  | 1 | 2 | 1 | 0 | #163 |
 | 43 | ENABLE_LLM パリティ | P1 | 1-late | runner |  | 1 | 2 | 2 | 0 |  |
 | 45 | git_script 認証 & プロキシ | P1 | 1 | runner |  | 1 | 2 | 2 | 0 | #120 |
 | 48 | 環境変数バリデーション & 診断 | P2 | 2 | runner |  | 1 | 1 | 1 | 0 |  |
@@ -368,6 +368,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 2
 - Depends (1): 39
 - Dependents (0): (none)
+- Progress: {"state": "done", "primary_pr": 163}
 
 ### Issue 43: ENABLE_LLM パリティ
 - Priority: P1, Phase: 1-late, Area: runner

@@ -1,6 +1,6 @@
 ```mermaid
 %% Auto-generated dependency graph
-%% Generated at: 2025-09-09T23:07:23.989306+00:00
+%% Generated at: 2025-09-11T00:54:49.897908+00:00
 %% Edge方向: dependency --> dependent
 graph LR
 
@@ -125,7 +125,7 @@ classDef progress fill:#e6f4ff,stroke:#0366d6,stroke-width:2px,color:#000;
 
 %% Class assignments
 class 31,46,49,54,62 highrisk;
-class 25,28,31,32,34,35,36,37,38,39,44,45,50,56,57,58,87,88,89,91 progress;
+class 25,28,31,32,34,35,36,37,38,39,42,44,45,50,56,57,58,87,88,89,91 progress;
 
 %% Legend (pseudo nodes)
 subgraph Legend[Legend]
