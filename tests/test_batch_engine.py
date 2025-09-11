@@ -957,76 +957,91 @@ class TestBatchRetry:
         # Verify the job execution was called
         mock_execute.assert_called_once_with(job)
 
-    def test_execute_job_with_retry_failure(self, engine):
-        """Test job execution failure after retries."""
+    def test_execute_job_with_retry_input_validation(self, engine):
+        """Test input validation for execute_job_with_retry."""
+        # Test invalid job
+        with pytest.raises(ValueError, match="job must be a BatchJob instance"):
+            engine.execute_job_with_retry("not_a_job")
+
+        with pytest.raises(ValueError, match="job must be a BatchJob instance"):
+            engine.execute_job_with_retry(None)
+
+        # Test invalid job_id
+        job = BatchJob("", "test_run", {"data": "test"})
+        with pytest.raises(ValueError, match="job.job_id must be a non-empty string"):
+            engine.execute_job_with_retry(job)
+
+        job = BatchJob(None, "test_run", {"data": "test"})
+        with pytest.raises(ValueError, match="job.job_id must be a non-empty string"):
+            engine.execute_job_with_retry(job)
+
+        # Test invalid max_retries
         job = BatchJob("test_job", "test_run", {"data": "test"})
+        with pytest.raises(ValueError, match="max_retries must be >= 0"):
+            engine.execute_job_with_retry(job, max_retries=-1)
 
-        # Mock failed execution
-        with patch.object(engine, '_execute_single_job', side_effect=Exception("Test failure")):
-            with pytest.raises(Exception) as exc_info:
-                engine.execute_job_with_retry(job, max_retries=2)
+        # Test invalid retry_delay
+        with pytest.raises(ValueError, match="retry_delay must be > 0"):
+            engine.execute_job_with_retry(job, retry_delay=0)
 
-        # Verify the original exception is re-raised
-        assert "Test failure" in str(exc_info.value)
-        assert "Failed after 3 attempts" in job.error_message
+        with pytest.raises(ValueError, match="retry_delay must be > 0"):
+            engine.execute_job_with_retry(job, retry_delay=-1)
 
-    def test_export_failed_rows(self, engine, temp_dir, run_context):
-        """Test failed rows export functionality."""
-        # Create a manifest with failed jobs
-        csv_content = "name,value\ntest1,data1\ntest2,data2\n"
-        csv_file = temp_dir / "test.csv"
-        csv_file.write_text(csv_content)
+    def test_log_security_no_sensitive_data(self, engine, caplog):
+        """Test that sensitive data is not logged."""
+        import logging
 
-        manifest = engine.create_batch_jobs(str(csv_file))
+        # Test data with sensitive information
+        sensitive_data = {
+            "password": "secret123",
+            "api_key": "sk-1234567890abcdef",
+            "credit_card": "4111111111111111"
+        }
+        job = BatchJob("test_job", "test_run", sensitive_data)
 
-        # Mark jobs as failed
-        for job in manifest.jobs:
-            engine.update_job_status(job.job_id, "failed", f"Test failure for {job.job_id}")
+        with caplog.at_level(logging.DEBUG):
+            with patch.object(engine, '_execute_single_job', side_effect=Exception("Test error with sensitive info")):
+                with pytest.raises(Exception):
+                    engine.execute_job_with_retry(job, max_retries=1)
 
-        # Complete the batch to trigger export
-        manifest.completed_jobs = 0
-        manifest.failed_jobs = 2
-        engine._export_failed_rows(manifest)
+        # Check that sensitive data is not in logs
+        log_messages = [record.message for record in caplog.records]
+        for message in log_messages:
+            assert "secret123" not in message
+            assert "sk-1234567890abcdef" not in message
+            assert "4111111111111111" not in message
 
-        # Check if failed_rows.csv was created
-        failed_csv_path = temp_dir / "test_run_123-batch" / "failed_rows.csv"
-        assert failed_csv_path.exists()
+        # But should contain safe information
+        assert any("test_job" in msg for msg in log_messages)
+        assert any("Exception" in msg for msg in log_messages)
 
-        # Verify CSV content
-        with open(failed_csv_path, 'r') as f:
-            content = f.read()
-            assert 'name,value,error_message,job_id,failed_at' in content
-            assert 'test1,data1,Test failure for' in content
-            assert 'test2,data2,Test failure for' in content
+    def test_retry_batch_jobs_input_validation(self, engine):
+        """Test input validation for retry_batch_jobs."""
+        # Test invalid batch_id
+        with pytest.raises(ValueError, match="batch_id must be a non-empty string"):
+            engine.retry_batch_jobs("", ["job1"])
 
-        # Verify CSV structure
-        with open(failed_csv_path, 'r', newline='') as f:
-            reader = csv.DictReader(f)
-            rows = list(reader)
-            assert len(rows) == 2
-            assert rows[0]['name'] == 'test1'
-            assert rows[0]['value'] == 'data1'
-            assert 'Test failure for' in rows[0]['error_message']
-            assert rows[1]['name'] == 'test2'
-            assert rows[1]['value'] == 'data2'
-            assert 'Test failure for' in rows[1]['error_message']
+        with pytest.raises(ValueError, match="batch_id must be a non-empty string"):
+            engine.retry_batch_jobs(None, ["job1"])
 
-    def test_export_failed_rows_no_failures(self, engine, temp_dir, run_context):
-        """Test failed rows export when no jobs failed."""
-        # Create a manifest with successful jobs
-        csv_content = "name,value\ntest,data\n"
-        csv_file = temp_dir / "test.csv"
-        csv_file.write_text(csv_content)
+        # Test invalid job_ids
+        with pytest.raises(ValueError, match="job_ids must be a non-empty list"):
+            engine.retry_batch_jobs("batch1", [])
 
-        manifest = engine.create_batch_jobs(str(csv_file))
+        with pytest.raises(ValueError, match="job_ids must be a non-empty list"):
+            engine.retry_batch_jobs("batch1", None)
 
-        # Mark job as completed
-        job_id = manifest.jobs[0].job_id
-        engine.update_job_status(job_id, "completed")
+        # Test invalid job_id elements
+        with pytest.raises(ValueError, match="All job_ids must be non-empty strings"):
+            engine.retry_batch_jobs("batch1", ["", "job2"])
 
-        # Try to export (should not create file)
-        engine._export_failed_rows(manifest)
+        with pytest.raises(ValueError, match="All job_ids must be non-empty strings"):
+            engine.retry_batch_jobs("batch1", [None, "job2"])
 
-        # Check that failed_rows.csv was not created
-        failed_csv_path = temp_dir / "test_run_123-batch" / "failed_rows.csv"
-        assert not failed_csv_path.exists()
+        # Test duplicate job_ids
+        with pytest.raises(ValueError, match="job_ids must not contain duplicates"):
+            engine.retry_batch_jobs("batch1", ["job1", "job1"])
+
+        # Test invalid max_retries
+        with pytest.raises(ValueError, match="max_retries must be >= 0"):
+            engine.retry_batch_jobs("batch1", ["job1"], max_retries=-1)

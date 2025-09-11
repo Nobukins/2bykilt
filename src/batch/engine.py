@@ -936,16 +936,32 @@ class BatchEngine:
         Retry specific jobs in a batch.
 
         Args:
-            batch_id: Batch identifier
-            job_ids: List of job IDs to retry
-            max_retries: Maximum number of retry attempts per job
+            batch_id: Batch identifier (must be non-empty string)
+            job_ids: List of job IDs to retry (must contain valid job IDs)
+            max_retries: Maximum number of retry attempts per job (must be >= 0)
 
         Returns:
             Dictionary with retry results and statistics
 
         Raises:
-            ValueError: If batch or jobs are not found
+            ValueError: If batch or jobs are not found, or input validation fails
         """
+        # Input validation
+        if not batch_id or not isinstance(batch_id, str):
+            raise ValueError("batch_id must be a non-empty string")
+
+        if not job_ids or not isinstance(job_ids, list):
+            raise ValueError("job_ids must be a non-empty list")
+
+        if not all(isinstance(job_id, str) and job_id for job_id in job_ids):
+            raise ValueError("All job_ids must be non-empty strings")
+
+        if max_retries < 0:
+            raise ValueError("max_retries must be >= 0")
+
+        if len(job_ids) != len(set(job_ids)):
+            raise ValueError("job_ids must not contain duplicates")
+
         try:
             # Load batch manifest
             manifest = self._load_manifest_from_current_context(batch_id)
@@ -1088,13 +1104,26 @@ class BatchEngine:
         Execute a job with automatic retry on failure.
 
         Args:
-            job: Job to execute
-            max_retries: Maximum number of retry attempts
-            retry_delay: Delay between retries in seconds
+            job: Job to execute (must be valid BatchJob instance)
+            max_retries: Maximum number of retry attempts (must be >= 0)
+            retry_delay: Delay between retries in seconds (must be > 0)
 
         Returns:
             Final status of the job ('completed' or 'failed')
         """
+        # Input validation
+        if not isinstance(job, BatchJob):
+            raise ValueError("job must be a BatchJob instance")
+
+        if not job.job_id or not isinstance(job.job_id, str):
+            raise ValueError("job.job_id must be a non-empty string")
+
+        if max_retries < 0:
+            raise ValueError("max_retries must be >= 0")
+
+        if retry_delay <= 0:
+            raise ValueError("retry_delay must be > 0")
+
         import time
         from typing import Optional
 
@@ -1119,7 +1148,7 @@ class BatchEngine:
             except Exception as e:
                 last_error = str(e)
                 last_exception = e
-                self.logger.warning(f"Job {job.job_id} failed on attempt {attempt + 1}: {e}")
+                self.logger.warning(f"Job {job.job_id} failed on attempt {attempt + 1}: {type(e).__name__}")
 
                 # Don't retry on the last attempt
                 if attempt < max_retries:
@@ -1131,15 +1160,15 @@ class BatchEngine:
                     self.logger.error(f"Job {job.job_id} failed after {max_retries + 1} attempts")
 
         # All attempts failed
-        error_msg = f"Failed after {max_retries + 1} attempts. Last error: {last_error}"
-        job.error_message = error_msg
-        self.logger.error(f"Job {job.job_id} permanently failed: {error_msg}")
+        error_summary = f"Failed after {max_retries + 1} attempts"
+        job.error_message = f"{error_summary}. Last error: {type(last_exception).__name__ if last_exception else 'Unknown'}"
+        self.logger.error(f"Job {job.job_id} permanently failed: {error_summary}")
 
         # Re-raise the last exception to preserve the original error context
         if last_exception:
             raise last_exception
         else:
-            raise RuntimeError(error_msg)
+            raise RuntimeError(f"Job {job.job_id}: {error_summary}")
 
     def _execute_single_job(self, job: BatchJob) -> str:
         """
@@ -1150,7 +1179,7 @@ class BatchEngine:
         simulates job execution based on the data content.
 
         Args:
-            job: Job to execute
+            job: Job to execute (must be valid BatchJob instance)
 
         Returns:
             Job status ('completed' or 'failed')
@@ -1159,12 +1188,19 @@ class BatchEngine:
             ValueError: If job data is invalid
             RuntimeError: If job execution fails
         """
+        # Input validation
+        if not isinstance(job, BatchJob):
+            raise ValueError("job must be a BatchJob instance")
+
+        if not job.job_id or not isinstance(job.job_id, str):
+            raise ValueError("job.job_id must be a non-empty string")
+
         try:
             # Validate job data
             if not job.row_data:
                 raise ValueError(f"Job {job.job_id} has no row data")
 
-            self.logger.debug(f"Processing job {job.job_id} with data: {job.row_data}")
+            self.logger.debug(f"Processing job {job.job_id} with data keys: {list(job.row_data.keys()) if job.row_data else 'None'}")
 
             # Basic validation of required fields
             # In a real implementation, this would validate against your schema
@@ -1176,9 +1212,9 @@ class BatchEngine:
             return self._simulate_job_execution(job)
 
         except Exception as e:
-            error_msg = f"Job execution failed for {job.job_id}: {e}"
+            error_msg = f"Job execution failed for {job.job_id}: {type(e).__name__}"
             self.logger.error(error_msg)
-            raise RuntimeError(error_msg) from e
+            raise RuntimeError(f"Job {job.job_id}: {type(e).__name__}") from e
 
     def _simulate_job_execution(self, job: BatchJob) -> str:
         """
@@ -1189,11 +1225,18 @@ class BatchEngine:
         with actual job execution logic.
 
         Args:
-            job: Job to execute
+            job: Job to execute (must be valid BatchJob instance)
 
         Returns:
             Job status ('completed' or 'failed')
         """
+        # Input validation
+        if not isinstance(job, BatchJob):
+            raise ValueError("job must be a BatchJob instance")
+
+        if not job.row_data:
+            raise ValueError(f"Job {job.job_id} has no row data")
+
         import random
         from typing import Any
 
@@ -1226,7 +1269,7 @@ class BatchEngine:
             return 'completed'
 
         except Exception as e:
-            self.logger.debug(f"Job {job.job_id} simulation failed: {e}")
+            self.logger.debug(f"Job {job.job_id} simulation failed: {type(e).__name__}")
             raise
 
 
