@@ -11,7 +11,19 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 from io import StringIO
 
-from src.batch.engine import BatchEngine, BatchJob, BatchManifest, start_batch, ConfigurationError, FileProcessingError, SecurityError, DEFAULT_MAX_RETRIES, DEFAULT_RETRY_DELAY, DEFAULT_BACKOFF_FACTOR, MAX_RETRY_DELAY
+from src.batch.engine import (
+    BatchEngine,
+    BatchJob,
+    BatchManifest,
+    start_batch,
+    ConfigurationError,
+    FileProcessingError,
+    SecurityError,
+    DEFAULT_MAX_RETRIES,
+    DEFAULT_RETRY_DELAY,
+    DEFAULT_BACKOFF_FACTOR,
+    MAX_RETRY_DELAY,
+)
 from src.runtime.run_context import RunContext
 
 
@@ -892,18 +904,12 @@ class TestBatchRetry:
     """Test batch retry functionality."""
 
     @pytest.fixture
-    def temp_dir(self):
-        """Create temporary directory for tests."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            yield Path(tmpdir)
-
-    @pytest.fixture
-    def run_context(self, temp_dir):
+    def run_context(self, tmp_path):
         """Create mock run context."""
         context = Mock(spec=RunContext)
         context.run_id_base = "test_run_123"
         def artifact_dir_mock(component):
-            path = temp_dir / f"{context.run_id_base}-{component}"
+            path = tmp_path / f"{context.run_id_base}-{component}"
             path.mkdir(parents=True, exist_ok=True)
             return path
         context.artifact_dir = artifact_dir_mock
@@ -1175,8 +1181,6 @@ class TestBatchRetry:
 
     def test_log_security_no_sensitive_data(self, engine, caplog):
         """Test that sensitive data is not logged."""
-        import logging
-
         # Test data with sensitive information
         sensitive_data = {
             "password": "secret123",

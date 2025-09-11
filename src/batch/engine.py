@@ -14,15 +14,16 @@ import mimetypes
 import time
 import random
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Union, Iterator
+from typing import Dict, List, Optional, Any, Union, Iterator, Literal
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from contextlib import contextmanager
 
 from ..core.artifact_manager import ArtifactManager, get_artifact_manager
 from ..runtime.run_context import RunContext
+from ..metrics import get_metrics_collector, MetricType
 
-from .summary import BatchSummary
+from .summary import BatchSummary, BatchSummaryGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -554,8 +555,6 @@ class BatchEngine:
     def _record_batch_creation_metrics(self, manifest: BatchManifest):
         """Record metrics for batch creation."""
         try:
-            from ..metrics import get_metrics_collector, MetricType
-
             collector = get_metrics_collector()
             if collector is None:
                 return
@@ -611,8 +610,6 @@ class BatchEngine:
             ```
         """
         try:
-            from .summary import BatchSummaryGenerator
-
             manifest = self._load_manifest_by_batch_id(batch_id)
             
             if manifest is None:
@@ -725,8 +722,6 @@ class BatchEngine:
     def _record_job_metrics(self, job: BatchJob, status: str, error_message: Optional[str] = None):
         """Record metrics for job execution."""
         try:
-            from ..metrics import get_metrics_collector, MetricType
-
             collector = get_metrics_collector()
             if collector is None:
                 return
@@ -747,7 +742,6 @@ class BatchEngine:
             # Record job duration if completed_at is available
             if job.completed_at and job.created_at:
                 try:
-                    from datetime import datetime, timezone
                     created_time = datetime.fromisoformat(job.created_at.replace('Z', '+00:00'))
                     completed_time = datetime.fromisoformat(job.completed_at.replace('Z', '+00:00'))
                     duration_seconds = (completed_time - created_time).total_seconds()
@@ -865,8 +859,6 @@ class BatchEngine:
     def _generate_batch_summary(self, manifest: BatchManifest):
         """Generate and save batch summary when batch is complete."""
         try:
-            from .summary import BatchSummaryGenerator
-
             generator = BatchSummaryGenerator()
             summary = generator.generate_summary(manifest)
 
@@ -926,8 +918,6 @@ class BatchEngine:
     def _record_failed_rows_export_metric(self, failed_count: int):
         """Record metrics for failed rows export."""
         try:
-            from ..metrics import get_metrics_collector, MetricType
-
             collector = get_metrics_collector()
             if collector is None:
                 return
@@ -1136,8 +1126,6 @@ class BatchEngine:
     def _record_retry_metrics(self, batch_id: str, retry_count: int) -> None:
         """Record metrics for batch retry operations."""
         try:
-            from ..metrics import get_metrics_collector, MetricType
-
             collector = get_metrics_collector()
             if collector is None:
                 return
@@ -1157,7 +1145,7 @@ class BatchEngine:
 
     def execute_job_with_retry(self, job: BatchJob, max_retries: int = DEFAULT_MAX_RETRIES,
                               retry_delay: float = DEFAULT_RETRY_DELAY, backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
-                              max_retry_delay: Optional[float] = None) -> str:
+                              max_retry_delay: Optional[float] = None) -> Literal['completed', 'failed']:
         """
         Execute a job with automatic retry on failure.
 
@@ -1223,17 +1211,28 @@ class BatchEngine:
 
         # Re-raise the last exception to preserve the original error context
         if last_exception:
-            raise last_exception
+            raise
         else:
             raise RuntimeError(f"Job {job.job_id}: {error_summary}")
 
-    def _execute_single_job(self, job: BatchJob) -> str:
+    def _execute_single_job(self, job: BatchJob) -> Literal['completed', 'failed']:
         """
         Execute a single job.
 
         This method integrates with the actual job execution logic.
-        In the current implementation, it processes the job data and
-        simulates job execution based on the data content.
+        
+        Integration points for job execution:
+        1. Load job data from job.row_data (CSV row data)
+        2. Execute browser automation or other processing systems
+        3. Handle job-specific configuration and parameters
+        4. Process results and determine completion status
+        5. Return appropriate status ('completed' or 'failed')
+        
+        Expected interface for production integration:
+        - Input: BatchJob with row_data containing job parameters
+        - Processing: Browser automation, API calls, or other automation tasks
+        - Output: Success/failure status and any error details
+        - Error handling: Proper exception handling with descriptive messages
 
         TODO: Replace simulation with actual job execution logic (e.g., browser automation)
 
@@ -1320,8 +1319,9 @@ class BatchEngine:
             raise ValueError("max_random_delay must be >= 0")
 
         try:
-            # Add small random delay to simulate processing time
-            if max_random_delay > 0:
+            # Add small random delay to simulate processing time (only in debug/test mode)
+            debug_mode = os.environ.get('BATCH_DEBUG_MODE', '').lower() in ('true', '1', 'yes')
+            if max_random_delay > 0 and debug_mode:
                 time.sleep(random.uniform(0, max_random_delay))
 
             # Simulate different failure scenarios based on data content
@@ -1334,6 +1334,7 @@ class BatchEngine:
             if data.get('value') == 'error':
                 raise ValueError("Invalid value for processing")
 
+            # TODO: Replace hardcoded random behavior with configurable job execution logic
             # Random success/failure for normal cases
             if random.random() > success_rate:
                 raise Exception("Simulated random failure")
