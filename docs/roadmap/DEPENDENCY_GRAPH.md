@@ -1,6 +1,6 @@
 ```mermaid
 %% Auto-generated dependency graph
-%% Generated at: 2025-09-11T00:54:49.897908+00:00
+%% Generated at: STABLE
 %% Edge方向: dependency --> dependent
 graph LR
 
@@ -60,6 +60,27 @@ subgraph R1[Rank 1]
   89["89 Screenshot ログイベント整備…"]
   90["90 Temp test issue for…"]
   91["91 統一録画パス Rollout (fla…"]
+  92["92 [enhance][roadmap] …"]
+  101["101 chore(test): async …"]
+  102["102 chore(flags): Featu…"]
+  104["104 #91 統一録画パス Rollout …"]
+  106["106 Phase 2 enforcement…"]
+  107["107 Cleanup: PytestRetu…"]
+  108["108 Stabilize Edge head…"]
+  109["109 [quality][coverage]…"]
+  110["110 [bug][artifacts] Br…"]
+  111["111 [refactor][artifact…"]
+  113["113 docs: cleanup archi…"]
+  114["114 ci: evaluate relaxi…"]
+  115["115 [A3][regression][ha…"]
+  127["127 [docs][batch] CSVバッ…"]
+  154["154 pip-audit stabiliza…"]
+  173["173 [UI][batch][#40 fol…"]
+  174["174 [artifacts][batch] …"]
+  175["175 バッチ行単位成果物キャプチャ基盤 (ス…"]
+  176["176 宣言的抽出スキーマ (CSV列→コマン…"]
+  177["177 MVP エンタープライズ Readin…"]
+  178["178 CI: dependency-pipe…"]
 end
 
 %% Edges (depends --> dependent)
@@ -118,6 +139,15 @@ end
 33 --> 89
 58 --> 89
 28 --> 91
+39 --> 173
+40 --> 173
+41 --> 173
+42 --> 173
+28 --> 174
+30 --> 174
+33 --> 174
+35 --> 174
+39 --> 174
 
 %% Styling definitions (Mermaid syntax uses colon)
 classDef highrisk fill:#ffe6e6,stroke:#d40000,stroke-width:2px,color:#000;
@@ -125,7 +155,7 @@ classDef progress fill:#e6f4ff,stroke:#0366d6,stroke-width:2px,color:#000;
 
 %% Class assignments
 class 31,46,49,54,62 highrisk;
-class 25,28,31,32,34,35,36,37,38,39,42,44,45,50,56,57,58,87,88,89,91 progress;
+class 25,28,31,32,34,35,36,37,38,39,40,41,42,44,45,50,56,57,58,87,88,89,91,154 progress;
 
 %% Legend (pseudo nodes)
 subgraph Legend[Legend]
