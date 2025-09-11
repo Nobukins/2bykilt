@@ -54,7 +54,7 @@
 | A8 | 後続の新規作成issue | Planned | 追加Issueの評価とスケジュール反映 |
 
 Progress Summary (Phase 1): Wave A1 100% / Wave A2 100% / Wave A3 100% / Wave A4 100% / Wave A5 100% / Wave A6 100% / Wave A7 100% ( #60 Security Base 完了) 残: Group B Phase 2 へ移行。Draft/試行 PR は進捗計測に含めず。
-Progress Summary (Phase 2): Wave B4 25% ( #39 CSV コア完了) 残: B1-B3, B5-B6 着手待ち。
+Progress Summary (Phase 2): Wave B4 50% ( #39 CSV コア完了, #42 リトライ完了) 残: B1-B3, B5-B6 着手待ち。
 
 ### Group B (Phase 2 – 拡張 / 高度化)
 
@@ -63,7 +63,7 @@ Progress Summary (Phase 2): Wave B4 25% ( #39 CSV コア完了) 残: B1-B3, B5-B
 | B1 | #46 → #47 → #48 | Planned | Run/Job タイムアウト & キャンセル → 並列実行キュー & 制限 → 環境変数バリデーション & 診断 |
 | B2 | #52 → (#62 PoC) → (#62 Enforce) → #54 → #55 | Planned | サンドボックス allow/deny パス → 実行サンドボックス機能制限 → cdp-use デュアルエンジン抽象レイヤ → browser_control pytest パス修正 |
 | B3 | #51 | Planned | Windows プロファイル永続化 |
-| B4 | #39 ✅ → #41 → #42 → #40 | In Progress | CSV 駆動バッチエンジンコア (part1 完了) → バッチ進捗・サマリー → バッチ部分リトライ → CSV D&D UI 連携 |
+| B4 | #39 ✅ → #41 → #42 ✅ → #40 | In Progress | CSV 駆動バッチエンジンコア (part1 完了) → バッチ進捗・サマリー → バッチ部分リトライ → CSV D&D UI 連携 |
 | B5 | #53 → #49(part1/part2) | Planned | cdp-use 追加タイプ調査 → ユーザースクリプト プラグインアーキテクチャ |
 | B6 | Hardening / Cleanup | Planned | 全体のHardeningとCleanup |
 
