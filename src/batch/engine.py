@@ -856,10 +856,310 @@ class BatchEngine:
             summary_path = self.run_context.artifact_dir("batch") / "batch_summary.json"
             generator.save_summary(summary, summary_path)
 
+            # Export failed rows to CSV if there are any failures
+            if manifest.failed_jobs > 0:
+                self._export_failed_rows(manifest)
+
             self.logger.info(f"Generated batch summary for {manifest.batch_id}")
 
         except Exception as e:
             self.logger.error(f"Failed to generate batch summary: {e}")
+
+    def _export_failed_rows(self, manifest: BatchManifest):
+        """Export failed job rows to CSV file."""
+        try:
+            failed_jobs = [job for job in manifest.jobs if job.status == 'failed']
+            if not failed_jobs:
+                return
+
+            # Prepare CSV data
+            csv_rows = []
+            headers = None
+
+            for job in failed_jobs:
+                if headers is None:
+                    # Use the first job's row_data keys as headers
+                    headers = list(job.row_data.keys()) + ['error_message', 'job_id', 'failed_at']
+                    csv_rows.append(headers)
+
+                # Create row data
+                row = list(job.row_data.values()) + [
+                    job.error_message or '',
+                    job.job_id,
+                    job.completed_at or ''
+                ]
+                csv_rows.append(row)
+
+            # Save to CSV
+            failed_csv_path = self.run_context.artifact_dir("batch") / "failed_rows.csv"
+            with open(failed_csv_path, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                for row in csv_rows:
+                    writer.writerow(row)
+
+            self.logger.info(f"Exported {len(failed_jobs)} failed rows to {failed_csv_path}")
+
+            # Record export metric
+            self._record_failed_rows_export_metric(len(failed_jobs))
+
+        except Exception as e:
+            self.logger.error(f"Failed to export failed rows: {e}")
+
+    def _record_failed_rows_export_metric(self, failed_count: int):
+        """Record metrics for failed rows export."""
+        try:
+            from ..metrics import get_metrics_collector, MetricType
+
+            collector = get_metrics_collector()
+            if collector is None:
+                return
+
+            collector.record_metric(
+                name="batch_failed_rows_exported",
+                value=failed_count,
+                metric_type=MetricType.COUNTER,
+                tags={
+                    "run_id": self.run_context.run_id_base
+                }
+            )
+
+        except Exception as e:
+            self.logger.debug(f"Failed to record failed rows export metric: {e}")
+
+    def retry_batch_jobs(self, batch_id: str, job_ids: List[str], max_retries: int = 3) -> Dict[str, Any]:
+        """
+        Retry specific jobs in a batch.
+
+        Args:
+            batch_id: Batch identifier
+            job_ids: List of job IDs to retry
+            max_retries: Maximum number of retry attempts per job
+
+        Returns:
+            Dictionary with retry results and statistics
+
+        Raises:
+            ValueError: If batch or jobs are not found
+        """
+        try:
+            # Load batch manifest
+            manifest = self._load_manifest_from_current_context(batch_id)
+            if manifest is None:
+                manifest = self._search_batch_manifest_in_artifacts(batch_id)
+
+            if manifest is None:
+                raise ValueError(f"Batch not found: {batch_id}")
+
+            # Validate job IDs exist in the batch
+            batch_job_ids = {job.job_id for job in manifest.jobs}
+            invalid_job_ids = [job_id for job_id in job_ids if job_id not in batch_job_ids]
+            if invalid_job_ids:
+                raise ValueError(f"Jobs not found in batch {batch_id}: {invalid_job_ids}")
+
+            # Filter jobs to retry (only failed jobs)
+            jobs_to_retry = [
+                job for job in manifest.jobs
+                if job.job_id in job_ids and job.status == 'failed'
+            ]
+
+            if not jobs_to_retry:
+                self.logger.info(f"No failed jobs to retry in batch {batch_id}")
+                return {
+                    'batch_id': batch_id,
+                    'total_requested': len(job_ids),
+                    'retried': 0,
+                    'skipped': len(job_ids),
+                    'reason': 'No failed jobs found'
+                }
+
+            # Reset job statuses for retry
+            retry_results = []
+            for job in jobs_to_retry:
+                original_status = job.status
+                original_error = job.error_message
+                original_completed_at = job.completed_at
+
+                # Reset job for retry
+                job.status = 'pending'
+                job.error_message = None
+                job.completed_at = None
+
+                # Update manifest counters
+                if original_status == 'failed':
+                    manifest.failed_jobs -= 1
+
+                retry_results.append({
+                    'job_id': job.job_id,
+                    'original_status': original_status,
+                    'original_error': original_error,
+                    'reset_at': datetime.now(timezone.utc).isoformat()
+                })
+
+                self.logger.info(f"Reset job {job.job_id} for retry")
+
+            # Save updated manifest
+            manifest_file = self._find_manifest_file_for_batch(batch_id)
+            if manifest_file:
+                self._save_manifest(manifest_file, manifest)
+
+            # Record retry metrics
+            self._record_retry_metrics(batch_id, len(jobs_to_retry))
+
+            result = {
+                'batch_id': batch_id,
+                'total_requested': len(job_ids),
+                'retried': len(jobs_to_retry),
+                'skipped': len(job_ids) - len(jobs_to_retry),
+                'retry_details': retry_results,
+                'max_retries': max_retries
+            }
+
+            self.logger.info(f"Prepared {len(jobs_to_retry)} jobs for retry in batch {batch_id}")
+            return result
+
+        except Exception as e:
+            error_msg = f"Failed to retry batch jobs: {e}"
+            self.logger.error(error_msg)
+            raise ValueError(error_msg) from e
+
+    def _find_manifest_file_for_batch(self, batch_id: str) -> Optional[Path]:
+        """Find manifest file for a specific batch."""
+        # First try current run context
+        manifest_file = self.run_context.artifact_dir("batch") / BATCH_MANIFEST_FILENAME
+        if manifest_file.exists():
+            try:
+                with open(manifest_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    manifest = BatchManifest.from_dict(data)
+                    if manifest.batch_id == batch_id:
+                        return manifest_file
+            except Exception:
+                pass
+
+        # Search in artifacts/runs
+        artifacts_root = Path("artifacts") / "runs"
+        if not artifacts_root.exists():
+            return None
+
+        for batch_dir in artifacts_root.glob("*-batch"):
+            manifest_file = batch_dir / BATCH_MANIFEST_FILENAME
+            if manifest_file.exists():
+                try:
+                    with open(manifest_file, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        manifest = BatchManifest.from_dict(data)
+                        if manifest.batch_id == batch_id:
+                            return manifest_file
+                except Exception:
+                    continue
+
+        return None
+
+    def _record_retry_metrics(self, batch_id: str, retry_count: int):
+        """Record metrics for batch retry operations."""
+        try:
+            from ..metrics import get_metrics_collector, MetricType
+
+            collector = get_metrics_collector()
+            if collector is None:
+                return
+
+            collector.record_metric(
+                name="batch_retry_initiated",
+                value=retry_count,
+                metric_type=MetricType.COUNTER,
+                tags={
+                    "batch_id": batch_id,
+                    "run_id": self.run_context.run_id_base
+                }
+            )
+
+        except Exception as e:
+            self.logger.debug(f"Failed to record retry metrics: {e}")
+
+    def execute_job_with_retry(self, job: BatchJob, max_retries: int = 3,
+                              retry_delay: float = 1.0) -> str:
+        """
+        Execute a job with automatic retry on failure.
+
+        Args:
+            job: Job to execute
+            max_retries: Maximum number of retry attempts
+            retry_delay: Delay between retries in seconds
+
+        Returns:
+            Final status of the job ('completed' or 'failed')
+        """
+        import time
+
+        last_error = None
+
+        for attempt in range(max_retries + 1):  # +1 for initial attempt
+            try:
+                self.logger.info(f"Executing job {job.job_id} (attempt {attempt + 1}/{max_retries + 1})")
+
+                # Here you would integrate with your actual job execution logic
+                # For now, we'll simulate job execution
+                status = self._execute_single_job(job)
+
+                if status == 'completed':
+                    self.logger.info(f"Job {job.job_id} completed successfully")
+                    return 'completed'
+                else:
+                    raise Exception(f"Job execution returned status: {status}")
+
+            except Exception as e:
+                last_error = str(e)
+                self.logger.warning(f"Job {job.job_id} failed on attempt {attempt + 1}: {e}")
+
+                # Don't retry on the last attempt
+                if attempt < max_retries:
+                    self.logger.info(f"Retrying job {job.job_id} in {retry_delay}s...")
+                    time.sleep(retry_delay)
+                    # Exponential backoff
+                    retry_delay *= 2
+                else:
+                    self.logger.error(f"Job {job.job_id} failed after {max_retries + 1} attempts")
+
+        # All attempts failed
+        job.error_message = f"Failed after {max_retries + 1} attempts. Last error: {last_error}"
+        return 'failed'
+
+    def _execute_single_job(self, job: BatchJob) -> str:
+        """
+        Execute a single job.
+
+        This is a placeholder for the actual job execution logic.
+        In a real implementation, this would integrate with your
+        browser automation or other job processing systems.
+
+        Args:
+            job: Job to execute
+
+        Returns:
+            Job status ('completed' or 'failed')
+        """
+        # Placeholder implementation
+        # In real implementation, this would:
+        # 1. Load job data from job.row_data
+        # 2. Execute browser automation or other processing
+        # 3. Return appropriate status
+
+        try:
+            # Simulate some processing
+            self.logger.debug(f"Processing job {job.job_id} with data: {job.row_data}")
+
+            # For demonstration, randomly succeed/fail
+            # In real implementation, replace with actual job logic
+            import random
+            if random.random() > 0.3:  # 70% success rate
+                return 'completed'
+            else:
+                raise Exception("Simulated job failure")
+
+        except Exception as e:
+            self.logger.error(f"Job execution failed: {e}")
+            raise
 
 
 def start_batch(csv_path: str, run_context: Optional[RunContext] = None, config: Optional[ConfigType] = None) -> BatchManifest:

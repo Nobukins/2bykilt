@@ -854,3 +854,162 @@ class TestStartBatch:
             # Verify BatchEngine was created with config
             mock_engine_class.assert_called_once_with(mock_context, custom_config)
             mock_engine.create_batch_jobs.assert_called_once_with(str(csv_file))
+
+
+class TestBatchRetry:
+    """Test batch retry functionality."""
+
+    @pytest.fixture
+    def temp_dir(self):
+        """Create temporary directory for tests."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yield Path(tmpdir)
+
+    @pytest.fixture
+    def run_context(self, temp_dir):
+        """Create mock run context."""
+        context = Mock(spec=RunContext)
+        context.run_id_base = "test_run_123"
+        def artifact_dir_mock(component):
+            path = temp_dir / f"{context.run_id_base}-{component}"
+            path.mkdir(parents=True, exist_ok=True)
+            return path
+        context.artifact_dir = artifact_dir_mock
+        return context
+
+    @pytest.fixture
+    def engine(self, run_context):
+        """Create BatchEngine instance."""
+        return BatchEngine(run_context)
+
+    def test_retry_batch_jobs_success(self, engine, temp_dir, run_context):
+        """Test successful retry of failed jobs."""
+        # Create a manifest with failed jobs
+        csv_content = "name,value\ntest1,data1\ntest2,data2\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        manifest = engine.create_batch_jobs(str(csv_file))
+
+        # Mark first job as failed
+        job_id = manifest.jobs[0].job_id
+        engine.update_job_status(job_id, "failed", "Test failure")
+
+        # Retry the failed job
+        result = engine.retry_batch_jobs(manifest.batch_id, [job_id])
+
+        assert result['batch_id'] == manifest.batch_id
+        assert result['total_requested'] == 1
+        assert result['retried'] == 1
+        assert result['skipped'] == 0
+        assert len(result['retry_details']) == 1
+
+        # Verify job was reset for retry
+        retry_detail = result['retry_details'][0]
+        assert retry_detail['job_id'] == job_id
+        assert retry_detail['original_status'] == 'failed'
+
+    def test_retry_batch_jobs_not_found(self, engine):
+        """Test retry with non-existent batch."""
+        with pytest.raises(ValueError, match="Batch not found"):
+            engine.retry_batch_jobs("non_existent_batch", ["job1"])
+
+    def test_retry_batch_jobs_invalid_job_id(self, engine, temp_dir, run_context):
+        """Test retry with invalid job ID."""
+        # Create a manifest
+        csv_content = "name,value\ntest,data\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        manifest = engine.create_batch_jobs(str(csv_file))
+
+        # Try to retry non-existent job
+        with pytest.raises(ValueError, match="Jobs not found in batch"):
+            engine.retry_batch_jobs(manifest.batch_id, ["non_existent_job"])
+
+    def test_retry_batch_jobs_no_failed_jobs(self, engine, temp_dir, run_context):
+        """Test retry when no failed jobs exist."""
+        # Create a manifest
+        csv_content = "name,value\ntest,data\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        manifest = engine.create_batch_jobs(str(csv_file))
+
+        # Try to retry completed job (should be skipped)
+        job_id = manifest.jobs[0].job_id
+        result = engine.retry_batch_jobs(manifest.batch_id, [job_id])
+
+        assert result['total_requested'] == 1
+        assert result['retried'] == 0
+        assert result['skipped'] == 1
+
+    def test_execute_job_with_retry_success(self, engine):
+        """Test successful job execution with retry."""
+        job = BatchJob("test_job", "test_run", {"data": "test"})
+
+        # Mock successful execution
+        with patch.object(engine, '_execute_single_job', return_value='completed'):
+            status = engine.execute_job_with_retry(job, max_retries=2)
+
+        assert status == 'completed'
+
+    def test_execute_job_with_retry_failure(self, engine):
+        """Test job execution failure after retries."""
+        job = BatchJob("test_job", "test_run", {"data": "test"})
+
+        # Mock failed execution
+        with patch.object(engine, '_execute_single_job', side_effect=Exception("Test failure")):
+            status = engine.execute_job_with_retry(job, max_retries=2)
+
+        assert status == 'failed'
+        assert "Failed after 3 attempts" in job.error_message
+
+    def test_export_failed_rows(self, engine, temp_dir, run_context):
+        """Test failed rows export functionality."""
+        # Create a manifest with failed jobs
+        csv_content = "name,value\ntest1,data1\ntest2,data2\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        manifest = engine.create_batch_jobs(str(csv_file))
+
+        # Mark jobs as failed
+        for job in manifest.jobs:
+            engine.update_job_status(job.job_id, "failed", f"Test failure for {job.job_id}")
+
+        # Complete the batch to trigger export
+        manifest.completed_jobs = 0
+        manifest.failed_jobs = 2
+        engine._export_failed_rows(manifest)
+
+        # Check if failed_rows.csv was created
+        failed_csv_path = temp_dir / "test_run_123-batch" / "failed_rows.csv"
+        assert failed_csv_path.exists()
+
+        # Verify CSV content
+        with open(failed_csv_path, 'r') as f:
+            content = f.read()
+            assert 'name,value,error_message,job_id,failed_at' in content
+            assert 'test1,data1,Test failure for' in content
+            assert 'test2,data2,Test failure for' in content
+
+    def test_export_failed_rows_no_failures(self, engine, temp_dir, run_context):
+        """Test failed rows export when no jobs failed."""
+        # Create a manifest with successful jobs
+        csv_content = "name,value\ntest,data\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        manifest = engine.create_batch_jobs(str(csv_file))
+
+        # Mark job as completed
+        job_id = manifest.jobs[0].job_id
+        engine.update_job_status(job_id, "completed")
+
+        # Try to export (should not create file)
+        engine._export_failed_rows(manifest)
+
+        # Check that failed_rows.csv was not created
+        failed_csv_path = temp_dir / "test_run_123-batch" / "failed_rows.csv"
+        assert not failed_csv_path.exists()
