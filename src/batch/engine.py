@@ -807,6 +807,17 @@ class BatchEngine:
             self.logger.error(f"Failed to load batch manifest: {e}")
             return None
 
+    def _save_manifest(self, manifest_file: Path, manifest: BatchManifest):
+        """Save batch manifest to file."""
+        try:
+            manifest_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(manifest_file, 'w', encoding='utf-8') as f:
+                json.dump(manifest.to_dict(), f, indent=2, ensure_ascii=False)
+            self.logger.debug(f"Saved batch manifest to {manifest_file}")
+        except Exception as e:
+            self.logger.error(f"Failed to save batch manifest: {e}")
+            raise
+
     def _find_job_by_id(self, manifest: BatchManifest, job_id: str) -> Optional[BatchJob]:
         """Find job by ID in manifest."""
         for job in manifest.jobs:
