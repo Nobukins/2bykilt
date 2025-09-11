@@ -5,6 +5,7 @@ from src.modules.git_helper import clone_or_pull_repository, checkout_version
 import os
 import subprocess
 from pathlib import Path
+from src.utils.timeout_manager import get_timeout_manager, TimeoutScope, TimeoutError, CancellationError
 
 logger = logging.getLogger(__name__)
 
@@ -72,8 +73,14 @@ class BrowserAutomationManager:
                 logger.error(f"Missing required parameters for action '{name}': {', '.join(missing_params)}")
                 return False
         
+        # Get timeout manager and check for cancellation
+        timeout_manager = get_timeout_manager()
+        if timeout_manager.is_cancelled():
+            logger.warning(f"Action '{name}' cancelled due to global cancellation request")
+            return False
+        
         try:
-            # Execute based on action type
+            # Execute based on action type with timeout protection
             action_type = action.get('type')
             if action_type == 'browser-control':
                 return self._execute_browser_control(action, **params)
@@ -87,6 +94,12 @@ class BrowserAutomationManager:
             else:
                 logger.error(f"Unknown action type for '{name}'")
                 return False
+        except TimeoutError as e:
+            logger.error(f"Action '{name}' timed out: {e}")
+            return False
+        except CancellationError as e:
+            logger.warning(f"Action '{name}' cancelled: {e}")
+            return False
         except Exception as e:
             logger.error(f"Error executing action '{name}': {e}")
             return False
@@ -141,6 +154,8 @@ class BrowserAutomationManager:
     
     def _execute_script(self, action: Dict[str, Any], **params) -> bool:
         """スクリプト実行（Gitリポジトリ対応）"""
+        timeout_manager = get_timeout_manager()
+        
         if "git" in action:
             # Gitリポジトリからスクリプトを取得
             success, script_path = self._prepare_git_script(action)
@@ -173,22 +188,29 @@ class BrowserAutomationManager:
                     command = command.replace('python', _sys.executable, 1)
             except Exception:
                 pass
-            # コマンド実行
+            
+            # コマンド実行 with timeout protection
             logger.info(f"コマンド実行: {command}")
             try:
-                result = subprocess.run(
-                    command, 
-                    shell=True, 
-                    env=env, 
-                    timeout=action.get("timeout", 300),
-                    check=False
+                # Get timeout value from action or use default
+                timeout_value = action.get("timeout", 300)
+                
+                # Execute with timeout manager protection
+                result = timeout_manager.wait_with_timeout(
+                    self._run_subprocess(command, env),
+                    timeout=timeout_value,
+                    operation_name=f"script execution for {action['name']}"
                 )
+                
                 success = result.returncode == 0
                 if not success:
                     logger.error(f"コマンド実行が失敗しました: コード {result.returncode}")
                 return success
-            except subprocess.TimeoutExpired:
-                logger.error(f"コマンド実行がタイムアウトしました")
+            except TimeoutError:
+                logger.error(f"コマンド実行がタイムアウトしました: {action['name']}")
+                return False
+            except CancellationError:
+                logger.warning(f"コマンド実行がキャンセルされました: {action['name']}")
                 return False
             except Exception as e:
                 logger.error(f"コマンド実行エラー: {str(e)}")
@@ -205,12 +227,22 @@ class BrowserAutomationManager:
         
         return True
     
-    def _fallback_to_llm(self, action_name, **params):
-        """LLMを使用したフォールバック処理"""
-        logger.info(f"アクション実行をLLMにフォールバック: {action_name}")
-        # Implement the LLM fallback logic here
-        # This would connect to the existing LLM processing pipeline
-        return False
+    async def _run_subprocess(self, command: str, env: Dict[str, str]):
+        """Run subprocess command asynchronously"""
+        import asyncio
+        
+        # Run subprocess in thread pool to avoid blocking
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None,
+            lambda: subprocess.run(
+                command,
+                shell=True,
+                env=env,
+                check=False,
+                capture_output=False
+            )
+        )
 
 # Main application function that integrates the above classes
 def setup_browser_automation(website_url: Optional[str] = None) -> BrowserAutomationManager:

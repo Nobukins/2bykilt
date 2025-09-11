@@ -58,6 +58,47 @@ Examples:
 
     return parser
 
+def create_batch_parser():
+    """Create argument parser for batch commands."""
+    parser = argparse.ArgumentParser(
+        description="bykilt - Browser automation with batch execution support",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        add_help=False,  # Disable automatic --help handling
+        epilog="""
+Examples:
+  # Start batch execution from CSV
+  python bykilt.py batch start data.csv
+
+  # Get batch status
+  python bykilt.py batch status batch_123
+
+  # Update job status
+  python bykilt.py batch update-job job_0001 completed
+
+  # Launch web UI (default)
+  python bykilt.py ui
+        """
+    )
+
+    subparsers = parser.add_subparsers(dest='batch_command', help='Batch subcommands', required=True)
+
+    # batch start
+    start_parser = subparsers.add_parser('start', help='Start batch execution from CSV')
+    start_parser.add_argument('csv_path', help='Path to CSV file')
+    start_parser.add_argument('--template', help='Template ID for job configuration')
+
+    # batch status
+    status_parser = subparsers.add_parser('status', help='Get batch execution status')
+    status_parser.add_argument('batch_id', help='Batch ID to check')
+
+    # batch update-job
+    update_parser = subparsers.add_parser('update-job', help='Update job status')
+    update_parser.add_argument('job_id', help='Job ID to update')
+    update_parser.add_argument('status', choices=['completed', 'failed'], help='New status')
+    update_parser.add_argument('--error', help='Error message for failed jobs')
+
+    return parser
+
 
 def handle_batch_command(args):
     """Handle batch-related CLI commands."""
@@ -2333,6 +2374,36 @@ def main():
         import traceback
         traceback.print_exc()
 
+    # Initialize timeout manager for job/run timeout and cancellation support
+    try:
+        from src.utils.timeout_manager import get_timeout_manager, TimeoutConfig
+        from src.utils.timeout_manager import reset_timeout_manager
+        
+        # Reset any existing manager to ensure clean state
+        reset_timeout_manager()
+        
+        # Create timeout config with reasonable defaults for job execution
+        timeout_config = TimeoutConfig(
+            job_timeout=int(os.getenv('JOB_TIMEOUT', '3600')),  # 1 hour default
+            operation_timeout=int(os.getenv('OPERATION_TIMEOUT', '300')),  # 5 minutes default
+            step_timeout=int(os.getenv('STEP_TIMEOUT', '60')),  # 1 minute default
+            network_timeout=int(os.getenv('NETWORK_TIMEOUT', '30')),  # 30 seconds default
+            enable_cancellation=True,
+            graceful_shutdown_timeout=int(os.getenv('GRACEFUL_SHUTDOWN_TIMEOUT', '10'))
+        )
+        
+        # Initialize global timeout manager
+        timeout_manager = get_timeout_manager(timeout_config)
+        print("⏱️  Timeout manager initialized successfully")
+        print(f"   Job timeout: {timeout_config.job_timeout}s")
+        print(f"   Operation timeout: {timeout_config.operation_timeout}s")
+        print(f"   Cancellation enabled: {timeout_config.enable_cancellation}")
+        
+    except Exception as e:
+        print(f"⚠️  Failed to initialize timeout manager: {e}")
+        import traceback
+        traceback.print_exc()
+
     # For UI or default case, proceed with Gradio
     parser = argparse.ArgumentParser(description="Gradio UI for 2Bykilt Agent")
     parser.add_argument("--ip", type=str, default="127.0.0.1", help="IP address to bind to")
@@ -2711,6 +2782,33 @@ def handle_batch_command(args):
             print("📊 Metrics system initialized for batch operation")
         except Exception as e:
             print(f"⚠️  Failed to initialize metrics system: {e}")
+
+        # Initialize timeout manager for batch operations
+        try:
+            from src.utils.timeout_manager import get_timeout_manager, TimeoutConfig
+            from src.utils.timeout_manager import reset_timeout_manager
+            
+            # Reset any existing manager
+            reset_timeout_manager()
+            
+            # Create timeout config for batch operations
+            timeout_config = TimeoutConfig(
+                job_timeout=int(os.getenv('BATCH_JOB_TIMEOUT', '7200')),  # 2 hours for batch jobs
+                operation_timeout=int(os.getenv('BATCH_OPERATION_TIMEOUT', '600')),  # 10 minutes for batch operations
+                step_timeout=int(os.getenv('BATCH_STEP_TIMEOUT', '120')),  # 2 minutes for batch steps
+                network_timeout=int(os.getenv('BATCH_NETWORK_TIMEOUT', '60')),  # 1 minute for batch network ops
+                enable_cancellation=True,
+                graceful_shutdown_timeout=int(os.getenv('BATCH_SHUTDOWN_TIMEOUT', '30'))
+            )
+            
+            # Initialize global timeout manager
+            timeout_manager = get_timeout_manager(timeout_config)
+            print("⏱️  Batch timeout manager initialized")
+            print(f"   Job timeout: {timeout_config.job_timeout}s")
+            print(f"   Operation timeout: {timeout_config.operation_timeout}s")
+            
+        except Exception as e:
+            print(f"⚠️  Failed to initialize batch timeout manager: {e}")
 
         from src.batch.engine import BatchEngine, start_batch
         from src.runtime.run_context import RunContext
