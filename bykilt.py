@@ -1832,12 +1832,15 @@ URLを入力してPlaywright codegenを起動し、ブラウザ操作を記録�
                 
                 batch_status_output = gr.Textbox(label="Batch Status", lines=5, interactive=False)
                 batch_progress_output = gr.Textbox(label="Progress", lines=3, interactive=False)
+                # Optional feedback element for JS (errors / warnings)
+                csv_feedback = gr.Markdown("", elem_id="csv-upload-feedback")
                 
                 # Batch processing functions
+                current_batch_ref = {"batch_id": None}  # closure-based mutable reference
                 def start_batch_processing(csv_file):
                     """Start batch processing from uploaded CSV file."""
                     if csv_file is None:
-                        return "❌ No CSV file selected", ""
+                        return "❌ No CSV file selected", "", ""
                     
                     try:
                         from src.batch.engine import start_batch
@@ -1846,16 +1849,21 @@ URLを入力してPlaywright codegenを起動し、ブラウザ操作を記録�
                         # Save uploaded file temporarily
                         import tempfile
                         import shutil
+                        import os
+                        import logging
                         
-                        with tempfile.NamedTemporaryFile(mode='wb', suffix='.csv', delete=False) as temp_file:
-                            shutil.copyfileobj(csv_file, temp_file)
-                            temp_csv_path = temp_file.name
+                        temp_csv_path = None
+                        try:
+                            with tempfile.NamedTemporaryFile(mode='wb', suffix='.csv', delete=False) as temp_file:
+                                shutil.copyfileobj(csv_file, temp_file)
+                                temp_csv_path = temp_file.name
+
+                            # Start batch processing
+                            run_context = RunContext.get()
+                            manifest = start_batch(temp_csv_path, run_context)
+                            current_batch_ref["batch_id"] = manifest.batch_id
                         
-                        # Start batch processing
-                        run_context = RunContext.get()
-                        manifest = start_batch(temp_csv_path, run_context)
-                        
-                        status = f"""✅ Batch started successfully!
+                            status = f"""✅ Batch started successfully!
                         
 Batch ID: {manifest.batch_id}
 Run ID: {manifest.run_id}
@@ -1864,46 +1872,50 @@ CSV Path: {manifest.csv_path}
 Jobs Directory: {run_context.artifact_dir('jobs')}
 Manifest: {run_context.artifact_dir('batch')}/batch_manifest.json
 """
-                        
-                        progress = f"Jobs: 0/{manifest.total_jobs} completed"
-                        
-                        # Clean up temp file
-                        import os
-                        os.unlink(temp_csv_path)
-                        
-                        return status, progress
+                            progress = f"Jobs: 0/{manifest.total_jobs} completed"
+                            return status, progress, manifest.batch_id
+                        finally:
+                            if temp_csv_path and os.path.exists(temp_csv_path):
+                                try:
+                                    os.remove(temp_csv_path)
+                                except Exception as cleanup_exc:  # noqa: BLE001
+                                    logging.warning(f"Failed to clean up temp file {temp_csv_path}: {cleanup_exc}")
                     
                     except Exception as e:
                         import traceback
                         error_msg = f"❌ Error starting batch: {str(e)}\n{traceback.format_exc()}"
-                        return error_msg, ""
+                        return error_msg, "", ""
                 
                 def stop_batch_processing():
                     """Stop current batch processing."""
                     try:
                         from src.batch.engine import BatchEngine
                         from src.runtime.run_context import RunContext
-                        
+                        import logging
+
                         run_context = RunContext.get()
                         engine = BatchEngine(run_context)
-                        
-                        # For now, just return a message since we need batch_id
-                        # In a real implementation, we'd track the current batch
-                        return "ℹ️ Batch stop functionality requires batch ID. Use CLI: python bykilt.py batch stop <batch_id>", ""
+                        batch_id = current_batch_ref.get("batch_id")
+                        if not batch_id:
+                            return "ℹ️ No active batch to stop", "", ""
+                        result = engine.stop_batch(batch_id)
+                        status = (f"🛑 Batch stopped. Batch ID: {batch_id}\n"
+                                  f"Stopped Jobs: {result['stopped_jobs']} / {result['total_jobs']}")
+                        return status, "", batch_id
                     
                     except Exception as e:
-                        return f"❌ Error stopping batch: {str(e)}", ""
+                        return f"❌ Error stopping batch: {str(e)}", "", current_batch_ref.get("batch_id") or ""
                 
                 start_batch_button.click(
                     fn=start_batch_processing,
                     inputs=[csv_file_input],
-                    outputs=[batch_status_output, batch_progress_output]
+                    outputs=[batch_status_output, batch_progress_output, gr.State()]  # third value: batch_id (ephemeral)
                 )
                 
                 stop_batch_button.click(
                     fn=stop_batch_processing,
                     inputs=[],
-                    outputs=[batch_status_output, batch_progress_output]
+                    outputs=[batch_status_output, batch_progress_output, gr.State()]
                 )
 
         llm_provider.change(lambda provider, api_key, base_url: update_model_dropdown(provider, api_key, base_url), inputs=[llm_provider, llm_api_key, llm_base_url], outputs=llm_model_name)
