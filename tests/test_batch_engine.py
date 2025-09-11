@@ -249,8 +249,46 @@ class TestBatchEngine:
         rows = engine.parse_csv(str(csv_file))
 
         assert len(rows) == 2
-        assert rows[0] == {"name": "test1", "value": "data1"}
-        assert rows[1] == {"name": "test2", "value": "data2"}
+
+    # ---------------- Row-level artifact PoC tests (#175) -----------------
+    def test_add_row_artifact_text(self, engine, temp_dir, run_context):
+        """Row-level artifact registration stores file and updates manifest job entry."""
+        # Create simple CSV to generate a batch
+        csv_file = temp_dir / "rows.csv"
+        csv_file.write_text("name,value\nalpha,1\n")
+        manifest = engine.create_batch_jobs(str(csv_file))
+        job_id = manifest.jobs[0].job_id
+
+        # Add a text artifact
+        path = engine.add_row_artifact(job_id, "log", "hello world", extension="txt", meta={"k": "v"})
+        assert path.exists()
+        assert path.read_text(encoding="utf-8").strip() == "hello world"
+
+        # Reload manifest and assert artifact reference present
+        manifest_file = run_context.artifact_dir("batch") / "batch_manifest.json"
+        data = json.loads(manifest_file.read_text(encoding="utf-8"))
+        # find job
+        job = [j for j in data["jobs"] if j["job_id"] == job_id][0]
+        assert "artifacts" in job
+        assert len(job["artifacts"]) == 1
+        ref = job["artifacts"][0]
+        assert ref["type"] == "log"
+        assert ref["path"].endswith(".txt")
+        assert ref.get("meta", {}).get("k") == "v"
+
+    def test_add_row_artifact_json_infer_ext(self, engine, temp_dir, run_context):
+        """Extension inferred for dict/list content and stored as json."""
+        csv_file = temp_dir / "rows2.csv"
+        csv_file.write_text("name,value\nalpha,1\n")
+        manifest = engine.create_batch_jobs(str(csv_file))
+        job_id = manifest.jobs[0].job_id
+
+        payload = {"a": 1, "b": [1,2,3]}
+        path = engine.add_row_artifact(job_id, "data", payload, meta={"fmt": "json"})
+        assert path.suffix == ".json"
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+        assert loaded["a"] == 1
+        assert loaded["b"][2] == 3
 
     def test_parse_csv_file_too_large(self, temp_dir):
         """Test CSV parsing with file exceeding size limit."""

@@ -89,10 +89,15 @@ class BatchJob:
     created_at: Optional[str] = None
     completed_at: Optional[str] = None
     batch_id: Optional[str] = None  # Add batch_id for better metrics tracking
+    # Row-level artifacts (Issue #175 PoC): list of {type, path, created_at, meta?}
+    artifacts: Optional[List[Dict[str, Any]]] = None
 
     def __post_init__(self):
         if self.created_at is None:
             self.created_at = datetime.now(timezone.utc).isoformat()
+        # Normalize artifacts container
+        if self.artifacts is None:
+            self.artifacts = []
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -232,6 +237,19 @@ class BatchEngine:
         # Also configure the module-level logger if needed
         module_logger = logging.getLogger(__name__)
         module_logger.setLevel(log_level)
+
+    # Reuse artifact manager's portable relpath logic pattern (simplified inline) (#175 helper)
+    @staticmethod
+    def _to_portable_relpath(p: Path) -> str:
+        try:
+            rel = p.relative_to(Path.cwd())
+            return rel.as_posix()
+        except Exception:  # noqa: BLE001
+            try:
+                rel = p.relative_to(Path("artifacts"))
+                return rel.as_posix()
+            except Exception:  # noqa: BLE001
+                return p.name
 
     def _load_config_from_env(self) -> Dict[str, Any]:
         """
@@ -721,6 +739,114 @@ class BatchEngine:
 
         except Exception as e:
             self.logger.error(f"Failed to update job status: {e}")
+
+    # ------------------------------------------------------------------
+    # Row-level Artifact Registration (Issue #175 PoC)
+    # ------------------------------------------------------------------
+    def add_row_artifact(self, job_id: str, artifact_type: str, content: Any,
+                          extension: Optional[str] = None, meta: Optional[Dict[str, Any]] = None) -> Path:
+        """Persist a row-level artifact and attach reference to the job entry in the batch manifest.
+
+        Minimal PoC Goals (#175):
+          * Provide per-row directory under artifacts/runs/<run_id>-batch/rows/<job_id>/
+          * Allow arbitrary content types: bytes -> raw file, str -> text file, dict/list -> JSON file
+          * Append manifest.jobs[*].artifacts list with portable relative path + metadata
+
+        Args:
+            job_id: Target job identifier
+            artifact_type: Logical type label (e.g. 'screenshot', 'element_capture', 'log')
+            content: bytes | str | dict | list content payload
+            extension: Optional file extension override (e.g. 'png'); if None inferred
+            meta: Optional metadata dict stored alongside reference
+
+        Returns:
+            Path to written artifact file
+
+        Raises:
+            ValueError: if job / manifest not found or invalid params
+        """
+        if not job_id or not isinstance(job_id, str):
+            raise ValueError("job_id must be a non-empty string")
+        if not artifact_type or not isinstance(artifact_type, str):
+            raise ValueError("artifact_type must be a non-empty string")
+
+        manifest_file = self._find_manifest_file_for_job(job_id)
+        if manifest_file is None:
+            raise ValueError(f"Batch manifest not found for job {job_id}")
+
+        manifest = self._load_manifest(manifest_file)
+        if manifest is None:
+            raise ValueError("Failed to load batch manifest")
+
+        job = self._find_job_by_id(manifest, job_id)
+        if job is None:
+            raise ValueError(f"Job not found: {job_id}")
+
+        # Prepare row directory
+        rows_root = self.run_context.artifact_dir("batch") / "rows" / job_id
+        rows_root.mkdir(parents=True, exist_ok=True)
+
+        # Determine file name & write content
+        ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S%f")
+        # Basic inference of extension
+        if extension:
+            ext = extension.lstrip('.')
+        else:
+            if isinstance(content, (dict, list)):
+                ext = 'json'
+            elif isinstance(content, (bytes, bytearray)):
+                # Let caller specify for binary; default to bin
+                ext = 'bin'
+            else:
+                ext = 'txt'
+
+        fname = f"{artifact_type}_{ts}.{ext}"
+        fpath = rows_root / fname
+
+        try:
+            if isinstance(content, (dict, list)):
+                fpath.write_text(json.dumps(content, ensure_ascii=False, indent=2), encoding='utf-8')
+            elif isinstance(content, (bytes, bytearray)):
+                fpath.write_bytes(content)  # assume already encoded/binary
+            else:  # treat as text
+                fpath.write_text(str(content), encoding='utf-8')
+        except Exception as e:  # noqa: BLE001
+            raise ValueError(f"Failed writing artifact for job {job_id}: {e}") from e
+
+        # Append artifact ref to job (in-memory) & persist manifest
+        try:
+            rel_path = self._to_portable_relpath(fpath)
+        except Exception:
+            rel_path = fpath.name
+
+        artifact_entry = {
+            "type": artifact_type,
+            "path": rel_path,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        if meta:
+            artifact_entry["meta"] = meta
+
+        if job.artifacts is None:
+            job.artifacts = []
+        job.artifacts.append(artifact_entry)
+
+        # Persist entire manifest update
+        try:
+            self._save_manifest(manifest_file, manifest)
+        except Exception as e:  # noqa: BLE001
+            raise ValueError(f"Failed to persist manifest after adding row artifact: {e}") from e
+
+        self.logger.info(
+            f"Added row artifact for job {job_id}",
+            extra={
+                "event": "batch.row.artifact.added",
+                "job_id": job_id,
+                "artifact_type": artifact_type,
+                "file": str(fpath),
+            },
+        )
+        return fpath
 
     def _record_job_metrics(self, job: BatchJob, status: str, error_message: Optional[str] = None):
         """Record metrics for job execution."""
