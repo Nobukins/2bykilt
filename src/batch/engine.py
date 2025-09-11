@@ -583,6 +583,20 @@ class BatchEngine:
 
         Returns:
             BatchSummary if found, None otherwise
+
+        Note:
+            The returned BatchSummary uses a hybrid data access pattern:
+            - Summary statistics: Use attribute access (e.g., summary.completed_jobs)
+            - Individual job details: Use dictionary access (e.g., summary.jobs[0]['status'])
+
+        Example:
+            ```python
+            summary = engine.get_batch_summary("batch-123")
+            if summary:
+                print(f"Completed: {summary.completed_jobs}/{summary.total_jobs}")
+                if summary.jobs:
+                    print(f"First job status: {summary.jobs[0]['status']}")
+            ```
         """
         try:
             from .summary import BatchSummaryGenerator
@@ -806,6 +820,17 @@ class BatchEngine:
         except Exception as e:
             self.logger.error(f"Failed to load batch manifest: {e}")
             return None
+
+    def _save_manifest(self, manifest_file: Path, manifest: BatchManifest):
+        """Save batch manifest to file."""
+        try:
+            manifest_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(manifest_file, 'w', encoding='utf-8') as f:
+                json.dump(manifest.to_dict(), f, indent=2, ensure_ascii=False)
+            self.logger.debug(f"Saved batch manifest to {manifest_file}")
+        except Exception as e:
+            self.logger.error(f"Failed to save batch manifest: {e}")
+            raise
 
     def _find_job_by_id(self, manifest: BatchManifest, job_id: str) -> Optional[BatchJob]:
         """Find job by ID in manifest."""

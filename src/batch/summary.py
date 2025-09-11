@@ -20,7 +20,24 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class BatchSummary:
-    """Summary of batch execution results."""
+    """
+    Summary of batch execution results.
+
+    This class provides aggregated information about batch execution, including
+    overall statistics and individual job details.
+
+    Data Access Patterns:
+    - Summary statistics (completed_jobs, failed_jobs, etc.): Use attribute access
+      Example: summary.completed_jobs, summary.total_jobs
+
+    - Individual job details: Use dictionary access on the jobs list
+      Example: summary.jobs[0]['status'], summary.jobs[0]['error_message']
+
+    This design provides:
+    - Fast access to frequently used summary statistics
+    - Flexible access to detailed job information
+    - JSON serialization compatibility for job details
+    """
     batch_id: str
     run_id: str
     total_jobs: int

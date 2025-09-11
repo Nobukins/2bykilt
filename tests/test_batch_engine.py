@@ -499,9 +499,9 @@ class TestBatchEngine:
         engine.update_job_status(job_id, "completed")
 
         # Verify status updated
-        updated_manifest = engine.get_batch_status(manifest.batch_id)
+        updated_manifest = engine.get_batch_summary(manifest.batch_id)
         assert updated_manifest is not None
-        assert updated_manifest.jobs[0].status == "completed"
+        assert updated_manifest.jobs[0]['status'] == "completed"
         assert updated_manifest.completed_jobs == 1
 
     def test_update_job_status_with_error(self, engine, temp_dir, run_context):
@@ -518,15 +518,15 @@ class TestBatchEngine:
         engine.update_job_status(job_id, "failed", "Test error")
 
         # Verify status and error updated
-        updated_manifest = engine.get_batch_status(manifest.batch_id)
+        updated_manifest = engine.get_batch_summary(manifest.batch_id)
         assert updated_manifest is not None
-        assert updated_manifest.jobs[0].status == "failed"
-        assert updated_manifest.jobs[0].error_message == "Test error"
+        assert updated_manifest.jobs[0]['status'] == "failed"
+        assert updated_manifest.jobs[0]['error_message'] == "Test error"
         assert updated_manifest.failed_jobs == 1
 
-    def test_get_batch_status_not_found(self, engine):
-        """Test getting status of non-existent batch."""
-        result = engine.get_batch_status("non_existent_batch")
+    def test_get_batch_summary_not_found(self, engine):
+        """Test getting summary of non-existent batch."""
+        result = engine.get_batch_summary("non_existent_batch")
         assert result is None
 
     def test_update_job_status_not_found(self, engine, temp_dir, run_context):
