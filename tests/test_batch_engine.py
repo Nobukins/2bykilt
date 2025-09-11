@@ -458,6 +458,53 @@ class TestBatchEngine:
         assert manifest.run_id == run_context.run_id_base
         assert manifest.csv_path == str(csv_file)
         assert manifest.total_jobs == 2
+
+    def test_stop_batch_marks_pending_jobs_stopped(self, engine, temp_dir, run_context):
+        """stop_batch should mark pending/running jobs as 'stopped' and persist manifest."""
+        from src.batch.engine import BatchEngine, BatchManifest, BATCH_MANIFEST_FILENAME
+        import json, os
+        # Prepare CSV with three jobs
+        csv_content = "name,value\na,1\nb,2\nc,3\n"
+        csv_file = temp_dir / "jobs.csv"
+        csv_file.write_text(csv_content)
+        manifest = engine.create_batch_jobs(str(csv_file))
+        batch_id = manifest.batch_id
+        # Simulate one job completed, one failed, one pending
+        manifest.jobs[0].status = 'completed'
+        manifest.completed_jobs = 1
+        manifest.jobs[1].status = 'failed'
+        manifest.failed_jobs = 1
+        # Persist modified manifest to disk
+        manifest_path = run_context.artifact_dir('batch') / BATCH_MANIFEST_FILENAME
+        with open(manifest_path, 'w', encoding='utf-8') as f:
+            json.dump(manifest.to_dict(), f, indent=2, ensure_ascii=False)
+        # Stop batch
+        result = engine.stop_batch(batch_id)
+        assert result['batch_id'] == batch_id
+        assert result['stopped_jobs'] == 1  # only the remaining pending one
+        # Reload manifest and verify statuses
+        with open(manifest_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        reloaded = BatchManifest.from_dict(data)
+        statuses = {j.job_id: j.status for j in reloaded.jobs}
+        assert list(statuses.values()).count('stopped') == 1
+        assert list(statuses.values()).count('completed') == 1
+        assert list(statuses.values()).count('failed') == 1
+
+    def test_stop_batch_invalid_id(self, engine):
+        """stop_batch with invalid id raises ValueError."""
+        import pytest
+        with pytest.raises(ValueError, match="Batch not found"):
+            engine.stop_batch("non-existent")
+
+    def test_retry_metrics_still_available_after_stop_batch_addition(self, engine, temp_dir):
+        """Ensure _record_retry_metrics still callable after adding stop_batch (regression guard)."""
+        # create simple CSV
+        csv_file = temp_dir / 'simple.csv'
+        csv_file.write_text('name,value\nfoo,1\n')
+        manifest = engine.create_batch_jobs(str(csv_file))
+        # should not raise
+        engine._record_retry_metrics(manifest.batch_id, 0)
         assert len(manifest.jobs) == 2
 
         # Check job files created

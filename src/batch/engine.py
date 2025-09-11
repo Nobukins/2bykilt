@@ -1155,6 +1155,86 @@ class BatchEngine:
         except Exception as e:
             self.logger.debug(f"Failed to record retry metrics: {e}")
 
+    # ------------------------------------------------------------------
+    # Batch Stop (graceful) Support
+    # ------------------------------------------------------------------
+    def stop_batch(self, batch_id: str) -> Dict[str, Any]:
+        """Gracefully stop a batch by marking pending / running jobs as 'stopped'.
+
+        This does not delete artifacts; it only updates job statuses and manifest
+        counters. Already completed / failed jobs remain unchanged.
+
+        Args:
+            batch_id: Target batch identifier.
+
+        Returns:
+            Dict with summary: {batch_id, stopped_jobs, unaffected_jobs, total_jobs}
+
+        Raises:
+            ValueError: If batch manifest cannot be found.
+        """
+        if not batch_id or not isinstance(batch_id, str):
+            raise ValueError("batch_id must be a non-empty string")
+
+        manifest = self._load_manifest_by_batch_id(batch_id)
+        if manifest is None:
+            raise ValueError(f"Batch not found: {batch_id}")
+
+        stopped_count = 0
+        unaffected = 0
+
+        for job in manifest.jobs:
+            if job.status in ("pending", "running"):
+                job.status = "stopped"
+                job.completed_at = datetime.now(timezone.utc).isoformat()
+                stopped_count += 1
+            else:
+                unaffected += 1
+
+        # Persist manifest update
+        manifest_file = self._find_manifest_file_for_batch(batch_id)
+        if manifest_file:
+            try:
+                self._save_manifest(manifest_file, manifest)
+            except Exception as e:
+                self.logger.error(f"Failed saving manifest while stopping batch {batch_id}: {e}")
+                raise
+
+        # Record metric
+        self._record_batch_stop_metrics(batch_id, stopped_count)
+
+        result = {
+            "batch_id": batch_id,
+            "stopped_jobs": stopped_count,
+            "unaffected_jobs": unaffected,
+            "total_jobs": len(manifest.jobs),
+        }
+        self.logger.info(
+            f"Stopped batch {batch_id}: stopped={stopped_count} unaffected={unaffected} total={len(manifest.jobs)}"
+        )
+        return result
+
+    def _record_batch_stop_metrics(self, batch_id: str, stopped: int) -> None:
+        """Record metrics when a batch is stopped."""
+        try:
+            from ..metrics import get_metrics_collector, MetricType
+
+            collector = get_metrics_collector()
+            if collector is None:
+                return
+
+            collector.record_metric(
+                name="batch_stopped",
+                value=stopped,
+                metric_type=MetricType.COUNTER,
+                tags={
+                    "batch_id": batch_id,
+                    "run_id": self.run_context.run_id_base,
+                },
+            )
+        except Exception as e:
+            self.logger.debug(f"Failed to record batch stop metrics: {e}")
+
     def execute_job_with_retry(self, job: BatchJob, max_retries: int = DEFAULT_MAX_RETRIES,
                               retry_delay: float = DEFAULT_RETRY_DELAY, backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
                               max_retry_delay: Optional[float] = None) -> str:

@@ -39,10 +39,10 @@ issues:
     dependents: [], risk: null, progress: {state: done, primary_pr: 103}, critical_path_rank: 1}
   "39": {title: "CSV 駆動バッチエンジンコア", meta: {area: batch, type: feat, priority: P1, 
         phase: "2", stability: experimental}, depends: ["32"], dependents: ["40",
-      "41", "42"], risk: null, progress: {state: in_progress}, critical_path_rank: 2}
+      "41", "42"], risk: null, progress: {state: done, primary_pr: 164}, critical_path_rank: 2}
   "40": {title: "CSV D&D UI 連携", meta: {area: batch, type: feat, priority: P2, 
         phase: "2", stability: experimental}, depends: ["39"], dependents: [], 
-      risk: null, critical_path_rank: 1}
+      risk: null, progress: {state: done, primary_pr: 165}, critical_path_rank: 1}
   "41": {title: "バッチ進捗・サマリー", meta: {area: batch, type: feat, priority: P2, 
         phase: "2", stability: experimental}, depends: ["39", "56"], dependents: [],
     risk: null, critical_path_rank: 1}
@@ -149,9 +149,11 @@ issues:
     depends: []
     dependents: []
   "91": {title: "統一録画パス Rollout (flag default 有効化 & legacy 廃止)", meta: {area: artifacts, type: chore, priority: P0, phase: "1-late", stability: core}, depends: ["28"], dependents: [], progress: {state: done, primary_pr: 105}, risk: null, critical_path_rank: 1}
+  "173": {title: "[UI][batch][#40 follow-up] CSV Preview & Command Argument Mapping", meta: {area: batch, type: feat, priority: P2, phase: "2", stability: experimental}, depends: ["39", "40", "41", "42"], dependents: [], risk: null, critical_path_rank: 1}
+  "174": {title: "[artifacts][batch] Clarify Artifact Output & Access Flow", meta: {area: artifacts, type: docs, priority: P3, phase: "2", stability: core}, depends: ["28", "30", "33", "35", "39"], dependents: [], risk: low, critical_path_rank: 1}
 
 summary:
-  total_issues: 47
+  total_issues: 49
   high_risk: ["31", "46", "49", "54", "62"]
   longest_chain_example: ["65", "64", "63", "66", "67"]
   data_quality_checks:

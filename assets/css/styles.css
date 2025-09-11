@@ -67,3 +67,95 @@
 .dark .suggestion-desc {
     color: #aaa;
 }
+
+/* CSV Upload Drag & Drop Styles */
+#csv-upload {
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+    padding: 40px 20px;
+    text-align: center;
+    background-color: #fafafa;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+}
+
+#csv-upload:hover {
+    border-color: #007bff;
+    background-color: #f8f9ff;
+}
+
+#csv-upload.dragover {
+    border-color: #007bff;
+    background-color: #e3f2fd;
+    transform: scale(1.02);
+}
+
+.dark #csv-upload {
+    background-color: #2c2c2c;
+    border-color: #444;
+}
+
+.dark #csv-upload:hover {
+    background-color: #3a3f4b;
+    border-color: #007bff;
+}
+
+.dark #csv-upload.dragover {
+    background-color: #1e3a5f;
+    border-color: #007bff;
+}
+
+#csv-upload .upload-icon {
+    font-size: 48px;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.dark #csv-upload .upload-icon {
+    color: #aaa;
+}
+
+#csv-upload .upload-text {
+    font-size: 16px;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.dark #csv-upload .upload-text {
+    color: #aaa;
+}
+
+#csv-upload .upload-hint {
+    font-size: 14px;
+    color: #999;
+}
+
+.dark #csv-upload .upload-hint {
+    color: #777;
+}
+
+/* Batch Processing Styles */
+.batch-status {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 10px 0;
+}
+
+.dark .batch-status {
+    background-color: #2c2c2c;
+    border-color: #444;
+}
+
+.batch-progress {
+    background-color: #e9ecef;
+    border-radius: 4px;
+    padding: 10px;
+    margin: 10px 0;
+}
+
+.dark .batch-progress {
+    background-color: #3a3f4b;
+}

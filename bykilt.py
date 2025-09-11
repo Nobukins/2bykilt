@@ -1806,6 +1806,118 @@ URLを入力してPlaywright codegenを起動し、ブラウザ操作を記録�
                 markdown_output_display = gr.Markdown(label="Research Report")
                 markdown_download_path = gr.Textbox(label="Research Report Download Path", placeholder="Path where report will be saved")
 
+            with gr.TabItem("📊 Batch Processing", id=12):
+                gr.Markdown("### 📊 CSV Batch Processing")
+                gr.Markdown("""
+                Upload a CSV file to start batch processing. Drag and drop the file or click to browse.
+                
+                **Features:**
+                - Drag & Drop CSV file upload
+                - Automatic batch job creation
+                - Real-time progress monitoring
+                - Job status tracking
+                """)
+                
+                with gr.Row():
+                    csv_file_input = gr.File(
+                        label="CSV File", 
+                        file_types=[".csv"], 
+                        file_count="single",
+                        elem_id="csv-upload"
+                    )
+                
+                with gr.Row():
+                    start_batch_button = gr.Button("🚀 Start Batch Processing", variant="primary", scale=2)
+                    stop_batch_button = gr.Button("⏹️ Stop Batch", variant="stop", scale=1)
+                
+                batch_status_output = gr.Textbox(label="Batch Status", lines=5, interactive=False)
+                batch_progress_output = gr.Textbox(label="Progress", lines=3, interactive=False)
+                # Optional feedback element for JS (errors / warnings)
+                csv_feedback = gr.Markdown("", elem_id="csv-upload-feedback")
+                
+                # Batch processing functions
+                current_batch_ref = {"batch_id": None}  # closure-based mutable reference
+                def start_batch_processing(csv_file):
+                    """Start batch processing from uploaded CSV file."""
+                    if csv_file is None:
+                        return "❌ No CSV file selected", "", ""
+                    
+                    try:
+                        from src.batch.engine import start_batch
+                        from src.runtime.run_context import RunContext
+                        
+                        # Save uploaded file temporarily
+                        import tempfile
+                        import shutil
+                        import os
+                        import logging
+                        
+                        temp_csv_path = None
+                        try:
+                            with tempfile.NamedTemporaryFile(mode='wb', suffix='.csv', delete=False) as temp_file:
+                                shutil.copyfileobj(csv_file, temp_file)
+                                temp_csv_path = temp_file.name
+
+                            # Start batch processing
+                            run_context = RunContext.get()
+                            manifest = start_batch(temp_csv_path, run_context)
+                            current_batch_ref["batch_id"] = manifest.batch_id
+                        
+                            status = f"""✅ Batch started successfully!
+                        
+Batch ID: {manifest.batch_id}
+Run ID: {manifest.run_id}
+Total Jobs: {manifest.total_jobs}
+CSV Path: {manifest.csv_path}
+Jobs Directory: {run_context.artifact_dir('jobs')}
+Manifest: {run_context.artifact_dir('batch')}/batch_manifest.json
+"""
+                            progress = f"Jobs: 0/{manifest.total_jobs} completed"
+                            return status, progress, manifest.batch_id
+                        finally:
+                            if temp_csv_path and os.path.exists(temp_csv_path):
+                                try:
+                                    os.remove(temp_csv_path)
+                                except Exception as cleanup_exc:  # noqa: BLE001
+                                    logging.warning(f"Failed to clean up temp file {temp_csv_path}: {cleanup_exc}")
+                    
+                    except Exception as e:
+                        import traceback
+                        error_msg = f"❌ Error starting batch: {str(e)}\n{traceback.format_exc()}"
+                        return error_msg, "", ""
+                
+                def stop_batch_processing():
+                    """Stop current batch processing."""
+                    try:
+                        from src.batch.engine import BatchEngine
+                        from src.runtime.run_context import RunContext
+                        import logging
+
+                        run_context = RunContext.get()
+                        engine = BatchEngine(run_context)
+                        batch_id = current_batch_ref.get("batch_id")
+                        if not batch_id:
+                            return "ℹ️ No active batch to stop", "", ""
+                        result = engine.stop_batch(batch_id)
+                        status = (f"🛑 Batch stopped. Batch ID: {batch_id}\n"
+                                  f"Stopped Jobs: {result['stopped_jobs']} / {result['total_jobs']}")
+                        return status, "", batch_id
+                    
+                    except Exception as e:
+                        return f"❌ Error stopping batch: {str(e)}", "", current_batch_ref.get("batch_id") or ""
+                
+                start_batch_button.click(
+                    fn=start_batch_processing,
+                    inputs=[csv_file_input],
+                    outputs=[batch_status_output, batch_progress_output, gr.State()]  # third value: batch_id (ephemeral)
+                )
+                
+                stop_batch_button.click(
+                    fn=stop_batch_processing,
+                    inputs=[],
+                    outputs=[batch_status_output, batch_progress_output, gr.State()]
+                )
+
         llm_provider.change(lambda provider, api_key, base_url: update_model_dropdown(provider, api_key, base_url), inputs=[llm_provider, llm_api_key, llm_base_url], outputs=llm_model_name)
         enable_recording.change(lambda enabled: gr.update(interactive=enabled), inputs=enable_recording, outputs=save_recording_path)
         use_own_browser.change(fn=close_global_browser)
@@ -2036,6 +2148,153 @@ URLを入力してPlaywright codegenを起動し、ブラウザ操作を記録�
                     console.log("CommandSuggest初期化を開始");
                     window.CommandSuggest = new CommandSuggest();
                     window.commandSuggestLoaded = true;
+                }}, 1000);
+            }});
+            
+            // CSV Upload Drag & Drop functionality
+            class CSVUploadHandler {{
+                constructor() {{
+                    this.dropZone = null;
+                    this.fileInput = null;
+                    this.initialize();
+                }}
+                
+                initialize() {{
+                    // Wait for DOM to be ready
+                    if (document.readyState === 'loading') {{
+                        document.addEventListener('DOMContentLoaded', () => this.setup());
+                    }} else {{
+                        this.setup();
+                    }}
+                }}
+                
+                setup() {{
+                    // Find the CSV upload element
+                    this.dropZone = document.getElementById('csv-upload');
+                    if (!this.dropZone) {{
+                        console.log('CSV upload element not found, retrying...');
+                        setTimeout(() => this.setup(), 1000);
+                        return;
+                    }}
+                    
+                    // Find the actual file input within the drop zone
+                    this.fileInput = this.dropZone.querySelector('input[type="file"]');
+                    if (!this.fileInput) {{
+                        console.log('File input not found within CSV upload element');
+                        return;
+                    }}
+                    
+                    this.setupDragAndDrop();
+                    console.log('CSV Upload Handler initialized');
+                }}
+                
+                setupDragAndDrop() {{
+                    // Prevent default drag behaviors
+                    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {{
+                        this.dropZone.addEventListener(eventName, this.preventDefaults, false);
+                        document.body.addEventListener(eventName, this.preventDefaults, false);
+                    }});
+                    
+                    // Highlight drop zone when item is dragged over it
+                    ['dragenter', 'dragover'].forEach(eventName => {{
+                        this.dropZone.addEventListener(eventName, this.highlight, false);
+                    }});
+                    
+                    ['dragleave', 'drop'].forEach(eventName => {{
+                        this.dropZone.addEventListener(eventName, this.unhighlight, false);
+                    }});
+                    
+                    // Handle dropped files
+                    this.dropZone.addEventListener('drop', this.handleDrop.bind(this), false);
+                }}
+                
+                preventDefaults(e) {{
+                    e.preventDefault();
+                    e.stopPropagation();
+                }}
+                
+                highlight(e) {{
+                    const dropZone = e.target.closest('#csv-upload');
+                    if (dropZone) {{
+                        dropZone.style.borderColor = '#007bff';
+                        dropZone.style.backgroundColor = '#f8f9ff';
+                    }}
+                }}
+                
+                unhighlight(e) {{
+                    const dropZone = e.target.closest('#csv-upload');
+                    if (dropZone) {{
+                        dropZone.style.borderColor = '#ddd';
+                        dropZone.style.backgroundColor = '';
+                    }}
+                }}
+                
+                handleDrop(e) {{
+                    const dt = e.dataTransfer;
+                    const files = dt.files;
+                    
+                    this.handleFiles(files);
+                }}
+                
+                handleFiles(files) {{
+                    const feedbackEl = document.getElementById('csv-upload-feedback');
+                    const emitFeedback = (msg, level='info') => {{
+                        if (feedbackEl) {{
+                            feedbackEl.textContent = msg;
+                            feedbackEl.dataset.level = level;
+                        }}
+                        console[level === 'error' ? 'error' : 'log'](msg);
+                        const evt = new CustomEvent('csv-upload-feedback', {{ detail: {{ message: msg, level }} }});
+                        window.dispatchEvent(evt);
+                    }};
+
+                    // Filter for CSV files only
+                    const csvFiles = Array.from(files).filter(file => {{
+                        return file.type === 'text/csv' ||
+                               file.type === 'application/vnd.ms-excel' ||
+                               file.name.toLowerCase().endsWith('.csv');
+                    }});
+
+                    if (csvFiles.length === 0) {{
+                        emitFeedback('Please drop a CSV file (.csv)', 'error');
+                        return;
+                    }}
+
+                    if (csvFiles.length > 1) {{
+                        emitFeedback('Please drop only one CSV file at a time', 'error');
+                        return;
+                    }}
+
+                    const file = csvFiles[0];
+
+                    // Determine max size from data attribute if present (fallback 500MB)
+                    if (!this.dropZone.dataset.maxSize) {{
+                        this.dropZone.dataset.maxSize = String(500 * 1024 * 1024);
+                    }}
+                    const maxSize = parseInt(this.dropZone.dataset.maxSize, 10);
+                    if (file.size > maxSize) {{
+                        const maxMB = (maxSize / (1024 * 1024)).toFixed(0);
+                        emitFeedback('File size too large. Maximum size is ' + maxMB + 'MB.', 'error');
+                        return;
+                    }}
+
+                    // Create a DataTransfer object to set the file
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    this.fileInput.files = dt.files;
+
+                    // Trigger change event to notify Gradio
+                    const event = new Event('change', {{ bubbles: true }});
+                    this.fileInput.dispatchEvent(event);
+
+                    emitFeedback('CSV file selected: ' + file.name, 'info');
+                }}
+            }}
+            
+            // Initialize CSV upload handler when page loads
+            window.addEventListener('load', function() {{
+                setTimeout(function() {{
+                    window.csvUploadHandler = new CSVUploadHandler();
                 }}, 1000);
             }});
             """
