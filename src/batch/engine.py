@@ -14,7 +14,7 @@ import mimetypes
 import time
 import random
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Union, Iterator
+from typing import Dict, List, Optional, Any, Union, Iterator, Literal
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from contextlib import contextmanager
@@ -1157,7 +1157,7 @@ class BatchEngine:
 
     def execute_job_with_retry(self, job: BatchJob, max_retries: int = DEFAULT_MAX_RETRIES,
                               retry_delay: float = DEFAULT_RETRY_DELAY, backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
-                              max_retry_delay: Optional[float] = None) -> str:
+                              max_retry_delay: Optional[float] = None) -> Literal['completed', 'failed']:
         """
         Execute a job with automatic retry on failure.
 
@@ -1221,9 +1221,9 @@ class BatchEngine:
         job.error_message = f"{error_summary}. Last error: {type(last_exception).__name__ if last_exception else 'Unknown'}"
         self.logger.error(f"Job {job.job_id} permanently failed: {error_summary}")
 
-        # Re-raise the last exception to preserve the original error context
+        # Preserve the original exception context using exception chaining
         if last_exception:
-            raise last_exception
+            raise RuntimeError(f"Job {job.job_id}: {error_summary}") from last_exception
         else:
             raise RuntimeError(f"Job {job.job_id}: {error_summary}")
 
@@ -1320,8 +1320,9 @@ class BatchEngine:
             raise ValueError("max_random_delay must be >= 0")
 
         try:
-            # Add small random delay to simulate processing time
-            if max_random_delay > 0:
+            # Add small random delay to simulate processing time (only in debug/test mode)
+            debug_mode = os.getenv('BATCH_DEBUG_MODE', 'false').lower() == 'true'
+            if max_random_delay > 0 and debug_mode:
                 time.sleep(random.uniform(0, max_random_delay))
 
             # Simulate different failure scenarios based on data content
