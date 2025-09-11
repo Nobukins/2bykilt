@@ -39,10 +39,10 @@ issues:
     dependents: [], risk: null, progress: {state: done, primary_pr: 103}, critical_path_rank: 1}
   "39": {title: "CSV 駆動バッチエンジンコア", meta: {area: batch, type: feat, priority: P1, 
         phase: "2", stability: experimental}, depends: ["32"], dependents: ["40",
-      "41", "42"], risk: null, progress: {state: in_progress}, critical_path_rank: 2}
+      "41", "42"], risk: null, progress: {state: done, primary_pr: 164}, critical_path_rank: 2}
   "40": {title: "CSV D&D UI 連携", meta: {area: batch, type: feat, priority: P2, 
         phase: "2", stability: experimental}, depends: ["39"], dependents: [], 
-      risk: null, critical_path_rank: 1}
+      risk: null, progress: {state: done, primary_pr: 165}, critical_path_rank: 1}
   "41": {title: "バッチ進捗・サマリー", meta: {area: batch, type: feat, priority: P2, 
         phase: "2", stability: experimental}, depends: ["39", "56"], dependents: [],
     risk: null, critical_path_rank: 1}
