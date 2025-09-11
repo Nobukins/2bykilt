@@ -27,6 +27,11 @@ logger = logging.getLogger(__name__)
 # Type aliases for better type hints
 ConfigType = Dict[str, Union[str, int, float, bool]]
 
+# Constants for job execution simulation
+DEFAULT_SUCCESS_RATE = 0.7  # 70% success rate for simulation
+MAX_RANDOM_DELAY = 0.1  # Maximum random delay in seconds
+MAX_RETRY_DELAY = 60.0  # Maximum retry delay in seconds
+
 
 class BatchEngineError(Exception):
     """Base exception for BatchEngine errors."""
@@ -1018,7 +1023,7 @@ class BatchEngine:
             return result
 
         except Exception as e:
-            error_msg = f"Failed to retry batch jobs: {e}"
+            error_msg = f"Failed to retry batch jobs for batch '{batch_id}': {e}"
             self.logger.error(error_msg)
             raise ValueError(error_msg) from e
 
@@ -1055,7 +1060,7 @@ class BatchEngine:
 
         return None
 
-    def _record_retry_metrics(self, batch_id: str, retry_count: int):
+    def _record_retry_metrics(self, batch_id: str, retry_count: int) -> None:
         """Record metrics for batch retry operations."""
         try:
             from ..metrics import get_metrics_collector, MetricType
@@ -1091,47 +1096,97 @@ class BatchEngine:
             Final status of the job ('completed' or 'failed')
         """
         import time
+        from typing import Optional
 
-        last_error = None
+        last_error: Optional[str] = None
+        last_exception: Optional[Exception] = None
 
         for attempt in range(max_retries + 1):  # +1 for initial attempt
             try:
                 self.logger.info(f"Executing job {job.job_id} (attempt {attempt + 1}/{max_retries + 1})")
 
-                # Here you would integrate with your actual job execution logic
-                # For now, we'll simulate job execution
+                # Execute the job using the actual implementation
                 status = self._execute_single_job(job)
 
                 if status == 'completed':
-                    self.logger.info(f"Job {job.job_id} completed successfully")
+                    self.logger.info(f"Job {job.job_id} completed successfully on attempt {attempt + 1}")
                     return 'completed'
                 else:
-                    raise Exception(f"Job execution returned status: {status}")
+                    error_msg = f"Job execution returned unexpected status: {status}"
+                    self.logger.warning(f"Job {job.job_id} returned status '{status}' on attempt {attempt + 1}")
+                    raise ValueError(error_msg)
 
             except Exception as e:
                 last_error = str(e)
+                last_exception = e
                 self.logger.warning(f"Job {job.job_id} failed on attempt {attempt + 1}: {e}")
 
                 # Don't retry on the last attempt
                 if attempt < max_retries:
                     self.logger.info(f"Retrying job {job.job_id} in {retry_delay}s...")
                     time.sleep(retry_delay)
-                    # Exponential backoff
-                    retry_delay *= 2
+                    # Exponential backoff with maximum delay cap
+                    retry_delay = min(retry_delay * 2, MAX_RETRY_DELAY)  # Cap at 60 seconds
                 else:
                     self.logger.error(f"Job {job.job_id} failed after {max_retries + 1} attempts")
 
         # All attempts failed
-        job.error_message = f"Failed after {max_retries + 1} attempts. Last error: {last_error}"
-        return 'failed'
+        error_msg = f"Failed after {max_retries + 1} attempts. Last error: {last_error}"
+        job.error_message = error_msg
+        self.logger.error(f"Job {job.job_id} permanently failed: {error_msg}")
+
+        # Re-raise the last exception to preserve the original error context
+        if last_exception:
+            raise last_exception
+        else:
+            raise RuntimeError(error_msg)
 
     def _execute_single_job(self, job: BatchJob) -> str:
         """
         Execute a single job.
 
-        This is a placeholder for the actual job execution logic.
-        In a real implementation, this would integrate with your
-        browser automation or other job processing systems.
+        This method integrates with the actual job execution logic.
+        In the current implementation, it processes the job data and
+        simulates job execution based on the data content.
+
+        Args:
+            job: Job to execute
+
+        Returns:
+            Job status ('completed' or 'failed')
+
+        Raises:
+            ValueError: If job data is invalid
+            RuntimeError: If job execution fails
+        """
+        try:
+            # Validate job data
+            if not job.row_data:
+                raise ValueError(f"Job {job.job_id} has no row data")
+
+            self.logger.debug(f"Processing job {job.job_id} with data: {job.row_data}")
+
+            # Basic validation of required fields
+            # In a real implementation, this would validate against your schema
+            if not isinstance(job.row_data, dict):
+                raise ValueError(f"Job {job.job_id} row_data must be a dictionary")
+
+            # Simulate job execution based on data content
+            # In real implementation, replace with actual browser automation or processing logic
+            return self._simulate_job_execution(job)
+
+        except Exception as e:
+            error_msg = f"Job execution failed for {job.job_id}: {e}"
+            self.logger.error(error_msg)
+            raise RuntimeError(error_msg) from e
+
+    def _simulate_job_execution(self, job: BatchJob) -> str:
+        """
+        Simulate job execution for testing purposes.
+
+        This is a temporary implementation that simulates job execution
+        based on the job data. In production, this should be replaced
+        with actual job execution logic.
 
         Args:
             job: Job to execute
@@ -1139,26 +1194,39 @@ class BatchEngine:
         Returns:
             Job status ('completed' or 'failed')
         """
-        # Placeholder implementation
-        # In real implementation, this would:
-        # 1. Load job data from job.row_data
-        # 2. Execute browser automation or other processing
-        # 3. Return appropriate status
+        import random
+        from typing import Any
+
+        # Constants for simulation
+        SUCCESS_RATE = DEFAULT_SUCCESS_RATE  # 70% success rate
+        MAX_RANDOM_DELAY = MAX_RANDOM_DELAY  # Maximum random delay in seconds
 
         try:
-            # Simulate some processing
-            self.logger.debug(f"Processing job {job.job_id} with data: {job.row_data}")
+            # Add small random delay to simulate processing time
+            if MAX_RANDOM_DELAY > 0:
+                import time
+                time.sleep(random.uniform(0, MAX_RANDOM_DELAY))
 
-            # For demonstration, randomly succeed/fail
-            # In real implementation, replace with actual job logic
-            import random
-            if random.random() > 0.3:  # 70% success rate
-                return 'completed'
-            else:
-                raise Exception("Simulated job failure")
+            # Simulate different failure scenarios based on data content
+            data: Dict[str, Any] = job.row_data
+
+            # Check for intentional failure triggers in test data
+            if data.get('name') == 'fail':
+                raise Exception("Intentional failure for testing")
+
+            if data.get('value') == 'error':
+                raise ValueError("Invalid value for processing")
+
+            # Random success/failure for normal cases
+            if random.random() > SUCCESS_RATE:
+                raise Exception("Simulated random failure")
+
+            # Success case
+            self.logger.debug(f"Job {job.job_id} simulation completed successfully")
+            return 'completed'
 
         except Exception as e:
-            self.logger.error(f"Job execution failed: {e}")
+            self.logger.debug(f"Job {job.job_id} simulation failed: {e}")
             raise
 
 

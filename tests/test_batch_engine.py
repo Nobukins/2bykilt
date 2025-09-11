@@ -2,6 +2,7 @@
 Tests for CSV-driven batch execution engine.
 """
 
+import csv
 import json
 import tempfile
 import pytest
@@ -949,10 +950,12 @@ class TestBatchRetry:
         job = BatchJob("test_job", "test_run", {"data": "test"})
 
         # Mock successful execution
-        with patch.object(engine, '_execute_single_job', return_value='completed'):
+        with patch.object(engine, '_execute_single_job', return_value='completed') as mock_execute:
             status = engine.execute_job_with_retry(job, max_retries=2)
 
         assert status == 'completed'
+        # Verify the job execution was called
+        mock_execute.assert_called_once_with(job)
 
     def test_execute_job_with_retry_failure(self, engine):
         """Test job execution failure after retries."""
@@ -960,9 +963,11 @@ class TestBatchRetry:
 
         # Mock failed execution
         with patch.object(engine, '_execute_single_job', side_effect=Exception("Test failure")):
-            status = engine.execute_job_with_retry(job, max_retries=2)
+            with pytest.raises(Exception) as exc_info:
+                engine.execute_job_with_retry(job, max_retries=2)
 
-        assert status == 'failed'
+        # Verify the original exception is re-raised
+        assert "Test failure" in str(exc_info.value)
         assert "Failed after 3 attempts" in job.error_message
 
     def test_export_failed_rows(self, engine, temp_dir, run_context):
@@ -993,6 +998,18 @@ class TestBatchRetry:
             assert 'name,value,error_message,job_id,failed_at' in content
             assert 'test1,data1,Test failure for' in content
             assert 'test2,data2,Test failure for' in content
+
+        # Verify CSV structure
+        with open(failed_csv_path, 'r', newline='') as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+            assert len(rows) == 2
+            assert rows[0]['name'] == 'test1'
+            assert rows[0]['value'] == 'data1'
+            assert 'Test failure for' in rows[0]['error_message']
+            assert rows[1]['name'] == 'test2'
+            assert rows[1]['value'] == 'data2'
+            assert 'Test failure for' in rows[1]['error_message']
 
     def test_export_failed_rows_no_failures(self, engine, temp_dir, run_context):
         """Test failed rows export when no jobs failed."""
