@@ -1,6 +1,6 @@
 ```mermaid
 %% Auto-generated dependency graph
-%% Generated at: 2025-09-11T00:54:49.897908+00:00
+%% Generated at: STABLE
 %% Edge方向: dependency --> dependent
 graph LR
 
@@ -60,6 +60,10 @@ subgraph R1[Rank 1]
   89["89 Screenshot ログイベント整備…"]
   90["90 Temp test issue for…"]
   91["91 統一録画パス Rollout (fla…"]
+  92["92 [enhance][roadmap] …"]
+  154["154 pip-audit stabiliza…"]
+  173["173 [UI][batch][#40 fol…"]
+  174["174 [artifacts][batch] …"]
 end
 
 %% Edges (depends --> dependent)
@@ -118,6 +122,15 @@ end
 33 --> 89
 58 --> 89
 28 --> 91
+39 --> 173
+40 --> 173
+41 --> 173
+42 --> 173
+28 --> 174
+30 --> 174
+33 --> 174
+35 --> 174
+39 --> 174
 
 %% Styling definitions (Mermaid syntax uses colon)
 classDef highrisk fill:#ffe6e6,stroke:#d40000,stroke-width:2px,color:#000;
@@ -125,7 +138,7 @@ classDef progress fill:#e6f4ff,stroke:#0366d6,stroke-width:2px,color:#000;
 
 %% Class assignments
 class 31,46,49,54,62 highrisk;
-class 25,28,31,32,34,35,36,37,38,39,42,44,45,50,56,57,58,87,88,89,91 progress;
+class 25,28,31,32,34,35,36,37,38,39,40,41,42,44,45,50,56,57,58,87,88,89,91,154 progress;
 
 %% Legend (pseudo nodes)
 subgraph Legend[Legend]
