@@ -48,7 +48,7 @@ issues:
     risk: null, critical_path_rank: 1}
   "42": {title: "バッチ部分リトライ", meta: {area: batch, type: feat, priority: P2, phase: "2",
       stability: experimental}, depends: ["39"], dependents: [], risk: null, 
-      critical_path_rank: 1}
+      progress: {state: done, primary_pr: 163}, critical_path_rank: 1}
   "43": {title: "ENABLE_LLM パリティ", meta: {area: runner, type: feat, priority: P1,
       phase: "1-late", stability: core}, depends: ["64", "65"], dependents: [], 
       risk: null, critical_path_rank: 1}
