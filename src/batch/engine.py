@@ -94,6 +94,7 @@ class BatchJob:
     created_at: Optional[str] = None
     completed_at: Optional[str] = None
     batch_id: Optional[str] = None  # Add batch_id for better metrics tracking
+    row_index: Optional[int] = None  # Row index in the original CSV
     # Row-level artifacts (Issue #175 PoC): list of {type, path, created_at, meta?}
     artifacts: Optional[List[Dict[str, Any]]] = None
 
@@ -542,7 +543,8 @@ class BatchEngine:
                 job_id=job_id,
                 run_id=run_id,
                 row_data=row_data,
-                batch_id=batch_id  # Set batch_id for metrics tracking
+                batch_id=batch_id,  # Set batch_id for metrics tracking
+                row_index=i  # Set row index for robust field extraction
             )
 
             # Save individual job file
@@ -1591,7 +1593,7 @@ class BatchEngine:
             # TODO: Integrate with actual browser context
             result = extractor.extract_fields(
                 job_id=job.job_id,
-                row_index=getattr(job, 'row_index', self._parse_row_index_from_job_id(job.job_id)),
+                row_index=job.row_index if job.row_index is not None else self._parse_row_index_from_job_id(job.job_id),
                 page_content=self._get_mock_page_content(job)
             )
 
