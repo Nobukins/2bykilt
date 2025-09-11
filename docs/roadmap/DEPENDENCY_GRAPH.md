@@ -1,6 +1,6 @@
 ```mermaid
 %% Auto-generated dependency graph
-%% Generated at: 2025-09-11T00:54:49.897908+00:00
+%% Generated at: 2025-09-11T13:06:21.619399+00:00
 %% Edge方向: dependency --> dependent
 graph LR
 
@@ -34,6 +34,8 @@ subgraph R2[Rank 2]
   66["66 ドキュメント整備 第1弾"]
   76["76 依存更新自動化パイプライン (PR 起…"]
   81["81 Async/Browser テスト安定…"]
+  175["175 バッチ行単位成果物キャプチャ基盤 (ス…"]
+  176["176 宣言的抽出スキーマ (CSV列→コマン…"]
 end
 subgraph R1[Rank 1]
   34["34 要素値キャプチャ & エクスポート"]
@@ -60,6 +62,11 @@ subgraph R1[Rank 1]
   89["89 Screenshot ログイベント整備…"]
   90["90 Temp test issue for…"]
   91["91 統一録画パス Rollout (fla…"]
+  154["154 pip-audit stabiliza…"]
+  173["173 [UI][batch][#40 fol…"]
+  174["174 [artifacts][batch] …"]
+  177["177 MVP エンタープライズ Readin…"]
+  178["178 CI: dependency-pipe…"]
 end
 
 %% Edges (depends --> dependent)
@@ -118,14 +125,38 @@ end
 33 --> 89
 58 --> 89
 28 --> 91
+39 --> 173
+40 --> 173
+41 --> 173
+42 --> 173
+28 --> 174
+30 --> 174
+33 --> 174
+35 --> 174
+39 --> 174
+39 --> 175
+40 --> 175
+41 --> 175
+42 --> 175
+33 --> 175
+35 --> 175
+175 --> 176
+39 --> 176
+40 --> 176
+60 --> 177
+58 --> 177
+35 --> 177
+39 --> 177
+43 --> 177
+76 --> 178
 
 %% Styling definitions (Mermaid syntax uses colon)
 classDef highrisk fill:#ffe6e6,stroke:#d40000,stroke-width:2px,color:#000;
 classDef progress fill:#e6f4ff,stroke:#0366d6,stroke-width:2px,color:#000;
 
 %% Class assignments
-class 31,46,49,54,62 highrisk;
-class 25,28,31,32,34,35,36,37,38,39,42,44,45,50,56,57,58,87,88,89,91 progress;
+class 31,46,49,54,62,176 highrisk;
+class 25,28,31,32,34,35,36,37,38,39,40,41,42,44,45,50,56,57,58,87,88,89,91,154 progress;
 
 %% Legend (pseudo nodes)
 subgraph Legend[Legend]
