@@ -14,7 +14,7 @@ import mimetypes
 import time
 import random
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Union, Iterator
+from typing import Dict, List, Optional, Any, Union, Iterator, Literal
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from contextlib import contextmanager
@@ -24,6 +24,14 @@ from ..runtime.run_context import RunContext
 
 from .summary import BatchSummary
 
+# Import metrics here to avoid repeated imports in methods
+try:
+    from ..metrics import get_metrics_collector, MetricType
+except ImportError:
+    # Handle case where metrics module is not available
+    get_metrics_collector = None
+    MetricType = None
+
 logger = logging.getLogger(__name__)
 
 # Type aliases for better type hints
@@ -32,6 +40,9 @@ ConfigType = Dict[str, Union[str, int, float, bool]]
 # Constants for job execution simulation
 DEFAULT_SUCCESS_RATE = 0.7  # 70% success rate for simulation
 MAX_RANDOM_DELAY = 0.1  # Maximum random delay in seconds for simulation
+
+# Debug/Test mode control
+ENABLE_SIMULATION_DELAYS = os.getenv("ENABLE_SIMULATION_DELAYS", "false").lower() == "true"
 
 # Constants for retry mechanism
 DEFAULT_MAX_RETRIES = 3  # Default maximum number of retry attempts
@@ -554,7 +565,8 @@ class BatchEngine:
     def _record_batch_creation_metrics(self, manifest: BatchManifest):
         """Record metrics for batch creation."""
         try:
-            from ..metrics import get_metrics_collector, MetricType
+            if get_metrics_collector is None:
+                return
 
             collector = get_metrics_collector()
             if collector is None:
@@ -725,7 +737,8 @@ class BatchEngine:
     def _record_job_metrics(self, job: BatchJob, status: str, error_message: Optional[str] = None):
         """Record metrics for job execution."""
         try:
-            from ..metrics import get_metrics_collector, MetricType
+            if get_metrics_collector is None:
+                return
 
             collector = get_metrics_collector()
             if collector is None:
@@ -926,7 +939,8 @@ class BatchEngine:
     def _record_failed_rows_export_metric(self, failed_count: int):
         """Record metrics for failed rows export."""
         try:
-            from ..metrics import get_metrics_collector, MetricType
+            if get_metrics_collector is None:
+                return
 
             collector = get_metrics_collector()
             if collector is None:
@@ -1136,7 +1150,8 @@ class BatchEngine:
     def _record_retry_metrics(self, batch_id: str, retry_count: int) -> None:
         """Record metrics for batch retry operations."""
         try:
-            from ..metrics import get_metrics_collector, MetricType
+            if get_metrics_collector is None:
+                return
 
             collector = get_metrics_collector()
             if collector is None:
@@ -1157,7 +1172,7 @@ class BatchEngine:
 
     def execute_job_with_retry(self, job: BatchJob, max_retries: int = DEFAULT_MAX_RETRIES,
                               retry_delay: float = DEFAULT_RETRY_DELAY, backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
-                              max_retry_delay: Optional[float] = None) -> str:
+                              max_retry_delay: Optional[float] = None) -> Literal['completed', 'failed']:
         """
         Execute a job with automatic retry on failure.
 
@@ -1223,11 +1238,11 @@ class BatchEngine:
 
         # Re-raise the last exception to preserve the original error context
         if last_exception:
-            raise last_exception
+            raise
         else:
             raise RuntimeError(f"Job {job.job_id}: {error_summary}")
 
-    def _execute_single_job(self, job: BatchJob) -> str:
+    def _execute_single_job(self, job: BatchJob) -> Literal['completed', 'failed']:
         """
         Execute a single job.
 
@@ -1320,8 +1335,8 @@ class BatchEngine:
             raise ValueError("max_random_delay must be >= 0")
 
         try:
-            # Add small random delay to simulate processing time
-            if max_random_delay > 0:
+            # Add small random delay to simulate processing time (only in debug/test mode)
+            if max_random_delay > 0 and ENABLE_SIMULATION_DELAYS:
                 time.sleep(random.uniform(0, max_random_delay))
 
             # Simulate different failure scenarios based on data content
