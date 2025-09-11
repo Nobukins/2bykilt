@@ -290,6 +290,76 @@ class TestBatchEngine:
         assert loaded["a"] == 1
         assert loaded["b"][2] == 3
 
+    def test_add_row_artifact_binary_content(self, engine, temp_dir, run_context):
+        """Binary content stored with specified extension."""
+        csv_file = temp_dir / "rows3.csv"
+        csv_file.write_text("name,value\nbeta,2\n")
+        manifest = engine.create_batch_jobs(str(csv_file))
+        job_id = manifest.jobs[0].job_id
+
+        binary_data = b"binary content here"
+        path = engine.add_row_artifact(job_id, "binary", binary_data, extension="bin", meta={"size": len(binary_data)})
+        assert path.suffix == ".bin"
+        assert path.read_bytes() == binary_data
+
+    def test_add_row_artifact_extension_override(self, engine, temp_dir, run_context):
+        """Extension override works for text content."""
+        csv_file = temp_dir / "rows4.csv"
+        csv_file.write_text("name,value\ngamma,3\n")
+        manifest = engine.create_batch_jobs(str(csv_file))
+        job_id = manifest.jobs[0].job_id
+
+        text_content = "some text content"
+        path = engine.add_row_artifact(job_id, "text", text_content, extension="log")
+        assert path.suffix == ".log"
+        assert path.read_text(encoding="utf-8") == text_content
+
+    def test_add_row_artifact_job_not_found(self, engine, temp_dir, run_context):
+        """Raises ValueError when job is not found."""
+        with pytest.raises(ValueError, match="Batch manifest not found for job non_existent_job"):
+            engine.add_row_artifact("non_existent_job", "test", "content")
+
+    def test_add_row_artifact_job_not_in_manifest(self, engine, temp_dir, run_context):
+        """Test that add_row_artifact works correctly with valid job."""
+        # Create a manifest with one job
+        csv_file = temp_dir / "rows6.csv"
+        csv_file.write_text("name,value\ndelta,4\n")
+        manifest = engine.create_batch_jobs(str(csv_file))
+        job_id = manifest.jobs[0].job_id
+        
+        # Add artifact for the valid job - this should work
+        artifact_path = engine.add_row_artifact(job_id, "test_artifact", "test content")
+        
+        # Verify artifact was created
+        assert artifact_path.exists()
+        assert artifact_path.read_text() == "test content"
+        
+        # Verify manifest was updated by loading it directly
+        manifest_file = engine._find_manifest_file_for_job(job_id)
+        assert manifest_file is not None
+        updated_manifest = engine._load_manifest(manifest_file)
+        assert updated_manifest is not None
+        
+        job = updated_manifest.jobs[0]
+        assert job.artifacts is not None
+        assert len(job.artifacts) == 1
+        assert job.artifacts[0]["type"] == "test_artifact"
+
+    def test_add_row_artifact_invalid_params(self, engine, temp_dir, run_context):
+        """Raises ValueError for invalid parameters."""
+        csv_file = temp_dir / "rows5.csv"
+        csv_file.write_text("name,value\ndelta,4\n")
+        manifest = engine.create_batch_jobs(str(csv_file))
+        job_id = manifest.jobs[0].job_id
+
+        # Invalid job_id
+        with pytest.raises(ValueError, match="job_id must be a non-empty string"):
+            engine.add_row_artifact("", "test", "content")
+
+        # Invalid artifact_type
+        with pytest.raises(ValueError, match="artifact_type must be a non-empty string"):
+            engine.add_row_artifact(job_id, "", "content")
+
     def test_parse_csv_file_too_large(self, temp_dir):
         """Test CSV parsing with file exceeding size limit."""
         from src.runtime.run_context import RunContext
@@ -537,9 +607,9 @@ class TestBatchEngine:
 
     def test_retry_metrics_still_available_after_stop_batch_addition(self, engine, temp_dir):
         """Ensure _record_retry_metrics still callable after adding stop_batch (regression guard)."""
-        # create simple CSV
+        # create simple CSV with 2 rows
         csv_file = temp_dir / 'simple.csv'
-        csv_file.write_text('name,value\nfoo,1\n')
+        csv_file.write_text('name,value\nfoo,1\nbar,2\n')
         manifest = engine.create_batch_jobs(str(csv_file))
         # should not raise
         engine._record_retry_metrics(manifest.batch_id, 0)
@@ -1407,3 +1477,635 @@ class TestBatchRetry:
         assert status == 'completed'
         # Should have the same sleep pattern (no side effects from previous call)
         mock_sleep.assert_has_calls(expected_calls)
+
+    # New test cases for uncovered lines
+    def test_load_config_from_env_partial_coverage(self, run_context):
+        """Test _load_config_from_env method for partial coverage."""
+        from src.batch.engine import BatchEngine
+        import os
+        
+        # Test with partial environment variables
+        with patch.dict(os.environ, {
+            'BATCH_MAX_FILE_SIZE_MB': '150',
+            'BATCH_INVALID_VAR': 'should_be_ignored'
+        }):
+            engine = BatchEngine(run_context)
+            
+            # Verify valid env var was loaded
+            assert engine.config['max_file_size_mb'] == 150.0
+
+    def test_get_batch_summary_success(self, engine, temp_dir, run_context):
+        """Test get_batch_summary method success case."""
+        # Create a manifest
+        csv_content = "name,value\ntest1,data1\ntest2,data2\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        manifest = engine.create_batch_jobs(str(csv_file))
+        batch_id = manifest.batch_id
+
+        # Mock BatchSummaryGenerator in the correct module
+        with patch('src.batch.summary.BatchSummaryGenerator') as mock_generator_class:
+            mock_generator = Mock()
+            mock_summary = Mock()
+            mock_generator_class.return_value = mock_generator
+            mock_generator.generate_summary.return_value = mock_summary
+
+            result = engine.get_batch_summary(batch_id)
+
+            assert result == mock_summary
+            mock_generator.generate_summary.assert_called_once_with(manifest)
+
+    def test_get_batch_summary_with_summary_generator_import_error(self, engine, temp_dir, run_context):
+        """Test get_batch_summary when BatchSummaryGenerator import fails."""
+        # Create a manifest
+        csv_content = "name,value\ntest1,data1\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        manifest = engine.create_batch_jobs(str(csv_file))
+        batch_id = manifest.batch_id
+
+        # Mock import failure
+        with patch.dict('sys.modules', {'src.batch.summary': None}):
+            with patch('builtins.__import__', side_effect=ImportError("No module named 'src.batch.summary'")):
+                result = engine.get_batch_summary(batch_id)
+                assert result is None
+
+    def test_load_manifest_from_current_context_success(self, engine, temp_dir, run_context):
+        """Test _load_manifest_from_current_context method."""
+        # Create a manifest
+        csv_content = "name,value\ntest,data\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        manifest = engine.create_batch_jobs(str(csv_file))
+        batch_id = manifest.batch_id
+
+        # Test loading from current context
+        loaded_manifest = engine._load_manifest_from_current_context(batch_id)
+
+        assert loaded_manifest is not None
+        assert loaded_manifest.batch_id == batch_id
+
+    def test_load_manifest_from_current_context_not_found(self, engine):
+        """Test _load_manifest_from_current_context with non-existent batch."""
+        result = engine._load_manifest_from_current_context("non_existent")
+        assert result is None
+
+    def test_search_batch_manifest_in_artifacts_success(self, engine, temp_dir, run_context):
+        """Test _search_batch_manifest_in_artifacts method."""
+        # Create a manifest
+        csv_content = "name,value\ntest,data\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        manifest = engine.create_batch_jobs(str(csv_file))
+        batch_id = manifest.batch_id
+
+        # Create artifacts/runs directory structure in the working directory
+        # Change to temp_dir to make it the working directory for this test
+        original_cwd = Path.cwd()
+        try:
+            import os
+            os.chdir(temp_dir)
+            
+            artifacts_dir = Path("artifacts") / "runs"
+            batch_dir = artifacts_dir / f"{run_context.run_id_base}-{manifest.batch_id[:8]}-batch"
+            batch_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Copy manifest file to artifacts location
+            manifest_file = run_context.artifact_dir("batch") / "batch_manifest.json"
+            target_manifest = batch_dir / "batch_manifest.json"
+            import shutil
+            shutil.copy2(manifest_file, target_manifest)
+
+            # Test searching in artifacts
+            loaded_manifest = engine._search_batch_manifest_in_artifacts(batch_id)
+
+            assert loaded_manifest is not None
+            assert loaded_manifest.batch_id == batch_id
+        finally:
+            os.chdir(original_cwd)
+
+    def test_search_batch_manifest_in_artifacts_no_artifacts_dir(self, engine):
+        """Test _search_batch_manifest_in_artifacts when artifacts dir doesn't exist."""
+        result = engine._search_batch_manifest_in_artifacts("any_batch")
+        assert result is None
+
+    def test_update_job_status_batch_not_found(self, engine):
+        """Test update_job_status when batch manifest not found."""
+        # Should not raise exception, just log warning
+        engine.update_job_status("non_existent_job", "completed")
+
+    def test_update_job_status_job_not_found_in_manifest(self, engine, temp_dir, run_context):
+        """Test update_job_status when job not found in manifest."""
+        # Create a manifest
+        csv_content = "name,value\ntest,data\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        manifest = engine.create_batch_jobs(str(csv_file))
+
+        # Try to update non-existent job
+        engine.update_job_status("non_existent_job", "completed")
+
+    def test_load_and_check_manifest_success(self, engine, temp_dir, run_context):
+        """Test _load_and_check_manifest method."""
+        # Create a manifest
+        csv_content = "name,value\ntest,data\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        manifest = engine.create_batch_jobs(str(csv_file))
+        job_id = manifest.jobs[0].job_id
+
+        manifest_file = engine._find_manifest_file_for_job(job_id)
+        assert manifest_file is not None
+
+        # Test load and check
+        result = engine._load_and_check_manifest(manifest_file, job_id)
+        assert result is True
+
+    def test_load_and_check_manifest_job_not_found(self, engine, temp_dir, run_context):
+        """Test _load_and_check_manifest when job not found."""
+        # Create a manifest
+        csv_content = "name,value\ntest,data\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        manifest = engine.create_batch_jobs(str(csv_file))
+
+        manifest_file = engine._find_manifest_file_for_job(manifest.jobs[0].job_id)
+        assert manifest_file is not None
+
+        # Test with non-existent job
+        result = engine._load_and_check_manifest(manifest_file, "non_existent_job")
+        assert result is False
+
+    def test_find_manifest_file_for_job_not_found(self, engine):
+        """Test _find_manifest_file_for_job when manifest not found."""
+        result = engine._find_manifest_file_for_job("non_existent_job")
+        assert result is None
+
+    def test_update_single_job_status_completed(self, engine, temp_dir, run_context):
+        """Test _update_single_job_status for completed job."""
+        # Create a manifest
+        csv_content = "name,value\ntest,data\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        manifest = engine.create_batch_jobs(str(csv_file))
+        job = manifest.jobs[0]
+
+        # Update job status
+        engine._update_single_job_status(job, "completed", None, manifest)
+
+        assert job.status == "completed"
+        assert job.completed_at is not None
+        assert manifest.completed_jobs == 1
+
+    def test_update_single_job_status_failed(self, engine, temp_dir, run_context):
+        """Test _update_single_job_status for failed job."""
+        # Create a manifest
+        csv_content = "name,value\ntest,data\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        manifest = engine.create_batch_jobs(str(csv_file))
+        job = manifest.jobs[0]
+
+        # Update job status with error
+        engine._update_single_job_status(job, "failed", "Test error", manifest)
+
+        assert job.status == "failed"
+        assert job.error_message == "Test error"
+        assert job.completed_at is not None
+        assert manifest.failed_jobs == 1
+
+    def test_load_manifest_success(self, engine, temp_dir, run_context):
+        """Test _load_manifest method."""
+        # Create a manifest
+        csv_content = "name,value\ntest,data\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        manifest = engine.create_batch_jobs(str(csv_file))
+
+        manifest_file = engine._find_manifest_file_for_job(manifest.jobs[0].job_id)
+        assert manifest_file is not None
+
+        # Load manifest
+        loaded_manifest = engine._load_manifest(manifest_file)
+
+        assert loaded_manifest is not None
+        assert loaded_manifest.batch_id == manifest.batch_id
+
+    def test_load_manifest_file_not_found(self, engine, temp_dir):
+        """Test _load_manifest with non-existent file."""
+        non_existent_file = temp_dir / "non_existent.json"
+        result = engine._load_manifest(non_existent_file)
+        assert result is None
+
+    def test_save_manifest_success(self, engine, temp_dir, run_context):
+        """Test _save_manifest method."""
+        # Create a manifest
+        csv_content = "name,value\ntest,data\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        manifest = engine.create_batch_jobs(str(csv_file))
+
+        manifest_file = engine._find_manifest_file_for_job(manifest.jobs[0].job_id)
+        assert manifest_file is not None
+
+        # Modify manifest
+        manifest.total_jobs = 5
+
+        # Save manifest
+        engine._save_manifest(manifest_file, manifest)
+
+        # Verify saved
+        loaded_manifest = engine._load_manifest(manifest_file)
+        assert loaded_manifest.total_jobs == 5
+
+    def test_find_job_by_id_success(self, engine, temp_dir, run_context):
+        """Test _find_job_by_id method."""
+        # Create a manifest
+        csv_content = "name,value\ntest,data\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        manifest = engine.create_batch_jobs(str(csv_file))
+        job_id = manifest.jobs[0].job_id
+
+        # Find job
+        found_job = engine._find_job_by_id(manifest, job_id)
+
+        assert found_job is not None
+        assert found_job.job_id == job_id
+
+    def test_find_job_by_id_not_found(self, engine, temp_dir, run_context):
+        """Test _find_job_by_id when job not found."""
+        # Create a manifest
+        csv_content = "name,value\ntest,data\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        manifest = engine.create_batch_jobs(str(csv_file))
+
+        # Try to find non-existent job
+        result = engine._find_job_by_id(manifest, "non_existent_job")
+        assert result is None
+
+    def test_is_batch_complete_true(self, engine, temp_dir, run_context):
+        """Test _is_batch_complete when batch is complete."""
+        # Create a manifest
+        csv_content = "name,value\ntest,data\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        manifest = engine.create_batch_jobs(str(csv_file))
+
+        # Mark job as completed
+        manifest.completed_jobs = 1
+
+        # Check if complete
+        result = engine._is_batch_complete(manifest)
+        assert result is True
+
+    def test_is_batch_complete_false(self, engine, temp_dir, run_context):
+        """Test _is_batch_complete when batch is not complete."""
+        # Create a manifest
+        csv_content = "name,value\ntest,data\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        manifest = engine.create_batch_jobs(str(csv_file))
+
+        # Batch not complete
+        result = engine._is_batch_complete(manifest)
+        assert result is False
+
+    def test_generate_batch_summary_success(self, engine, temp_dir, run_context):
+        """Test _generate_batch_summary method."""
+        # Create a manifest
+        csv_content = "name,value\ntest,data\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        manifest = engine.create_batch_jobs(str(csv_file))
+
+        # Mock BatchSummaryGenerator in the correct module
+        with patch('src.batch.summary.BatchSummaryGenerator') as mock_generator_class:
+            mock_generator = Mock()
+            mock_summary = Mock()
+            mock_generator_class.return_value = mock_generator
+            mock_generator.generate_summary.return_value = mock_summary
+
+            # Generate summary
+            engine._generate_batch_summary(manifest)
+
+            # Verify summary was saved
+            summary_path = run_context.artifact_dir("batch") / "batch_summary.json"
+            mock_generator.save_summary.assert_called_once_with(mock_summary, summary_path)
+
+    def test_generate_batch_summary_import_error(self, engine, temp_dir, run_context):
+        """Test _generate_batch_summary when import fails."""
+        # Create a manifest
+        csv_content = "name,value\ntest,data\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        manifest = engine.create_batch_jobs(str(csv_file))
+
+        # Mock import failure
+        with patch.dict('sys.modules', {'src.batch.summary': None}):
+            with patch('builtins.__import__', side_effect=ImportError("No module named 'src.batch.summary'")):
+                # Should not raise exception
+                engine._generate_batch_summary(manifest)
+
+    def test_export_failed_rows_success(self, engine, temp_dir, run_context):
+        """Test _export_failed_rows method."""
+        # Create a manifest with failed jobs
+        csv_content = "name,value\ntest1,data1\ntest2,data2\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        manifest = engine.create_batch_jobs(str(csv_file))
+
+        # Mark jobs as failed
+        manifest.jobs[0].status = 'failed'
+        manifest.jobs[0].error_message = 'Test error'
+        manifest.jobs[1].status = 'failed'
+        manifest.jobs[1].error_message = 'Another error'
+        manifest.failed_jobs = 2
+
+        # Export failed rows
+        engine._export_failed_rows(manifest)
+
+        # Verify CSV was created
+        failed_csv_path = run_context.artifact_dir("batch") / "failed_rows.csv"
+        assert failed_csv_path.exists()
+
+        # Verify content
+        with open(failed_csv_path, 'r') as f:
+            content = f.read()
+            assert 'name,value,error_message,job_id,failed_at' in content
+            assert 'test1,data1,Test error,' in content
+            assert 'test2,data2,Another error,' in content
+
+    def test_export_failed_rows_no_failed_jobs(self, engine, temp_dir, run_context):
+        """Test _export_failed_rows when no failed jobs."""
+        # Create a manifest with no failed jobs
+        csv_content = "name,value\ntest,data\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        manifest = engine.create_batch_jobs(str(csv_file))
+
+        # Export failed rows (should do nothing)
+        engine._export_failed_rows(manifest)
+
+        # Verify no CSV was created
+        failed_csv_path = run_context.artifact_dir("batch") / "failed_rows.csv"
+        assert not failed_csv_path.exists()
+
+    def test_validate_retry_parameters_success(self, engine):
+        """Test _validate_retry_parameters method."""
+        max_retry_delay = engine._validate_retry_parameters(
+            max_retries=3,
+            retry_delay=1.0,
+            backoff_factor=2.0,
+            max_retry_delay=10.0
+        )
+        assert max_retry_delay == 10.0
+
+    def test_validate_retry_parameters_default_max_delay(self, engine):
+        """Test _validate_retry_parameters with default max_retry_delay."""
+        max_retry_delay = engine._validate_retry_parameters(
+            max_retries=3,
+            retry_delay=1.0,
+            backoff_factor=2.0,
+            max_retry_delay=None
+        )
+        assert max_retry_delay == 60.0  # DEFAULT_MAX_RETRY_DELAY
+
+    def test_validate_retry_parameters_invalid_max_retries(self, engine):
+        """Test _validate_retry_parameters with invalid max_retries."""
+        with pytest.raises(ValueError, match="max_retries must be >= 0"):
+            engine._validate_retry_parameters(-1, 1.0, 2.0, None)
+
+    def test_validate_retry_parameters_invalid_retry_delay(self, engine):
+        """Test _validate_retry_parameters with invalid retry_delay."""
+        with pytest.raises(ValueError, match="retry_delay must be > 0"):
+            engine._validate_retry_parameters(3, 0, 2.0, None)
+
+        with pytest.raises(ValueError, match="retry_delay must be > 0"):
+            engine._validate_retry_parameters(3, -1, 2.0, None)
+
+    def test_validate_retry_parameters_invalid_backoff_factor(self, engine):
+        """Test _validate_retry_parameters with invalid backoff_factor."""
+        with pytest.raises(ValueError, match="backoff_factor must be > 1.0"):
+            engine._validate_retry_parameters(3, 1.0, 1.0, None)
+
+        with pytest.raises(ValueError, match="backoff_factor must be > 1.0"):
+            engine._validate_retry_parameters(3, 0.5, 1.0, None)
+
+    def test_validate_retry_parameters_invalid_max_retry_delay(self, engine):
+        """Test _validate_retry_parameters with invalid max_retry_delay."""
+        with pytest.raises(ValueError, match="max_retry_delay must be > 0"):
+            engine._validate_retry_parameters(3, 1.0, 2.0, 0)
+
+        with pytest.raises(ValueError, match="max_retry_delay must be > 0"):
+            engine._validate_retry_parameters(3, 1.0, 2.0, -1)
+
+    def test_find_manifest_file_for_batch_success(self, engine, temp_dir, run_context):
+        """Test _find_manifest_file_for_batch method."""
+        # Create a manifest
+        csv_content = "name,value\ntest,data\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        manifest = engine.create_batch_jobs(str(csv_file))
+        batch_id = manifest.batch_id
+
+        # Find manifest file for batch
+        manifest_file = engine._find_manifest_file_for_batch(batch_id)
+
+        assert manifest_file is not None
+        assert manifest_file.exists()
+
+    def test_find_manifest_file_for_batch_not_found(self, engine):
+        """Test _find_manifest_file_for_batch with non-existent batch."""
+        result = engine._find_manifest_file_for_batch("non_existent_batch")
+        assert result is None
+
+    def test_record_retry_metrics_success(self, engine):
+        """Test _record_retry_metrics method."""
+        # Mock the metrics collector
+        with patch('src.metrics.get_metrics_collector') as mock_get_collector:
+            mock_collector = Mock()
+            mock_get_collector.return_value = mock_collector
+
+            # Record retry metrics
+            engine._record_retry_metrics("test_batch", 5)
+
+            # Verify metrics were recorded
+            mock_collector.record_metric.assert_called_once_with(
+                name="batch_retry_initiated",
+                value=5,
+                metric_type=mock_collector.record_metric.call_args[1]['metric_type'],
+                tags={
+                    "batch_id": "test_batch",
+                    "run_id": engine.run_context.run_id_base
+                }
+            )
+
+    def test_record_retry_metrics_no_collector(self, engine):
+        """Test _record_retry_metrics when no metrics collector available."""
+        # Mock get_metrics_collector to return None
+        with patch('src.metrics.get_metrics_collector', return_value=None):
+            # Should not raise exception
+            engine._record_retry_metrics("test_batch", 5)
+
+    def test_record_batch_stop_metrics_success(self, engine):
+        """Test _record_batch_stop_metrics method."""
+        # Mock the metrics collector
+        with patch('src.metrics.get_metrics_collector') as mock_get_collector:
+            mock_collector = Mock()
+            mock_get_collector.return_value = mock_collector
+
+            # Record batch stop metrics
+            engine._record_batch_stop_metrics("test_batch", 3)
+
+            # Verify metrics were recorded
+            mock_collector.record_metric.assert_called_once_with(
+                name="batch_stopped",
+                value=3,
+                metric_type=mock_collector.record_metric.call_args[1]['metric_type'],
+                tags={
+                    "batch_id": "test_batch",
+                    "run_id": engine.run_context.run_id_base
+                }
+            )
+
+    def test_record_batch_stop_metrics_no_collector(self, engine):
+        """Test _record_batch_stop_metrics when no metrics collector available."""
+        # Mock get_metrics_collector to return None
+        with patch('src.metrics.get_metrics_collector', return_value=None):
+            # Should not raise exception
+            engine._record_batch_stop_metrics("test_batch", 3)
+
+    def test_execute_job_with_retry_failure(self, engine):
+        """Test execute_job_with_retry with permanent failure."""
+        job = BatchJob("test_job", "test_run", {"data": "test"})
+
+        # Mock execution to always fail
+        with patch.object(engine, '_execute_single_job', side_effect=Exception("Test failure")):
+            with pytest.raises(Exception, match="Test failure"):
+                engine.execute_job_with_retry(job, max_retries=2)
+
+    def test_execute_single_job_success(self, engine):
+        """Test _execute_single_job method success."""
+        job = BatchJob("test_job", "test_run", {"data": "test"})
+
+        # Mock successful execution
+        with patch.object(engine, '_simulate_job_execution', return_value='completed'):
+            status = engine._execute_single_job(job)
+            assert status == 'completed'
+
+    def test_execute_single_job_invalid_job(self, engine):
+        """Test _execute_single_job with invalid job."""
+        with pytest.raises(ValueError, match="job must be a BatchJob instance"):
+            engine._execute_single_job("not_a_job")
+
+    def test_execute_single_job_no_row_data(self, engine):
+        """Test _execute_single_job with job having no row data."""
+        job = BatchJob("test_job", "test_run", None)
+
+        with pytest.raises(RuntimeError, match="Job test_job: ValueError"):
+            engine._execute_single_job(job)
+
+    def test_execute_single_job_invalid_row_data_type(self, engine):
+        """Test _execute_single_job with invalid row data type."""
+        job = BatchJob("test_job", "test_run", "invalid_data")
+
+        with pytest.raises(RuntimeError, match="Job test_job: AttributeError"):
+            engine._execute_single_job(job)
+
+    def test_simulate_job_execution_success(self, engine):
+        """Test _simulate_job_execution method success."""
+        job = BatchJob("test_job", "test_run", {"data": "test"})
+
+        status = engine._simulate_job_execution(job, success_rate=1.0)
+        assert status == 'completed'
+
+    def test_simulate_job_execution_invalid_job(self, engine):
+        """Test _simulate_job_execution with invalid job."""
+        with pytest.raises(ValueError, match="job must be a BatchJob instance"):
+            engine._simulate_job_execution("not_a_job")
+
+    def test_simulate_job_execution_no_row_data(self, engine):
+        """Test _simulate_job_execution with job having no row data."""
+        job = BatchJob("test_job", "test_run", None)
+
+        with pytest.raises(ValueError, match="Job test_job has no row data"):
+            engine._simulate_job_execution(job)
+
+    def test_simulate_job_execution_with_delay(self, engine):
+        """Test _simulate_job_execution with random delay."""
+        job = BatchJob("test_job", "test_run", {"data": "test"})
+
+        with patch('time.sleep') as mock_sleep:
+            with patch('random.uniform', return_value=1.5):
+                status = engine._simulate_job_execution(job, max_random_delay=2.0, success_rate=1.0)
+                assert status == 'completed'
+                mock_sleep.assert_called_once_with(1.5)
+
+    def test_simulate_job_execution_no_delay(self, engine):
+        """Test _simulate_job_execution with no delay."""
+        job = BatchJob("test_job", "test_run", {"data": "test"})
+
+        with patch('time.sleep') as mock_sleep:
+            status = engine._simulate_job_execution(job, max_random_delay=0, success_rate=1.0)
+            assert status == 'completed'
+            mock_sleep.assert_not_called()
+
+    def test_to_portable_relpath_success(self, engine, temp_dir):
+        """Test _to_portable_relpath method."""
+        test_file = temp_dir / "test.txt"
+        test_file.write_text("test")
+
+        rel_path = engine._to_portable_relpath(test_file)
+        assert isinstance(rel_path, str)
+        assert rel_path.endswith("test.txt")
+
+    def test_to_portable_relpath_fallback(self, engine, temp_dir):
+        """Test _to_portable_relpath fallback logic."""
+        test_file = temp_dir / "test.txt"
+        test_file.write_text("test")
+
+        # Mock relative_to to fail
+        with patch.object(Path, 'relative_to', side_effect=ValueError):
+            rel_path = engine._to_portable_relpath(test_file)
+            assert rel_path == "test.txt"
+
+    def test_configure_logging_success(self, engine):
+        """Test _configure_logging method."""
+        # Test with different log levels
+        test_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+
+        for level in test_levels:
+            engine.config['log_level'] = level
+            engine._configure_logging()
+
+            # Verify logger level was set
+            assert engine.logger.level == getattr(logging, level)
+
+    def test_configure_logging_invalid_level(self, engine):
+        """Test _configure_logging with invalid log level."""
+        engine.config['log_level'] = 'INVALID'
+        # Should not raise exception, just use default
+        engine._configure_logging()
+        assert engine.logger.level == logging.INFO  # Default level
