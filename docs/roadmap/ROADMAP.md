@@ -1,6 +1,6 @@
 # 2bykilt 開発ロードマップ (Baseline v1)
 
-最終更新: 2025-09-10
+最終更新: 2025-09-12
 対象リポジトリ: <https://github.com/Nobukins/2bykilt>
 
 
@@ -54,7 +54,7 @@
 | A8 | 後続の新規作成issue | Planned | 追加Issueの評価とスケジュール反映 |
 
 Progress Summary (Phase 1): Wave A1 100% / Wave A2 100% / Wave A3 100% / Wave A4 100% / Wave A5 100% / Wave A6 100% / Wave A7 100% ( #60 Security Base 完了) 残: Group B Phase 2 へ移行。Draft/試行 PR は進捗計測に含めず。
-Progress Summary (Phase2): Phase2-04 Done / Early focus shifts to Phase2-01 (Runner) & Phase2-05 (Batch 成果物) & Phase2-07 (Metrics surfacing) / Upcoming gating: coverage (#109) & sandbox (#62)。
+Progress Summary (Phase2): Phase2-04 Done / Phase2-05 Done / Early focus shifts to Phase2-01 (Runner) & Phase2-07 (Metrics surfacing) / Upcoming gating: coverage (#109) & sandbox (#62)。
 
 ### Phase2 (拡張 / 高度化 / 継続改善 統合)
 
@@ -66,7 +66,7 @@ Progress Summary (Phase2): Phase2-04 Done / Early focus shifts to Phase2-01 (Run
 | Phase2-02 | Sandbox 強化 & Exec 安全性 | #62 (PoC→Enforce) → #52 | Planned | システムコール/パス制限 → allow/deny 実装 |
 | Phase2-03 | Runner 拡張 (CDP/Windows) | #53 → #54 → #51 | Planned | 調査→抽象レイヤ→Win プロファイル |
 | Phase2-04 | Batch 価値強化 (完了) | #39 ✅ → #41 ✅ → #42 ✅ → #40 ✅ | Done | CSV コア→進捗→部分リトライ→UI |
-| Phase2-05 | Batch 成果物/エクスポート | #175 → #176 | OPEN | ポリシー成果物 & 宣言的抽出 PoC |
+| Phase2-05 | Batch 成果物/エクスポート | #175 ✅ → #176 ✅ | Done | ポリシー成果物 & 宣言的抽出 PoC |
 | Phase2-06 | Artifacts 安定化 / 統合 | #111 → #110 → #106 → #104 | OPEN | 録画/パス統合 & flag enforcement |
 | Phase2-07 | Observability 完全化 | #58 ✅ → #59 → #102 | In Progress | Metrics API / Flag artifacts helper |
 | Phase2-08 | Quality / Coverage Gate | #109 → #107 → #108 | OPEN | カバレッジ→警告除去→Edge安定化 |
@@ -152,8 +152,8 @@ Phase2 再編後の短期優先セットを以下に再定義。A フェーズ�
 ### 短期 (Phase2 Kick Re-aligned)
 
 1. Phase2-01 着手: #46 実行タイムアウト → 成功後 #47 concurrency queue draft
-2. Phase2-05 開始: #175 成果物キャプチャ PoC → #176 抽出スキーマ
-3. Phase2-07 前倒し: #59 Run Metrics API → #102 Flags artifacts helper
+2. Phase2-07 前倒し: #59 Run Metrics API → #102 Flags artifacts helper
+3. Phase2-06 開始: #111 録画/パス統合 → #110 browser-control gap fix
 4. Docs ギャップ定義: #177 MVP Matrix Draft → ギャップ派生 Issue 起票
 5. Workflow 整合性: #178 dependency-pipeline workflow 追加 or docs修正
 
@@ -194,7 +194,7 @@ graph LR
     end
     subgraph P2[Phase2 Unified]
       P201["Phase2-01 Timeout (#46)"]:::planned --> P201b["Queue (#47)"]:::future --> P201c["EnvDiag (#48)"]:::future
-      P205["Phase2-05 Deliverables (#175)"]:::inprogress --> P205b["Extract Spec (#176)"]:::future
+      P205["Phase2-05 Deliverables (#175)"]:::done --> P205b["Extract Spec (#176)"]:::done
       P207["Phase2-07 Metrics API (#59)"]:::planned --> P207b["Flags Helper (#102)"]:::future
       P206["Phase2-06 Artifact Consolidation (#111)"]:::future --> P206b["Recording Fix (#110)"]:::future
       P208["Phase2-08 Coverage (#109)"]:::planned
@@ -204,6 +204,7 @@ graph LR
     end
     classDef planned fil:#eef,stroke:#88f;
     classDef inprogress fill:#cfe,stroke:#393;
+    classDef done fill:#9f9,stroke:#363;
     classDef future fill:#fff,stroke:#999,stroke-dasharray: 4 2;
 ```
 
@@ -247,6 +248,7 @@ graph LR
 | 1.0.19 | 2025-09-10 | Group B B4 #39 完了反映 / Phase 2 進捗更新 / Batch Processing 展開準備 | Copilot Agent |
 | 1.0.20 | 2025-09-10 | Wave A8 抽象化 / 次アクションにMermaid/Gitツリー追加 / Wave A完了区切り | Copilot Agent |
 | 1.0.21 | 2025-09-10 | Group C追加 / 未記載OPEN IssueをPhase 3として整理 | Copilot Agent |
+| 1.0.22 | 2025-09-12 | Phase2-05 Done反映 / #175/#176 完了更新 / 派生出力物再作成 / Mermaid図更新 | Copilot Agent |
 
 ---
 
@@ -279,7 +281,7 @@ graph LR
 
 PR Description 追記テンプレ:
 
-```text
+```
 Docs Updated: yes/no(<理由>)
 Dependency Graph: regenerated
 Validation: dependencies=pass, queue=pass (warnings=<数>)
@@ -291,7 +293,7 @@ Idempotent Check: pass
 
 `/.github/workflows/dependency-pipeline.yml`
 
-```yaml
+```
 name: dependency-pipeline
 on:
   pull_request:
@@ -337,7 +339,6 @@ jobs:
         run: |
           python scripts/gen_mermaid.py docs/roadmap/ISSUE_DEPENDENCIES.yml > /tmp/graph.md
           diff -q /tmp/graph.md docs/roadmap/DEPENDENCY_GRAPH.md || (echo 'Graph out-of-sync' && exit 1)
-```
 
 ### 4. 失敗時の対応基準
 
