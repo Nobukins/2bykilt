@@ -1250,6 +1250,17 @@ class BatchEngine:
         In the current implementation, it processes the job data and
         simulates job execution based on the data content.
 
+        Integration Points:
+        - This method should be replaced with actual job execution logic
+        - Expected integrations include:
+          1. Browser automation (using playwright or similar)
+          2. API calls based on job data
+          3. File processing operations
+          4. Database operations
+        - The method should process job.row_data to determine actions
+        - Return 'completed' for successful execution, 'failed' for failures
+        - Throw specific exceptions for different error types
+
         TODO: Replace simulation with actual job execution logic (e.g., browser automation)
 
         Args:
@@ -1297,7 +1308,7 @@ class BatchEngine:
             raise RuntimeError(f"Job {job.job_id}: {type(e).__name__}") from e
 
     def _simulate_job_execution(self, job: BatchJob, success_rate: Optional[float] = None,
-                               max_random_delay: Optional[float] = None) -> str:
+                               max_random_delay: Optional[float] = None) -> Literal['completed', 'failed']:
         """
         Simulate job execution for testing purposes.
 
