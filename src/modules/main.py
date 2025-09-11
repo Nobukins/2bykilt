@@ -1,13 +1,14 @@
 from src.modules.automation_manager import setup_browser_automation
+import asyncio
 
-def main():
+async def main():
     # Initialize browser automation with target website
     website_url = "https://nogtips.wordpress.com"
     manager = setup_browser_automation(website_url)
     
     # Execute an action
     try:
-        success = manager.execute_action("search-nogtips", query="automation testing")
+        success = await manager.execute_action("search-nogtips", query="automation testing")
         if success:
             print("Action executed successfully")
         else:
@@ -16,4 +17,4 @@ def main():
         print(f"Error: {e}")
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

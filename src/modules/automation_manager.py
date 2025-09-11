@@ -239,6 +239,23 @@ class BrowserAutomationManager:
         # 例: llm_response = await call_llm_api(action_name, params)
         
         return True
+    
+    async def _run_subprocess(self, command: str, env: Dict[str, str]):
+        """Run subprocess command asynchronously"""
+        import asyncio
+        
+        # Run subprocess in thread pool to avoid blocking
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None,
+            lambda: subprocess.run(
+                command,
+                shell=True,
+                env=env,
+                check=False,
+                capture_output=False
+            )
+        )
 
 # Main application function that integrates the above classes
 def setup_browser_automation(website_url: Optional[str] = None) -> BrowserAutomationManager:
