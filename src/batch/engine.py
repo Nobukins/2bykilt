@@ -14,7 +14,7 @@ import mimetypes
 import time
 import random
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Union, Iterator
+from typing import Dict, List, Optional, Any, Union, Iterator, Literal
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from contextlib import contextmanager
@@ -1157,7 +1157,7 @@ class BatchEngine:
 
     def execute_job_with_retry(self, job: BatchJob, max_retries: int = DEFAULT_MAX_RETRIES,
                               retry_delay: float = DEFAULT_RETRY_DELAY, backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
-                              max_retry_delay: Optional[float] = None) -> str:
+                              max_retry_delay: Optional[float] = None) -> Literal['completed', 'failed']:
         """
         Execute a job with automatic retry on failure.
 
@@ -1227,13 +1227,19 @@ class BatchEngine:
         else:
             raise RuntimeError(f"Job {job.job_id}: {error_summary}")
 
-    def _execute_single_job(self, job: BatchJob) -> str:
+    def _execute_single_job(self, job: BatchJob) -> Literal['completed', 'failed']:
         """
         Execute a single job.
 
         This method integrates with the actual job execution logic.
         In the current implementation, it processes the job data and
         simulates job execution based on the data content.
+
+        Integration Points:
+        - Override this method to integrate with browser automation frameworks
+        - job.row_data contains the CSV row data for processing
+        - Return 'completed' for successful execution, 'failed' for failures
+        - Raise exceptions for errors that should be logged and retried
 
         TODO: Replace simulation with actual job execution logic (e.g., browser automation)
 
@@ -1320,8 +1326,8 @@ class BatchEngine:
             raise ValueError("max_random_delay must be >= 0")
 
         try:
-            # Add small random delay to simulate processing time
-            if max_random_delay > 0:
+            # Add small random delay to simulate processing time (only in test/debug mode)
+            if max_random_delay > 0 and os.getenv('BATCH_ENGINE_SIMULATION_MODE', 'true').lower() == 'true':
                 time.sleep(random.uniform(0, max_random_delay))
 
             # Simulate different failure scenarios based on data content
