@@ -4,10 +4,11 @@
 issues:
   "25": {title: "git_script が llms.txt で指定したスクリプトを正しく解決するよう修正", meta: {area: 
         runner, type: bug, priority: P0, phase: "1", stability: core}, depends: [],
-    dependents: ["44", "45", "49", "50"], progress: {state: done, primary_pr: 118}, risk: null, critical_path_rank: 3}
+    dependents: ["44", "45", "49", "50"], progress: {state: done, primary_pr: 
+        118}, risk: null, critical_path_rank: 3}
   "28": {title: "録画ファイル保存パス統一", meta: {area: artifacts, type: bug, priority: P0, 
         phase: "1", stability: core}, depends: ["32"], dependents: ["30"], risk: 
-  null, progress: {state: done, primary_pr: 112}, critical_path_rank: 4}
+      null, progress: {state: done, primary_pr: 112}, critical_path_rank: 4}
   "30": {title: "録画タイプ間不整合是正", meta: {area: artifacts, type: bug, priority: P0, 
         phase: "1", stability: core}, depends: ["28"], dependents: ["37", "38"], 
       risk: null, critical_path_rank: 3}
@@ -24,10 +25,12 @@ issues:
       "38", "34", "76"], risk: null, critical_path_rank: 2}
   "34": {title: "要素値キャプチャ & エクスポート", meta: {area: artifacts, type: feat, 
         priority: P1, phase: "1", stability: core}, depends: ["33", "35"], 
-      dependents: [], risk: null, progress: {state: done, primary_pr: 93}, critical_path_rank: 1}
+      dependents: [], risk: null, progress: {state: done, primary_pr: 93}, 
+      critical_path_rank: 1}
   "35": {title: "アーティファクト manifest v2", meta: {area: artifacts, type: feat, 
         priority: P0, phase: "1", stability: core}, depends: ["32"], dependents: [
-      "34", "36", "38"], risk: null, progress: {state: done, primary_pr: 94}, critical_path_rank: 3}
+      "34", "36", "38"], risk: null, progress: {state: done, primary_pr: 94}, 
+      critical_path_rank: 3}
   "36": {title: "アーティファクト一覧 API", meta: {area: artifacts, type: feat, priority: 
         P1, phase: "1", stability: core}, depends: ["35"], dependents: ["38"], 
       risk: null, progress: {state: done, primary_pr: 95}, critical_path_rank: 2}
@@ -36,13 +39,16 @@ issues:
       risk: null, progress: {state: done, primary_pr: 99}, critical_path_rank: 2}
   "38": {title: "録画統一後回帰テストスイート", meta: {area: artifacts, type: feat, priority: 
         P2, phase: "1-late", stability: core}, depends: ["30", "33", "35", "36", "37"],
-    dependents: [], risk: null, progress: {state: done, primary_pr: 103}, critical_path_rank: 1}
+    dependents: [], risk: null, progress: {state: done, primary_pr: 103}, 
+      critical_path_rank: 1}
   "39": {title: "CSV 駆動バッチエンジンコア", meta: {area: batch, type: feat, priority: P1, 
         phase: "2", stability: experimental}, depends: ["32"], dependents: ["40",
-      "41", "42"], risk: null, progress: {state: done, primary_pr: 164}, critical_path_rank: 2}
+      "41", "42"], risk: null, progress: {state: done, primary_pr: 164}, 
+      critical_path_rank: 2}
   "40": {title: "CSV D&D UI 連携", meta: {area: batch, type: feat, priority: P2, 
         phase: "2", stability: experimental}, depends: ["39"], dependents: [], 
-      risk: null, progress: {state: done, primary_pr: 172}, critical_path_rank: 1}
+      risk: null, progress: {state: done, primary_pr: 172}, critical_path_rank: 
+      1}
   "41": {title: "バッチ進捗・サマリー", meta: {area: batch, type: feat, priority: P2, 
         phase: "2", stability: experimental}, depends: ["39", "56"], dependents: [],
     risk: null, progress: {state: done, primary_pr: 162}, critical_path_rank: 1}
@@ -54,10 +60,12 @@ issues:
       risk: null, critical_path_rank: 1}
   "44": {title: "git_script 解決ロジック不具合修正", meta: {area: runner, type: bug, 
         priority: P0, phase: "1", stability: core}, depends: ["25"], dependents: [
-      "45"], risk: null, progress: {state: done, primary_pr: 120}, critical_path_rank: 2}
+      "45"], risk: null, progress: {state: done, primary_pr: 120}, 
+      critical_path_rank: 2}
   "45": {title: "git_script 認証 & プロキシ", meta: {area: runner, type: feat, 
         priority: P1, phase: "1", stability: core}, depends: ["25", "44"], 
-      dependents: [], risk: null, progress: {state: done, primary_pr: 120}, critical_path_rank: 1}
+      dependents: [], risk: null, progress: {state: done, primary_pr: 120}, 
+      critical_path_rank: 1}
   "46": {title: "Run/Job タイムアウト & キャンセル", meta: {area: runner, type: feat, 
         priority: P2, phase: "2", stability: core}, depends: ["32"], dependents: [
       "47"], risk: high, critical_path_rank: 3}
@@ -97,16 +105,17 @@ issues:
       progress: {state: done, primary_pr: 83}, risk: null, critical_path_rank: 1}
   "58": {title: "メトリクス計測基盤", meta: {area: observability, type: feat, priority: 
         P1, phase: "2", stability: core}, depends: ["32"], dependents: ["59"], 
-      risk: null, progress: {state: done, primary_pr: 155}, critical_path_rank: 2}
+      risk: null, progress: {state: done, primary_pr: 155}, critical_path_rank: 
+      2}
   "59": {title: "Run メトリクス API", meta: {area: observability, type: feat, 
         priority: P2, phase: "2", stability: core}, depends: ["58"], dependents: [],
     risk: null, critical_path_rank: 1}
   "60": {title: "シークレットマスキング拡張", meta: {area: security, type: feat, priority: P1,
       phase: "1-late", stability: core}, depends: ["56"], dependents: [], risk: 
       null, critical_path_rank: 1}
-  "61": {title: "[maint][security] 既存依存セキュリティスキャン基盤の最適化 & 運用強化", meta: {area: security, type: chore, priority: 
-        P1, phase: "2", stability: core}, depends: ["32"], dependents: [], risk: 
-      medium, critical_path_rank: 1}
+  "61": {title: "[maint][security] 既存依存セキュリティスキャン基盤の最適化 & 運用強化", meta: {area: 
+        security, type: chore, priority: P1, phase: "2", stability: core}, 
+      depends: ["32"], dependents: [], risk: medium, critical_path_rank: 1}
   "62": {title: "実行サンドボックス機能制限", meta: {area: security, type: feat, priority: P0,
       phase: "2", stability: experimental}, depends: ["32"], dependents: ["52"], 
       risk: high, critical_path_rank: 2}
@@ -134,13 +143,16 @@ issues:
       risk: null, critical_path_rank: 2}
   "87": {title: "スクリーンショット重複保存フラグ導入", meta: {area: artifacts, type: feat, 
         priority: P1, phase: "1-late", stability: core}, depends: ["33", "35"], 
-      dependents: ["83"], progress: {state: done, primary_pr: 96}, risk: null, critical_path_rank: 1}
+      dependents: ["83"], progress: {state: done, primary_pr: 96}, risk: null, 
+      critical_path_rank: 1}
   "88": {title: "スクリーンショット例外分類と特定例外キャッチ", meta: {area: artifacts, type: feat, 
         priority: P2, phase: "1-late", stability: core}, depends: ["33", "35"], 
-      dependents: [], risk: null, progress: {state: done, primary_pr: 97}, critical_path_rank: 1} # Adjusted depends: removed invalid 82 -> aligns with screenshot/manifest prerequisites
+      dependents: [], risk: null, progress: {state: done, primary_pr: 97}, 
+      critical_path_rank: 1}                                                                      # Adjusted depends: removed invalid 82 -> aligns with screenshot/manifest prerequisites
   "89": {title: "Screenshot ログイベント整備 (metrics 連携準備)", meta: {area: observability,
-  type: chore, priority: P2, phase: "1-late", stability: core}, depends: ["33",
-  "58"], dependents: [], risk: null, progress: {state: done, primary_pr: 98}, critical_path_rank: 1}
+      type: chore, priority: P2, phase: "1-late", stability: core}, depends: ["33",
+      "58"], dependents: [], risk: null, progress: {state: done, primary_pr: 98},
+    critical_path_rank: 1}
   '90':
     title: Temp test issue for enrichment
     meta:
@@ -148,13 +160,155 @@ issues:
     risk:
     depends: []
     dependents: []
-  "91": {title: "統一録画パス Rollout (flag default 有効化 & legacy 廃止)", meta: {area: artifacts, type: chore, priority: P0, phase: "1-late", stability: core}, depends: ["28"], dependents: [], progress: {state: done, primary_pr: 105}, risk: null, critical_path_rank: 1}
-  "173": {title: "[UI][batch][#40 follow-up] CSV Preview & Command Argument Mapping", meta: {area: batch, type: feat, priority: P2, phase: "2", stability: experimental}, depends: ["39", "40", "41", "42"], dependents: [], risk: null, critical_path_rank: 1}
-  "174": {title: "[artifacts][batch] Clarify Artifact Output & Access Flow", meta: {area: artifacts, type: docs, priority: P3, phase: "2", stability: core}, depends: ["28", "30", "33", "35", "39"], dependents: [], risk: low, critical_path_rank: 1}
-  "154": {title: "pip-audit stabilization in CI with normalizer + targeted suppressions", meta: {area: security, type: fix, priority: P1, phase: "1", stability: core}, depends: [], dependents: [], risk: null, progress: {state: done, primary_pr: 160}, critical_path_rank: 1}
+  "91": {title: "統一録画パス Rollout (flag default 有効化 & legacy 廃止)", meta: {area: 
+        artifacts, type: chore, priority: P0, phase: "1-late", stability: core}, 
+      depends: ["28"], dependents: [], progress: {state: done, primary_pr: 105}, 
+      risk: null, critical_path_rank: 1}
+  "173": {title: "[UI][batch][#40 follow-up] CSV Preview & Command Argument Mapping",
+    meta: {area: batch, type: feat, priority: P2, phase: "2", stability: 
+        experimental}, depends: ["39", "40", "41", "42"], dependents: [], risk: 
+      null, critical_path_rank: 1}
+  "174": {title: "[artifacts][batch] Clarify Artifact Output & Access Flow", 
+      meta: {area: artifacts, type: docs, priority: P3, phase: "2", stability: 
+        core}, depends: ["28", "30", "33", "35", "39"], dependents: [], risk: 
+      low, critical_path_rank: 1}
+  "154": {title: "pip-audit stabilization in CI with normalizer + targeted suppressions",
+    meta: {area: security, type: fix, priority: P1, phase: "1", stability: core},
+    depends: [], dependents: [], risk: null, progress: {state: done, primary_pr: 
+        160}, critical_path_rank: 1}
+  '92':
+    title: '[enhance][roadmap] Enrichment Phase 3: reverse dependents validation &
+      high-risk strict sync'
+    meta:
+      priority: P2
+    risk:
+    depends: []
+    dependents: []
+  '101':
+    title: 'chore(test): async ブラウザ起動・event loop 衝突安定化'
+    meta:
+      phase: '1'
+      priority: P2
+    risk:
+    depends: []
+    dependents: []
+  '102':
+    title: 'chore(flags): FeatureFlags アーティファクト生成とテスト補助ヘルパ'
+    meta:
+      priority: P2
+    risk:
+    depends: []
+    dependents: []
+  '104':
+    title: '#91 統一録画パス Rollout (flag default 有効化 & legacy 廃止)'
+    meta:
+      priority: P0
+    risk:
+    depends: []
+    dependents: []
+  '106':
+    title: 'Phase 2 enforcement: unified recording path flag false warning'
+    meta:
+      phase: 1-late
+      priority: P0
+    risk:
+    depends: []
+    dependents: []
+  '107':
+    title: 'Cleanup: PytestReturnNotNone warnings across component tests'
+    meta:
+      phase: 1-late
+      priority: P2
+    risk:
+    depends: []
+    dependents: []
+  '108':
+    title: Stabilize Edge headless navigation flake (TargetClosedError)
+    meta:
+      phase: 1-late
+      priority: P2
+    risk:
+    depends: []
+    dependents: []
+  '109':
+    title: '[quality][coverage] Sonar 新規行カバレッジ向上とQuality Gate再挑戦 (#105 追随)'
+    meta:
+      phase: '2'
+      priority: P2
+    risk:
+    depends: []
+    dependents: []
+  '110':
+    title: '[bug][artifacts] Browser-control モードで録画ファイル未生成 (enable_recording未伝播/開始トリガ未配線)'
+    meta: {}
+    risk:
+    depends: []
+    dependents: []
+  '111':
+    title: '[refactor][artifacts] ArtifactManager.resolve_recording_dir を recording_dir_resolver
+      へ統合'
+    meta: {}
+    risk:
+    depends: []
+    dependents: []
+  '113':
+    title: 'docs: cleanup archived references to tests/pytest.ini (post PR #112)'
+    meta:
+      priority: P2
+    risk:
+    depends: []
+    dependents: []
+  '114':
+    title: 'ci: evaluate relaxing pytest.ini guard scope for docs/archive references
+      (follow-up to PR #112)'
+    meta:
+      priority: P2
+    risk:
+    depends: []
+    dependents: []
+  '115':
+    title: '[A3][regression][hardening] Post-#38 回帰スイート強化 (破損動画 / 強制移行 / retention
+      トグル / パス可搬性 / flags 再生成)'
+    meta: {}
+    risk:
+    depends: []
+    dependents: []
+  '127':
+    title: '[docs][batch] CSVバッチエンジン統合ドキュメントの包括的改善'
+    meta:
+      phase: '2'
+      priority: P1
+    risk:
+    depends: []
+    dependents: []
+  '175':
+    title: バッチ行単位成果物キャプチャ基盤 (スクリーンショット/要素値/ログ関連紐付け)
+    meta: {}
+    risk:
+    depends: []
+    dependents: []
+  '176':
+    title: '[feat][batch] Declarative field extraction spec (YAML) for batch jobs'
+    meta: {}
+    risk:
+    depends: []
+    dependents: []
+  '177':
+    title: '[docs][mvp] MVP definition & enterprise readiness matrix'
+    meta: {}
+    risk:
+    depends: []
+    dependents: []
+  '178':
+    title: '[ci][workflow] Add dependency-pipeline.yml to align with roadmap Section
+      K'
+    meta: {}
+    risk:
+    depends: []
+    dependents: []
 
 summary:
-  total_issues: 50
+  total_issues: 68
   high_risk: ["31", "46", "49", "54", "62"]
   longest_chain_example: ["65", "64", "63", "66", "67"]
   data_quality_checks:
@@ -163,4 +317,23 @@ summary:
     - "55"
     - "81"
     - '90'
+    - '92'
+    - '101'
+    - '102'
+    - '104'
+    - '106'
+    - '107'
+    - '108'
+    - '109'
+    - '110'
+    - '111'
+    - '113'
+    - '114'
+    - '115'
+    - '127'
+    - "154"
+    - '175'
+    - '176'
+    - '177'
+    - '178'
   generated_at_utc: "2025-09-01T00:00:00Z"
