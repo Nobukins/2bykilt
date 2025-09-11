@@ -15,6 +15,7 @@ import time
 import random
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Union, Iterator
+from typing import TYPE_CHECKING
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from contextlib import contextmanager
@@ -23,6 +24,9 @@ from ..core.artifact_manager import ArtifactManager, get_artifact_manager
 from ..runtime.run_context import RunContext
 
 from .summary import BatchSummary
+
+if TYPE_CHECKING:
+    from ..extraction.models import ExtractionResult
 
 logger = logging.getLogger(__name__)
 
@@ -1474,7 +1478,13 @@ class BatchEngine:
 
             # Simulate job execution based on data content
             # In real implementation, replace with actual browser automation or processing logic
-            return self._simulate_job_execution(job)
+            status = self._simulate_job_execution(job)
+
+            # Execute field extraction if schema is available and job succeeded
+            if status == 'completed':
+                self._execute_field_extraction(job)
+
+            return status
 
         except Exception as e:
             error_msg = f"Job execution failed for {job.job_id}: {type(e).__name__}"
@@ -1545,6 +1555,132 @@ class BatchEngine:
         except Exception as e:
             self.logger.debug(f"Job {job.job_id} simulation failed: {type(e).__name__}")
             raise
+
+    def _execute_field_extraction(self, job: BatchJob):
+        """
+        Execute field extraction for a completed job.
+
+        This method attempts to extract fields based on the extraction schema
+        if one is configured for the batch.
+
+        Args:
+            job: The completed job to extract fields from
+        """
+        try:
+            # Check if extraction schema is configured
+            schema_path = self.config.get('extraction_schema_path')
+            if not schema_path:
+                # No schema configured, skip extraction
+                return
+
+            schema_path = Path(schema_path)
+            if not schema_path.exists():
+                self.logger.warning(f"Extraction schema not found: {schema_path}")
+                return
+
+            # Import extraction modules
+            from ..extraction.schema import ExtractionSchema
+            from ..extraction.extractor import FieldExtractor
+
+            # Load schema
+            schema = ExtractionSchema(schema_path)
+            extractor = FieldExtractor(schema)
+
+            # Extract fields (using mock data for now)
+            # TODO: Integrate with actual browser context
+            result = extractor.extract_fields(
+                job_id=job.job_id,
+                row_index=int(job.job_id.split('_')[-1]) if '_' in job.job_id else 0,
+                page_content=self._get_mock_page_content(job)
+            )
+
+            # Save extraction result
+            rows_dir = self.run_context.artifact_dir("batch") / "rows" / job.job_id
+            result_file = extractor.save_result(result, rows_dir)
+
+            # Add extraction result as artifact
+            self.add_row_artifact(
+                job_id=job.job_id,
+                artifact_type="extracted_fields",
+                content=result.to_dict(),
+                meta={
+                    "schema_version": schema.version,
+                    "field_count": len(schema.fields),
+                    "extraction_success_count": result.success_count,
+                    "extraction_failure_count": result.failure_count
+                }
+            )
+
+            # Record extraction metrics
+            self._record_extraction_metrics(job.job_id, result)
+
+            self.logger.info(f"Completed field extraction for job {job.job_id}")
+
+        except Exception as e:
+            self.logger.warning(f"Field extraction failed for job {job.job_id}: {e}")
+            # Don't fail the job if extraction fails, just log the warning
+
+    def _get_mock_page_content(self, job: BatchJob) -> str:
+        """
+        Generate mock HTML content for testing.
+
+        In production, this would be replaced with actual page content
+        from the browser automation system.
+        """
+        # Mock HTML content based on job data
+        mock_html = f"""
+        <html>
+        <body>
+            <div id="status">success</div>
+            <div class="profile">
+                <span class="uid" data-user="{job.job_id}">user123</span>
+            </div>
+            <div class="data">{job.row_data.get('name', 'test_data')}</div>
+        </body>
+        </html>
+        """
+        return mock_html
+
+    def _record_extraction_metrics(self, job_id: str, result: 'ExtractionResult'):
+        """Record metrics for field extraction."""
+        try:
+            from ..metrics import get_metrics_collector, MetricType
+
+            collector = get_metrics_collector()
+            if collector is None:
+                return
+
+            collector.record_metric(
+                name="extraction_fields_success_total",
+                value=result.success_count,
+                metric_type=MetricType.COUNTER,
+                tags={
+                    "job_id": job_id,
+                    "run_id": self.run_context.run_id_base
+                }
+            )
+
+            collector.record_metric(
+                name="extraction_fields_failure_total",
+                value=result.failure_count,
+                metric_type=MetricType.COUNTER,
+                tags={
+                    "job_id": job_id,
+                    "run_id": self.run_context.run_id_base
+                }
+            )
+
+            collector.record_metric(
+                name="extraction_last_schema_field_count",
+                value=result.total_fields,
+                metric_type=MetricType.GAUGE,
+                tags={
+                    "run_id": self.run_context.run_id_base
+                }
+            )
+
+        except Exception as e:
+            self.logger.debug(f"Failed to record extraction metrics: {e}")
 
 
 def start_batch(csv_path: str, run_context: Optional[RunContext] = None, config: Optional[ConfigType] = None) -> BatchManifest:

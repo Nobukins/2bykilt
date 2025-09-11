@@ -1,6 +1,0 @@
-name,url,action,description
-Test Job 1,https://example.com,navigate,Navigate to example.com
-Test Job 2,https://google.com,search,Search for test data
-Test Job 3,https://github.com,click,Click on repository link
-Test Job 4,https://stackoverflow.com,extract,Extract question titles
-Test Job 5,https://wikipedia.org,scroll,Scroll through the page
