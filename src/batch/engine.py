@@ -931,7 +931,9 @@ class BatchEngine:
         except Exception as e:
             self.logger.debug(f"Failed to record failed rows export metric: {e}")
 
-    def retry_batch_jobs(self, batch_id: str, job_ids: List[str], max_retries: int = 3) -> Dict[str, Any]:
+    def retry_batch_jobs(self, batch_id: str, job_ids: List[str], max_retries: int = 3,
+                        retry_delay: float = 1.0, backoff_factor: float = 2.0,
+                        max_retry_delay: Optional[float] = None) -> Dict[str, Any]:
         """
         Retry specific jobs in a batch.
 
@@ -939,6 +941,9 @@ class BatchEngine:
             batch_id: Batch identifier (must be non-empty string)
             job_ids: List of job IDs to retry (must contain valid job IDs)
             max_retries: Maximum number of retry attempts per job (must be >= 0)
+            retry_delay: Initial delay between retries in seconds (must be > 0)
+            backoff_factor: Exponential backoff multiplier (must be > 1.0)
+            max_retry_delay: Maximum retry delay in seconds (optional, defaults to MAX_RETRY_DELAY)
 
         Returns:
             Dictionary with retry results and statistics
@@ -956,11 +961,24 @@ class BatchEngine:
         if not all(isinstance(job_id, str) and job_id for job_id in job_ids):
             raise ValueError("All job_ids must be non-empty strings")
 
+        if len(job_ids) != len(set(job_ids)):
+            raise ValueError("job_ids must not contain duplicates")
+
         if max_retries < 0:
             raise ValueError("max_retries must be >= 0")
 
-        if len(job_ids) != len(set(job_ids)):
-            raise ValueError("job_ids must not contain duplicates")
+        if retry_delay <= 0:
+            raise ValueError("retry_delay must be > 0")
+
+        if backoff_factor <= 1.0:
+            raise ValueError("backoff_factor must be > 1.0")
+
+        if max_retry_delay is not None and max_retry_delay <= 0:
+            raise ValueError("max_retry_delay must be > 0")
+
+        # Use default if not specified
+        if max_retry_delay is None:
+            max_retry_delay = MAX_RETRY_DELAY
 
         try:
             # Load batch manifest
@@ -1032,7 +1050,10 @@ class BatchEngine:
                 'retried': len(jobs_to_retry),
                 'skipped': len(job_ids) - len(jobs_to_retry),
                 'retry_details': retry_results,
-                'max_retries': max_retries
+                'max_retries': max_retries,
+                'retry_delay': retry_delay,
+                'backoff_factor': backoff_factor,
+                'max_retry_delay': max_retry_delay
             }
 
             self.logger.info(f"Prepared {len(jobs_to_retry)} jobs for retry in batch {batch_id}")
@@ -1099,14 +1120,17 @@ class BatchEngine:
             self.logger.debug(f"Failed to record retry metrics: {e}")
 
     def execute_job_with_retry(self, job: BatchJob, max_retries: int = 3,
-                              retry_delay: float = 1.0) -> str:
+                              retry_delay: float = 1.0, backoff_factor: float = 2.0,
+                              max_retry_delay: Optional[float] = None) -> str:
         """
         Execute a job with automatic retry on failure.
 
         Args:
             job: Job to execute (must be valid BatchJob instance)
             max_retries: Maximum number of retry attempts (must be >= 0)
-            retry_delay: Delay between retries in seconds (must be > 0)
+            retry_delay: Initial delay between retries in seconds (must be > 0)
+            backoff_factor: Exponential backoff multiplier (must be > 1.0)
+            max_retry_delay: Maximum retry delay in seconds (optional, defaults to MAX_RETRY_DELAY)
 
         Returns:
             Final status of the job ('completed' or 'failed')
@@ -1124,11 +1148,22 @@ class BatchEngine:
         if retry_delay <= 0:
             raise ValueError("retry_delay must be > 0")
 
+        if backoff_factor <= 1.0:
+            raise ValueError("backoff_factor must be > 1.0")
+
+        if max_retry_delay is not None and max_retry_delay <= 0:
+            raise ValueError("max_retry_delay must be > 0")
+
+        # Use default if not specified
+        if max_retry_delay is None:
+            max_retry_delay = MAX_RETRY_DELAY
+
         import time
         from typing import Optional
 
         last_error: Optional[str] = None
         last_exception: Optional[Exception] = None
+        current_delay = retry_delay
 
         for attempt in range(max_retries + 1):  # +1 for initial attempt
             try:
@@ -1152,10 +1187,10 @@ class BatchEngine:
 
                 # Don't retry on the last attempt
                 if attempt < max_retries:
-                    self.logger.info(f"Retrying job {job.job_id} in {retry_delay}s...")
-                    time.sleep(retry_delay)
-                    # Exponential backoff with maximum delay cap
-                    retry_delay = min(retry_delay * 2, MAX_RETRY_DELAY)  # Cap at 60 seconds
+                    self.logger.info(f"Retrying job {job.job_id} in {current_delay:.1f}s...")
+                    time.sleep(current_delay)
+                    # Exponential backoff with configurable parameters
+                    current_delay = min(current_delay * backoff_factor, max_retry_delay)
                 else:
                     self.logger.error(f"Job {job.job_id} failed after {max_retries + 1} attempts")
 
@@ -1216,7 +1251,8 @@ class BatchEngine:
             self.logger.error(error_msg)
             raise RuntimeError(f"Job {job.job_id}: {type(e).__name__}") from e
 
-    def _simulate_job_execution(self, job: BatchJob) -> str:
+    def _simulate_job_execution(self, job: BatchJob, success_rate: Optional[float] = None,
+                               max_random_delay: Optional[float] = None) -> str:
         """
         Simulate job execution for testing purposes.
 
@@ -1226,6 +1262,8 @@ class BatchEngine:
 
         Args:
             job: Job to execute (must be valid BatchJob instance)
+            success_rate: Success rate for simulation (0.0 to 1.0, defaults to DEFAULT_SUCCESS_RATE)
+            max_random_delay: Maximum random delay in seconds (defaults to MAX_RANDOM_DELAY)
 
         Returns:
             Job status ('completed' or 'failed')
@@ -1237,18 +1275,26 @@ class BatchEngine:
         if not job.row_data:
             raise ValueError(f"Job {job.job_id} has no row data")
 
+        # Use defaults if not specified
+        if success_rate is None:
+            success_rate = DEFAULT_SUCCESS_RATE
+        if max_random_delay is None:
+            max_random_delay = MAX_RANDOM_DELAY
+
+        # Validate parameters
+        if not (0.0 <= success_rate <= 1.0):
+            raise ValueError("success_rate must be between 0.0 and 1.0")
+        if max_random_delay < 0:
+            raise ValueError("max_random_delay must be >= 0")
+
         import random
         from typing import Any
 
-        # Constants for simulation
-        SUCCESS_RATE = DEFAULT_SUCCESS_RATE  # 70% success rate
-        MAX_RANDOM_DELAY = MAX_RANDOM_DELAY  # Maximum random delay in seconds
-
         try:
             # Add small random delay to simulate processing time
-            if MAX_RANDOM_DELAY > 0:
+            if max_random_delay > 0:
                 import time
-                time.sleep(random.uniform(0, MAX_RANDOM_DELAY))
+                time.sleep(random.uniform(0, max_random_delay))
 
             # Simulate different failure scenarios based on data content
             data: Dict[str, Any] = job.row_data
@@ -1261,7 +1307,7 @@ class BatchEngine:
                 raise ValueError("Invalid value for processing")
 
             # Random success/failure for normal cases
-            if random.random() > SUCCESS_RATE:
+            if random.random() > success_rate:
                 raise Exception("Simulated random failure")
 
             # Success case

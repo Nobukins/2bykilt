@@ -987,6 +987,161 @@ class TestBatchRetry:
         with pytest.raises(ValueError, match="retry_delay must be > 0"):
             engine.execute_job_with_retry(job, retry_delay=-1)
 
+        # Test invalid backoff_factor
+        with pytest.raises(ValueError, match="backoff_factor must be > 1.0"):
+            engine.execute_job_with_retry(job, backoff_factor=1.0)
+
+        with pytest.raises(ValueError, match="backoff_factor must be > 1.0"):
+            engine.execute_job_with_retry(job, backoff_factor=0.5)
+
+        # Test invalid max_retry_delay
+        with pytest.raises(ValueError, match="max_retry_delay must be > 0"):
+            engine.execute_job_with_retry(job, max_retry_delay=0)
+
+        with pytest.raises(ValueError, match="max_retry_delay must be > 0"):
+            engine.execute_job_with_retry(job, max_retry_delay=-1)
+
+    def test_retry_batch_jobs_custom_parameters(self, engine, temp_dir, run_context):
+        """Test retry_batch_jobs with custom retry parameters."""
+        # Create a manifest with failed jobs
+        csv_content = "name,value\ntest1,data1\ntest2,data2\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        manifest = engine.create_batch_jobs(str(csv_file))
+
+        # Mark first job as failed
+        job_id = manifest.jobs[0].job_id
+        engine.update_job_status(job_id, "failed", "Test failure")
+
+        # Retry with custom parameters
+        result = engine.retry_batch_jobs(
+            manifest.batch_id,
+            [job_id],
+            max_retries=5,
+            retry_delay=2.0,
+            backoff_factor=3.0,
+            max_retry_delay=30.0
+        )
+
+        assert result['batch_id'] == manifest.batch_id
+        assert result['max_retries'] == 5
+        assert result['retry_delay'] == 2.0
+        assert result['backoff_factor'] == 3.0
+        assert result['max_retry_delay'] == 30.0
+        assert result['retried'] == 1
+
+    def test_execute_job_with_retry_custom_parameters(self, engine):
+        """Test execute_job_with_retry with custom retry parameters."""
+        job = BatchJob("test_job", "test_run", {"data": "test"})
+
+        # Mock successful execution
+        with patch.object(engine, '_execute_single_job', return_value='completed') as mock_execute:
+            status = engine.execute_job_with_retry(
+                job,
+                max_retries=3,
+                retry_delay=1.5,
+                backoff_factor=2.5,
+                max_retry_delay=20.0
+            )
+
+        assert status == 'completed'
+        mock_execute.assert_called_once_with(job)
+
+    def test_execute_job_with_retry_exponential_backoff(self, engine):
+        """Test that exponential backoff works correctly."""
+        job = BatchJob("test_job", "test_run", {"data": "test"})
+
+        # Mock execution to always fail
+        with patch.object(engine, '_execute_single_job', side_effect=Exception("Test failure")):
+            with patch('time.sleep') as mock_sleep:
+                with pytest.raises(Exception):
+                    engine.execute_job_with_retry(
+                        job,
+                        max_retries=2,
+                        retry_delay=1.0,
+                        backoff_factor=2.0,
+                        max_retry_delay=10.0
+                    )
+
+        # Verify sleep was called with correct exponential backoff
+        # First retry: 1.0s, Second retry: 2.0s
+        expected_calls = [((1.0,), {}), ((2.0,), {})]
+        mock_sleep.assert_has_calls(expected_calls)
+
+    def test_execute_job_with_retry_max_delay_cap(self, engine):
+        """Test that max_retry_delay caps the exponential backoff."""
+        job = BatchJob("test_job", "test_run", {"data": "test"})
+
+        # Mock execution to always fail
+        with patch.object(engine, '_execute_single_job', side_effect=Exception("Test failure")):
+            with patch('time.sleep') as mock_sleep:
+                with pytest.raises(Exception):
+                    engine.execute_job_with_retry(
+                        job,
+                        max_retries=3,
+                        retry_delay=1.0,
+                        backoff_factor=4.0,  # High backoff factor
+                        max_retry_delay=5.0  # Low cap
+                    )
+
+        # Verify sleep was called with capped delays
+        # First retry: 1.0s, Second retry: 4.0s (capped to 5.0s), Third retry: 16.0s (capped to 5.0s)
+        expected_calls = [((1.0,), {}), ((4.0,), {}), ((5.0,), {})]
+        mock_sleep.assert_has_calls(expected_calls)
+
+    def test_simulate_job_execution_custom_parameters(self, engine):
+        """Test _simulate_job_execution with custom parameters."""
+        job = BatchJob("test_job", "test_run", {"data": "test"})
+
+        # Test with custom success_rate
+        with patch('random.random', return_value=0.3):  # Below 0.5 success rate
+            status = engine._simulate_job_execution(job, success_rate=0.5)
+            assert status == 'completed'
+
+        # Test with custom max_random_delay
+        with patch('random.random', return_value=0.9):  # Above success rate
+            with patch('time.sleep') as mock_sleep:
+                with pytest.raises(Exception):
+                    engine._simulate_job_execution(job, success_rate=0.8, max_random_delay=2.0)
+
+        # Verify sleep was called with random delay <= max_random_delay
+        if mock_sleep.called:
+            delay = mock_sleep.call_args[0][0]
+            assert 0 <= delay <= 2.0
+
+    def test_simulate_job_execution_parameter_validation(self, engine):
+        """Test parameter validation in _simulate_job_execution."""
+        job = BatchJob("test_job", "test_run", {"data": "test"})
+
+        # Test invalid success_rate
+        with pytest.raises(ValueError, match="success_rate must be between 0.0 and 1.0"):
+            engine._simulate_job_execution(job, success_rate=-0.1)
+
+        with pytest.raises(ValueError, match="success_rate must be between 0.0 and 1.0"):
+            engine._simulate_job_execution(job, success_rate=1.5)
+
+        # Test invalid max_random_delay
+        with pytest.raises(ValueError, match="max_random_delay must be >= 0"):
+            engine._simulate_job_execution(job, max_random_delay=-1)
+
+    def test_simulate_job_execution_failure_scenarios(self, engine):
+        """Test various failure scenarios in simulation."""
+        # Test intentional failure triggers
+        job_fail = BatchJob("test_job", "test_run", {"name": "fail"})
+        with pytest.raises(Exception, match="Intentional failure for testing"):
+            engine._simulate_job_execution(job_fail)
+
+        job_error = BatchJob("test_job", "test_run", {"value": "error"})
+        with pytest.raises(ValueError, match="Invalid value for processing"):
+            engine._simulate_job_execution(job_error)
+
+        # Test random failure
+        job_random = BatchJob("test_job", "test_run", {"name": "test", "value": "data"})
+        with patch('random.random', return_value=0.9):  # Above success rate
+            with pytest.raises(Exception, match="Simulated random failure"):
+                engine._simulate_job_execution(job_random, success_rate=0.8)
+
     def test_log_security_no_sensitive_data(self, engine, caplog):
         """Test that sensitive data is not logged."""
         import logging
@@ -1045,3 +1200,24 @@ class TestBatchRetry:
         # Test invalid max_retries
         with pytest.raises(ValueError, match="max_retries must be >= 0"):
             engine.retry_batch_jobs("batch1", ["job1"], max_retries=-1)
+
+        # Test invalid retry_delay
+        with pytest.raises(ValueError, match="retry_delay must be > 0"):
+            engine.retry_batch_jobs("batch1", ["job1"], retry_delay=0)
+
+        with pytest.raises(ValueError, match="retry_delay must be > 0"):
+            engine.retry_batch_jobs("batch1", ["job1"], retry_delay=-1)
+
+        # Test invalid backoff_factor
+        with pytest.raises(ValueError, match="backoff_factor must be > 1.0"):
+            engine.retry_batch_jobs("batch1", ["job1"], backoff_factor=1.0)
+
+        with pytest.raises(ValueError, match="backoff_factor must be > 1.0"):
+            engine.retry_batch_jobs("batch1", ["job1"], backoff_factor=0.5)
+
+        # Test invalid max_retry_delay
+        with pytest.raises(ValueError, match="max_retry_delay must be > 0"):
+            engine.retry_batch_jobs("batch1", ["job1"], max_retry_delay=0)
+
+        with pytest.raises(ValueError, match="max_retry_delay must be > 0"):
+            engine.retry_batch_jobs("batch1", ["job1"], max_retry_delay=-1)
