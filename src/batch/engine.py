@@ -14,7 +14,7 @@ import mimetypes
 import time
 import random
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Union, Iterator
+from typing import Dict, List, Optional, Any, Union, Iterator, Literal
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from contextlib import contextmanager
@@ -1157,7 +1157,7 @@ class BatchEngine:
 
     def execute_job_with_retry(self, job: BatchJob, max_retries: int = DEFAULT_MAX_RETRIES,
                               retry_delay: float = DEFAULT_RETRY_DELAY, backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
-                              max_retry_delay: Optional[float] = None) -> str:
+                              max_retry_delay: Optional[float] = None) -> Literal['completed', 'failed']:
         """
         Execute a job with automatic retry on failure.
 
@@ -1215,17 +1215,14 @@ class BatchEngine:
                     current_delay = min(current_delay * backoff_factor, max_retry_delay)
                 else:
                     self.logger.error(f"Job {job.job_id} failed after {max_retries + 1} attempts")
+                    # Re-raise the exception immediately to preserve the stack trace
+                    raise
 
-        # All attempts failed
+        # All attempts failed - this code should not be reached due to exception re-raising above
         error_summary = f"Failed after {max_retries + 1} attempts"
         job.error_message = f"{error_summary}. Last error: {type(last_exception).__name__ if last_exception else 'Unknown'}"
         self.logger.error(f"Job {job.job_id} permanently failed: {error_summary}")
-
-        # Re-raise the last exception to preserve the original error context
-        if last_exception:
-            raise last_exception
-        else:
-            raise RuntimeError(f"Job {job.job_id}: {error_summary}")
+        raise RuntimeError(f"Job {job.job_id}: {error_summary}")
 
     def _execute_single_job(self, job: BatchJob) -> str:
         """
@@ -1282,7 +1279,7 @@ class BatchEngine:
             raise RuntimeError(f"Job {job.job_id}: {type(e).__name__}") from e
 
     def _simulate_job_execution(self, job: BatchJob, success_rate: Optional[float] = None,
-                               max_random_delay: Optional[float] = None) -> str:
+                               max_random_delay: Optional[float] = None) -> Literal['completed', 'failed']:
         """
         Simulate job execution for testing purposes.
 
@@ -1320,8 +1317,8 @@ class BatchEngine:
             raise ValueError("max_random_delay must be >= 0")
 
         try:
-            # Add small random delay to simulate processing time
-            if max_random_delay > 0:
+            # Add small random delay to simulate processing time (only in debug/test mode)
+            if max_random_delay > 0 and os.getenv('BATCH_ENGINE_DEBUG', '').lower() in ('true', '1', 'yes'):
                 time.sleep(random.uniform(0, max_random_delay))
 
             # Simulate different failure scenarios based on data content
