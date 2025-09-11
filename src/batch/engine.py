@@ -20,6 +20,8 @@ from contextlib import contextmanager
 from ..core.artifact_manager import ArtifactManager, get_artifact_manager
 from ..runtime.run_context import RunContext
 
+from .summary import BatchSummary
+
 logger = logging.getLogger(__name__)
 
 # Type aliases for better type hints
@@ -572,23 +574,36 @@ class BatchEngine:
         except Exception as e:
             self.logger.debug(f"Failed to record batch creation metrics: {e}")
 
-    def get_batch_status(self, batch_id: str) -> Optional[BatchManifest]:
+    def get_batch_summary(self, batch_id: str) -> Optional['BatchSummary']:
         """
-        Get status of a batch execution.
+        Get batch summary for a batch execution.
 
         Args:
             batch_id: Batch identifier
 
         Returns:
-            BatchManifest if found, None otherwise
+            BatchSummary if found, None otherwise
         """
-        # First try the current run context
-        manifest = self._load_manifest_from_current_context(batch_id)
-        if manifest is not None:
-            return manifest
+        try:
+            from .summary import BatchSummaryGenerator
 
-        # Search through all batch manifest files in artifacts/runs
-        return self._search_batch_manifest_in_artifacts(batch_id)
+            # First try to get manifest from current context
+            manifest = self._load_manifest_from_current_context(batch_id)
+            if manifest is None:
+                # Search through all batch manifest files in artifacts/runs
+                manifest = self._search_batch_manifest_in_artifacts(batch_id)
+            
+            if manifest is None:
+                return None
+
+            # Generate summary from manifest
+            generator = BatchSummaryGenerator()
+            return generator.generate_summary(manifest)
+
+        except Exception as e:
+            error_msg = f"Failed to get batch summary for {batch_id} - {type(e).__name__}: {e}"
+            self.logger.error(error_msg)
+            return None
 
     def _load_manifest_from_current_context(self, batch_id: str) -> Optional[BatchManifest]:
         """Load batch manifest from current run context."""
@@ -662,6 +677,10 @@ class BatchEngine:
 
             self._update_single_job_status(job, status, error_message, manifest)
             self._save_manifest(manifest_file, manifest)
+
+            # Generate summary if batch is complete
+            if self._is_batch_complete(manifest):
+                self._generate_batch_summary(manifest)
 
             # Record metrics for job completion
             self._record_job_metrics(job, status, error_message)
@@ -796,10 +815,26 @@ class BatchEngine:
         self.logger.warning(f"Job {job_id} not found in manifest")
         return None
 
-    def _save_manifest(self, manifest_file: Path, manifest: BatchManifest):
-        """Save manifest to file."""
-        with open(manifest_file, 'w', encoding='utf-8') as f:
-            json.dump(manifest.to_dict(), f, indent=2, ensure_ascii=False)
+    def _is_batch_complete(self, manifest: BatchManifest) -> bool:
+        """Check if all jobs in the batch are complete."""
+        return manifest.completed_jobs + manifest.failed_jobs == manifest.total_jobs
+
+    def _generate_batch_summary(self, manifest: BatchManifest):
+        """Generate and save batch summary when batch is complete."""
+        try:
+            from .summary import BatchSummaryGenerator
+
+            generator = BatchSummaryGenerator()
+            summary = generator.generate_summary(manifest)
+
+            # Save summary to artifacts/runs/<run_id>/batch_summary.json
+            summary_path = self.run_context.artifact_dir("batch") / "batch_summary.json"
+            generator.save_summary(summary, summary_path)
+
+            self.logger.info(f"Generated batch summary for {manifest.batch_id}")
+
+        except Exception as e:
+            self.logger.error(f"Failed to generate batch summary: {e}")
 
 
 def start_batch(csv_path: str, run_context: Optional[RunContext] = None, config: Optional[ConfigType] = None) -> BatchManifest:
