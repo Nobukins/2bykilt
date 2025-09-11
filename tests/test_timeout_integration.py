@@ -12,8 +12,8 @@ import os
 # Add the src directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from utils.timeout_manager import get_timeout_manager, TimeoutConfig, TimeoutScope, TimeoutError, CancellationError
-from modules.automation_manager import BrowserAutomationManager
+from src.utils.timeout_manager import get_timeout_manager, TimeoutConfig, TimeoutScope, TimeoutError, CancellationError, with_operation_timeout
+from src.modules.automation_manager import BrowserAutomationManager
 
 
 async def test_automation_manager_timeout():
@@ -21,7 +21,7 @@ async def test_automation_manager_timeout():
     print("🧪 Testing automation manager timeout integration...")
 
     # Reset timeout manager
-    from utils.timeout_manager import reset_timeout_manager
+    from src.utils.timeout_manager import reset_timeout_manager
     reset_timeout_manager()
 
     # Create timeout manager with short timeouts
@@ -32,6 +32,9 @@ async def test_automation_manager_timeout():
 
     manager = get_timeout_manager(config)
 
+    # Create automation manager and register test action
+    automation_manager = BrowserAutomationManager()
+    
     # Create a mock action that takes longer than timeout
     long_running_action = {
         'name': 'test_timeout_action',
@@ -39,12 +42,13 @@ async def test_automation_manager_timeout():
         'command': 'sleep 5',  # This should timeout
         'timeout': 2
     }
-
-    automation_manager = BrowserAutomationManager()
+    
+    # Register the action
+    automation_manager.register_action(long_running_action)
 
     try:
-        # This should timeout
-        result = automation_manager.execute_action('test_timeout_action', **{})
+        # This should timeout - now await the async method
+        result = await automation_manager.execute_action('test_timeout_action', **{})
         print(f"   ❌ Expected timeout but got result: {result}")
 
     except TimeoutError as e:
@@ -60,11 +64,11 @@ async def test_timeout_manager_integration():
     print("🧪 Testing timeout manager integration...")
 
     # Reset timeout manager
-    from utils.timeout_manager import reset_timeout_manager
+    from src.utils.timeout_manager import reset_timeout_manager
     reset_timeout_manager()
 
     # Test the convenience functions
-    from utils.timeout_manager import with_operation_timeout
+    from src.utils.timeout_manager import with_operation_timeout
 
     async def quick_operation():
         await asyncio.sleep(0.1)
