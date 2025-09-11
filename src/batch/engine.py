@@ -29,8 +29,13 @@ ConfigType = Dict[str, Union[str, int, float, bool]]
 
 # Constants for job execution simulation
 DEFAULT_SUCCESS_RATE = 0.7  # 70% success rate for simulation
-MAX_RANDOM_DELAY = 0.1  # Maximum random delay in seconds
-MAX_RETRY_DELAY = 60.0  # Maximum retry delay in seconds
+MAX_RANDOM_DELAY = 0.1  # Maximum random delay in seconds for simulation
+
+# Constants for retry mechanism
+DEFAULT_MAX_RETRIES = 3  # Default maximum number of retry attempts
+DEFAULT_RETRY_DELAY = 1.0  # Default initial delay between retries in seconds
+DEFAULT_BACKOFF_FACTOR = 2.0  # Default exponential backoff multiplier
+MAX_RETRY_DELAY = 60.0  # Maximum retry delay in seconds (cap for exponential backoff)
 
 
 class BatchEngineError(Exception):
@@ -910,29 +915,40 @@ class BatchEngine:
         except Exception as e:
             self.logger.error(f"Failed to export failed rows: {e}")
 
-    def _record_failed_rows_export_metric(self, failed_count: int):
-        """Record metrics for failed rows export."""
-        try:
-            from ..metrics import get_metrics_collector, MetricType
+    def _validate_retry_parameters(self, max_retries: int, retry_delay: float,
+                                  backoff_factor: float, max_retry_delay: Optional[float]) -> float:
+        """
+        Validate retry-related parameters and return the effective max_retry_delay.
 
-            collector = get_metrics_collector()
-            if collector is None:
-                return
+        Args:
+            max_retries: Maximum number of retry attempts
+            retry_delay: Initial delay between retries in seconds
+            backoff_factor: Exponential backoff multiplier
+            max_retry_delay: Maximum retry delay in seconds (optional)
 
-            collector.record_metric(
-                name="batch_failed_rows_exported",
-                value=failed_count,
-                metric_type=MetricType.COUNTER,
-                tags={
-                    "run_id": self.run_context.run_id_base
-                }
-            )
+        Returns:
+            Effective max_retry_delay value
 
-        except Exception as e:
-            self.logger.debug(f"Failed to record failed rows export metric: {e}")
+        Raises:
+            ValueError: If any parameter is invalid
+        """
+        if max_retries < 0:
+            raise ValueError("max_retries must be >= 0")
 
-    def retry_batch_jobs(self, batch_id: str, job_ids: List[str], max_retries: int = 3,
-                        retry_delay: float = 1.0, backoff_factor: float = 2.0,
+        if retry_delay <= 0:
+            raise ValueError("retry_delay must be > 0")
+
+        if backoff_factor <= 1.0:
+            raise ValueError("backoff_factor must be > 1.0")
+
+        if max_retry_delay is not None and max_retry_delay <= 0:
+            raise ValueError("max_retry_delay must be > 0")
+
+        # Use default if not specified
+        return max_retry_delay if max_retry_delay is not None else MAX_RETRY_DELAY
+
+    def retry_batch_jobs(self, batch_id: str, job_ids: List[str], max_retries: int = DEFAULT_MAX_RETRIES,
+                        retry_delay: float = DEFAULT_RETRY_DELAY, backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
                         max_retry_delay: Optional[float] = None) -> Dict[str, Any]:
         """
         Retry specific jobs in a batch.
@@ -940,9 +956,9 @@ class BatchEngine:
         Args:
             batch_id: Batch identifier (must be non-empty string)
             job_ids: List of job IDs to retry (must contain valid job IDs)
-            max_retries: Maximum number of retry attempts per job (must be >= 0)
-            retry_delay: Initial delay between retries in seconds (must be > 0)
-            backoff_factor: Exponential backoff multiplier (must be > 1.0)
+            max_retries: Maximum number of retry attempts per job (must be >= 0, default: DEFAULT_MAX_RETRIES)
+            retry_delay: Initial delay between retries in seconds (must be > 0, default: DEFAULT_RETRY_DELAY)
+            backoff_factor: Exponential backoff multiplier (must be > 1.0, default: DEFAULT_BACKOFF_FACTOR)
             max_retry_delay: Maximum retry delay in seconds (optional, defaults to MAX_RETRY_DELAY)
 
         Returns:
@@ -964,21 +980,10 @@ class BatchEngine:
         if len(job_ids) != len(set(job_ids)):
             raise ValueError("job_ids must not contain duplicates")
 
-        if max_retries < 0:
-            raise ValueError("max_retries must be >= 0")
-
-        if retry_delay <= 0:
-            raise ValueError("retry_delay must be > 0")
-
-        if backoff_factor <= 1.0:
-            raise ValueError("backoff_factor must be > 1.0")
-
-        if max_retry_delay is not None and max_retry_delay <= 0:
-            raise ValueError("max_retry_delay must be > 0")
-
-        # Use default if not specified
-        if max_retry_delay is None:
-            max_retry_delay = MAX_RETRY_DELAY
+        # Validate retry parameters using common function
+        max_retry_delay = self._validate_retry_parameters(
+            max_retries, retry_delay, backoff_factor, max_retry_delay
+        )
 
         try:
             # Load batch manifest
@@ -1119,17 +1124,17 @@ class BatchEngine:
         except Exception as e:
             self.logger.debug(f"Failed to record retry metrics: {e}")
 
-    def execute_job_with_retry(self, job: BatchJob, max_retries: int = 3,
-                              retry_delay: float = 1.0, backoff_factor: float = 2.0,
+    def execute_job_with_retry(self, job: BatchJob, max_retries: int = DEFAULT_MAX_RETRIES,
+                              retry_delay: float = DEFAULT_RETRY_DELAY, backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
                               max_retry_delay: Optional[float] = None) -> str:
         """
         Execute a job with automatic retry on failure.
 
         Args:
             job: Job to execute (must be valid BatchJob instance)
-            max_retries: Maximum number of retry attempts (must be >= 0)
-            retry_delay: Initial delay between retries in seconds (must be > 0)
-            backoff_factor: Exponential backoff multiplier (must be > 1.0)
+            max_retries: Maximum number of retry attempts (must be >= 0, default: DEFAULT_MAX_RETRIES)
+            retry_delay: Initial delay between retries in seconds (must be > 0, default: DEFAULT_RETRY_DELAY)
+            backoff_factor: Exponential backoff multiplier (must be > 1.0, default: DEFAULT_BACKOFF_FACTOR)
             max_retry_delay: Maximum retry delay in seconds (optional, defaults to MAX_RETRY_DELAY)
 
         Returns:
@@ -1142,21 +1147,10 @@ class BatchEngine:
         if not job.job_id or not isinstance(job.job_id, str):
             raise ValueError("job.job_id must be a non-empty string")
 
-        if max_retries < 0:
-            raise ValueError("max_retries must be >= 0")
-
-        if retry_delay <= 0:
-            raise ValueError("retry_delay must be > 0")
-
-        if backoff_factor <= 1.0:
-            raise ValueError("backoff_factor must be > 1.0")
-
-        if max_retry_delay is not None and max_retry_delay <= 0:
-            raise ValueError("max_retry_delay must be > 0")
-
-        # Use default if not specified
-        if max_retry_delay is None:
-            max_retry_delay = MAX_RETRY_DELAY
+        # Validate retry parameters using common function
+        max_retry_delay = self._validate_retry_parameters(
+            max_retries, retry_delay, backoff_factor, max_retry_delay
+        )
 
         import time
         from typing import Optional

@@ -11,7 +11,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 from io import StringIO
 
-from src.batch.engine import BatchEngine, BatchJob, BatchManifest, start_batch, ConfigurationError, FileProcessingError, SecurityError
+from src.batch.engine import BatchEngine, BatchJob, BatchManifest, start_batch, ConfigurationError, FileProcessingError, SecurityError, DEFAULT_MAX_RETRIES, DEFAULT_RETRY_DELAY, DEFAULT_BACKOFF_FACTOR, MAX_RETRY_DELAY
 from src.runtime.run_context import RunContext
 
 
