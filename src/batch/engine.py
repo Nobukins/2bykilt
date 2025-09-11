@@ -14,7 +14,7 @@ import mimetypes
 import time
 import random
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Union, Iterator
+from typing import Dict, List, Optional, Any, Union, Iterator, Literal
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from contextlib import contextmanager
@@ -1157,7 +1157,7 @@ class BatchEngine:
 
     def execute_job_with_retry(self, job: BatchJob, max_retries: int = DEFAULT_MAX_RETRIES,
                               retry_delay: float = DEFAULT_RETRY_DELAY, backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
-                              max_retry_delay: Optional[float] = None) -> str:
+                              max_retry_delay: Optional[float] = None) -> Literal['completed', 'failed']:
         """
         Execute a job with automatic retry on failure.
 
@@ -1223,7 +1223,7 @@ class BatchEngine:
 
         # Re-raise the last exception to preserve the original error context
         if last_exception:
-            raise last_exception
+            raise
         else:
             raise RuntimeError(f"Job {job.job_id}: {error_summary}")
 
@@ -1282,7 +1282,7 @@ class BatchEngine:
             raise RuntimeError(f"Job {job.job_id}: {type(e).__name__}") from e
 
     def _simulate_job_execution(self, job: BatchJob, success_rate: Optional[float] = None,
-                               max_random_delay: Optional[float] = None) -> str:
+                               max_random_delay: Optional[float] = None) -> Literal['completed', 'failed']:
         """
         Simulate job execution for testing purposes.
 
@@ -1320,8 +1320,8 @@ class BatchEngine:
             raise ValueError("max_random_delay must be >= 0")
 
         try:
-            # Add small random delay to simulate processing time
-            if max_random_delay > 0:
+            # Add small random delay to simulate processing time (only in debug/test mode)
+            if max_random_delay > 0 and os.getenv('BATCH_ENABLE_SIMULATION_DELAYS', 'false').lower() == 'true':
                 time.sleep(random.uniform(0, max_random_delay))
 
             # Simulate different failure scenarios based on data content
