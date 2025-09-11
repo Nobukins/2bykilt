@@ -1,46 +1,48 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-09-11T00:54:58+00:00
+Generated at (UTC): 2025-09-11T13:02:15+00:00
 
 ## 1. メタサマリー
 
-- Total Issues: 47
+- Total Issues: 68
 - High Risk (declared): 5 → 31, 46, 49, 54, 62
 - Cycle Detected: false (none)
-- Strict Orphans: 3
-- Curated Orphan List Count: 3
+- Strict Orphans: 22
+- Curated Orphan List Count: 22
 
 ## 2. 分布 (Distribution)
 
 ### Priority
-- P0: 15 (31.9%)
-- P1: 15 (31.9%)
-- P2: 16 (34.0%)
-- P3: 1 (2.1%)
+- (none): 7 (10.3%)
+- P0: 17 (25.0%)
+- P1: 17 (25.0%)
+- P2: 25 (36.8%)
+- P3: 2 (2.9%)
 
 ### Phase
-- (none): 1 (2.1%)
-- 1: 18 (38.3%)
-- 1-late: 12 (25.5%)
-- 2: 16 (34.0%)
+- (none): 13 (19.1%)
+- 1: 20 (29.4%)
+- 1-late: 15 (22.1%)
+- 2: 20 (29.4%)
 
 ### Area
-- (none): 1 (2.1%)
-- artifacts: 11 (23.4%)
-- automation: 1 (2.1%)
-- batch: 4 (8.5%)
-- config: 3 (6.4%)
-- docs: 2 (4.3%)
-- logging: 3 (6.4%)
-- observability: 3 (6.4%)
-- plugins: 1 (2.1%)
-- runner: 15 (31.9%)
-- security: 3 (6.4%)
+- (none): 19 (27.9%)
+- artifacts: 12 (17.6%)
+- automation: 1 (1.5%)
+- batch: 5 (7.4%)
+- config: 3 (4.4%)
+- docs: 2 (2.9%)
+- logging: 3 (4.4%)
+- observability: 3 (4.4%)
+- plugins: 1 (1.5%)
+- runner: 15 (22.1%)
+- security: 4 (5.9%)
 
 ### Risk
-- high: 5 (10.6%)
-- medium: 1 (2.1%)
-- none: 41 (87.2%)
+- high: 5 (7.4%)
+- low: 1 (1.5%)
+- medium: 1 (1.5%)
+- none: 61 (89.7%)
 
 ## 3. リスク詳細 (High / Medium / etc.)
 
@@ -57,11 +59,49 @@ Strict Orphans (自動抽出 = 依存なし & 参照されず):
 - 55: browser_control pytest パス修正
 - 81: Async/Browser テスト安定化計画
 - 90: Temp test issue for enrichment
+- 92: [enhance][roadmap] Enrichment Phase 3: reverse dependents validation & high-risk strict sync
+- 101: chore(test): async ブラウザ起動・event loop 衝突安定化
+- 102: chore(flags): FeatureFlags アーティファクト生成とテスト補助ヘルパ
+- 104: #91 統一録画パス Rollout (flag default 有効化 & legacy 廃止)
+- 106: Phase 2 enforcement: unified recording path flag false warning
+- 107: Cleanup: PytestReturnNotNone warnings across component tests
+- 108: Stabilize Edge headless navigation flake (TargetClosedError)
+- 109: [quality][coverage] Sonar 新規行カバレッジ向上とQuality Gate再挑戦 (#105 追随)
+- 110: [bug][artifacts] Browser-control モードで録画ファイル未生成 (enable_recording未伝播/開始トリガ未配線)
+- 111: [refactor][artifacts] ArtifactManager.resolve_recording_dir を recording_dir_resolver へ統合
+- 113: docs: cleanup archived references to tests/pytest.ini (post PR #112)
+- 114: ci: evaluate relaxing pytest.ini guard scope for docs/archive references (follow-up to PR #112)
+- 115: [A3][regression][hardening] Post-#38 回帰スイート強化 (破損動画 / 強制移行 / retention トグル / パス可搬性 / flags 再生成)
+- 127: [docs][batch] CSVバッチエンジン統合ドキュメントの包括的改善
+- 154: pip-audit stabilization in CI with normalizer + targeted suppressions
+- 175: バッチ行単位成果物キャプチャ基盤 (スクリーンショット/要素値/ログ関連紐付け)
+- 176: 宣言的抽出スキーマ (CSV列→コマンド引数/抽出ポリシーマッピング)
+- 177: MVP エンタープライズ Readiness マトリクス定義
+- 178: CI: dependency-pipeline workflow 追加 (生成物 idempotent 検証自動化)
 
 Curated Orphan List (summary.data_quality_checks.orphan_issues_without_dependents_or_depends):
 - 55: browser_control pytest パス修正
 - 81: Async/Browser テスト安定化計画
 - 90: Temp test issue for enrichment
+- 92: [enhance][roadmap] Enrichment Phase 3: reverse dependents validation & high-risk strict sync
+- 101: chore(test): async ブラウザ起動・event loop 衝突安定化
+- 102: chore(flags): FeatureFlags アーティファクト生成とテスト補助ヘルパ
+- 104: #91 統一録画パス Rollout (flag default 有効化 & legacy 廃止)
+- 106: Phase 2 enforcement: unified recording path flag false warning
+- 107: Cleanup: PytestReturnNotNone warnings across component tests
+- 108: Stabilize Edge headless navigation flake (TargetClosedError)
+- 109: [quality][coverage] Sonar 新規行カバレッジ向上とQuality Gate再挑戦 (#105 追随)
+- 110: [bug][artifacts] Browser-control モードで録画ファイル未生成 (enable_recording未伝播/開始トリガ未配線)
+- 111: [refactor][artifacts] ArtifactManager.resolve_recording_dir を recording_dir_resolver へ統合
+- 113: docs: cleanup archived references to tests/pytest.ini (post PR #112)
+- 114: ci: evaluate relaxing pytest.ini guard scope for docs/archive references (follow-up to PR #112)
+- 115: [A3][regression][hardening] Post-#38 回帰スイート強化 (破損動画 / 強制移行 / retention トグル / パス可搬性 / flags 再生成)
+- 127: [docs][batch] CSVバッチエンジン統合ドキュメントの包括的改善
+- 154: pip-audit stabilization in CI with normalizer + targeted suppressions
+- 175: バッチ行単位成果物キャプチャ基盤 (スクリーンショット/要素値/ログ関連紐付け)
+- 176: 宣言的抽出スキーマ (CSV列→コマンド引数/抽出ポリシーマッピング)
+- 177: MVP エンタープライズ Readiness マトリクス定義
+- 178: CI: dependency-pipeline workflow 追加 (生成物 idempotent 検証自動化)
 
 Missing Strict Orphans in curated list: (none)
 Extra non-strict entries in curated list: (none)
@@ -95,7 +135,7 @@ Sorted By: critical_path_rank
 | 33 | スクリーンショット取得ユーティリティ | P0 | 1 | artifacts |  | 2 | 1 | 1 | 3 |  |
 | 36 | アーティファクト一覧 API | P1 | 1 | artifacts |  | 2 | 2 | 1 | 1 | #95 |
 | 37 | 動画アーティファクト保持期間 | P1 | 1 | artifacts |  | 2 | 3 | 1 | 1 | #99 |
-| 39 | CSV 駆動バッチエンジンコア | P1 | 2 | batch |  | 2 | 1 | 1 | 3 |  |
+| 39 | CSV 駆動バッチエンジンコア | P1 | 2 | batch |  | 2 | 1 | 1 | 3 | #164 |
 | 44 | git_script 解決ロジック不具合修正 | P0 | 1 | runner |  | 2 | 1 | 1 | 1 | #120 |
 | 47 | 並列実行キュー & 制限 | P2 | 2 | runner |  | 2 | 2 | 1 | 1 |  |
 | 53 | cdp-use 追加タイプ調査 | P2 | 2 | runner |  | 2 | 0 | 0 | 1 |  |
@@ -105,10 +145,13 @@ Sorted By: critical_path_rank
 | 66 | ドキュメント整備 第1弾 | P2 | 1-late | docs |  | 2 | 3 | 1 | 1 |  |
 | 76 | 依存更新自動化パイプライン (PR 起票時の ISSUE_DEPENDENCIES.yml 自動更新) | P1 | 1-late | automation |  | 2 | 2 | 1 | 0 |  |
 | 81 | Async/Browser テスト安定化計画 | P1 | 1 | runner |  | 2 | 0 | 0 | 0 |  |
+| 154 | pip-audit stabilization in CI with normalizer + targeted suppressions | P1 | 1 | security |  | 1 | 0 | 0 | 0 | #160 |
+| 173 | [UI][batch][#40 follow-up] CSV Preview & Command Argument Mapping | P2 | 2 | batch |  | 1 | 4 | 4 | 0 |  |
+| 174 | [artifacts][batch] Clarify Artifact Output & Access Flow | P3 | 2 | artifacts | low | 1 | 3 | 5 | 0 |  |
 | 34 | 要素値キャプチャ & エクスポート | P1 | 1 | artifacts |  | 1 | 2 | 2 | 0 | #93 |
 | 38 | 録画統一後回帰テストスイート | P2 | 1-late | artifacts |  | 1 | 4 | 5 | 0 | #103 |
-| 40 | CSV D&D UI 連携 | P2 | 2 | batch |  | 1 | 2 | 1 | 0 |  |
-| 41 | バッチ進捗・サマリー | P2 | 2 | batch |  | 1 | 3 | 2 | 0 |  |
+| 40 | CSV D&D UI 連携 | P2 | 2 | batch |  | 1 | 2 | 1 | 0 | #172 |
+| 41 | バッチ進捗・サマリー | P2 | 2 | batch |  | 1 | 3 | 2 | 0 | #162 |
 | 42 | バッチ部分リトライ | P2 | 2 | batch |  | 1 | 2 | 1 | 0 | #163 |
 | 43 | ENABLE_LLM パリティ | P1 | 1-late | runner |  | 1 | 2 | 2 | 0 |  |
 | 45 | git_script 認証 & プロキシ | P1 | 1 | runner |  | 1 | 2 | 2 | 0 | #120 |
@@ -128,7 +171,25 @@ Sorted By: critical_path_rank
 | 88 | スクリーンショット例外分類と特定例外キャッチ | P2 | 1-late | artifacts |  | 1 | 2 | 2 | 0 | #97 |
 | 89 | Screenshot ログイベント整備 (metrics 連携準備) | P2 | 1-late | observability |  | 1 | 2 | 2 | 0 | #98 |
 | 91 | 統一録画パス Rollout (flag default 有効化 & legacy 廃止) | P0 | 1-late | artifacts |  | 1 | 2 | 1 | 0 | #105 |
+| 101 | chore(test): async ブラウザ起動・event loop 衝突安定化 | P2 | 1 |  |  |  | 0 | 0 | 0 |  |
+| 102 | chore(flags): FeatureFlags アーティファクト生成とテスト補助ヘルパ | P2 |  |  |  |  | 0 | 0 | 0 |  |
+| 104 | #91 統一録画パス Rollout (flag default 有効化 & legacy 廃止) | P0 |  |  |  |  | 0 | 0 | 0 |  |
+| 106 | Phase 2 enforcement: unified recording path flag false warning | P0 | 1-late |  |  |  | 0 | 0 | 0 |  |
+| 107 | Cleanup: PytestReturnNotNone warnings across component tests | P2 | 1-late |  |  |  | 0 | 0 | 0 |  |
+| 108 | Stabilize Edge headless navigation flake (TargetClosedError) | P2 | 1-late |  |  |  | 0 | 0 | 0 |  |
+| 109 | [quality][coverage] Sonar 新規行カバレッジ向上とQuality Gate再挑戦 (#105 追随) | P2 | 2 |  |  |  | 0 | 0 | 0 |  |
+| 110 | [bug][artifacts] Browser-control モードで録画ファイル未生成 (enable_recording未伝播/開始トリガ未配線) |  |  |  |  |  | 0 | 0 | 0 |  |
+| 111 | [refactor][artifacts] ArtifactManager.resolve_recording_dir を recording_dir_resolver へ統合 |  |  |  |  |  | 0 | 0 | 0 |  |
+| 113 | docs: cleanup archived references to tests/pytest.ini (post PR #112) | P2 |  |  |  |  | 0 | 0 | 0 |  |
+| 114 | ci: evaluate relaxing pytest.ini guard scope for docs/archive references (follow-up to PR #112) | P2 |  |  |  |  | 0 | 0 | 0 |  |
+| 115 | [A3][regression][hardening] Post-#38 回帰スイート強化 (破損動画 / 強制移行 / retention トグル / パス可搬性 / flags 再生成) |  |  |  |  |  | 0 | 0 | 0 |  |
+| 127 | [docs][batch] CSVバッチエンジン統合ドキュメントの包括的改善 | P1 | 2 |  |  |  | 0 | 0 | 0 |  |
+| 175 | バッチ行単位成果物キャプチャ基盤 (スクリーンショット/要素値/ログ関連紐付け) |  |  |  |  |  | 0 | 0 | 0 |  |
+| 176 | 宣言的抽出スキーマ (CSV列→コマンド引数/抽出ポリシーマッピング) |  |  |  |  |  | 0 | 0 | 0 |  |
+| 177 | MVP エンタープライズ Readiness マトリクス定義 |  |  |  |  |  | 0 | 0 | 0 |  |
+| 178 | CI: dependency-pipeline workflow 追加 (生成物 idempotent 検証自動化) |  |  |  |  |  | 0 | 0 | 0 |  |
 | 90 | Temp test issue for enrichment | P2 |  |  |  |  | 0 | 0 | 0 |  |
+| 92 | [enhance][roadmap] Enrichment Phase 3: reverse dependents validation & high-risk strict sync | P2 |  |  |  |  | 0 | 0 | 0 |  |
 
 ## 7. 依存詳細 (Fan-in / Fan-out)
 
@@ -250,7 +311,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 1
 - Depends (1): 32
 - Dependents (3): 40, 41, 42
-- Progress: {"state": "in_progress"}
+- Progress: {"state": "done", "primary_pr": 164}
 
 ### Issue 44: git_script 解決ロジック不具合修正
 - Priority: P0, Phase: 1, Area: runner
@@ -327,6 +388,31 @@ Sorted By: critical_path_rank
 - Depends (0): (none)
 - Dependents (0): (none)
 
+### Issue 154: pip-audit stabilization in CI with normalizer + targeted suppressions
+- Priority: P1, Phase: 1, Area: security
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+- Progress: {"state": "done", "primary_pr": 160}
+
+### Issue 173: [UI][batch][#40 follow-up] CSV Preview & Command Argument Mapping
+- Priority: P2, Phase: 2, Area: batch
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 4
+- Depends (4): 39, 40, 41, 42
+- Dependents (0): (none)
+
+### Issue 174: [artifacts][batch] Clarify Artifact Output & Access Flow
+- Priority: P3, Phase: 2, Area: artifacts
+- Risk: low
+- CriticalPathRank: 1
+- LongestDistance: 3
+- Depends (5): 28, 30, 33, 35, 39
+- Dependents (0): (none)
+
 ### Issue 34: 要素値キャプチャ & エクスポート
 - Priority: P1, Phase: 1, Area: artifacts
 - Risk: (none)
@@ -352,6 +438,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 2
 - Depends (1): 39
 - Dependents (0): (none)
+- Progress: {"state": "done", "primary_pr": 172}
 
 ### Issue 41: バッチ進捗・サマリー
 - Priority: P2, Phase: 2, Area: batch
@@ -360,6 +447,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 3
 - Depends (2): 39, 56
 - Dependents (0): (none)
+- Progress: {"state": "done", "primary_pr": 162}
 
 ### Issue 42: バッチ部分リトライ
 - Priority: P2, Phase: 2, Area: batch
@@ -521,7 +609,151 @@ Sorted By: critical_path_rank
 - Dependents (0): (none)
 - Progress: {"state": "done", "primary_pr": 105}
 
+### Issue 101: chore(test): async ブラウザ起動・event loop 衝突安定化
+- Priority: P2, Phase: 1, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 102: chore(flags): FeatureFlags アーティファクト生成とテスト補助ヘルパ
+- Priority: P2, Phase: None, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 104: #91 統一録画パス Rollout (flag default 有効化 & legacy 廃止)
+- Priority: P0, Phase: None, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 106: Phase 2 enforcement: unified recording path flag false warning
+- Priority: P0, Phase: 1-late, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 107: Cleanup: PytestReturnNotNone warnings across component tests
+- Priority: P2, Phase: 1-late, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 108: Stabilize Edge headless navigation flake (TargetClosedError)
+- Priority: P2, Phase: 1-late, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 109: [quality][coverage] Sonar 新規行カバレッジ向上とQuality Gate再挑戦 (#105 追随)
+- Priority: P2, Phase: 2, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 110: [bug][artifacts] Browser-control モードで録画ファイル未生成 (enable_recording未伝播/開始トリガ未配線)
+- Priority: None, Phase: None, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 111: [refactor][artifacts] ArtifactManager.resolve_recording_dir を recording_dir_resolver へ統合
+- Priority: None, Phase: None, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 113: docs: cleanup archived references to tests/pytest.ini (post PR #112)
+- Priority: P2, Phase: None, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 114: ci: evaluate relaxing pytest.ini guard scope for docs/archive references (follow-up to PR #112)
+- Priority: P2, Phase: None, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 115: [A3][regression][hardening] Post-#38 回帰スイート強化 (破損動画 / 強制移行 / retention トグル / パス可搬性 / flags 再生成)
+- Priority: None, Phase: None, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 127: [docs][batch] CSVバッチエンジン統合ドキュメントの包括的改善
+- Priority: P1, Phase: 2, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 175: バッチ行単位成果物キャプチャ基盤 (スクリーンショット/要素値/ログ関連紐付け)
+- Priority: None, Phase: None, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 176: 宣言的抽出スキーマ (CSV列→コマンド引数/抽出ポリシーマッピング)
+- Priority: None, Phase: None, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 177: MVP エンタープライズ Readiness マトリクス定義
+- Priority: None, Phase: None, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 178: CI: dependency-pipeline workflow 追加 (生成物 idempotent 検証自動化)
+- Priority: None, Phase: None, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
 ### Issue 90: Temp test issue for enrichment
+- Priority: P2, Phase: None, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 92: [enhance][roadmap] Enrichment Phase 3: reverse dependents validation & high-risk strict sync
 - Priority: P2, Phase: None, Area: None
 - Risk: (none)
 - CriticalPathRank: None
