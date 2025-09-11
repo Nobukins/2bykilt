@@ -37,7 +37,7 @@
 
 ---
 
-## B. フェーズ (Group A / Group B)
+## B. フェーズ (Group A / Phase2 統合)
 
 ### Group A (Phase 1 – 基盤 & 早期価値)
 
@@ -54,34 +54,26 @@
 | A8 | 後続の新規作成issue | Planned | 追加Issueの評価とスケジュール反映 |
 
 Progress Summary (Phase 1): Wave A1 100% / Wave A2 100% / Wave A3 100% / Wave A4 100% / Wave A5 100% / Wave A6 100% / Wave A7 100% ( #60 Security Base 完了) 残: Group B Phase 2 へ移行。Draft/試行 PR は進捗計測に含めず。
-Progress Summary (Phase 2): Wave B4 50% ( #39 CSV コア完了, #42 リトライ完了) 残: B1-B3, B5-B6 着手待ち。
+Progress Summary (Phase2): Phase2-04 Done / Early focus shifts to Phase2-01 (Runner) & Phase2-05 (Batch 成果物) & Phase2-07 (Metrics surfacing) / Upcoming gating: coverage (#109) & sandbox (#62)。
 
-### Group B (Phase 2 – 拡張 / 高度化)
+### Phase2 (拡張 / 高度化 / 継続改善 統合)
 
-| Wave | Issues | Status | 備考 |
-|------|--------|--------|------|
-| B1 | #46 → #47 → #48 | Planned | Run/Job タイムアウト & キャンセル → 並列実行キュー & 制限 → 環境変数バリデーション & 診断 |
-| B2 | #52 → (#62 PoC) → (#62 Enforce) → #54 → #55 | Planned | サンドボックス allow/deny パス → 実行サンドボックス機能制限 → cdp-use デュアルエンジン抽象レイヤ → browser_control pytest パス修正 |
-| B3 | #51 | Planned | Windows プロファイル永続化 |
-| B4 | #39 ✅ → #41 ✅ → #42 ✅ → #40 ✅ | In Progress | CSV 駆動バッチエンジンコア (part1 完了) → バッチ進捗・サマリー → バッチ部分リトライ → CSV D&D UI 連携 |
-| B5 | #53 → #49(part1/part2) | Planned | cdp-use 追加タイプ調査 → ユーザースクリプト プラグインアーキテクチャ |
-| B6 | Hardening / Cleanup | Planned | 全体のHardeningとCleanup |
+従来の Group B / C を統合し、優先度と依存関係に基づき再編した Wave (Phase2-XX) を定義。
 
-### Group C (Phase 3 – 継続改善 / 品質向上)
-
-| Wave | Issues | Status | 備考 |
-|------|--------|--------|------|
-| C1 | #154 | OPEN | 🔴 CRITICAL: pip-audit dependency resolution failure in GitHub Actions |
-| C2 | #127 | OPEN | `[docs][batch]` CSVバッチエンジン統合ドキュメントの包括的改善 |
-| C3 | #115 | OPEN | `[A3][regression][hardening]` Post-#38 回帰スイート強化 |
-| C4 | #114 #113 | OPEN | CI/ドキュメント改善 (pytest.ini guard scope / archived references cleanup) |
-| C5 | #111 #110 | OPEN | アーティファクト統合・バグ修正 (recording_dir_resolver / browser-control録画未生成) |
-| C6 | #109 | OPEN | `[quality][coverage]` Sonar 新規行カバレッジ向上とQuality Gate再挑戦 |
-| C7 | #108 #107 | OPEN | テスト安定化 (Edge headless flake / PytestReturnNotNone warnings) |
-| C8 | #106 #104 | OPEN | Phase 2 enforcement (unified recording path flag / rollout) |
-| C9 | #102 #101 | OPEN | フラグ・テスト改善 (FeatureFlags アーティファクト / async browser起動安定化) |
-| C10 | #92 #81 | OPEN | 高度化 (Enrichment Phase 3 / 非同期ブラウザ統合テスト安定化) |
-| C11 | #67 #66 | OPEN | ドキュメント整備 (第2弾 / 第1弾) |
+| Wave (Phase2-XX) | Focus | Issues (順序) | 状態 | 備考 |
+|------------------|-------|---------------|------|------|
+| Phase2-01 | Runner 安定化基盤 | #46 → #47 → #48 | Planned | タイムアウト→並列→環境変数診断 |
+| Phase2-02 | Sandbox 強化 & Exec 安全性 | #62 (PoC→Enforce) → #52 | Planned | システムコール/パス制限 → allow/deny 実装 |
+| Phase2-03 | Runner 拡張 (CDP/Windows) | #53 → #54 → #51 | Planned | 調査→抽象レイヤ→Win プロファイル |
+| Phase2-04 | Batch 価値強化 (完了) | #39 ✅ → #41 ✅ → #42 ✅ → #40 ✅ | Done | CSV コア→進捗→部分リトライ→UI |
+| Phase2-05 | Batch 成果物/エクスポート | #175 → #176 | OPEN | ポリシー成果物 & 宣言的抽出 PoC |
+| Phase2-06 | Artifacts 安定化 / 統合 | #111 → #110 → #106 → #104 | OPEN | 録画/パス統合 & flag enforcement |
+| Phase2-07 | Observability 完全化 | #58 ✅ → #59 → #102 | In Progress | Metrics API / Flag artifacts helper |
+| Phase2-08 | Quality / Coverage Gate | #109 → #107 → #108 | OPEN | カバレッジ→警告除去→Edge安定化 |
+| Phase2-09 | Security / Compliance | #154 ✅ (follow-ups TBD) | Partial | 追加セキュリティギャップ分析 (#177 連携) |
+| Phase2-10 | Plugin 基盤 | #49 (part1 / part2) | Planned | 増分2段階 (Loader → Lifecycle) |
+| Phase2-11 | Docs & Automation | #66 → #67 → #92 → #81 → #178 | OPEN | 整備 / enrichment / workflow 追加 |
+| Phase2-12 | MVP 定義 & ギャップ | #177 | OPEN | Enterprise readiness matrix |
 
 Gate 条件:
 
@@ -149,7 +141,7 @@ Flags / 後方互換 Schema / 追加専用ログ→削除遅延 / Sandbox enforc
 
 ## I. 次アクション
 
-Wave A4 は完了。Group A 基盤機能が完了したため、Phase 2 (Group B) の新機能開発へ移行。
+Phase2 再編後の短期優先セットを以下に再定義。A フェーズは完了済みのため記述簡略化。
 
 ### 優先順位付け方針
 
@@ -157,26 +149,28 @@ Wave A4 は完了。Group A 基盤機能が完了したため、Phase 2 (Group B
 - **ユーザーインパクト重視**: #39 (CSV駆動バッチエンジン) はユーザー体験向上効果が高いため優先
 - **セキュリティ重視**: #60 (シークレットマスキング拡張) はセキュリティ強化のため優先
 
-### 短期 (Group B Phase 2 移行 / 新機能開発開始)
+### 短期 (Phase2 Kick Re-aligned)
 
-1. **Group B 移行**: Phase 1 全Wave完了、Phase 2 へ移行開始
-2. **新機能開発開始**: #39 CSV駆動バッチエンジンコア (Phase 2 先頭)
-3. **Metrics 基盤準備**: #58 メトリクス計測基盤 (A6 完了済み)
-4. **Security Base 完了**: #60/#61 シークレットマスキング & スキャン最適化 (A5 完了済み)
-5. **追加Issue評価**: #81 (A2テスト安定化), #92 (Phase 3エンリッチメント), #102-#115 (A3/A8 各種改善) の優先順位付けとスケジュール反映
+1. Phase2-01 着手: #46 実行タイムアウト → 成功後 #47 concurrency queue draft
+2. Phase2-05 開始: #175 成果物キャプチャ PoC → #176 抽出スキーマ
+3. Phase2-07 前倒し: #59 Run Metrics API → #102 Flags artifacts helper
+4. Docs ギャップ定義: #177 MVP Matrix Draft → ギャップ派生 Issue 起票
+5. Workflow 整合性: #178 dependency-pipeline workflow 追加 or docs修正
 
-### 中期 (Phase 2 展開)
+### 中期 (Phase2 Expansion)
 
-1. **Batch Processing 展開**: #39 ✅ (コア完了) → #41 バッチ進捗・サマリー → #42 バッチ部分リトライ → #40 CSV D&D UI 連携
-2. **Runner Enhancement**: #46 → #47 → #48 (タイムアウト/並列/診断)
-3. **Security Hardening**: #62 → #52 (サンドボックス強化)
-4. **Plugins Architecture**: #49 (ユーザースクリプト拡張)
+1. Sandbox Enforcement Path: #62 PoC → enforce gate → #52 allow/deny materialization
+2. Runner Concurrency & Diagnostics: #47 queue infra → #48 env validation diagnostics
+3. Plugin Increment (part1): #49 loader + registration minimal
+4. Artifact Stabilization: #111 resolver merge → #110 browser-control gap fix → #106 flag enforcement warn
 
-### 長期 (Phase 2 後半)
+### 長期 (Phase2 Later)
 
-1. **Observability 完了**: #58 → #59 (メトリクスAPI)
-2. **Advanced Features**: #53 → #54 (CDPデュアルエンジン)
-3. **Documentation**: #66 → #67 (最終仕様文書化)
+1. Plugin Lifecycle & Hooks (#49 part2)
+2. CDP 二重エンジン: #53 research → #54 abstraction
+3. Windows Profile Persist: #51 after queue stability
+4. Quality Gate Hardening: #109 coverage gate automation + fail-fast
+5. Docs/Automation: #92 enrichment pipeline + #81 async test stabilization synergy
 
 ### 完了基準 (Group A → Group B 移行)
 
@@ -191,33 +185,26 @@ Wave A4 は完了。Group A 基盤機能が完了したため、Phase 2 (Group B
 - **セキュリティ優先**: #60 を A5 と並行して早期完了
 - **後方互換**: Flag ベースの段階的導入を徹底
 
-### 開発フロー (Mermaid)
+### 開発フロー (Mermaid - Phase2 色付け試案)
 
 ```mermaid
-graph TD
-    A[Group A 完了] --> B[Phase 2 移行]
-    B --> C[Batch Processing 優先]
-    C --> D[#39 CSVコア ✅]
-    D --> E[#41 進捗・サマリー]
-    E --> F[#42 部分リトライ]
-    F --> G[#40 UI連携]
-    
-    B --> H[Runner Enhancement]
-    H --> I[#46 タイムアウト]
-    I --> J[#47 並列実行]
-    J --> K[#48 診断]
-    
-    B --> L[Security Hardening]
-    L --> M[#62 サンドボックス]
-    M --> N[#52 強化]
-    
-    B --> O[Plugins Architecture]
-    O --> P[#49 ユーザースクリプト]
-    
-    C --> Q[長期目標]
-    Q --> R[#58/#59 Metrics API]
-    R --> S[#53/#54 CDPデュアル]
-    S --> T[#66/#67 Docs]
+graph LR
+    subgraph A[Phase1 Completed]
+      A1[Flags/Config] --> A2[Logging/ID] --> A3[Artifacts] --> A4[Runner Reliability] --> A5[Security Base] --> A6[Metrics Base] --> A7[LLM Toggle]
+    end
+    subgraph P2[Phase2 Unified]
+      P201["Phase2-01 Timeout (#46)"]:::planned --> P201b["Queue (#47)"]:::future --> P201c["EnvDiag (#48)"]:::future
+      P205["Phase2-05 Deliverables (#175)"]:::inprogress --> P205b["Extract Spec (#176)"]:::future
+      P207["Phase2-07 Metrics API (#59)"]:::planned --> P207b["Flags Helper (#102)"]:::future
+      P206["Phase2-06 Artifact Consolidation (#111)"]:::future --> P206b["Recording Fix (#110)"]:::future
+      P208["Phase2-08 Coverage (#109)"]:::planned
+      P202["Phase2-02 Sandbox PoC (#62)"]:::planned --> P202b["Sandbox Enforce (#52)"]:::future
+      P210["Phase2-10 Plugins Part1 (#49)"]:::future
+      P212["Phase2-12 MVP Matrix (#177)"]:::inprogress --> P211["Phase2-11 Docs/Automation (#92,#81,#66,#67,#178)"]:::future
+    end
+    classDef planned fil:#eef,stroke:#88f;
+    classDef inprogress fill:#cfe,stroke:#393;
+    classDef future fill:#fff,stroke:#999,stroke-dasharray: 4 2;
 ```
 
 ### Gitツリー表示 (開発ブランチ構造)
