@@ -11,6 +11,8 @@ import logging
 import uuid
 import os
 import mimetypes
+import time
+import random
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Union, Iterator
 from dataclasses import dataclass, asdict
@@ -611,11 +613,7 @@ class BatchEngine:
         try:
             from .summary import BatchSummaryGenerator
 
-            # First try to get manifest from current context
-            manifest = self._load_manifest_from_current_context(batch_id)
-            if manifest is None:
-                # Search through all batch manifest files in artifacts/runs
-                manifest = self._search_batch_manifest_in_artifacts(batch_id)
+            manifest = self._load_manifest_by_batch_id(batch_id)
             
             if manifest is None:
                 return None
@@ -672,6 +670,16 @@ class BatchEngine:
                 self.logger.error(f"Failed to load batch manifest {manifest_file}: {e}")
 
         return None
+
+    def _load_manifest_by_batch_id(self, batch_id: str) -> Optional[BatchManifest]:
+        """Load batch manifest by batch ID from current context or artifacts."""
+        # First try to get manifest from current context
+        manifest = self._load_manifest_from_current_context(batch_id)
+        if manifest is None:
+            # Search through all batch manifest files in artifacts/runs
+            manifest = self._search_batch_manifest_in_artifacts(batch_id)
+        
+        return manifest
 
     def update_job_status(self, job_id: str, status: str, error_message: Optional[str] = None):
         """
@@ -915,6 +923,27 @@ class BatchEngine:
         except Exception as e:
             self.logger.error(f"Failed to export failed rows: {e}")
 
+    def _record_failed_rows_export_metric(self, failed_count: int):
+        """Record metrics for failed rows export."""
+        try:
+            from ..metrics import get_metrics_collector, MetricType
+
+            collector = get_metrics_collector()
+            if collector is None:
+                return
+
+            collector.record_metric(
+                name="failed_rows_exported",
+                value=failed_count,
+                metric_type=MetricType.COUNTER,
+                tags={
+                    "run_id": self.run_context.run_id_base
+                }
+            )
+
+        except Exception as e:
+            self.logger.debug(f"Failed to record failed rows export metrics: {e}")
+
     def _validate_retry_parameters(self, max_retries: int, retry_delay: float,
                                   backoff_factor: float, max_retry_delay: Optional[float]) -> float:
         """
@@ -951,7 +980,11 @@ class BatchEngine:
                         retry_delay: float = DEFAULT_RETRY_DELAY, backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
                         max_retry_delay: Optional[float] = None) -> Dict[str, Any]:
         """
-        Retry specific jobs in a batch.
+        Prepare specific jobs in a batch for retry by resetting their status.
+
+        This method resets failed jobs to 'pending' status, allowing them to be
+        executed again. It does not execute the jobs immediately - it only prepares
+        them for subsequent execution.
 
         Args:
             batch_id: Batch identifier (must be non-empty string)
@@ -987,9 +1020,7 @@ class BatchEngine:
 
         try:
             # Load batch manifest
-            manifest = self._load_manifest_from_current_context(batch_id)
-            if manifest is None:
-                manifest = self._search_batch_manifest_in_artifacts(batch_id)
+            manifest = self._load_manifest_by_batch_id(batch_id)
 
             if manifest is None:
                 raise ValueError(f"Batch not found: {batch_id}")
@@ -1152,9 +1183,6 @@ class BatchEngine:
             max_retries, retry_delay, backoff_factor, max_retry_delay
         )
 
-        import time
-        from typing import Optional
-
         last_error: Optional[str] = None
         last_exception: Optional[Exception] = None
         current_delay = retry_delay
@@ -1207,6 +1235,8 @@ class BatchEngine:
         In the current implementation, it processes the job data and
         simulates job execution based on the data content.
 
+        TODO: Replace simulation with actual job execution logic (e.g., browser automation)
+
         Args:
             job: Job to execute (must be valid BatchJob instance)
 
@@ -1254,6 +1284,8 @@ class BatchEngine:
         based on the job data. In production, this should be replaced
         with actual job execution logic.
 
+        TODO: Replace this simulation with actual job execution logic
+
         Args:
             job: Job to execute (must be valid BatchJob instance)
             success_rate: Success rate for simulation (0.0 to 1.0, defaults to DEFAULT_SUCCESS_RATE)
@@ -1281,13 +1313,9 @@ class BatchEngine:
         if max_random_delay < 0:
             raise ValueError("max_random_delay must be >= 0")
 
-        import random
-        from typing import Any
-
         try:
             # Add small random delay to simulate processing time
             if max_random_delay > 0:
-                import time
                 time.sleep(random.uniform(0, max_random_delay))
 
             # Simulate different failure scenarios based on data content

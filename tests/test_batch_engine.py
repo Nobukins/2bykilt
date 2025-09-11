@@ -588,6 +588,37 @@ class TestBatchEngine:
                 assert rows[0]['name'] == 'test'
                 assert rows[0]['value'] == '123'
 
+    def test_record_failed_rows_export_metric(self, engine):
+        """Test _record_failed_rows_export_metric method."""
+        # Mock the metrics collector and get_metrics_collector function
+        with patch('src.metrics.get_metrics_collector') as mock_get_collector, \
+             patch('src.metrics.MetricType') as mock_metric_type:
+            
+            mock_collector = Mock()
+            mock_get_collector.return_value = mock_collector
+            
+            # Call the method
+            engine._record_failed_rows_export_metric(5)
+            
+            # Verify metrics were recorded
+            mock_collector.record_metric.assert_called_once_with(
+                name="failed_rows_exported",
+                value=5,
+                metric_type=mock_metric_type.COUNTER,
+                tags={
+                    "run_id": engine.run_context.run_id_base
+                }
+            )
+
+    def test_record_failed_rows_export_metric_no_collector(self, engine):
+        """Test _record_failed_rows_export_metric when no metrics collector is available."""
+        # Mock get_metrics_collector to return None
+        with patch('src.metrics.get_metrics_collector', return_value=None):
+            # Call the method - should not raise exception
+            engine._record_failed_rows_export_metric(5)
+        
+        # Method should complete without error even without metrics collector
+
 
 class TestBatchEngineLogging:
     """Test BatchEngine logging functionality."""
@@ -1221,3 +1252,73 @@ class TestBatchRetry:
 
         with pytest.raises(ValueError, match="max_retry_delay must be > 0"):
             engine.retry_batch_jobs("batch1", ["job1"], max_retry_delay=-1)
+
+    def test_load_manifest_by_batch_id_success(self, engine, temp_dir, run_context):
+        """Test _load_manifest_by_batch_id helper method success."""
+        # Create a manifest
+        csv_content = "name,value\ntest1,data1\ntest2,data2\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        manifest = engine.create_batch_jobs(str(csv_file))
+        batch_id = manifest.batch_id
+
+        # Test the helper method
+        loaded_manifest = engine._load_manifest_by_batch_id(batch_id)
+
+        assert loaded_manifest is not None
+        assert loaded_manifest.batch_id == batch_id
+        assert loaded_manifest.total_jobs == 2
+        assert len(loaded_manifest.jobs) == 2
+
+    def test_load_manifest_by_batch_id_not_found(self, engine):
+        """Test _load_manifest_by_batch_id with non-existent batch."""
+        result = engine._load_manifest_by_batch_id("non_existent_batch")
+        assert result is None
+
+    def test_execute_job_with_retry_no_side_effects(self, engine):
+        """Test that execute_job_with_retry doesn't have side effects on retry parameters."""
+        job = BatchJob("test_job", "test_run", {"data": "test"})
+
+        # Mock execution to fail twice then succeed
+        call_count = 0
+        def mock_execute(job):
+            nonlocal call_count
+            call_count += 1
+            if call_count < 3:
+                raise Exception("Test failure")
+            return 'completed'
+
+        with patch.object(engine, '_execute_single_job', side_effect=mock_execute):
+            with patch('time.sleep') as mock_sleep:
+                status = engine.execute_job_with_retry(
+                    job,
+                    max_retries=3,
+                    retry_delay=1.0,
+                    backoff_factor=2.0,
+                    max_retry_delay=10.0
+                )
+
+        assert status == 'completed'
+        assert call_count == 3  # Initial + 2 retries
+
+        # Verify sleep was called with correct exponential backoff
+        # First retry: 1.0s, Second retry: 2.0s
+        expected_calls = [((1.0,), {}), ((2.0,), {})]
+        mock_sleep.assert_has_calls(expected_calls)
+
+        # Test that calling the method again starts fresh (no side effects)
+        call_count = 0
+        with patch.object(engine, '_execute_single_job', side_effect=mock_execute):
+            with patch('time.sleep') as mock_sleep:
+                status = engine.execute_job_with_retry(
+                    job,
+                    max_retries=3,
+                    retry_delay=1.0,
+                    backoff_factor=2.0,
+                    max_retry_delay=10.0
+                )
+
+        assert status == 'completed'
+        # Should have the same sleep pattern (no side effects from previous call)
+        mock_sleep.assert_has_calls(expected_calls)
