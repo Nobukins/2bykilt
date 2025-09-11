@@ -13,6 +13,7 @@ import os
 import mimetypes
 import time
 import random
+import re
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Union, Iterator
 from typing import TYPE_CHECKING
@@ -1662,7 +1663,6 @@ class BatchEngine:
                     return int(last_part)
 
             # Try to find any numeric sequence at the end
-            import re
             match = re.search(r'(\d+)$', job_id)
             if match:
                 return int(match.group(1))

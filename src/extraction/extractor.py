@@ -52,12 +52,12 @@ class FieldExtractor:
                 if value is not None:
                     extracted_fields[field.name] = value
                 elif field.required:
-                    # Required field not found - set to None and add warning
+                    # Optional field not found - set to None and add warning
                     extracted_fields[field.name] = None
                     warnings.append(ExtractionWarning(
                         field_name=field.name,
                         selector=field.selector,
-                        reason="Required field not found",
+                        reason="Optional field not found",
                         timestamp=datetime.now().isoformat()
                     ))
                 else:
@@ -86,7 +86,7 @@ class FieldExtractor:
                         warnings.append(ExtractionWarning(
                             field_name=field.name,
                             selector=field.selector,
-                            reason="Required field not found",
+                            reason="Optional field not found",
                             timestamp=datetime.now().isoformat()
                         ))
 

@@ -326,7 +326,7 @@ fields:
         finally:
             Path(temp_path).unlink()
 
-    @patch('bs4.BeautifulSoup')
+    @patch('src.extraction.extractor.BeautifulSoup')
     def test_extract_fields_text_mode(self, mock_bs):
         """Test field extraction in text mode."""
         # Mock BeautifulSoup
@@ -363,7 +363,7 @@ fields:
         finally:
             Path(temp_path).unlink()
 
-    @patch('bs4.BeautifulSoup')
+    @patch('src.extraction.extractor.BeautifulSoup')
     def test_extract_fields_attr_mode(self, mock_bs):
         """Test field extraction in attr mode."""
         # Mock BeautifulSoup
@@ -398,7 +398,7 @@ fields:
         finally:
             Path(temp_path).unlink()
 
-    @patch('bs4.BeautifulSoup')
+    @patch('src.extraction.extractor.BeautifulSoup')
     def test_extract_fields_element_not_found(self, mock_bs):
         """Test field extraction when element is not found."""
         # Mock BeautifulSoup
@@ -468,7 +468,7 @@ fields:
         finally:
             Path(temp_path).unlink()
 
-    @patch('bs4.BeautifulSoup')
+    @patch('src.extraction.extractor.BeautifulSoup')
     def test_extract_fields_with_default_value(self, mock_bs):
         """Test field extraction with default values."""
         # Mock BeautifulSoup
