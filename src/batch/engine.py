@@ -32,6 +32,7 @@ ConfigType = Dict[str, Union[str, int, float, bool]]
 # Constants for job execution simulation
 DEFAULT_SUCCESS_RATE = 0.7  # 70% success rate for simulation
 MAX_RANDOM_DELAY = 0.1  # Maximum random delay in seconds for simulation
+ENABLE_SIMULATION_DELAYS = os.getenv('BYKILT_ENABLE_SIMULATION_DELAYS', '').lower() in ('true', '1', 'yes')
 
 # Constants for retry mechanism
 DEFAULT_MAX_RETRIES = 3  # Default maximum number of retry attempts
@@ -1223,7 +1224,7 @@ class BatchEngine:
 
         # Re-raise the last exception to preserve the original error context
         if last_exception:
-            raise last_exception
+            raise
         else:
             raise RuntimeError(f"Job {job.job_id}: {error_summary}")
 
@@ -1320,8 +1321,9 @@ class BatchEngine:
             raise ValueError("max_random_delay must be >= 0")
 
         try:
-            # Add small random delay to simulate processing time
-            if max_random_delay > 0:
+            # Add small random delay to simulate processing time 
+            # (only if explicitly enabled via BYKILT_ENABLE_SIMULATION_DELAYS env var)
+            if max_random_delay > 0 and ENABLE_SIMULATION_DELAYS:
                 time.sleep(random.uniform(0, max_random_delay))
 
             # Simulate different failure scenarios based on data content
