@@ -1,6 +1,6 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-09-11T13:06:25+00:00
+Generated at (UTC): 2025-09-11T22:08:10+00:00
 
 ## 1. メタサマリー
 
@@ -96,8 +96,8 @@ Sorted By: critical_path_rank
 | 35 | アーティファクト manifest v2 | P0 | 1 | artifacts |  | 3 | 1 | 1 | 3 | #94 |
 | 46 | Run/Job タイムアウト & キャンセル | P2 | 2 | runner | high | 3 | 1 | 1 | 1 |  |
 | 63 | llms.txt スキーマ & バリデータ | P0 | 1-late | config |  | 3 | 2 | 2 | 1 |  |
-| 175 | バッチ行単位成果物キャプチャ基盤 (スクリーンショット/要素値/ログ関連紐付け) | P1 | 2 | artifacts | medium | 2 | 4 | 6 | 1 |  |
-| 176 | 宣言的抽出スキーマ (CSV列→コマンド引数/抽出ポリシーマッピング) | P1 | 2 | batch | high | 2 | 3 | 3 | 0 |  |
+| 175 | バッチ行単位成果物キャプチャ基盤 (スクリーンショット/要素値/ログ関連紐付け) | P1 | 2 | artifacts | medium | 2 | 4 | 6 | 1 | #181 |
+| 176 | 宣言的抽出スキーマ (CSV列→コマンド引数/抽出ポリシーマッピング) | P1 | 2 | batch | high | 2 | 3 | 3 | 0 | #181 |
 | 33 | スクリーンショット取得ユーティリティ | P0 | 1 | artifacts |  | 2 | 1 | 1 | 3 |  |
 | 36 | アーティファクト一覧 API | P1 | 1 | artifacts |  | 2 | 2 | 1 | 1 | #95 |
 | 37 | 動画アーティファクト保持期間 | P1 | 1 | artifacts |  | 2 | 3 | 1 | 1 | #99 |
@@ -235,6 +235,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 4
 - Depends (6): 39, 40, 41, 42, 33, 35
 - Dependents (1): 176
+- Progress: {"state": "done", "primary_pr": 181}
 
 ### Issue 176: 宣言的抽出スキーマ (CSV列→コマンド引数/抽出ポリシーマッピング)
 - Priority: P1, Phase: 2, Area: batch
@@ -243,6 +244,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 3
 - Depends (3): 175, 39, 40
 - Dependents (0): (none)
+- Progress: {"state": "done", "primary_pr": 181}
 
 ### Issue 33: スクリーンショット取得ユーティリティ
 - Priority: P0, Phase: 1, Area: artifacts

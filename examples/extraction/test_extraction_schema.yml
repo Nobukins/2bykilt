@@ -1,0 +1,29 @@
+version: "1.0"
+name: "test_extraction_schema"
+description: "Test schema for field extraction validation"
+
+fields:
+  - name: "user_id"
+    selector: ".profile .uid"
+    mode: "text"
+    required: true
+    description: "User ID from profile section"
+
+  - name: "status"
+    selector: "#status"
+    mode: "text"
+    required: true
+    description: "Status indicator"
+
+  - name: "data_value"
+    selector: ".data"
+    mode: "text"
+    required: false
+    description: "Data value from content"
+
+  - name: "user_attr"
+    selector: ".profile .uid"
+    mode: "attr"
+    attr_name: "data-user"
+    required: false
+    description: "User attribute from data-user"

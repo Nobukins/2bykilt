@@ -152,8 +152,8 @@ issues:
   "173": {title: "[UI][batch][#40 follow-up] CSV Preview & Command Argument Mapping", meta: {area: batch, type: feat, priority: P2, phase: "2", stability: experimental}, depends: ["39", "40", "41", "42"], dependents: [], risk: null, critical_path_rank: 1}
   "174": {title: "[artifacts][batch] Clarify Artifact Output & Access Flow", meta: {area: artifacts, type: docs, priority: P3, phase: "2", stability: core}, depends: ["28", "30", "33", "35", "39"], dependents: [], risk: low, critical_path_rank: 1}
   "154": {title: "pip-audit stabilization in CI with normalizer + targeted suppressions", meta: {area: security, type: fix, priority: P1, phase: "1", stability: core}, depends: [], dependents: [], risk: null, progress: {state: done, primary_pr: 160}, critical_path_rank: 1}
-  "175": {title: "バッチ行単位成果物キャプチャ基盤 (スクリーンショット/要素値/ログ関連紐付け)", meta: {area: artifacts, type: feat, priority: P1, phase: "2", stability: experimental}, depends: ["39", "40", "41", "42", "33", "35"], dependents: ["176"], risk: medium, critical_path_rank: 2}
-  "176": {title: "宣言的抽出スキーマ (CSV列→コマンド引数/抽出ポリシーマッピング)", meta: {area: batch, type: feat, priority: P1, phase: "2", stability: experimental}, depends: ["175", "39", "40"], dependents: [], risk: high, critical_path_rank: 2}
+  "175": {title: "バッチ行単位成果物キャプチャ基盤 (スクリーンショット/要素値/ログ関連紐付け)", meta: {area: artifacts, type: feat, priority: P1, phase: "2", stability: experimental}, depends: ["39", "40", "41", "42", "33", "35"], dependents: ["176"], risk: medium, progress: {state: done, primary_pr: 181}, critical_path_rank: 2}
+  "176": {title: "宣言的抽出スキーマ (CSV列→コマンド引数/抽出ポリシーマッピング)", meta: {area: batch, type: feat, priority: P1, phase: "2", stability: experimental}, depends: ["175", "39", "40"], dependents: [], risk: high, progress: {state: done, primary_pr: 181}, critical_path_rank: 2}
   "177": {title: "MVP エンタープライズ Readiness マトリクス定義", meta: {area: docs, type: docs, priority: P1, phase: "2", stability: core}, depends: ["60", "58", "35", "39", "43"], dependents: [], risk: null, critical_path_rank: 1}
   "178": {title: "CI: dependency-pipeline workflow 追加 (生成物 idempotent 検証自動化)", meta: {area: automation, type: chore, priority: P2, phase: "2", stability: core}, depends: ["76"], dependents: [], risk: low, critical_path_rank: 1}
 
@@ -168,4 +168,4 @@ summary:
       - "81"
       - "90"
       - "154"
-  generated_at_utc: "2025-09-01T00:00:00Z"
+  generated_at_utc: "2025-09-12T00:00:00Z"

@@ -1,3 +1,5 @@
 timestamp,value,batch_id,error_type,job_id,run_id
-2025-09-10T22:32:40.593648,1,d1aa9203-9ce6-49b8-b255-2ed45dfc7d96,execution_error,test_run_123_0001,test_run_123
-2025-09-10T22:33:08.858568,1,35ad5393-6c7b-49ab-800b-7f2ca2566139,execution_error,MFLAGON3_0003,MFLAGON3
+2025-09-12T06:39:25.180040,1,726c0ac4-da72-43cb-865c-854d5467ad8e,execution_error,test_run_123_0001,test_run_123
+2025-09-12T06:39:25.218317,1,d45f5de6-b246-4586-b0b6-dae0086a40c1,execution_error,test_run_123_0001,test_run_123
+2025-09-12T06:39:25.237526,1,2f91609f-58cb-4146-9f6e-6bdd125f772a,execution_error,test_run_123_0001,test_run_123
+2025-09-12T06:39:56.741936,1,d9b6f2db-ec52-4e1d-b4af-e1e19cf3953a,execution_error,MFLAGON3_0003,MFLAGON3
