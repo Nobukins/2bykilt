@@ -1266,6 +1266,12 @@ class BatchEngine:
             if not isinstance(job.row_data, dict):
                 raise ValueError(f"Job {job.job_id} row_data must be a dictionary")
 
+            # Log job data keys safely (exclude sensitive information)
+            sensitive_keys = {'password', 'secret', 'token', 'key', 'api_key', 'auth', 'credential'}
+            safe_keys = [k for k in job.row_data.keys() if k.lower() not in sensitive_keys]
+            self.logger.debug(f"Processing job {job.job_id} with {len(job.row_data)} data fields "
+                            f"(safe keys: {safe_keys[:5]}{'...' if len(safe_keys) > 5 else ''})")
+
             # Simulate job execution based on data content
             # In real implementation, replace with actual browser automation or processing logic
             return self._simulate_job_execution(job)
