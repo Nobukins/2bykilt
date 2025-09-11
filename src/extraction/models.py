@@ -35,9 +35,11 @@ class ExtractionResult:
     def __post_init__(self):
         if not self.extracted_at:
             self.extracted_at = datetime.now().isoformat()
-        self.success_count = len([f for f in self.extracted_fields.values() if f is not None])
+        # Calculate success/failure counts
+        self.success_count = len([v for v in self.extracted_fields.values() if v is not None])
         self.failure_count = len(self.warnings)
-        self.total_fields = self.success_count + self.failure_count
+        # Total fields attempted is the number of fields in extracted_fields
+        self.total_fields = len(self.extracted_fields)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""

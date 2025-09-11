@@ -50,6 +50,8 @@ class FieldExtractor:
                 if value is not None:
                     extracted_fields[field.name] = value
                 elif field.required:
+                    # Required field not found - set to None and add warning
+                    extracted_fields[field.name] = None
                     warnings.append(ExtractionWarning(
                         field_name=field.name,
                         selector=field.selector,
@@ -72,7 +74,19 @@ class FieldExtractor:
                         timestamp=datetime.now().isoformat()
                     ))
                 else:
-                    extracted_fields[field.name] = field.default_value
+                    # For non-required fields, use default value if available
+                    if field.default_value is not None:
+                        extracted_fields[field.name] = field.default_value
+                        # This counts as a success since we provided a default value
+                    else:
+                        extracted_fields[field.name] = None
+                        # This counts as a failure for non-required fields without defaults
+                        warnings.append(ExtractionWarning(
+                            field_name=field.name,
+                            selector=field.selector,
+                            reason="Required field not found",
+                            timestamp=datetime.now().isoformat()
+                        ))
 
         result = ExtractionResult(
             job_id=job_id,
@@ -128,14 +142,16 @@ class FieldExtractor:
         In production, this would use Playwright or Selenium.
         """
         # TODO: Implement actual browser extraction
-        # For now, return mock data for testing
+        # For now, return mock data based on field type for testing
         self.logger.debug(f"Mock extraction for field '{field.name}' from browser")
 
-        # Mock extraction based on field name for testing
-        if field.name == "login_status":
-            return "success"
-        elif field.name == "user_id":
-            return "user123"
+        # Generic mock implementation based on field mode
+        if field.mode == "text":
+            return f"mock_text_for_{field.name}"
+        elif field.mode == "attr":
+            return f"mock_attr_for_{field.name}"
+        elif field.mode == "html":
+            return f"<div>mock_html_for_{field.name}</div>"
         else:
             return f"mock_value_for_{field.name}"
 

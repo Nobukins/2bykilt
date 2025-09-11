@@ -1590,7 +1590,7 @@ class BatchEngine:
             # TODO: Integrate with actual browser context
             result = extractor.extract_fields(
                 job_id=job.job_id,
-                row_index=int(job.job_id.split('_')[-1]) if '_' in job.job_id else 0,
+                row_index=getattr(job, 'row_index', self._parse_row_index_from_job_id(job.job_id)),
                 page_content=self._get_mock_page_content(job)
             )
 
@@ -1640,6 +1640,39 @@ class BatchEngine:
         </html>
         """
         return mock_html
+
+    def _parse_row_index_from_job_id(self, job_id: str) -> int:
+        """
+        Parse row index from job ID.
+
+        Supports various job ID formats:
+        - run_id_001, run_id_002, etc.
+        - UUID-based IDs
+        - Custom formats
+
+        Returns:
+            Parsed row index or 0 if parsing fails
+        """
+        try:
+            # Try to extract numeric part from the end
+            parts = job_id.split('_')
+            if len(parts) >= 2:
+                last_part = parts[-1]
+                if last_part.isdigit():
+                    return int(last_part)
+
+            # Try to find any numeric sequence at the end
+            import re
+            match = re.search(r'(\d+)$', job_id)
+            if match:
+                return int(match.group(1))
+
+            # Fallback to 0 for UUIDs or other formats
+            return 0
+
+        except (ValueError, AttributeError):
+            self.logger.debug(f"Could not parse row index from job_id: {job_id}")
+            return 0
 
     def _record_extraction_metrics(self, job_id: str, result: 'ExtractionResult'):
         """Record metrics for field extraction."""
