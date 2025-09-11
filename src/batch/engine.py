@@ -583,6 +583,20 @@ class BatchEngine:
 
         Returns:
             BatchSummary if found, None otherwise
+
+        Note:
+            The returned BatchSummary uses a hybrid data access pattern:
+            - Summary statistics: Use attribute access (e.g., summary.completed_jobs)
+            - Individual job details: Use dictionary access (e.g., summary.jobs[0]['status'])
+
+        Example:
+            ```python
+            summary = engine.get_batch_summary("batch-123")
+            if summary:
+                print(f"Completed: {summary.completed_jobs}/{summary.total_jobs}")
+                if summary.jobs:
+                    print(f"First job status: {summary.jobs[0]['status']}")
+            ```
         """
         try:
             from .summary import BatchSummaryGenerator
