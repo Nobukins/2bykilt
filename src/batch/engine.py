@@ -14,7 +14,7 @@ import mimetypes
 import time
 import random
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Union, Iterator
+from typing import Dict, List, Optional, Any, Union, Iterator, Literal
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from contextlib import contextmanager
@@ -181,6 +181,7 @@ class BatchEngine:
             'validate_headers': True, # Validate CSV headers exist
             'skip_empty_rows': True, # Skip empty rows automatically
             'log_level': 'INFO',     # Logging level (DEBUG, INFO, WARNING, ERROR)
+            'enable_simulation_delay': False, # Enable random delays in simulation (default: False for production)
         }
 
         # Load configuration from environment variables first
@@ -252,6 +253,7 @@ class BatchEngine:
             'BATCH_VALIDATE_HEADERS': ('validate_headers', lambda x: x.lower() in ('true', '1', 'yes')),
             'BATCH_SKIP_EMPTY_ROWS': ('skip_empty_rows', lambda x: x.lower() in ('true', '1', 'yes')),
             'BATCH_LOG_LEVEL': ('log_level', str),
+            'BATCH_ENABLE_SIMULATION_DELAY': ('enable_simulation_delay', lambda x: x.lower() in ('true', '1', 'yes')),
         }
 
         for env_var, (config_key, converter) in env_mapping.items():
@@ -1157,7 +1159,7 @@ class BatchEngine:
 
     def execute_job_with_retry(self, job: BatchJob, max_retries: int = DEFAULT_MAX_RETRIES,
                               retry_delay: float = DEFAULT_RETRY_DELAY, backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
-                              max_retry_delay: Optional[float] = None) -> str:
+                              max_retry_delay: Optional[float] = None) -> Literal['completed', 'failed']:
         """
         Execute a job with automatic retry on failure.
 
@@ -1221,13 +1223,10 @@ class BatchEngine:
         job.error_message = f"{error_summary}. Last error: {type(last_exception).__name__ if last_exception else 'Unknown'}"
         self.logger.error(f"Job {job.job_id} permanently failed: {error_summary}")
 
-        # Re-raise the last exception to preserve the original error context
-        if last_exception:
-            raise last_exception
-        else:
-            raise RuntimeError(f"Job {job.job_id}: {error_summary}")
+        # Return failed status instead of raising exception to match return type annotation
+        return 'failed'
 
-    def _execute_single_job(self, job: BatchJob) -> str:
+    def _execute_single_job(self, job: BatchJob) -> Literal['completed', 'failed']:
         """
         Execute a single job.
 
@@ -1282,7 +1281,7 @@ class BatchEngine:
             raise RuntimeError(f"Job {job.job_id}: {type(e).__name__}") from e
 
     def _simulate_job_execution(self, job: BatchJob, success_rate: Optional[float] = None,
-                               max_random_delay: Optional[float] = None) -> str:
+                               max_random_delay: Optional[float] = None) -> Literal['completed', 'failed']:
         """
         Simulate job execution for testing purposes.
 
@@ -1320,8 +1319,8 @@ class BatchEngine:
             raise ValueError("max_random_delay must be >= 0")
 
         try:
-            # Add small random delay to simulate processing time
-            if max_random_delay > 0:
+            # Add small random delay to simulate processing time (only in test/debug mode)
+            if max_random_delay > 0 and self.config.get('enable_simulation_delay', False):
                 time.sleep(random.uniform(0, max_random_delay))
 
             # Simulate different failure scenarios based on data content
