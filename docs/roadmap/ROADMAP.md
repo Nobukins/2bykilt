@@ -193,18 +193,18 @@ graph LR
       A1[Flags/Config] --> A2[Logging/ID] --> A3[Artifacts] --> A4[Runner Reliability] --> A5[Security Base] --> A6[Metrics Base] --> A7[LLM Toggle]
     end
     subgraph P2[Phase2 Unified]
-      P201[Phase2-01 Timeout (#46)]:::planned --> P201b[Queue (#47)]:::future --> P201c[EnvDiag (#48)]:::future
-      P205[Phase2-05 Deliverables (#175)]:::inprogress --> P205b[Extract Spec (#176)]:::future
-      P207[Phase2-07 Metrics API (#59)]:::planned --> P207b[Flags Helper (#102)]:::future
-      P206[Phase2-06 Artifact Consolidation (#111)]:::future --> P206b[Recording Fix (#110)]:::future
-      P208[Phase2-08 Coverage (#109)]:::planned
-      P202[Phase2-02 Sandbox PoC (#62)]:::planned --> P202b[Sandbox Enforce (#52)]:::future
-      P210[Phase2-10 Plugins Part1 (#49)]:::future
-      P212[Phase2-12 MVP Matrix (#177)]:::inprogress --> P211[Phase2-11 Docs/Automation (#92,#81,#66,#67,#178)]:::future
+      P201["Phase2-01 Timeout (#46)"]:::planned --> P201b["Queue (#47)"]:::future --> P201c["EnvDiag (#48)"]:::future
+      P205["Phase2-05 Deliverables (#175)"]:::inprogress --> P205b["Extract Spec (#176)"]:::future
+      P207["Phase2-07 Metrics API (#59)"]:::planned --> P207b["Flags Helper (#102)"]:::future
+      P206["Phase2-06 Artifact Consolidation (#111)"]:::future --> P206b["Recording Fix (#110)"]:::future
+      P208["Phase2-08 Coverage (#109)"]:::planned
+      P202["Phase2-02 Sandbox PoC (#62)"]:::planned --> P202b["Sandbox Enforce (#52)"]:::future
+      P210["Phase2-10 Plugins Part1 (#49)"]:::future
+      P212["Phase2-12 MVP Matrix (#177)"]:::inprogress --> P211["Phase2-11 Docs/Automation (#92,#81,#66,#67,#178)"]:::future
     end
-    classDef planned fill=#eef,stroke=#88f;
-    classDef inprogress fill=#cfe,stroke=#393;
-    classDef future fill=#fff,stroke=#999,stroke-dasharray: 4 2;
+    classDef planned fil:#eef,stroke:#88f;
+    classDef inprogress fill:#cfe,stroke:#393;
+    classDef future fill:#fff,stroke:#999,stroke-dasharray: 4 2;
 ```
 
 ### Gitツリー表示 (開発ブランチ構造)
