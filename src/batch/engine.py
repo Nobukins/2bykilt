@@ -574,7 +574,7 @@ class BatchEngine:
         except Exception as e:
             self.logger.debug(f"Failed to record batch creation metrics: {e}")
 
-    def get_batch_summary(self, batch_id: str):
+    def get_batch_summary(self, batch_id: str) -> Optional['BatchSummary']:
         """
         Get batch summary for a batch execution.
 
@@ -587,8 +587,12 @@ class BatchEngine:
         try:
             from .summary import BatchSummaryGenerator
 
-            # First try to get manifest
-            manifest = self.get_batch_status(batch_id)
+            # First try to get manifest from current context
+            manifest = self._load_manifest_from_current_context(batch_id)
+            if manifest is None:
+                # Search through all batch manifest files in artifacts/runs
+                manifest = self._search_batch_manifest_in_artifacts(batch_id)
+            
             if manifest is None:
                 return None
 

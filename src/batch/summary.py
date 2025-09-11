@@ -9,8 +9,11 @@ import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, TYPE_CHECKING
 from dataclasses import dataclass, asdict
+
+if TYPE_CHECKING:
+    from .engine import BatchManifest
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +57,7 @@ class BatchSummaryGenerator:
     def __init__(self):
         self.logger = logging.getLogger(f"{__name__}.BatchSummaryGenerator")
 
-    def generate_summary(self, manifest) -> BatchSummary:
+    def generate_summary(self, manifest: 'BatchManifest') -> BatchSummary:
         """
         Generate batch summary from manifest.
 
