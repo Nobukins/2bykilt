@@ -86,7 +86,6 @@ class QueueManager:
         }
 
         # Don't start stats logging automatically - let caller start it when ready
-        # self._start_stats_logging()
 
     async def start_stats_logging(self) -> None:
         """Start periodic queue statistics logging (async)"""
@@ -123,21 +122,6 @@ class QueueManager:
 
         self._max_concurrency = value
         self._semaphore = asyncio.Semaphore(value)
-
-    def _start_stats_logging(self) -> None:
-        """Start periodic queue statistics logging"""
-        async def log_stats_periodically():
-            while not self._shutdown_event.is_set():
-                try:
-                    await asyncio.sleep(30)  # Log stats every 30 seconds
-                    if not self._shutdown_event.is_set():
-                        self.log_queue_stats()
-                except asyncio.CancelledError:
-                    break
-                except Exception as e:
-                    logger.error(f"Error in periodic stats logging: {e}")
-
-        self._stats_task = asyncio.create_task(log_stats_periodically())
 
     async def shutdown(self) -> None:
         """
