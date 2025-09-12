@@ -117,18 +117,18 @@ class QueueManager:
             raise ValueError("Max concurrency must be at least 1")
 
         # Only allow changing if no active tasks are running
-        if not self._can_change_concurrency():
+        if not self._has_no_pending_tasks():
             raise RuntimeError("Cannot change max_concurrency while tasks are active.")
 
         self._max_concurrency = value
         self._semaphore = asyncio.Semaphore(value)
 
-    def _can_change_concurrency(self) -> bool:
+    def _has_no_pending_tasks(self) -> bool:
         """
-        Check if concurrency can be changed (no active or waiting tasks)
+        Check if there are no active or waiting tasks (pending tasks)
 
         Returns:
-            bool: True if concurrency can be changed, False otherwise
+            bool: True if there are no active or waiting tasks, False otherwise
         """
         return len(self._active) == 0 and len(self._queue) == 0
 
@@ -428,19 +428,34 @@ class QueueManager:
             # Calculate average wait times
             if self._completed_count > 0:
                 completed_items = list(self._completed.values())
-                total_wait = sum(
-                    item.started_at - item.created_at
-                    for item in completed_items
-                    if item.started_at and item.created_at
-                )
-                stats["avg_wait_time"] = total_wait / self._completed_count if self._completed_count > 0 else 0
 
-                total_run = sum(
-                    item.completed_at - item.started_at
-                    for item in completed_items
+                # Calculate average wait time using only items with valid timestamps
+                wait_items = [
+                    item for item in completed_items
+                    if item.started_at and item.created_at
+                ]
+                if wait_items:
+                    total_wait = sum(
+                        item.started_at - item.created_at
+                        for item in wait_items
+                    )
+                    stats["avg_wait_time"] = total_wait / len(wait_items)
+                else:
+                    stats["avg_wait_time"] = 0
+
+                # Calculate average run time using only items with valid timestamps
+                run_items = [
+                    item for item in completed_items
                     if item.completed_at and item.started_at
-                )
-                stats["avg_run_time"] = total_run / self._completed_count if self._completed_count > 0 else 0
+                ]
+                if run_items:
+                    total_run = sum(
+                        item.completed_at - item.started_at
+                        for item in run_items
+                    )
+                    stats["avg_run_time"] = total_run / len(run_items)
+                else:
+                    stats["avg_run_time"] = 0
 
             return stats
 
@@ -484,7 +499,7 @@ class QueueManager:
             raise ValueError("Max concurrency must be at least 1")
 
         # Only allow changing if no active tasks are running
-        if not self._can_change_concurrency():
+        if not self._has_no_pending_tasks():
             raise RuntimeError("Cannot change max_concurrency while tasks are active.")
 
         old_limit = self._max_concurrency
