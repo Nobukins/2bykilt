@@ -132,6 +132,25 @@ class QueueManager:
         """
         return len(self._active) == 0 and len(self._queue) == 0
 
+    # Test helper methods
+    def _add_active_item_for_testing(self, item_id: str, name: str) -> None:
+        """Test helper: Add an active item (violates encapsulation for testing)"""
+        item = QueueItem(
+            id=item_id,
+            name=name,
+            state=QueueState.RUNNING,
+            created_at=time.time()
+        )
+        self._active[item_id] = item
+
+    def _clear_queue_for_testing(self) -> None:
+        """Test helper: Clear the queue (violates encapsulation for testing)"""
+        self._queue.clear()
+
+    def _get_shutdown_event_for_testing(self) -> asyncio.Event:
+        """Test helper: Get shutdown event (violates encapsulation for testing)"""
+        return self._shutdown_event
+
     async def shutdown(self) -> None:
         """
         Shutdown the queue manager gracefully
@@ -148,6 +167,16 @@ class QueueManager:
                 await self._stats_task
             except asyncio.CancelledError:
                 pass
+
+        # Cancel all waiting items in queue
+        with self._lock:
+            while self._queue:
+                item = heapq.heappop(self._queue)
+                item.state = QueueState.CANCELLED
+                item.completed_at = time.time()
+                self._completed[item.id] = item
+                self._cancelled_count += 1
+                logger.info(f"Item cancelled during shutdown: {item.id}")
 
         # Wait for active tasks to complete
         if self._active:
@@ -400,7 +429,7 @@ class QueueManager:
             if len(queue_state["events"]) > 1000:
                 queue_state["events"] = queue_state["events"][-1000:]
 
-            artifact_manager._persist_manifest()
+            artifact_manager.persist_manifest()
 
         except Exception as e:
             logger.error(f"Failed to update manifest queue state: {e}")
@@ -481,7 +510,7 @@ class QueueManager:
             if len(queue_stats) > 100:
                 queue_stats.pop(0)
 
-            artifact_manager._persist_manifest()
+            artifact_manager.persist_manifest()
 
             logger.info("Queue stats logged", extra={"queue_stats": stats})
 
