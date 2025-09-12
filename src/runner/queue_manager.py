@@ -116,12 +116,21 @@ class QueueManager:
         if value < 1:
             raise ValueError("Max concurrency must be at least 1")
 
-        # Only allow changing if all permits are available (no active holders/waiters)
-        if hasattr(self, '_semaphore') and self._semaphore._value < self._max_concurrency:
-            raise RuntimeError("Cannot change max_concurrency while tasks are active or waiting on the semaphore.")
+        # Only allow changing if no active tasks are running
+        if not self._can_change_concurrency():
+            raise RuntimeError("Cannot change max_concurrency while tasks are active.")
 
         self._max_concurrency = value
         self._semaphore = asyncio.Semaphore(value)
+
+    def _can_change_concurrency(self) -> bool:
+        """
+        Check if concurrency can be changed (no active or waiting tasks)
+
+        Returns:
+            bool: True if concurrency can be changed, False otherwise
+        """
+        return len(self._active) == 0 and len(self._queue) == 0
 
     async def shutdown(self) -> None:
         """
@@ -474,9 +483,9 @@ class QueueManager:
         if new_limit < 1:
             raise ValueError("Max concurrency must be at least 1")
 
-        # Only allow changing if all permits are available (no active holders/waiters)
-        if self._semaphore._value < self._max_concurrency:
-            raise RuntimeError("Cannot change max_concurrency while tasks are active or waiting on the semaphore.")
+        # Only allow changing if no active tasks are running
+        if not self._can_change_concurrency():
+            raise RuntimeError("Cannot change max_concurrency while tasks are active.")
 
         old_limit = self._max_concurrency
         self._max_concurrency = new_limit

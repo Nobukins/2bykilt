@@ -18,7 +18,9 @@ class TestQueueManager:
 
     def setup_method(self):
         """Setup test environment"""
-        self.artifacts_dir = Path("/tmp/test_artifacts")
+        import tempfile
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.artifacts_dir = Path(self.temp_dir.name) / "test_artifacts"
         self.artifacts_dir.mkdir(exist_ok=True)
         self.manager = QueueManager(self.artifacts_dir, max_concurrency=2)
 
@@ -26,6 +28,9 @@ class TestQueueManager:
         """Cleanup test environment"""
         # Reset global state
         reset_queue_manager()
+        # Clean up temp directory
+        if hasattr(self, 'temp_dir'):
+            self.temp_dir.cleanup()
 
     def test_enqueue_item(self):
         """Test enqueuing an item"""
@@ -162,47 +167,46 @@ class TestQueueManager:
     @pytest.mark.asyncio
     async def test_update_max_concurrency_with_active_tasks_raises_error(self):
         """Test that updating max concurrency with active tasks raises RuntimeError"""
-        # Acquire semaphore to simulate active task
-        await self.manager._semaphore.acquire()
+        # Simulate active task by adding item to _active dict
+        active_item = QueueItem("active-test", "Active Test", QueueState.RUNNING, time.time())
+        self.manager._active["active-test"] = active_item
 
         try:
-            # Try to update max concurrency while semaphore is acquired - should raise RuntimeError
+            # Try to update max concurrency while there are active tasks - should raise RuntimeError
             with pytest.raises(RuntimeError, match="Cannot change max_concurrency while tasks are active"):
                 self.manager.update_max_concurrency(3)
         finally:
-            # Release semaphore
-            self.manager._semaphore.release()
+            # Clean up
+            self.manager._active.pop("active-test", None)
 
     @pytest.mark.asyncio
     async def test_set_max_concurrency_with_active_tasks_raises_error(self):
         """Test that setting max concurrency with active tasks raises RuntimeError"""
-        # Acquire semaphore to simulate active task
-        await self.manager._semaphore.acquire()
+        # Simulate active task by adding item to _active dict
+        active_item = QueueItem("active-test", "Active Test", QueueState.RUNNING, time.time())
+        self.manager._active["active-test"] = active_item
 
         try:
-            # Try to set max concurrency while semaphore is acquired - should raise RuntimeError
+            # Try to set max concurrency while there are active tasks - should raise RuntimeError
             with pytest.raises(RuntimeError, match="Cannot change max_concurrency while tasks are active"):
                 self.manager.max_concurrency = 3
         finally:
-            # Release semaphore
-            self.manager._semaphore.release()
+            # Clean up
+            self.manager._active.pop("active-test", None)
 
     @pytest.mark.asyncio
     async def test_update_max_concurrency_with_waiting_tasks_raises_error(self):
         """Test that updating max concurrency with waiting tasks raises RuntimeError"""
-        # Set low concurrency limit
-        manager = QueueManager(self.artifacts_dir, max_concurrency=1)
-
-        # Acquire semaphore to simulate active task
-        await manager._semaphore.acquire()
+        # Add waiting task to queue
+        self.manager.enqueue("waiting-test", "Waiting Test")
 
         try:
-            # Try to update max concurrency while semaphore is acquired - should raise RuntimeError
+            # Try to update max concurrency while there are waiting tasks - should raise RuntimeError
             with pytest.raises(RuntimeError, match="Cannot change max_concurrency while tasks are active"):
-                manager.update_max_concurrency(2)
+                self.manager.update_max_concurrency(2)
         finally:
-            # Release semaphore
-            manager._semaphore.release()
+            # Clean up
+            self.manager._queue.clear()
 
     @patch('src.config.multi_env_loader.load_config')
     def test_get_queue_manager_with_config(self, mock_load_config):
@@ -255,15 +259,16 @@ class TestQueueItem:
 
     def test_queue_item_comparison(self):
         """Test QueueItem priority comparison"""
-        item1 = QueueItem("1", "Item 1", QueueState.WAITING, time.time(), priority=1)
-        item2 = QueueItem("2", "Item 2", QueueState.WAITING, time.time(), priority=2)
+        base_time = time.time()
+        item1 = QueueItem("1", "Item 1", QueueState.WAITING, base_time, priority=1)
+        item2 = QueueItem("2", "Item 2", QueueState.WAITING, base_time, priority=2)
 
         # Higher priority should come first
         assert item2 < item1
 
         # Same priority, earlier creation time should come first
-        time.sleep(0.001)
-        item3 = QueueItem("3", "Item 3", QueueState.WAITING, time.time(), priority=1)
+        later_time = base_time + 0.001
+        item3 = QueueItem("3", "Item 3", QueueState.WAITING, later_time, priority=1)
         assert item1 < item3
 
 
