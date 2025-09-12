@@ -159,6 +159,51 @@ class TestQueueManager:
         with pytest.raises(ValueError):
             self.manager.update_max_concurrency(0)
 
+    @pytest.mark.asyncio
+    async def test_update_max_concurrency_with_active_tasks_raises_error(self):
+        """Test that updating max concurrency with active tasks raises RuntimeError"""
+        # Acquire semaphore to simulate active task
+        await self.manager._semaphore.acquire()
+
+        try:
+            # Try to update max concurrency while semaphore is acquired - should raise RuntimeError
+            with pytest.raises(RuntimeError, match="Cannot change max_concurrency while tasks are active"):
+                self.manager.update_max_concurrency(3)
+        finally:
+            # Release semaphore
+            self.manager._semaphore.release()
+
+    @pytest.mark.asyncio
+    async def test_set_max_concurrency_with_active_tasks_raises_error(self):
+        """Test that setting max concurrency with active tasks raises RuntimeError"""
+        # Acquire semaphore to simulate active task
+        await self.manager._semaphore.acquire()
+
+        try:
+            # Try to set max concurrency while semaphore is acquired - should raise RuntimeError
+            with pytest.raises(RuntimeError, match="Cannot change max_concurrency while tasks are active"):
+                self.manager.max_concurrency = 3
+        finally:
+            # Release semaphore
+            self.manager._semaphore.release()
+
+    @pytest.mark.asyncio
+    async def test_update_max_concurrency_with_waiting_tasks_raises_error(self):
+        """Test that updating max concurrency with waiting tasks raises RuntimeError"""
+        # Set low concurrency limit
+        manager = QueueManager(self.artifacts_dir, max_concurrency=1)
+
+        # Acquire semaphore to simulate active task
+        await manager._semaphore.acquire()
+
+        try:
+            # Try to update max concurrency while semaphore is acquired - should raise RuntimeError
+            with pytest.raises(RuntimeError, match="Cannot change max_concurrency while tasks are active"):
+                manager.update_max_concurrency(2)
+        finally:
+            # Release semaphore
+            manager._semaphore.release()
+
     @patch('src.config.multi_env_loader.load_config')
     def test_get_queue_manager_with_config(self, mock_load_config):
         """Test get_queue_manager with config loading"""
