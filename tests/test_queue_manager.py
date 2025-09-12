@@ -165,7 +165,7 @@ class TestQueueManager:
         mock_load_config.return_value = {"runner": {"max_concurrency": 10}}
 
         with patch('src.runtime.run_context.RunContext.get') as mock_rc:
-            mock_rc.return_value.artifact_dir.return_value = self.artifacts_dir
+            mock_rc.return_value.artifact_dir = MagicMock(return_value=self.artifacts_dir)
 
             manager = get_queue_manager()
             assert manager.max_concurrency == 10

@@ -354,6 +354,59 @@ class QueueManager:
         except Exception as e:
             logger.error(f"Failed to log queue event: {e}")
 
+    def _update_manifest_queue_state(self, item: QueueItem, event: str) -> None:
+        """
+        Update manifest with queue state change
+
+        Args:
+            item: Queue item
+            event: Event type (enqueued, started, completed, cancelled)
+        """
+        try:
+            from src.core.artifact_manager import get_artifact_manager
+            artifact_manager = get_artifact_manager()
+
+            manifest = artifact_manager.get_manifest()
+
+            # Initialize queue_state if not exists
+            if "queue_state" not in manifest:
+                manifest["queue_state"] = {
+                    "items": {},
+                    "events": []
+                }
+
+            # Update item state
+            queue_state = manifest["queue_state"]
+            queue_state["items"][item.id] = {
+                "name": item.name,
+                "state": item.state.value,
+                "created_at": item.created_at,
+                "started_at": item.started_at,
+                "completed_at": item.completed_at,
+                "priority": item.priority,
+                "metadata": item.metadata
+            }
+
+            # Add event to events list
+            timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            event_entry = {
+                "timestamp": timestamp,
+                "event": event,
+                "item_id": item.id,
+                "item_name": item.name,
+                "state": item.state.value
+            }
+            queue_state["events"].append(event_entry)
+
+            # Keep only last 1000 events to prevent manifest from growing too large
+            if len(queue_state["events"]) > 1000:
+                queue_state["events"] = queue_state["events"][-1000:]
+
+            artifact_manager._persist_manifest()
+
+        except Exception as e:
+            logger.error(f"Failed to update manifest queue state: {e}")
+
     def get_queue_stats(self) -> Dict[str, Any]:
         """
         Get current queue statistics
@@ -376,16 +429,17 @@ class QueueManager:
 
             # Calculate average wait times
             if self._completed_count > 0:
+                completed_items = list(self._completed.values())
                 total_wait = sum(
                     item.started_at - item.created_at
-                    for item in list(self._queue) + list(self._active.values())
+                    for item in completed_items
                     if item.started_at and item.created_at
                 )
                 stats["avg_wait_time"] = total_wait / self._completed_count if self._completed_count > 0 else 0
 
                 total_run = sum(
                     item.completed_at - item.started_at
-                    for item in list(self._queue) + list(self._active.values())
+                    for item in completed_items
                     if item.completed_at and item.started_at
                 )
                 stats["avg_run_time"] = total_run / self._completed_count if self._completed_count > 0 else 0
