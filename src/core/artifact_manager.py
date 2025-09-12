@@ -284,6 +284,10 @@ class ArtifactManager:
                 pass
         return self._load_manifest()
 
+    def persist_manifest(self) -> None:
+        """Persist the current manifest to disk (public API for external updates)"""
+        self._persist_manifest()
+
     # ---------------- Video Handling (#30) -------------------
     def register_video_file(self, video_path: Path) -> Path:
         """Register a video artifact. Optionally transcode to target container.
