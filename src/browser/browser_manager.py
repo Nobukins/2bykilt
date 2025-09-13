@@ -16,20 +16,7 @@ try:
     from src.utils.recording_path_utils import get_recording_path
 except ImportError:
     # フォールバック: 基本的な録画パス設定
-    def get_recording_path(fallback_relative_path="./tmp/record_videos"):
-        import platform
-        recording_dir = os.environ.get("RECORDING_PATH", "").strip()
-        if not recording_dir:
-            if platform.system() == "Windows":
-                recording_dir = os.path.join(os.path.expanduser("~"), "Documents", "2bykilt", "recordings")
-            else:
-                recording_dir = fallback_relative_path
-        try:
-            os.makedirs(recording_dir, exist_ok=True)
-            return recording_dir
-        except Exception:
-            import tempfile
-            return tempfile.gettempdir()
+    from src.utils.recording_path_utils import get_recording_path
 
 # Configure logging
 logger = logging.getLogger(__name__)

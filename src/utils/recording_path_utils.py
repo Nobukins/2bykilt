@@ -7,6 +7,15 @@ import platform
 import tempfile
 from pathlib import Path
 
+"""
+録画パス設定ユーティリティ - クロスプラットフォーム対応
+"""
+
+import os
+import platform
+import tempfile
+from pathlib import Path
+
 def get_recording_path(fallback_relative_path: str = "./tmp/record_videos") -> str:
     """
     録画ディレクトリのパスを取得する（クロスプラットフォーム対応）
@@ -16,6 +25,18 @@ def get_recording_path(fallback_relative_path: str = "./tmp/record_videos") -> s
         
     Returns:
         str: 録画ディレクトリのパス
+    """
+    # 統一されたリゾルバを使用（Issue #28 step 2）
+    try:
+        from src.utils.recording_dir_resolver import create_or_get_recording_dir
+        return str(create_or_get_recording_dir())
+    except ImportError:
+        # フォールバック: レガシー実装
+        return _legacy_get_recording_path(fallback_relative_path)
+
+def _legacy_get_recording_path(fallback_relative_path: str = "./tmp/record_videos") -> str:
+    """
+    レガシーの録画パス取得実装（フォールバック用）
     """
     # 環境変数から取得
     recording_dir = os.environ.get("RECORDING_PATH", "").strip()

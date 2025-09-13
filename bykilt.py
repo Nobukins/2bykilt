@@ -2484,16 +2484,8 @@ async def on_run_agent_click(task, add_infos, llm_provider, llm_model_name, llm_
                 )
                 
                 if browser_result.get("status") == "success":
-                    # 録画パスを設定（環境変数または設定から取得）
-                    recording_path = os.getenv('RECORDING_PATH')
-                    if not recording_path:
-                        if platform.system() == "Windows":
-                            recording_path = str(Path.cwd() / "tmp" / "record_videos")
-                        else:
-                            recording_path = './tmp/record_videos'
-                    
-                    # 録画ディレクトリを作成
-                    Path(recording_path).mkdir(parents=True, exist_ok=True)
+                    # 録画パスを設定（統一されたリゾルバを使用）
+                    recording_path = str(create_or_get_recording_dir())
                     
                     # 実際のスクリプト実行
                     script_output, script_path = await run_script(

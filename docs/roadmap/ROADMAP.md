@@ -67,7 +67,7 @@ Progress Summary (Phase2): Phase2-04 Done / Phase2-05 Done / Early focus shifts 
 | Phase2-03 | Runner 拡張 (CDP/Windows) | #53 → #54 → #51 | Planned | 調査→抽象レイヤ→Win プロファイル |
 | Phase2-04 | Batch 価値強化 (完了) | #39 ✅ → #41 ✅ → #42 ✅ → #40 ✅ | Done | CSV コア→進捗→部分リトライ→UI |
 | Phase2-05 | Batch 成果物/エクスポート | #175 ✅ → #176 ✅ | Done | ポリシー成果物 & 宣言的抽出 PoC |
-| Phase2-06 | Artifacts 安定化 / 統合 | #111 → #110 → #106 → #104 | OPEN | 録画/パス統合 & flag enforcement |
+| Phase2-06 | Artifacts 安定化 / 統合 | #111 → #110 → #106 → #104 | ✅ DONE | 録画/パス統合 & flag enforcement |
 | Phase2-07 | Observability 完全化 | #58 ✅ → #59 → #102 | In Progress | Metrics API / Flag artifacts helper |
 | Phase2-08 | Quality / Coverage Gate | #109 → #107 → #108 | OPEN | カバレッジ→警告除去→Edge安定化 |
 | Phase2-09 | Security / Compliance | #154 ✅ (follow-ups TBD) | Partial | 追加セキュリティギャップ分析 (#177 連携) |
@@ -196,7 +196,7 @@ graph LR
       P201["Phase2-01 Timeout (#46)"]:::planned --> P201b["Queue (#47)"]:::future --> P201c["EnvDiag (#48)"]:::future
       P205["Phase2-05 Deliverables (#175)"]:::done --> P205b["Extract Spec (#176)"]:::done
       P207["Phase2-07 Metrics API (#59)"]:::planned --> P207b["Flags Helper (#102)"]:::future
-      P206["Phase2-06 Artifact Consolidation (#111)"]:::future --> P206b["Recording Fix (#110)"]:::future
+      P206["Phase2-06 Artifact Consolidation (#111)"]:::done --> P206b["Recording Fix (#110)"]:::done
       P208["Phase2-08 Coverage (#109)"]:::planned
       P202["Phase2-02 Sandbox PoC (#62)"]:::planned --> P202b["Sandbox Enforce (#52)"]:::future
       P210["Phase2-10 Plugins Part1 (#49)"]:::future
