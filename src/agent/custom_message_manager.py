@@ -39,13 +39,14 @@ if ENABLE_LLM:
         class BaseChatModel: pass
 else:
     LLM_MESSAGE_MANAGER_AVAILABLE = False
-    import logging
-    logging.getLogger(__name__).info("ℹ️ LLM disabled reason: ENABLE_LLM=false - message manager functionality disabled")
     # ダミークラスを定義
     class MessageManager: pass
     class BaseChatModel: pass
 
 logger = logging.getLogger(__name__)
+
+if not ENABLE_LLM:
+    logger.info("ℹ️ LLM disabled reason: ENABLE_LLM=false - message manager functionality disabled")
 
 
 class CustomMessageManager(MessageManager):

@@ -1,4 +1,5 @@
 import os
+import logging
 try:
     from src.config.feature_flags import is_llm_enabled
     ENABLE_LLM = is_llm_enabled()
@@ -6,6 +7,8 @@ except Exception:
     ENABLE_LLM = os.getenv("ENABLE_LLM", "false").lower() == "true"
 from dataclasses import dataclass
 from typing import Type, Optional
+
+logger = logging.getLogger(__name__)
 
 # 条件付きLLMインポート
 if ENABLE_LLM:
@@ -34,8 +37,6 @@ if ENABLE_LLM:
             return None
 else:
     LLM_AGENT_VIEWS_AVAILABLE = False
-    import logging
-    logger = logging.getLogger(__name__)
     logger.info("ℹ️ LLM disabled reason: ENABLE_LLM=false - agent views functionality disabled")
     
     # ダミークラスを定義

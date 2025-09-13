@@ -1,6 +1,7 @@
 import pdb
 from typing import List, Optional
 import os
+import logging
 try:
   from src.config.feature_flags import is_llm_enabled
   ENABLE_LLM = is_llm_enabled()
@@ -9,6 +10,8 @@ except Exception:
 import pdb
 from typing import List, Optional
 import os
+
+logger = logging.getLogger(__name__)
 
 # ---------------- Feature flag / legacy env bridge -----------------
 try:
@@ -86,8 +89,6 @@ if ENABLE_LLM:
     print(f"⚠️ Warning: LLM prompts modules failed to load: {e}")
     pass
 else:
-    import logging
-    logger = logging.getLogger(__name__)
     logger.info("ℹ️ LLM disabled reason: ENABLE_LLM=false - prompts functionality disabled")
     LLM_PROMPTS_AVAILABLE = False
 
