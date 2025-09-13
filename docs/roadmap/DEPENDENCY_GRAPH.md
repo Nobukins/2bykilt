@@ -1,6 +1,6 @@
 ```mermaid
 %% Auto-generated dependency graph
-%% Generated at: 2025-09-11T22:08:08.431324+00:00
+%% Generated at: 2025-09-13T12:12:13.126775+00:00
 %% Edge方向: dependency --> dependent
 graph LR
 
@@ -19,6 +19,8 @@ subgraph R3[Rank 3]
   35["35 アーティファクト manifest v2"]
   46["46 Run/Job タイムアウト & キャ…"]
   63["63 llms.txt スキーマ & バリデ…"]
+  110["110 browser-control gap…"]
+  111["111 録画/パス統合"]
 end
 subgraph R2[Rank 2]
   33["33 スクリーンショット取得ユーティリティ"]
@@ -62,6 +64,7 @@ subgraph R1[Rank 1]
   89["89 Screenshot ログイベント整備…"]
   90["90 Temp test issue for…"]
   91["91 統一録画パス Rollout (fla…"]
+  102["102 Flags artifacts hel…"]
   154["154 pip-audit stabiliza…"]
   173["173 [UI][batch][#40 fol…"]
   174["174 [artifacts][batch] …"]
@@ -109,6 +112,7 @@ end
 56 --> 57
 32 --> 58
 58 --> 59
+64 --> 102
 56 --> 60
 32 --> 61
 32 --> 62
@@ -149,6 +153,8 @@ end
 39 --> 177
 43 --> 177
 76 --> 178
+28 --> 111
+111 --> 110
 
 %% Styling definitions (Mermaid syntax uses colon)
 classDef highrisk fill:#ffe6e6,stroke:#d40000,stroke-width:2px,color:#000;
@@ -156,7 +162,7 @@ classDef progress fill:#e6f4ff,stroke:#0366d6,stroke-width:2px,color:#000;
 
 %% Class assignments
 class 31,46,49,54,62,176 highrisk;
-class 25,28,31,32,34,35,36,37,38,39,40,41,42,44,45,50,56,57,58,87,88,89,91,154,175,176 progress;
+class 25,28,31,32,34,35,36,37,38,39,40,41,42,44,45,50,56,57,58,59,87,88,89,91,102,110,111,154,175,176,177 progress;
 
 %% Legend (pseudo nodes)
 subgraph Legend[Legend]
