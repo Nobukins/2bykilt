@@ -21,7 +21,7 @@ def _parse_tag_filter(tag: Optional[str]) -> Optional[Dict[str, str]]:
     if not tag:
         return None
     if "=" not in tag:
-        raise HTTPException(status_code=400, detail="tag must be in key=value format")
+        raise HTTPException(status_code=400, detail="Tag filter must be in key=value format (e.g., phase=test)")
     k, v = tag.split("=", 1)
     return {k: v}
 

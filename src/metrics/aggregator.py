@@ -62,7 +62,7 @@ def compute_summary(series: MetricSeries, *, since_seconds: Optional[int] = None
         return sorted_vals[k - 1]
 
     return {
-        "count": float(n) if series.metric_type == MetricType.COUNTER else n,
+        "count": n,
         "min": s_min,
         "max": s_max,
         "avg": s_avg,
