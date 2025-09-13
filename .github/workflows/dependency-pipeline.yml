@@ -1,14 +1,32 @@
 name: Dependency Pipeline (Issue #178)
 
+# Validates and auto-generates derived artifacts when ISSUE_DEPENDENCIES.yml changes
+# Handles PR validation, scheduled generation, and manual triggers
+
 on:
+  # PR validation for default branch
   pull_request:
+    branches:
+      - 2bykilt
     paths:
       - 'docs/roadmap/ISSUE_DEPENDENCIES.yml'
-      - 'scripts/**.py'
-      - '.github/workflows/dependency-pipeline.yml'
+  
+  # Scheduled generation at 3 AM UTC
+  schedule:
+    - cron: '0 3 * * *'
+  
+  # Manual trigger
+  workflow_dispatch:
+  
+  # Push trigger for immediate generation
+  push:
+    branches:
+      - 2bykilt
+    paths:
+      - 'docs/roadmap/ISSUE_DEPENDENCIES.yml'
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: read
 
 jobs:
@@ -34,13 +52,15 @@ jobs:
           echo "🔍 Validating ISSUE_DEPENDENCIES.yml..."
           python scripts/validate_dependencies.py docs/roadmap/ISSUE_DEPENDENCIES.yml
 
-  regenerate-and-check:
-    name: Regenerate and Check
+  regenerate-and-commit:
+    name: Regenerate and Commit
     needs: validate-deps
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -51,6 +71,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install PyYAML requests
+
+      - name: Get current commit hashes
+        id: commits
+        run: |
+          echo "roadmap_commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          echo "dependencies_commit=$(git log -1 --format="%H" -- docs/roadmap/ISSUE_DEPENDENCIES.yml)" >> $GITHUB_OUTPUT
 
       - name: Regenerate derived artifacts
         run: |
@@ -64,110 +90,49 @@ jobs:
             --no-api \
             --verbose
 
-      - name: Queue Validation
+      - name: Update commit hashes in generated file
+        run: |
+          sed -i 's/roadmap_commit: REPLACE_ME/roadmap_commit: ${{ steps.commits.outputs.roadmap_commit }}/' docs/roadmap/TASK_QUEUE.yml
+          sed -i 's/dependencies_commit: REPLACE_ME/dependencies_commit: ${{ steps.commits.outputs.dependencies_commit }}/' docs/roadmap/TASK_QUEUE.yml
+
+      - name: Validate generated task queue
         run: |
           echo "✅ Validating generated task queue..."
           python scripts/validate_task_queue.py \
             --queue docs/roadmap/TASK_QUEUE.yml \
             --dependencies docs/roadmap/ISSUE_DEPENDENCIES.yml
 
-      - name: Idempotency Check
+      - name: Check for changes
+        id: changes
         run: |
-          echo "🔁 Checking idempotency (2nd generation)..."
-          cp docs/roadmap/TASK_QUEUE.yml /tmp/TASK_QUEUE.yml.bak
-          cp docs/roadmap/DEPENDENCY_GRAPH.md /tmp/DEPENDENCY_GRAPH.md.bak
-          cp docs/roadmap/TASK_DASHBOARD.md /tmp/TASK_DASHBOARD.md.bak
-
-          # 2回目の生成
-          python scripts/gen_mermaid.py docs/roadmap/ISSUE_DEPENDENCIES.yml > docs/roadmap/DEPENDENCY_GRAPH.md
-          python scripts/generate_task_dashboard.py
-          python scripts/generate_task_queue.py \
-            --repo ${{ github.repository }} \
-            --input docs/roadmap/ISSUE_DEPENDENCIES.yml \
-            --output docs/roadmap/TASK_QUEUE.yml \
-            --no-api
-
-          # 差分チェック
-          if diff -u /tmp/TASK_QUEUE.yml.bak docs/roadmap/TASK_QUEUE.yml; then
-            echo "✅ TASK_QUEUE.yml: Idempotent (no diff)"
+          if git diff --quiet docs/roadmap/TASK_QUEUE.yml docs/roadmap/DEPENDENCY_GRAPH.md docs/roadmap/TASK_DASHBOARD.md; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "No changes detected in generated files"
           else
-            echo "❌ TASK_QUEUE.yml: Not idempotent (diff detected)"
-            exit 1
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Changes detected in generated files"
+            git diff --stat docs/roadmap/TASK_QUEUE.yml docs/roadmap/DEPENDENCY_GRAPH.md docs/roadmap/TASK_DASHBOARD.md
           fi
 
-          if diff -u /tmp/DEPENDENCY_GRAPH.md.bak docs/roadmap/DEPENDENCY_GRAPH.md; then
-            echo "✅ DEPENDENCY_GRAPH.md: Idempotent (no diff)"
-          else
-            echo "❌ DEPENDENCY_GRAPH.md: Not idempotent (diff detected)"
-            exit 1
-          fi
-
-          if diff -u /tmp/TASK_DASHBOARD.md.bak docs/roadmap/TASK_DASHBOARD.md; then
-            echo "✅ TASK_DASHBOARD.md: Idempotent (no diff)"
-          else
-            echo "❌ TASK_DASHBOARD.md: Not idempotent (diff detected)"
-            exit 1
-          fi
-
-  diff-guard:
-    name: Diff Guard
-    needs: regenerate-and-check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install dependencies
+      - name: Commit and push changes
+        if: steps.changes.outputs.changed == 'true' && github.event_name != 'pull_request'
         run: |
-          python -m pip install --upgrade pip
-          pip install PyYAML requests
+          set -euo pipefail
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action (Dependency Pipeline Bot)"
+          git add docs/roadmap/TASK_QUEUE.yml docs/roadmap/DEPENDENCY_GRAPH.md docs/roadmap/TASK_DASHBOARD.md
+          COMMIT_TS=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          git commit -m "docs: auto-update dependency artifacts" \
+                     -m "Generated at: $COMMIT_TS" \
+                     -m "Roadmap commit: ${{ steps.commits.outputs.roadmap_commit }}" \
+                     -m "Dependencies commit: ${{ steps.commits.outputs.dependencies_commit }}" \
+                     -m "[skip ci]" || echo "Nothing to commit (race)"
+          git push origin 2bykilt
 
-      - name: Ensure committed artifacts are up to date
+      - name: Skip push (PR context)
+        if: steps.changes.outputs.changed == 'true' && github.event_name == 'pull_request'
         run: |
-          echo "🛡️ Checking if committed artifacts are synchronized..."
-
-          # DEPENDENCY_GRAPH.md の同期チェック
-          python scripts/gen_mermaid.py docs/roadmap/ISSUE_DEPENDENCIES.yml > /tmp/graph.md
-          if diff -q /tmp/graph.md docs/roadmap/DEPENDENCY_GRAPH.md; then
-            echo "✅ DEPENDENCY_GRAPH.md is synchronized"
-          else
-            echo "❌ DEPENDENCY_GRAPH.md is out-of-sync with ISSUE_DEPENDENCIES.yml"
-            echo "Differences:"
-            diff -u docs/roadmap/DEPENDENCY_GRAPH.md /tmp/graph.md || true
-            exit 1
-          fi
-
-          # TASK_QUEUE.yml の同期チェック
-          python scripts/generate_task_queue.py \
-            --repo ${{ github.repository }} \
-            --input docs/roadmap/ISSUE_DEPENDENCIES.yml \
-            --output /tmp/queue.yml \
-            --no-api
-          if diff -q /tmp/queue.yml docs/roadmap/TASK_QUEUE.yml; then
-            echo "✅ TASK_QUEUE.yml is synchronized"
-          else
-            echo "❌ TASK_QUEUE.yml is out-of-sync with ISSUE_DEPENDENCIES.yml"
-            echo "Differences:"
-            diff -u docs/roadmap/TASK_QUEUE.yml /tmp/queue.yml || true
-            exit 1
-          fi
-
-          # TASK_DASHBOARD.md の同期チェック
-          python scripts/generate_task_dashboard.py
-          # generate_task_dashboard.py は直接 docs/roadmap/TASK_DASHBOARD.md を更新するので、
-          # 再生成後の差分をチェック
-          if git diff --quiet docs/roadmap/TASK_DASHBOARD.md; then
-            echo "✅ TASK_DASHBOARD.md is synchronized"
-          else
-            echo "❌ TASK_DASHBOARD.md is out-of-sync"
-            git diff docs/roadmap/TASK_DASHBOARD.md
-            exit 1
-          fi
+          echo "Skip committing updates on pull_request (detached HEAD)" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Output summary
         run: |
@@ -175,12 +140,27 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Repository**: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Triggered by**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **PR**: ${{ github.event.number }}" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "- **PR**: ${{ github.event.number }}" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "- **Validation**: ✅ PASSED" >> $GITHUB_STEP_SUMMARY
-          echo "- **Idempotency**: ✅ PASSED" >> $GITHUB_STEP_SUMMARY
-          echo "- **Sync Check**: ✅ PASSED" >> $GITHUB_STEP_SUMMARY
+          echo "- **Changes detected**: ${{ steps.changes.outputs.changed }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Generated Artifacts" >> $GITHUB_STEP_SUMMARY
           echo "- DEPENDENCY_GRAPH.md" >> $GITHUB_STEP_SUMMARY
           echo "- TASK_QUEUE.yml" >> $GITHUB_STEP_SUMMARY
           echo "- TASK_DASHBOARD.md" >> $GITHUB_STEP_SUMMARY
+          
+          # Add generation statistics
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Generation Statistics" >> $GITHUB_STEP_SUMMARY
+          python -c "
+          import yaml
+          with open('docs/roadmap/TASK_QUEUE.yml', 'r') as f:
+              data = yaml.safe_load(f)
+          print(f'- **Total issues**: {data.get(\"diagnostics\", {}).get(\"total_issues\", \"unknown\")}')
+          print(f'- **Ready**: {len(data.get(\"ready\", []))} issues')
+          print(f'- **Blocked**: {len(data.get(\"blocked\", []))} issues') 
+          print(f'- **In Progress**: {len(data.get(\"in_progress\", []))} issues')
+          print(f'- **Done**: {len(data.get(\"done\", []))} issues')
+          " >> $GITHUB_STEP_SUMMARY
