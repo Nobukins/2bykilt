@@ -9,10 +9,12 @@ from pathlib import Path
 
 # 統一されたリゾルバのimportを試行（Issue #28 step 2）
 # このimportはモジュールレベルのtry-exceptで安全に行われ、失敗時はレガシー実装にフォールバックします
+# ImportErrorが発生した場合、_resolver_funcはNoneとなり、レガシー実装が使用されます
 try:
     from src.utils.recording_dir_resolver import create_or_get_recording_dir
     _resolver_func = create_or_get_recording_dir
 except ImportError:
+    # 統一リゾルバが利用できない場合はNoneを設定し、レガシー実装を使用
     _resolver_func = None
 
 def get_recording_path(fallback_relative_path: str = "./tmp/record_videos") -> str:
