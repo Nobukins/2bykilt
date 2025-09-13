@@ -10,10 +10,10 @@ FastAPI ベースのメトリクス API を提供します。既存の `src/metr
   収集されているメトリクスシリーズ名を配列で返します。
 
 - GET `/api/metrics/series/{name}`  
-  指定シリーズの生データを JSON で返します。`?tag=key=value` でタグフィルタが可能。
+  指定シリーズの生データを JSON で返します。`?tag=key=value` でタグフィルタが可能（単一タグのみ）。
 
 - GET `/api/metrics/series/{name}/summary`  
-  指定シリーズの要約統計（min/max/avg/p50/p90/p95/p99）。`?since_seconds=3600` で最近1時間に限定、`?tag=key=value` でタグフィルタ可能。
+  指定シリーズの要約統計（min/max/avg/p50/p90/p95/p99）。`?since_seconds=3600` で最近1時間に限定、`?tag=key=value` でタグフィルタ可能（単一タグのみ）。
 
 ## 実装場所
 
