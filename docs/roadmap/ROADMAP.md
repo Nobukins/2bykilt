@@ -54,7 +54,7 @@
 | A8 | 後続の新規作成issue | Planned | 追加Issueの評価とスケジュール反映 |
 
 Progress Summary (Phase 1): Wave A1 100% / Wave A2 100% / Wave A3 100% / Wave A4 100% / Wave A5 100% / Wave A6 100% / Wave A7 100% ( #60 Security Base 完了) 残: Group B Phase 2 へ移行。Draft/試行 PR は進捗計測に含めず。
-Progress Summary (Phase2): Phase2-04 Done / Phase2-05 Done / Phase2-06 Done / Phase2-07 In Progress / Phase2-12 Done / Early focus shifts to Phase2-01 (Runner) & Phase2-07 (Metrics surfacing) / Upcoming gating: coverage (#109) & sandbox (#62)。
+Progress Summary (Phase2): Phase2-04 Done / Phase2-05 Done / Phase2-06 Done / Phase2-07 In Progress / Phase2-11 Done / Phase2-12 Done / Early focus shifts to Phase2-01 (Runner) & Phase2-07 (Metrics surfacing) / Upcoming gating: coverage (#109) & sandbox (#62)。
 
 ### Phase2 (拡張 / 高度化 / 継続改善 統合)
 
@@ -72,7 +72,7 @@ Progress Summary (Phase2): Phase2-04 Done / Phase2-05 Done / Phase2-06 Done / Ph
 | Phase2-08 | Quality / Coverage Gate | #109 → #107 → #108 | OPEN | カバレッジ→警告除去→Edge安定化 |
 | Phase2-09 | Security / Compliance | #154 ✅ (follow-ups TBD) | Partial | 追加セキュリティギャップ分析 (#177 連携) |
 | Phase2-10 | Plugin 基盤 | #49 (part1 / part2) | Planned | 増分2段階 (Loader → Lifecycle) |
-| Phase2-11 | Docs & Automation | #66 → #67 → #92 → #81 → #178 | OPEN | 整備 / enrichment / workflow 追加 |
+| Phase2-11 | Docs & Automation | #66 → #67 → #92 → #81 → #178 ✅ | Done | 整備 / enrichment / workflow 追加 (dependency-pipeline workflow実装完了) |
 | Phase2-12 | MVP 定義 & ギャップ | #177 | ✅ Done | Enterprise readiness matrix 実装完了 (docs/mvp/README.md) |
 
 **Phase2-12 MVP Matrix 詳細:**
@@ -165,7 +165,7 @@ Phase2 再編後の短期優先セットを以下に再定義。A フェーズ�
 2. Phase2-07 前倒し: #59 Run Metrics API → #102 Flags artifacts helper
 3. Phase2-06 開始: #111 録画/パス統合 → #110 browser-control gap fix
 4. Docs ギャップ定義: #177 MVP Matrix Draft → ギャップ派生 Issue 起票
-5. Workflow 整合性: #178 dependency-pipeline workflow 追加 or docs修正
+5. ✅ Workflow 整合性: #178 dependency-pipeline workflow 実装完了 (自動生成・コミット機能統合)
 
 ### 中期 (Phase2 Expansion)
 
@@ -259,6 +259,7 @@ graph LR
 | 1.0.20 | 2025-09-10 | Wave A8 抽象化 / 次アクションにMermaid/Gitツリー追加 / Wave A完了区切り | Copilot Agent |
 | 1.0.21 | 2025-09-10 | Group C追加 / 未記載OPEN IssueをPhase 3として整理 | Copilot Agent |
 | 1.0.24 | 2025-01-XX | Phase2-07 status updated to In Progress based on ISSUE_DEPENDENCIES.yml latest state | Copilot Agent |
+| 1.0.25 | 2025-09-14 | Phase2-11 #178 dependency-pipeline workflow 実装完了 / CIジョブ構成更新 / ワークフロー統合反映 | Copilot Agent |
 
 ---
 
@@ -303,52 +304,118 @@ Idempotent Check: pass
 
 `/.github/workflows/dependency-pipeline.yml`
 
-```
-name: dependency-pipeline
+```yaml
+name: Dependency Pipeline (Issue #178)
+
+# Validates and auto-generates derived artifacts when ISSUE_DEPENDENCIES.yml changes
+# Handles PR validation, scheduled generation, and manual triggers
+
 on:
+  # PR validation for default branch
   pull_request:
-    paths:
-      - 'docs/roadmap/ISSUE_DEPENDENCIES.yml'
-      - 'scripts/**.py'
+    branches: [2bykilt]
+    paths: ['docs/roadmap/ISSUE_DEPENDENCIES.yml']
+  
+  # Scheduled generation at 3 AM UTC
+  schedule:
+    - cron: '0 3 * * *'
+  
+  # Manual trigger
+  workflow_dispatch:
+  
+  # Push trigger for immediate generation
+  push:
+    branches: [2bykilt]
+    paths: ['docs/roadmap/ISSUE_DEPENDENCIES.yml']
+
 jobs:
   validate-deps:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: {python-version: '3.12'}
-      - run: pip install pyyaml
-      - name: Dependency Validation
-        run: python scripts/validate_dependencies.py docs/roadmap/ISSUE_DEPENDENCIES.yml
-  regenerate-and-check:
-    needs: validate-deps
+    name: Validate Dependencies
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
       - run: pip install pyyaml requests
-      - name: Regenerate
-        run: |
-          python scripts/gen_mermaid.py docs/roadmap/ISSUE_DEPENDENCIES.yml > docs/roadmap/DEPENDENCY_GRAPH.md
-          python scripts/generate_task_dashboard.py
-          python scripts/generate_task_queue.py --repo ${{ github.repository }} --input docs/roadmap/ISSUE_DEPENDENCIES.yml --output docs/roadmap/TASK_QUEUE.yml --no-api
-      - name: Queue Validate
-        run: python scripts/validate_task_queue.py --queue docs/roadmap/TASK_QUEUE.yml --dependencies docs/roadmap/ISSUE_DEPENDENCIES.yml
-      - name: Idempotency Check
-        run: |
-          cp docs/roadmap/TASK_QUEUE.yml /tmp/TASK_QUEUE.yml.bak
-          python scripts/generate_task_queue.py --repo ${{ github.repository }} --input docs/roadmap/ISSUE_DEPENDENCIES.yml --output docs/roadmap/TASK_QUEUE.yml --no-api
-          diff -u /tmp/TASK_QUEUE.yml.bak docs/roadmap/TASK_QUEUE.yml
-  diff-guard:
-    needs: regenerate-and-check
+      - name: Dependency Validation
+        run: python scripts/validate_dependencies.py docs/roadmap/ISSUE_DEPENDENCIES.yml
+  
+  regenerate-and-commit:
+    name: Regenerate and Commit
+    needs: validate-deps
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Ensure committed artifacts up to date
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install pyyaml requests
+      
+      # Get current commit hashes for traceability
+      - name: Get current commit hashes
+        id: commits
         run: |
-          python scripts/gen_mermaid.py docs/roadmap/ISSUE_DEPENDENCIES.yml > /tmp/graph.md
-          diff -q /tmp/graph.md docs/roadmap/DEPENDENCY_GRAPH.md || (echo 'Graph out-of-sync' && exit 1)
+          echo "roadmap_commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          echo "dependencies_commit=$(git log -1 --format="%H" -- docs/roadmap/ISSUE_DEPENDENCIES.yml)" >> $GITHUB_OUTPUT
+      
+      # Regenerate all derived artifacts
+      - name: Regenerate derived artifacts
+        run: |
+          python scripts/gen_mermaid.py docs/roadmap/ISSUE_DEPENDENCIES.yml > docs/roadmap/DEPENDENCY_GRAPH.md
+          python scripts/generate_task_dashboard.py
+          python scripts/generate_task_queue.py \
+            --repo ${{ github.repository }} \
+            --input docs/roadmap/ISSUE_DEPENDENCIES.yml \
+            --output docs/roadmap/TASK_QUEUE.yml \
+            --no-api \
+            --verbose
+      
+      # Update commit hashes in generated files
+      - name: Update commit hashes in generated file
+        run: |
+          sed -i 's/roadmap_commit: REPLACE_ME/roadmap_commit: ${{ steps.commits.outputs.roadmap_commit }}/' docs/roadmap/TASK_QUEUE.yml
+          sed -i 's/dependencies_commit: REPLACE_ME/dependencies_commit: ${{ steps.commits.outputs.dependencies_commit }}/' docs/roadmap/TASK_QUEUE.yml
+      
+      # Validate generated artifacts
+      - name: Validate generated task queue
+        run: python scripts/validate_task_queue.py \
+          --queue docs/roadmap/TASK_QUEUE.yml \
+          --dependencies docs/roadmap/ISSUE_DEPENDENCIES.yml
+      
+      # Check for changes and commit if needed
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet docs/roadmap/TASK_QUEUE.yml docs/roadmap/DEPENDENCY_GRAPH.md docs/roadmap/TASK_DASHBOARD.md; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+      
+      # Auto-commit changes (skip on PR)
+      - name: Commit and push changes
+        if: steps.changes.outputs.changed == 'true' && github.event_name != 'pull_request'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action (Dependency Pipeline Bot)"
+          git add docs/roadmap/TASK_QUEUE.yml docs/roadmap/DEPENDENCY_GRAPH.md docs/roadmap/TASK_DASHBOARD.md
+          git commit -m "docs: auto-update dependency artifacts" \
+                     -m "[skip ci]"
+          git push origin 2bykilt
+      
+      # Skip commit on PR context
+      - name: Skip push (PR context)
+        if: steps.changes.outputs.changed == 'true' && github.event_name == 'pull_request'
+        run: echo "Skip committing updates on pull_request (detached HEAD)"
+      
+      # Output summary
+      - name: Output summary
+        run: |
+          echo "## Dependency Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Changes detected**: ${{ steps.changes.outputs.changed }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Generated artifacts**: TASK_QUEUE.yml, DEPENDENCY_GRAPH.md, TASK_DASHBOARD.md" >> $GITHUB_STEP_SUMMARY
+```
 
 ### 4. 失敗時の対応基準
 
@@ -359,9 +426,10 @@ jobs:
 
 ### 5. 改善予定 (追跡用)
 
-1. done 判定に GitHub API 無効時 `progress.state` fallback 追加 (#TBD)
+1. ✅ done 判定に GitHub API 無効時 `progress.state` fallback 追加 (#TBD) → dependency-pipeline workflow で実装済み
 2. Mermaid 生成時刻抑制フラグ (`--stable`) 追加 (#TBD)
 3. curated orphan を strict / extra 二段表示 (#TBD)
+4. ワークフロー統合完了: generate-task-queue.yml → dependency-pipeline.yml一本化 (2025-09-14)
 
 ---
 
