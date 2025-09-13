@@ -101,6 +101,7 @@ issues:
   "59": {title: "Run メトリクス API", meta: {area: observability, type: feat, 
         priority: P2, phase: "2", stability: core}, depends: ["58"], dependents: [],
     progress: {state: in-progress}, risk: null, critical_path_rank: 1}
+  "102": {title: "Flags artifacts helper", meta: {area: config, type: chore, priority: P2, phase: "2", stability: core}, depends: ["64"], dependents: [], progress: {state: in-progress}, risk: null, critical_path_rank: 1}
   "60": {title: "シークレットマスキング拡張", meta: {area: security, type: feat, priority: P1,
       phase: "1-late", stability: core}, depends: ["56"], dependents: [], risk: 
       null, critical_path_rank: 1}
@@ -158,7 +159,7 @@ issues:
   "178": {title: "CI: dependency-pipeline workflow 追加 (生成物 idempotent 検証自動化)", meta: {area: automation, type: chore, priority: P2, phase: "2", stability: core}, depends: ["76"], dependents: [], risk: low, critical_path_rank: 1}
 
 summary:
-  total_issues: 54
+  total_issues: 55
   high_risk: ["31", "46", "49", "54", "62", "176"]
   longest_chain_example: ["65", "64", "63", "66", "67"]
   data_quality_checks:

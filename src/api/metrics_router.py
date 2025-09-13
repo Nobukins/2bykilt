@@ -26,6 +26,13 @@ def _parse_tag_filter(tag: Optional[str]) -> Optional[Dict[str, str]]:
     return {k: v}
 
 
+def _get_metric_series_or_404(name: str) -> MetricSeries:
+    """Get metric series by name or raise 404."""
+    collector = get_metrics_collector()
+    series: Optional[MetricSeries] = collector.get_metric_series(name)
+    if not series:
+        raise HTTPException(status_code=404, detail=f"Series '{name}' not found")
+    return series
 router = APIRouter(prefix="/api/metrics", tags=["metrics"])
 
 
@@ -38,11 +45,7 @@ def list_series() -> Dict[str, Any]:
 @router.get("/series/{name}")
 def get_series(name: str,
                tag: Optional[str] = Query(None, description="tag filter key=value")) -> Dict[str, Any]:
-    collector = get_metrics_collector()
-    series: Optional[MetricSeries] = collector.get_metric_series(name)
-    if not series:
-        raise HTTPException(status_code=404, detail=f"Series '{name}' not found")
-
+    series = _get_metric_series_or_404(name)
     tags_filter = _parse_tag_filter(tag)
 
     values = [v.to_dict() for v in series.get_values(tags_filter)]
@@ -53,11 +56,7 @@ def get_series(name: str,
 def get_series_summary(name: str,
                        since_seconds: Optional[int] = Query(None, ge=1),
                        tag: Optional[str] = Query(None, description="tag filter key=value")) -> Dict[str, Any]:
-    collector = get_metrics_collector()
-    series: Optional[MetricSeries] = collector.get_metric_series(name)
-    if not series:
-        raise HTTPException(status_code=404, detail=f"Series '{name}' not found")
-
+    series = _get_metric_series_or_404(name)
     tags_filter = _parse_tag_filter(tag)
 
     summary = compute_summary(series, since_seconds=since_seconds, tags_filter=tags_filter)

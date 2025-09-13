@@ -223,6 +223,51 @@ class FeatureFlags:
                 logger.info("All runtime feature flag overrides cleared", extra={"event": "flag.override.cleared_all"})
                 cls._maybe_write_artifact(force_refresh=True)
 
+    @classmethod
+    def dump_snapshot(cls) -> Path:
+        """Write a snapshot artifact of current resolved flags and return path.
+
+        Useful in tests and tooling that need to ensure a flags artifact exists
+        without relying on lazy writes. Returns the directory path containing
+        the JSON file.
+        """
+        cls._ensure_loaded()
+        # Force refresh to ensure latest cache/overrides are reflected
+        out_dir = cls._maybe_write_artifact(force_refresh=True)
+        if out_dir is None:
+            # Fallback if writing failed: ensure artifact directory and file exist
+            out_dir = None
+            try:
+                out_dir = cls._create_fallback_artifact_dir("fallback-flags")
+
+                # Write current resolved flags to JSON
+                payload = {
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
+                    "flags_file": str(cls._flags_file) if cls._flags_file else None,
+                    "run_id_base": None,
+                    "resolved": cls._resolved_cache.copy(),
+                    "overrides_active": list(cls._overrides.keys()),
+                }
+                (out_dir / "feature_flags_resolved.json").write_text(
+                    json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8"
+                )
+                logger.info(
+                    "Fallback feature flags artifact written",
+                    extra={"event": "flag.artifact.fallback.written", "path": str(out_dir)},
+                )
+            except Exception as e:  # noqa: BLE001
+                logger.error(
+                    "Failed to write fallback feature flags snapshot artifact",
+                    extra={"event": "flag.artifact.fallback.error", "error": repr(e)},
+                )
+                # Last resort: raise an exception to indicate failure
+                # This ensures callers are aware the artifact was not created
+                fallback_dir = str(out_dir) if out_dir is not None else "fallback directory"
+                raise RuntimeError(
+                    f"Failed to write feature flags snapshot artifact to {fallback_dir}. Error: {e}"
+                )
+        return out_dir
+
     # -------------------- Internal helpers -------------------------------- #
     @classmethod
     def _ensure_loaded(cls) -> None:
@@ -305,6 +350,10 @@ class FeatureFlags:
 
     @classmethod
     def _prune_expired(cls) -> None:
+        """Remove expired runtime overrides.
+
+        This method may be called from multiple places to ensure expired overrides are cleaned up.
+        """
         now = datetime.now(timezone.utc)
         expired = [k for k, (_v, exp) in cls._overrides.items() if exp and exp <= now]
         for k in expired:
@@ -313,28 +362,40 @@ class FeatureFlags:
             logger.info("Expired feature flag override removed", extra={"event": "flag.override.expired", "flag": k})
 
     @classmethod
-    def _maybe_write_artifact(cls, force_refresh: bool = False) -> None:
+    def _create_fallback_artifact_dir(cls, suffix: str) -> Path:
+        """Create a fallback artifact directory with timestamp-based naming.
+
+        Args:
+            suffix: Suffix for the directory name (e.g., 'legacy-flags', 'fallback-flags')
+
+        Returns:
+            Path to the created directory
+        """
+        _ARTIFACT_ROOT.mkdir(parents=True, exist_ok=True)
+        run_id = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S") + f"-{suffix}"
+        out_dir = _ARTIFACT_ROOT / run_id
+        out_dir.mkdir(parents=True, exist_ok=True)
+        return out_dir
+
+    @classmethod
+    def _maybe_write_artifact(cls, force_refresh: bool = False) -> Path | None:
         if not force_refresh and cls._artifact_written:
             # If working directory changed after first write (tests use tmp_path + chdir),
             # the previously written artifact may no longer exist relative to the new CWD.
             # Allow a second write in that case so tests see a -flags directory (Issue #91 side-effect).
             try:  # defensive; never block flag resolution
-                if RunContext:
-                    # artifact_dir returns Path; ensure=False avoids creating when probing existence
-                    expected_dir = RunContext.get().artifact_dir("flags", ensure=False)
-                    if not expected_dir.exists():
-                        cls._artifact_written = False  # reset and proceed to write below
-                    else:
-                        return
+                expected_dir = RunContext.get().artifact_dir("flags", ensure=False)
+                if not expected_dir.exists():
+                    cls._artifact_written = False  # reset and proceed to write below
                 else:
-                    return
+                    return expected_dir
             except Exception as e:  # noqa: BLE001
                 # Log once for observability while still suppressing to avoid cascading failures
                 logger.warning(
                     "Error while probing existing flags artifact directory",
                     extra={"event": "flag.artifact.dir.error", "error": repr(e)},
                 )
-                return
+                return None
         try:
             # Gather current resolved values (resolve defaults without side effects)
             resolved: Dict[str, Any] = {}
@@ -357,19 +418,18 @@ class FeatureFlags:
                 if name not in resolved:
                     resolved[name] = cls._overrides[name][0]
             # Unified RunContext directory (Issue #32)
-            if RunContext:
+            try:
                 out_dir = RunContext.get().artifact_dir("flags")
-            else:  # fallback (should not generally occur)
-                # REVIEW FIX: ensure directory actually exists (previously missing mkdir for out_dir)
-                if not _ARTIFACT_ROOT.exists():
-                    _ARTIFACT_ROOT.mkdir(parents=True, exist_ok=True)
-                run_id = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S") + "-legacy-flags"
-                out_dir = _ARTIFACT_ROOT / run_id
-                out_dir.mkdir(parents=True, exist_ok=True)
+                run_id_base = RunContext.get().run_id_base
+            except Exception:  # noqa: BLE001
+                # Fallback to legacy behavior
+                out_dir = cls._create_fallback_artifact_dir("legacy-flags")
+                run_id_base = None
+
             payload = {
                 "generated_at": datetime.now(timezone.utc).isoformat(),
                 "flags_file": str(cls._flags_file) if cls._flags_file else None,
-                "run_id_base": RunContext.get().run_id_base if RunContext else None,
+                "run_id_base": run_id_base,
                 "resolved": resolved,
                 "overrides_active": list(cls._overrides.keys()),
             }
@@ -381,11 +441,13 @@ class FeatureFlags:
                 "Feature flags artifact written",
                 extra={"event": "flag.artifact.written", "path": str(out_dir)},
             )
+            return out_dir
         except Exception as e:  # noqa: BLE001
             logger.warning(
                 "Failed to write feature flags artifact",
                 extra={"event": "flag.artifact.error", "error": repr(e)},
             )
+            return None
 
 
 # Initialize on import (safe, file missing handled gracefully)
