@@ -261,8 +261,9 @@ class FeatureFlags:
                 )
                 # Last resort: raise an exception to indicate failure
                 # This ensures callers are aware the artifact was not created
+                fallback_dir = str(out_dir) if out_dir is not None else "fallback directory"
                 raise RuntimeError(
-                    f"Failed to write feature flags snapshot artifact to fallback location 'unknown'. Error: {e}"
+                    f"Failed to write feature flags snapshot artifact to {fallback_dir}. Error: {e}"
                 )
         return out_dir
 
@@ -348,7 +349,10 @@ class FeatureFlags:
 
     @classmethod
     def _prune_expired(cls) -> None:
-        """Remove expired runtime overrides (called lazily on access)."""
+        """Remove expired runtime overrides.
+
+        This method may be called from multiple places to ensure expired overrides are cleaned up.
+        """
         now = datetime.now(timezone.utc)
         expired = [k for k, (_v, exp) in cls._overrides.items() if exp and exp <= now]
         for k in expired:
