@@ -7,6 +7,13 @@ import platform
 import tempfile
 from pathlib import Path
 
+# 統一されたリゾルバのimportを試行（Issue #28 step 2）
+try:
+    from src.utils.recording_dir_resolver import create_or_get_recording_dir
+    _use_unified_resolver = True
+except ImportError:
+    _use_unified_resolver = False
+
 def get_recording_path(fallback_relative_path: str = "./tmp/record_videos") -> str:
     """
     録画ディレクトリのパスを取得する（クロスプラットフォーム対応）
@@ -17,12 +24,10 @@ def get_recording_path(fallback_relative_path: str = "./tmp/record_videos") -> s
     Returns:
         str: 録画ディレクトリのパス
     """
-    # 統一されたリゾルバを使用（Issue #28 step 2）
-    try:
-        from src.utils.recording_dir_resolver import create_or_get_recording_dir
+    if _use_unified_resolver:
         return str(create_or_get_recording_dir())
-    except ImportError:
-        # フォールバック: レガシー実装
+    else:
+        # フォールバック: レガシー実装を使用
         return _legacy_get_recording_path(fallback_relative_path)
 
 def _legacy_get_recording_path(fallback_relative_path: str = "./tmp/record_videos") -> str:
