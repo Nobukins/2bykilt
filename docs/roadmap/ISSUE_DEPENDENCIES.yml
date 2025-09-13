@@ -157,6 +157,8 @@ issues:
   "176": {title: "宣言的抽出スキーマ (CSV列→コマンド引数/抽出ポリシーマッピング)", meta: {area: batch, type: feat, priority: P1, phase: "2", stability: experimental}, depends: ["175", "39", "40"], dependents: [], risk: high, progress: {state: done, primary_pr: 181}, critical_path_rank: 2}
   "177": {title: "MVP エンタープライズ Readiness マトリクス定義", meta: {area: docs, type: docs, priority: P1, phase: "2", stability: core}, depends: ["60", "58", "35", "39", "43"], dependents: [], risk: null, critical_path_rank: 1}
   "178": {title: "CI: dependency-pipeline workflow 追加 (生成物 idempotent 検証自動化)", meta: {area: automation, type: chore, priority: P2, phase: "2", stability: core}, depends: ["76"], dependents: [], risk: low, critical_path_rank: 1}
+  "111": {title: "録画/パス統合", meta: {area: artifacts, type: feat, priority: P0, phase: "2", stability: core}, depends: ["28"], dependents: ["110"], progress: {state: done}, risk: null, critical_path_rank: 3}
+  "110": {title: "browser-control gap fix", meta: {area: runner, type: bug, priority: P0, phase: "2", stability: core}, depends: ["111"], dependents: ["106"], progress: {state: done}, risk: null, critical_path_rank: 3}
 
 summary:
   total_issues: 55

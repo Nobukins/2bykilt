@@ -7,6 +7,16 @@ import platform
 import tempfile
 from pathlib import Path
 
+# 統一されたリゾルバのimportを試行（Issue #28 step 2）
+# このimportはモジュールレベルのtry-exceptで安全に行われ、失敗時はレガシー実装にフォールバックします
+# ImportErrorが発生した場合、_resolver_funcはNoneとなり、レガシー実装が使用されます
+try:
+    from src.utils.recording_dir_resolver import create_or_get_recording_dir
+    _resolver_func = create_or_get_recording_dir
+except ImportError:
+    # 統一リゾルバが利用できない場合はNoneを設定し、レガシー実装を使用
+    _resolver_func = None
+
 def get_recording_path(fallback_relative_path: str = "./tmp/record_videos") -> str:
     """
     録画ディレクトリのパスを取得する（クロスプラットフォーム対応）
@@ -16,6 +26,35 @@ def get_recording_path(fallback_relative_path: str = "./tmp/record_videos") -> s
         
     Returns:
         str: 録画ディレクトリのパス
+    """
+    if _resolver_func is not None:
+        return str(_resolver_func())
+    else:
+        # フォールバック: レガシー実装を使用
+        return _legacy_get_recording_path(fallback_relative_path)
+
+def _legacy_get_recording_path(fallback_relative_path: str = "./tmp/record_videos") -> str:
+    """
+    レガシーの録画パス取得実装（フォールバック用）
+    
+    統一されたリゾルバが利用できない場合に使用されるフォールバック実装です。
+    環境変数、プラットフォーム固有のデフォルトパス、指定されたフォールバックパスを
+    順番に試行し、録画ディレクトリのパスを決定します。
+    
+    Args:
+        fallback_relative_path (str): フォールバック時に使用する相対パス。
+            デフォルトは "./tmp/record_videos"。
+            macOS/Linuxで環境変数が未設定の場合に使用されます。
+    
+    Returns:
+        str: 録画ディレクトリの絶対パス。
+            ディレクトリが作成できない場合は一時ディレクトリのパスを返します。
+    
+    Behavior:
+        - 環境変数 "RECORDING_PATH" が設定されていればその値を使用します。
+        - Windowsの場合はデフォルトでユーザーの "Documents/2bykilt/recordings" ディレクトリを使用します。
+        - macOS/Linuxの場合は fallback_relative_path を使用します。
+        - ディレクトリ作成に失敗した場合は一時ディレクトリを返します。
     """
     # 環境変数から取得
     recording_dir = os.environ.get("RECORDING_PATH", "").strip()
