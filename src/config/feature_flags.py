@@ -259,9 +259,11 @@ class FeatureFlags:
                     "Failed to write fallback feature flags snapshot artifact",
                     extra={"event": "flag.artifact.fallback.error", "error": repr(e)},
                 )
-                # Last resort: return existing artifact root even if file doesn't exist
-                # This maintains API contract while logging the failure
-                return _ARTIFACT_ROOT
+                # Last resort: raise an exception to indicate failure
+                # This ensures callers are aware the artifact was not created
+                raise RuntimeError(
+                    f"Failed to write feature flags snapshot artifact to fallback location '{out_dir}'. Error: {e}"
+                )
         return out_dir
 
     # -------------------- Internal helpers -------------------------------- #
