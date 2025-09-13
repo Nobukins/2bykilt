@@ -34,7 +34,9 @@ if ENABLE_LLM:
             return None
 else:
     LLM_AGENT_VIEWS_AVAILABLE = False
-    print("ℹ️ LLM agent views functionality is disabled (ENABLE_LLM=false)")
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info("ℹ️ LLM disabled reason: ENABLE_LLM=false - agent views functionality disabled")
     
     # ダミークラスを定義
     class AgentOutput:

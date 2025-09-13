@@ -172,3 +172,23 @@ summary:
       - "90"
       - "154"
   generated_at_utc: "2025-09-12T00:00:00Z"
+
+validation_rules:
+  - "All blocking dependencies must be completed before starting an issue"
+  - "Test coverage must be >= 80% for completed issues"
+  - "Documentation must be updated for all changes"
+  - "LLM parity must be maintained across enable/disable states"
+
+automated_checks:
+  - name: "dependency_validation"
+    description: "Validate all dependencies are completed"
+    command: "python scripts/validate_dependencies.py"
+    frequency: "on_issue_start"
+  - name: "llm_parity_test"
+    description: "Run LLM parity test suite"
+    command: "pytest tests/runner/llm_parity.py -v"
+    frequency: "on_llm_changes"
+  - name: "manifest_validation"
+    description: "Validate manifest.json integrity"
+    command: "python scripts/validate_manifest.py"
+    frequency: "daily"

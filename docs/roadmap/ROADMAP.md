@@ -75,6 +75,16 @@ Progress Summary (Phase2): Phase2-04 Done / Phase2-05 Done / Phase2-06 Done / Ph
 | Phase2-11 | Docs & Automation | #66 → #67 → #92 → #81 → #178 | OPEN | 整備 / enrichment / workflow 追加 |
 | Phase2-12 | MVP 定義 & ギャップ | #177 | ✅ Done | Enterprise readiness matrix 実装完了 (docs/mvp/README.md) |
 
+**Phase2-12 MVP Matrix 詳細:**
+
+- **機能性軸**: Batch Processing, Artifacts, Logging & Metrics, Configuration, Runner Core
+- **透明性軸**: Execution Visibility, Error Reporting, Performance Metrics, Debug Information, Status Tracking
+- **監査性軸**: Action Logging, Data Provenance, Change Tracking, Access Control, Retention Policy
+- **セキュリティ軸**: Secret Management, Input Validation, Sandbox Execution, Network Security, Vulnerability Management
+- **成熟度レベル**: L0（Prototype）→ L1（Usable）→ L2（Hardened）→ L3（Ready）
+- **Measurable Signals**: 各軸・レベルで定量的な達成基準を定義
+- **ギャップ分析**: High Priority Gapsとして#175, #62, #109を特定
+
 Gate 条件:
 
 - Group A
@@ -210,7 +220,7 @@ graph LR
 
 ### Gitツリー表示 (開発ブランチ構造)
 
-```
+```bash
 2bykilt (main)
 ├── feature/issue-155-metrics-foundation (Metrics基盤)
 ├── feature/issue-43-enable-llm-parity (LLM Toggle)
@@ -281,7 +291,7 @@ graph LR
 
 PR Description 追記テンプレ:
 
-```
+```markdown
 Docs Updated: yes/no(<理由>)
 Dependency Graph: regenerated
 Validation: dependencies=pass, queue=pass (warnings=<数>)
