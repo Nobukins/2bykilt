@@ -8,8 +8,9 @@ import tempfile
 from pathlib import Path
 
 # 統一されたリゾルバのimportを試行（Issue #28 step 2）
+# このimportはモジュールレベルのtry-exceptで安全に行われ、失敗時はレガシー実装にフォールバックします
 try:
-    from src.utils.recording_dir_resolver import create_or_get_recording_dir
+    from src.utils.recording_dir_resolver import create_or_get_recording_dir  # noqa: F401
     _use_unified_resolver = True
     _resolver_func = create_or_get_recording_dir
 except ImportError:
