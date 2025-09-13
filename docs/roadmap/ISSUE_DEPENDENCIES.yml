@@ -159,7 +159,7 @@ issues:
   "178": {title: "CI: dependency-pipeline workflow 追加 (生成物 idempotent 検証自動化)", meta: {area: automation, type: chore, priority: P2, phase: "2", stability: core}, depends: ["76"], dependents: [], risk: low, critical_path_rank: 1}
 
 summary:
-  total_issues: 54
+  total_issues: 55
   high_risk: ["31", "46", "49", "54", "62", "176"]
   longest_chain_example: ["65", "64", "63", "66", "67"]
   data_quality_checks:
