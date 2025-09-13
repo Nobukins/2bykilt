@@ -16,7 +16,7 @@ def _filtered_values(series: MetricSeries, since_seconds: Optional[int] = None,
                      tags_filter: Optional[Dict[str, str]] = None) -> List[MetricValue]:
     values = series.get_values(tags_filter)
     if since_seconds is not None and since_seconds > 0:
-        cutoff = values[-1].timestamp.timestamp() - since_seconds if values else 0
+        cutoff = (values[-1].timestamp.timestamp() - since_seconds) if len(values) > 0 else 0
         values = [v for v in values if v.timestamp.timestamp() >= cutoff]
     return values
 

@@ -237,10 +237,7 @@ class FeatureFlags:
         if out_dir is None:
             # Fallback if writing failed: ensure artifact directory and file exist
             try:
-                _ARTIFACT_ROOT.mkdir(parents=True, exist_ok=True)
-                run_id = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S") + "-fallback-flags"
-                out_dir = _ARTIFACT_ROOT / run_id
-                out_dir.mkdir(parents=True, exist_ok=True)
+                out_dir = cls._create_fallback_artifact_dir("fallback-flags")
 
                 # Write current resolved flags to JSON
                 payload = {
@@ -348,13 +345,20 @@ class FeatureFlags:
         return value
 
     @classmethod
-    def _prune_expired(cls) -> None:
-        now = datetime.now(timezone.utc)
-        expired = [k for k, (_v, exp) in cls._overrides.items() if exp and exp <= now]
-        for k in expired:
-            cls._overrides.pop(k, None)
-            cls._resolved_cache.pop(k, None)
-            logger.info("Expired feature flag override removed", extra={"event": "flag.override.expired", "flag": k})
+    def _create_fallback_artifact_dir(cls, suffix: str) -> Path:
+        """Create a fallback artifact directory with timestamp-based naming.
+
+        Args:
+            suffix: Suffix for the directory name (e.g., 'legacy-flags', 'fallback-flags')
+
+        Returns:
+            Path to the created directory
+        """
+        _ARTIFACT_ROOT.mkdir(parents=True, exist_ok=True)
+        run_id = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S") + f"-{suffix}"
+        out_dir = _ARTIFACT_ROOT / run_id
+        out_dir.mkdir(parents=True, exist_ok=True)
+        return out_dir
 
     @classmethod
     def _maybe_write_artifact(cls, force_refresh: bool = False) -> Path | None:
@@ -402,11 +406,7 @@ class FeatureFlags:
                 run_id_base = RunContext.get().run_id_base
             except Exception:  # noqa: BLE001
                 # Fallback to legacy behavior
-                if not _ARTIFACT_ROOT.exists():
-                    _ARTIFACT_ROOT.mkdir(parents=True, exist_ok=True)
-                run_id = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S") + "-legacy-flags"
-                out_dir = _ARTIFACT_ROOT / run_id
-                out_dir.mkdir(parents=True, exist_ok=True)
+                out_dir = cls._create_fallback_artifact_dir("legacy-flags")
                 run_id_base = None
 
             payload = {
