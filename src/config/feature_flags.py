@@ -235,8 +235,36 @@ class FeatureFlags:
         # Force refresh to ensure latest cache/overrides are reflected
         out_dir = cls._maybe_write_artifact(force_refresh=True)
         if out_dir is None:
-            # Fallback if writing failed
-            out_dir = _ARTIFACT_ROOT
+            # Fallback if writing failed: ensure artifact directory and file exist
+            try:
+                _ARTIFACT_ROOT.mkdir(parents=True, exist_ok=True)
+                run_id = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S") + "-fallback-flags"
+                out_dir = _ARTIFACT_ROOT / run_id
+                out_dir.mkdir(parents=True, exist_ok=True)
+
+                # Write current resolved flags to JSON
+                payload = {
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
+                    "flags_file": str(cls._flags_file) if cls._flags_file else None,
+                    "run_id_base": None,
+                    "resolved": cls._resolved_cache.copy(),
+                    "overrides_active": list(cls._overrides.keys()),
+                }
+                (out_dir / "feature_flags_resolved.json").write_text(
+                    json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8"
+                )
+                logger.info(
+                    "Fallback feature flags artifact written",
+                    extra={"event": "flag.artifact.fallback.written", "path": str(out_dir)},
+                )
+            except Exception as e:  # noqa: BLE001
+                logger.error(
+                    "Failed to write fallback feature flags snapshot artifact",
+                    extra={"event": "flag.artifact.fallback.error", "error": repr(e)},
+                )
+                # Last resort: return existing artifact root even if file doesn't exist
+                # This maintains API contract while logging the failure
+                return _ARTIFACT_ROOT
         return out_dir
 
     # -------------------- Internal helpers -------------------------------- #
