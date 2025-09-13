@@ -10,11 +10,9 @@ from pathlib import Path
 # 統一されたリゾルバのimportを試行（Issue #28 step 2）
 # このimportはモジュールレベルのtry-exceptで安全に行われ、失敗時はレガシー実装にフォールバックします
 try:
-    from src.utils.recording_dir_resolver import create_or_get_recording_dir  # noqa: F401
-    _use_unified_resolver = True
+    from src.utils.recording_dir_resolver import create_or_get_recording_dir
     _resolver_func = create_or_get_recording_dir
 except ImportError:
-    _use_unified_resolver = False
     _resolver_func = None
 
 def get_recording_path(fallback_relative_path: str = "./tmp/record_videos") -> str:
@@ -27,7 +25,7 @@ def get_recording_path(fallback_relative_path: str = "./tmp/record_videos") -> s
     Returns:
         str: 録画ディレクトリのパス
     """
-    if _use_unified_resolver and _resolver_func is not None:
+    if _resolver_func is not None:
         return str(_resolver_func())
     else:
         # フォールバック: レガシー実装を使用
