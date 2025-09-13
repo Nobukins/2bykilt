@@ -236,6 +236,7 @@ class FeatureFlags:
         out_dir = cls._maybe_write_artifact(force_refresh=True)
         if out_dir is None:
             # Fallback if writing failed: ensure artifact directory and file exist
+            out_dir = None
             try:
                 out_dir = cls._create_fallback_artifact_dir("fallback-flags")
 
@@ -261,8 +262,9 @@ class FeatureFlags:
                 )
                 # Last resort: raise an exception to indicate failure
                 # This ensures callers are aware the artifact was not created
+                fallback_path = str(out_dir) if out_dir is not None else "unknown"
                 raise RuntimeError(
-                    f"Failed to write feature flags snapshot artifact to fallback location '{out_dir}'. Error: {e}"
+                    f"Failed to write feature flags snapshot artifact to fallback location '{fallback_path}'. Error: {e}"
                 )
         return out_dir
 
