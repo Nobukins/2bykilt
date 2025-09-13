@@ -39,7 +39,6 @@ async def handle_git_script(action: Dict[str, Any], params: Dict[str, Any], use_
         # Execute the git script action
         result = await execute_git_script_new_method(
             action=action,
-            params=params,
             **execution_params
         )
 

@@ -7,15 +7,6 @@ import platform
 import tempfile
 from pathlib import Path
 
-"""
-録画パス設定ユーティリティ - クロスプラットフォーム対応
-"""
-
-import os
-import platform
-import tempfile
-from pathlib import Path
-
 def get_recording_path(fallback_relative_path: str = "./tmp/record_videos") -> str:
     """
     録画ディレクトリのパスを取得する（クロスプラットフォーム対応）

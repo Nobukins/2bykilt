@@ -37,7 +37,6 @@ async def handle_script(action: Dict[str, Any], params: Dict[str, Any], use_own_
         # Execute the script action
         result_msg, _ = await execute_script(
             script_info=action,
-            params=params,
             **execution_params
         )
 
