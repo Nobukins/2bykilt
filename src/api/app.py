@@ -18,6 +18,7 @@ from src.utils.log_ui import create_log_tab  # Correct import from log_ui instea
 from src.utils.app_logger import logger
 import gradio as gr
 from src.core.artifact_manager import ArtifactManager
+from src.api.metrics_router import router as metrics_router
 
 # Simplified CSP middleware
 class CSPMiddleware(BaseHTTPMiddleware):
@@ -63,6 +64,9 @@ def create_fastapi_app(demo, args):
     @app.get("/api/status")
     async def root():
         return {"message": "APIサーバーは正常に動作しています"}
+
+    # Metrics API (Issue #59)
+    app.include_router(metrics_router)
 
     # Artifact manifest listing (#36)
     @app.get("/api/artifacts")
