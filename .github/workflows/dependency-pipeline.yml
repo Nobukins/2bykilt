@@ -1,0 +1,186 @@
+name: Dependency Pipeline (Issue #178)
+
+on:
+  pull_request:
+    paths:
+      - 'docs/roadmap/ISSUE_DEPENDENCIES.yml'
+      - 'scripts/**.py'
+      - '.github/workflows/dependency-pipeline.yml'
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  validate-deps:
+    name: Validate Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install PyYAML requests
+
+      - name: Dependency Validation
+        run: |
+          echo "🔍 Validating ISSUE_DEPENDENCIES.yml..."
+          python scripts/validate_dependencies.py docs/roadmap/ISSUE_DEPENDENCIES.yml
+
+  regenerate-and-check:
+    name: Regenerate and Check
+    needs: validate-deps
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install PyYAML requests
+
+      - name: Regenerate derived artifacts
+        run: |
+          echo "🔄 Regenerating derived artifacts..."
+          python scripts/gen_mermaid.py docs/roadmap/ISSUE_DEPENDENCIES.yml > docs/roadmap/DEPENDENCY_GRAPH.md
+          python scripts/generate_task_dashboard.py
+          python scripts/generate_task_queue.py \
+            --repo ${{ github.repository }} \
+            --input docs/roadmap/ISSUE_DEPENDENCIES.yml \
+            --output docs/roadmap/TASK_QUEUE.yml \
+            --no-api \
+            --verbose
+
+      - name: Queue Validation
+        run: |
+          echo "✅ Validating generated task queue..."
+          python scripts/validate_task_queue.py \
+            --queue docs/roadmap/TASK_QUEUE.yml \
+            --dependencies docs/roadmap/ISSUE_DEPENDENCIES.yml
+
+      - name: Idempotency Check
+        run: |
+          echo "🔁 Checking idempotency (2nd generation)..."
+          cp docs/roadmap/TASK_QUEUE.yml /tmp/TASK_QUEUE.yml.bak
+          cp docs/roadmap/DEPENDENCY_GRAPH.md /tmp/DEPENDENCY_GRAPH.md.bak
+          cp docs/roadmap/TASK_DASHBOARD.md /tmp/TASK_DASHBOARD.md.bak
+
+          # 2回目の生成
+          python scripts/gen_mermaid.py docs/roadmap/ISSUE_DEPENDENCIES.yml > docs/roadmap/DEPENDENCY_GRAPH.md
+          python scripts/generate_task_dashboard.py
+          python scripts/generate_task_queue.py \
+            --repo ${{ github.repository }} \
+            --input docs/roadmap/ISSUE_DEPENDENCIES.yml \
+            --output docs/roadmap/TASK_QUEUE.yml \
+            --no-api
+
+          # 差分チェック
+          if diff -u /tmp/TASK_QUEUE.yml.bak docs/roadmap/TASK_QUEUE.yml; then
+            echo "✅ TASK_QUEUE.yml: Idempotent (no diff)"
+          else
+            echo "❌ TASK_QUEUE.yml: Not idempotent (diff detected)"
+            exit 1
+          fi
+
+          if diff -u /tmp/DEPENDENCY_GRAPH.md.bak docs/roadmap/DEPENDENCY_GRAPH.md; then
+            echo "✅ DEPENDENCY_GRAPH.md: Idempotent (no diff)"
+          else
+            echo "❌ DEPENDENCY_GRAPH.md: Not idempotent (diff detected)"
+            exit 1
+          fi
+
+          if diff -u /tmp/TASK_DASHBOARD.md.bak docs/roadmap/TASK_DASHBOARD.md; then
+            echo "✅ TASK_DASHBOARD.md: Idempotent (no diff)"
+          else
+            echo "❌ TASK_DASHBOARD.md: Not idempotent (diff detected)"
+            exit 1
+          fi
+
+  diff-guard:
+    name: Diff Guard
+    needs: regenerate-and-check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install PyYAML requests
+
+      - name: Ensure committed artifacts are up to date
+        run: |
+          echo "🛡️ Checking if committed artifacts are synchronized..."
+
+          # DEPENDENCY_GRAPH.md の同期チェック
+          python scripts/gen_mermaid.py docs/roadmap/ISSUE_DEPENDENCIES.yml > /tmp/graph.md
+          if diff -q /tmp/graph.md docs/roadmap/DEPENDENCY_GRAPH.md; then
+            echo "✅ DEPENDENCY_GRAPH.md is synchronized"
+          else
+            echo "❌ DEPENDENCY_GRAPH.md is out-of-sync with ISSUE_DEPENDENCIES.yml"
+            echo "Differences:"
+            diff -u docs/roadmap/DEPENDENCY_GRAPH.md /tmp/graph.md || true
+            exit 1
+          fi
+
+          # TASK_QUEUE.yml の同期チェック
+          python scripts/generate_task_queue.py \
+            --repo ${{ github.repository }} \
+            --input docs/roadmap/ISSUE_DEPENDENCIES.yml \
+            --output /tmp/queue.yml \
+            --no-api
+          if diff -q /tmp/queue.yml docs/roadmap/TASK_QUEUE.yml; then
+            echo "✅ TASK_QUEUE.yml is synchronized"
+          else
+            echo "❌ TASK_QUEUE.yml is out-of-sync with ISSUE_DEPENDENCIES.yml"
+            echo "Differences:"
+            diff -u docs/roadmap/TASK_QUEUE.yml /tmp/queue.yml || true
+            exit 1
+          fi
+
+          # TASK_DASHBOARD.md の同期チェック
+          python scripts/generate_task_dashboard.py
+          # generate_task_dashboard.py は直接 docs/roadmap/TASK_DASHBOARD.md を更新するので、
+          # 再生成後の差分をチェック
+          if git diff --quiet docs/roadmap/TASK_DASHBOARD.md; then
+            echo "✅ TASK_DASHBOARD.md is synchronized"
+          else
+            echo "❌ TASK_DASHBOARD.md is out-of-sync"
+            git diff docs/roadmap/TASK_DASHBOARD.md
+            exit 1
+          fi
+
+      - name: Output summary
+        run: |
+          echo "## Dependency Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Repository**: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **PR**: ${{ github.event.number }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Validation**: ✅ PASSED" >> $GITHUB_STEP_SUMMARY
+          echo "- **Idempotency**: ✅ PASSED" >> $GITHUB_STEP_SUMMARY
+          echo "- **Sync Check**: ✅ PASSED" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Generated Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- DEPENDENCY_GRAPH.md" >> $GITHUB_STEP_SUMMARY
+          echo "- TASK_QUEUE.yml" >> $GITHUB_STEP_SUMMARY
+          echo "- TASK_DASHBOARD.md" >> $GITHUB_STEP_SUMMARY
