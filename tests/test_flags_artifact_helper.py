@@ -3,6 +3,7 @@ import json
 import pytest
 
 from src.config.feature_flags import FeatureFlags
+from src.runtime.run_context import RunContext
 
 
 def test_flags_dump_snapshot_creates_artifact(tmp_path, monkeypatch):
@@ -78,15 +79,12 @@ def test_flags_dump_snapshot_fallback_behavior(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
 
     # Mock RunContext.get() to raise an exception
-    import src.config.feature_flags as ff_module
-    original_run_context = ff_module.RunContext
-
     class MockRunContext:
         @staticmethod
         def get():
             raise Exception("RunContext not available")
 
-    ff_module.RunContext = MockRunContext
+    monkeypatch.setattr("src.config.feature_flags.RunContext", MockRunContext)
 
     try:
         FeatureFlags.clear_all_overrides()
@@ -99,8 +97,8 @@ def test_flags_dump_snapshot_fallback_behavior(tmp_path, monkeypatch):
         assert (out_dir / "feature_flags_resolved.json").exists()
 
     finally:
-        # Restore original RunContext
-        ff_module.RunContext = original_run_context
+        # Restore original RunContext - monkeypatch handles this automatically
+        pass
 
 
 def test_flags_dump_snapshot_error_handling(tmp_path, monkeypatch):

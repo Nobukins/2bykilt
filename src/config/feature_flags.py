@@ -236,6 +236,7 @@ class FeatureFlags:
         out_dir = cls._maybe_write_artifact(force_refresh=True)
         if out_dir is None:
             # Fallback if writing failed: ensure artifact directory and file exist
+            out_dir = None
             try:
                 out_dir = cls._create_fallback_artifact_dir("fallback-flags")
 
