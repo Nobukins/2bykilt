@@ -16,6 +16,16 @@ from src.metrics.collector import get_metrics_collector, MetricSeries
 from src.metrics.aggregator import compute_summary
 
 
+def _parse_tag_filter(tag: Optional[str]) -> Optional[Dict[str, str]]:
+    """Parse tag filter from query parameter (key=value format)."""
+    if not tag:
+        return None
+    if "=" not in tag:
+        raise HTTPException(status_code=400, detail="tag must be in key=value format")
+    k, v = tag.split("=", 1)
+    return {k: v}
+
+
 router = APIRouter(prefix="/api/metrics", tags=["metrics"])
 
 
@@ -33,12 +43,7 @@ def get_series(name: str,
     if not series:
         raise HTTPException(status_code=404, detail=f"Series '{name}' not found")
 
-    tags_filter = None
-    if tag:
-        if "=" not in tag:
-            raise HTTPException(status_code=400, detail="tag must be in key=value format")
-        k, v = tag.split("=", 1)
-        tags_filter = {k: v}
+    tags_filter = _parse_tag_filter(tag)
 
     values = [v.to_dict() for v in series.get_values(tags_filter)]
     return {"name": name, "type": series.metric_type.value, "values": values}
@@ -53,12 +58,7 @@ def get_series_summary(name: str,
     if not series:
         raise HTTPException(status_code=404, detail=f"Series '{name}' not found")
 
-    tags_filter = None
-    if tag:
-        if "=" not in tag:
-            raise HTTPException(status_code=400, detail="tag must be in key=value format")
-        k, v = tag.split("=", 1)
-        tags_filter = {k: v}
+    tags_filter = _parse_tag_filter(tag)
 
     summary = compute_summary(series, since_seconds=since_seconds, tags_filter=tags_filter)
     return {"name": name, **summary}
