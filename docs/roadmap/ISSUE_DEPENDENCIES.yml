@@ -101,6 +101,7 @@ issues:
   "59": {title: "Run メトリクス API", meta: {area: observability, type: feat, 
         priority: P2, phase: "2", stability: core}, depends: ["58"], dependents: [],
     progress: {state: in-progress}, risk: null, critical_path_rank: 1}
+  "102": {title: "Flags artifacts helper", meta: {area: config, type: chore, priority: P2, phase: "2", stability: core}, depends: ["64"], dependents: [], progress: {state: in-progress}, risk: null, critical_path_rank: 1}
   "60": {title: "シークレットマスキング拡張", meta: {area: security, type: feat, priority: P1,
       phase: "1-late", stability: core}, depends: ["56"], dependents: [], risk: 
       null, critical_path_rank: 1}

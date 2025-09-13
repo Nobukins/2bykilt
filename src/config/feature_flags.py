@@ -223,6 +223,26 @@ class FeatureFlags:
                 logger.info("All runtime feature flag overrides cleared", extra={"event": "flag.override.cleared_all"})
                 cls._maybe_write_artifact(force_refresh=True)
 
+    @classmethod
+    def dump_snapshot(cls) -> Path:
+        """Write a snapshot artifact of current resolved flags and return path.
+
+        Useful in tests and tooling that need to ensure a flags artifact exists
+        without relying on lazy writes. Returns the directory path containing
+        the JSON file.
+        """
+        cls._ensure_loaded()
+        # Force refresh to ensure latest cache/overrides are reflected
+        cls._maybe_write_artifact(force_refresh=True)
+        try:
+            if RunContext:
+                out_dir = RunContext.get().artifact_dir("flags", ensure=False)
+            else:
+                out_dir = _ARTIFACT_ROOT  # fallback root
+        except Exception:  # noqa: BLE001
+            out_dir = _ARTIFACT_ROOT
+        return out_dir
+
     # -------------------- Internal helpers -------------------------------- #
     @classmethod
     def _ensure_loaded(cls) -> None:
