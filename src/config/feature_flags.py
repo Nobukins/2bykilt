@@ -345,6 +345,16 @@ class FeatureFlags:
         return value
 
     @classmethod
+    def _prune_expired(cls) -> None:
+        """Remove expired runtime overrides (called lazily on access)."""
+        now = datetime.now(timezone.utc)
+        expired = [k for k, (_v, exp) in cls._overrides.items() if exp and exp <= now]
+        for k in expired:
+            cls._overrides.pop(k, None)
+            cls._resolved_cache.pop(k, None)
+            logger.info("Expired feature flag override removed", extra={"event": "flag.override.expired", "flag": k})
+
+    @classmethod
     def _create_fallback_artifact_dir(cls, suffix: str) -> Path:
         """Create a fallback artifact directory with timestamp-based naming.
 
