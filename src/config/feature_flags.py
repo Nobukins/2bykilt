@@ -233,13 +233,9 @@ class FeatureFlags:
         """
         cls._ensure_loaded()
         # Force refresh to ensure latest cache/overrides are reflected
-        cls._maybe_write_artifact(force_refresh=True)
-        try:
-            if RunContext:
-                out_dir = RunContext.get().artifact_dir("flags", ensure=False)
-            else:
-                out_dir = _ARTIFACT_ROOT  # fallback root
-        except Exception:  # noqa: BLE001
+        out_dir = cls._maybe_write_artifact(force_refresh=True)
+        if out_dir is None:
+            # Fallback if writing failed
             out_dir = _ARTIFACT_ROOT
         return out_dir
 
@@ -333,28 +329,25 @@ class FeatureFlags:
             logger.info("Expired feature flag override removed", extra={"event": "flag.override.expired", "flag": k})
 
     @classmethod
-    def _maybe_write_artifact(cls, force_refresh: bool = False) -> None:
+    def _maybe_write_artifact(cls, force_refresh: bool = False) -> Path | None:
         if not force_refresh and cls._artifact_written:
             # If working directory changed after first write (tests use tmp_path + chdir),
             # the previously written artifact may no longer exist relative to the new CWD.
             # Allow a second write in that case so tests see a -flags directory (Issue #91 side-effect).
             try:  # defensive; never block flag resolution
-                if RunContext:
-                    # artifact_dir returns Path; ensure=False avoids creating when probing existence
-                    expected_dir = RunContext.get().artifact_dir("flags", ensure=False)
-                    if not expected_dir.exists():
-                        cls._artifact_written = False  # reset and proceed to write below
-                    else:
-                        return
+                RunContext.get().artifact_dir("flags", ensure=False)
+                expected_dir = RunContext.get().artifact_dir("flags", ensure=False)
+                if not expected_dir.exists():
+                    cls._artifact_written = False  # reset and proceed to write below
                 else:
-                    return
+                    return expected_dir
             except Exception as e:  # noqa: BLE001
                 # Log once for observability while still suppressing to avoid cascading failures
                 logger.warning(
                     "Error while probing existing flags artifact directory",
                     extra={"event": "flag.artifact.dir.error", "error": repr(e)},
                 )
-                return
+                return None
         try:
             # Gather current resolved values (resolve defaults without side effects)
             resolved: Dict[str, Any] = {}
@@ -377,19 +370,22 @@ class FeatureFlags:
                 if name not in resolved:
                     resolved[name] = cls._overrides[name][0]
             # Unified RunContext directory (Issue #32)
-            if RunContext:
+            try:
                 out_dir = RunContext.get().artifact_dir("flags")
-            else:  # fallback (should not generally occur)
-                # REVIEW FIX: ensure directory actually exists (previously missing mkdir for out_dir)
+                run_id_base = RunContext.get().run_id_base
+            except Exception:  # noqa: BLE001
+                # Fallback to legacy behavior
                 if not _ARTIFACT_ROOT.exists():
                     _ARTIFACT_ROOT.mkdir(parents=True, exist_ok=True)
                 run_id = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S") + "-legacy-flags"
                 out_dir = _ARTIFACT_ROOT / run_id
                 out_dir.mkdir(parents=True, exist_ok=True)
+                run_id_base = None
+
             payload = {
                 "generated_at": datetime.now(timezone.utc).isoformat(),
                 "flags_file": str(cls._flags_file) if cls._flags_file else None,
-                "run_id_base": RunContext.get().run_id_base if RunContext else None,
+                "run_id_base": run_id_base,
                 "resolved": resolved,
                 "overrides_active": list(cls._overrides.keys()),
             }
@@ -401,11 +397,13 @@ class FeatureFlags:
                 "Feature flags artifact written",
                 extra={"event": "flag.artifact.written", "path": str(out_dir)},
             )
+            return out_dir
         except Exception as e:  # noqa: BLE001
             logger.warning(
                 "Failed to write feature flags artifact",
                 extra={"event": "flag.artifact.error", "error": repr(e)},
             )
+            return None
 
 
 # Initialize on import (safe, file missing handled gracefully)
