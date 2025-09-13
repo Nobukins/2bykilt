@@ -1,6 +1,7 @@
 import pdb
 from typing import List, Optional
 import os
+import logging
 try:
   from src.config.feature_flags import is_llm_enabled
   ENABLE_LLM = is_llm_enabled()
@@ -9,6 +10,8 @@ except Exception:
 import pdb
 from typing import List, Optional
 import os
+
+logger = logging.getLogger(__name__)
 
 # ---------------- Feature flag / legacy env bridge -----------------
 try:
@@ -85,32 +88,35 @@ if ENABLE_LLM:
   except ImportError as e:  # pragma: no cover
     print(f"⚠️ Warning: LLM prompts modules failed to load: {e}")
     pass
+else:
+    logger.info("ℹ️ LLM disabled reason: ENABLE_LLM=false - prompts functionality disabled")
+    LLM_PROMPTS_AVAILABLE = False
 
-  class ActionResult:
-    def __init__(self, extracted_content=None, include_in_memory=False, error=None):
-      self.extracted_content = extracted_content
-      self.include_in_memory = include_in_memory
-      self.error = error
+    class ActionResult:
+        def __init__(self, extracted_content=None, include_in_memory=False, error=None):
+            self.extracted_content = extracted_content
+            self.include_in_memory = include_in_memory
+            self.error = error
 
-  class HumanMessage:
-    def __init__(self, content=None):
-      self.content = content
+    class HumanMessage:
+        def __init__(self, content=None):
+            self.content = content
 
-  class SystemMessage:
-    def __init__(self, content=None):
-      self.content = content
+    class SystemMessage:
+        def __init__(self, content=None):
+            self.content = content
 
-  class CustomAgentStepInfo:
-    def __init__(self, **kwargs):
-      self.step_number = kwargs.get('step_number', 0)
-      self.max_steps = kwargs.get('max_steps', 0)
-      self.task = kwargs.get('task', '')
-      self.add_infos = kwargs.get('add_infos', '')
-      self.memory = kwargs.get('memory', '')
-      self.task_progress = kwargs.get('task_progress', '')
-      self.future_plans = kwargs.get('future_plans', '')
+    class CustomAgentStepInfo:
+        def __init__(self, **kwargs):
+            self.step_number = kwargs.get('step_number', 0)
+            self.max_steps = kwargs.get('max_steps', 0)
+            self.task = kwargs.get('task', '')
+            self.add_infos = kwargs.get('add_infos', '')
+            self.memory = kwargs.get('memory', '')
+            self.task_progress = kwargs.get('task_progress', '')
+            self.future_plans = kwargs.get('future_plans', '')
 
-  from datetime import datetime
+    from datetime import datetime
 
 
 class CustomSystemPrompt(SystemPrompt):

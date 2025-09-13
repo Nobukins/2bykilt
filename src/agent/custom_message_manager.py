@@ -5,7 +5,11 @@ import os
 from typing import List, Optional, Type, Dict
 
 # LLM機能の有効/無効を制御
-ENABLE_LLM = os.getenv("ENABLE_LLM", "false").lower() == "true"
+try:
+    from src.config.feature_flags import is_llm_enabled
+    ENABLE_LLM = is_llm_enabled()
+except Exception:
+    ENABLE_LLM = os.getenv("ENABLE_LLM", "false").lower() == "true"
 
 # 条件付きLLMインポート
 if ENABLE_LLM:
@@ -40,6 +44,9 @@ else:
     class BaseChatModel: pass
 
 logger = logging.getLogger(__name__)
+
+if not ENABLE_LLM:
+    logger.info("ℹ️ LLM disabled reason: ENABLE_LLM=false - message manager functionality disabled")
 
 
 class CustomMessageManager(MessageManager):

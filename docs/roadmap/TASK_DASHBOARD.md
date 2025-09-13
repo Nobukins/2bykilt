@@ -1,10 +1,10 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-09-11T22:08:10+00:00
+Generated at (UTC): 2025-09-13T12:12:17+00:00
 
 ## 1. メタサマリー
 
-- Total Issues: 54
+- Total Issues: 57
 - High Risk (declared): 6 → 31, 46, 49, 54, 62, 176
 - Cycle Detected: false (none)
 - Strict Orphans: 4
@@ -13,35 +13,35 @@ Generated at (UTC): 2025-09-11T22:08:10+00:00
 ## 2. 分布 (Distribution)
 
 ### Priority
-- P0: 15 (27.8%)
-- P1: 19 (35.2%)
-- P2: 18 (33.3%)
-- P3: 2 (3.7%)
+- P0: 17 (29.8%)
+- P1: 19 (33.3%)
+- P2: 19 (33.3%)
+- P3: 2 (3.5%)
 
 ### Phase
-- (none): 1 (1.9%)
-- 1: 19 (35.2%)
-- 1-late: 12 (22.2%)
-- 2: 22 (40.7%)
+- (none): 1 (1.8%)
+- 1: 19 (33.3%)
+- 1-late: 12 (21.1%)
+- 2: 25 (43.9%)
 
 ### Area
-- (none): 1 (1.9%)
-- artifacts: 13 (24.1%)
-- automation: 2 (3.7%)
-- batch: 6 (11.1%)
-- config: 3 (5.6%)
-- docs: 3 (5.6%)
-- logging: 3 (5.6%)
-- observability: 3 (5.6%)
-- plugins: 1 (1.9%)
-- runner: 15 (27.8%)
-- security: 4 (7.4%)
+- (none): 1 (1.8%)
+- artifacts: 14 (24.6%)
+- automation: 2 (3.5%)
+- batch: 6 (10.5%)
+- config: 4 (7.0%)
+- docs: 3 (5.3%)
+- logging: 3 (5.3%)
+- observability: 3 (5.3%)
+- plugins: 1 (1.8%)
+- runner: 16 (28.1%)
+- security: 4 (7.0%)
 
 ### Risk
-- high: 6 (11.1%)
-- low: 2 (3.7%)
-- medium: 2 (3.7%)
-- none: 44 (81.5%)
+- high: 6 (10.5%)
+- low: 2 (3.5%)
+- medium: 2 (3.5%)
+- none: 47 (82.5%)
 
 ## 3. リスク詳細 (High / Medium / etc.)
 
@@ -90,6 +90,8 @@ Sorted By: critical_path_rank
 | 65 | マルチ環境設定ローダ | P0 | 1 | config |  | 5 | 0 | 0 | 4 |  |
 | 28 | 録画ファイル保存パス統一 | P0 | 1 | artifacts |  | 4 | 1 | 1 | 1 | #112 |
 | 64 | フィーチャーフラグフレームワーク | P0 | 1 | config |  | 4 | 1 | 1 | 3 |  |
+| 110 | browser-control gap fix | P0 | 2 | runner |  | 3 | 0 | 1 | 1 | #188 |
+| 111 | 録画/パス統合 | P0 | 2 | artifacts |  | 3 | 2 | 1 | 1 | #188 |
 | 25 | git_script が llms.txt で指定したスクリプトを正しく解決するよう修正 | P0 | 1 | runner |  | 3 | 0 | 0 | 4 | #118 |
 | 30 | 録画タイプ間不整合是正 | P0 | 1 | artifacts |  | 3 | 2 | 1 | 2 |  |
 | 31 | 統一ログ設計 (JSON Lines) | P0 | 1 | logging | high | 3 | 1 | 1 | 1 | #80 |
@@ -111,10 +113,11 @@ Sorted By: critical_path_rank
 | 66 | ドキュメント整備 第1弾 | P2 | 1-late | docs |  | 2 | 3 | 1 | 1 |  |
 | 76 | 依存更新自動化パイプライン (PR 起票時の ISSUE_DEPENDENCIES.yml 自動更新) | P1 | 1-late | automation |  | 2 | 2 | 1 | 0 |  |
 | 81 | Async/Browser テスト安定化計画 | P1 | 1 | runner |  | 2 | 0 | 0 | 0 |  |
+| 102 | Flags artifacts helper | P2 | 2 | config |  | 1 | 2 | 1 | 0 |  |
 | 154 | pip-audit stabilization in CI with normalizer + targeted suppressions | P1 | 1 | security |  | 1 | 0 | 0 | 0 | #160 |
 | 173 | [UI][batch][#40 follow-up] CSV Preview & Command Argument Mapping | P2 | 2 | batch |  | 1 | 4 | 4 | 0 |  |
 | 174 | [artifacts][batch] Clarify Artifact Output & Access Flow | P3 | 2 | artifacts | low | 1 | 3 | 5 | 0 |  |
-| 177 | MVP エンタープライズ Readiness マトリクス定義 | P1 | 2 | docs |  | 1 | 4 | 5 | 0 |  |
+| 177 | MVP エンタープライズ Readiness マトリクス定義 | P1 | 2 | docs |  | 1 | 4 | 5 | 0 | #189 |
 | 178 | CI: dependency-pipeline workflow 追加 (生成物 idempotent 検証自動化) | P2 | 2 | automation | low | 1 | 3 | 1 | 0 |  |
 | 34 | 要素値キャプチャ & エクスポート | P1 | 1 | artifacts |  | 1 | 2 | 2 | 0 | #93 |
 | 38 | 録画統一後回帰テストスイート | P2 | 1-late | artifacts |  | 1 | 4 | 5 | 0 | #103 |
@@ -176,6 +179,24 @@ Sorted By: critical_path_rank
 - LongestDistance: 1
 - Depends (1): 65
 - Dependents (3): 63, 43, 49
+
+### Issue 110: browser-control gap fix
+- Priority: P0, Phase: 2, Area: runner
+- Risk: (none)
+- CriticalPathRank: 3
+- LongestDistance: 0
+- Depends (1): 111
+- Dependents (1): 106
+- Progress: {"state": "done", "primary_pr": 188}
+
+### Issue 111: 録画/パス統合
+- Priority: P0, Phase: 2, Area: artifacts
+- Risk: (none)
+- CriticalPathRank: 3
+- LongestDistance: 2
+- Depends (1): 28
+- Dependents (1): 110
+- Progress: {"state": "done", "primary_pr": 188}
 
 ### Issue 25: git_script が llms.txt で指定したスクリプトを正しく解決するよう修正
 - Priority: P0, Phase: 1, Area: runner
@@ -356,6 +377,15 @@ Sorted By: critical_path_rank
 - Depends (0): (none)
 - Dependents (0): (none)
 
+### Issue 102: Flags artifacts helper
+- Priority: P2, Phase: 2, Area: config
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 2
+- Depends (1): 64
+- Dependents (0): (none)
+- Progress: {"state": "in-progress"}
+
 ### Issue 154: pip-audit stabilization in CI with normalizer + targeted suppressions
 - Priority: P1, Phase: 1, Area: security
 - Risk: (none)
@@ -388,6 +418,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 4
 - Depends (5): 60, 58, 35, 39, 43
 - Dependents (0): (none)
+- Progress: {"state": "done", "primary_pr": 189}
 
 ### Issue 178: CI: dependency-pipeline workflow 追加 (生成物 idempotent 検証自動化)
 - Priority: P2, Phase: 2, Area: automation
@@ -532,6 +563,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 2
 - Depends (1): 58
 - Dependents (0): (none)
+- Progress: {"state": "in-progress"}
 
 ### Issue 60: シークレットマスキング拡張
 - Priority: P1, Phase: 1-late, Area: security

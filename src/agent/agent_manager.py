@@ -37,7 +37,8 @@ if ENABLE_LLM:
         LLM_AGENT_AVAILABLE = False
 else:
     LLM_AGENT_AVAILABLE = False
-    print("ℹ️ LLM functionality is disabled (ENABLE_LLM=false)")
+    import logging
+    logging.getLogger(__name__).info("ℹ️ LLM disabled reason: ENABLE_LLM=false - agent functionality disabled")
 
 # 常に利用可能なモジュール
 from src.utils.utils import get_latest_files

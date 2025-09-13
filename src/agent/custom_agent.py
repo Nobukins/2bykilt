@@ -11,7 +11,11 @@ import io
 import platform
 
 # LLM機能の有効/無効を制御
-ENABLE_LLM = os.getenv("ENABLE_LLM", "false").lower() == "true"
+try:
+    from src.config.feature_flags import is_llm_enabled
+    ENABLE_LLM = is_llm_enabled()
+except Exception:
+    ENABLE_LLM = os.getenv("ENABLE_LLM", "false").lower() == "true"
 
 # 条件付きLLMインポート
 if ENABLE_LLM:
@@ -48,11 +52,57 @@ if ENABLE_LLM:
         # ダミークラスを定義
         class Agent: pass
         class BaseChatModel: pass
+        class Controller: pass
+        class Browser: pass
+        class BrowserContext: pass
+        class SystemPrompt: pass
+        class AgentMessagePrompt: pass
+        class PlannerPrompt: pass
+        class BrowserState: pass
+        class AgentOutput: pass
+        class AgentHistoryList: pass
+        class ActionResult: pass
+        class ActionModel: pass
+        class AgentHistory: pass
+        class BrowserStateHistory: pass
+        class AgentEndTelemetryEvent: pass
+        class AgentRunTelemetryEvent: pass
+        class AgentStepTelemetryEvent: pass
+        def time_execution_async(*args, **kwargs):
+            def decorator(func):
+                return func
+            return decorator
+        class BaseMessage: pass
+        class HumanMessage: pass
+        class AIMessage: pass
 else:
     LLM_AGENT_AVAILABLE = False
     # ダミークラスを定義
     class Agent: pass
     class BaseChatModel: pass
+    class Controller: pass
+    class Browser: pass
+    class BrowserContext: pass
+    class SystemPrompt: pass
+    class AgentMessagePrompt: pass
+    class PlannerPrompt: pass
+    class BrowserState: pass
+    class AgentOutput: pass
+    class AgentHistoryList: pass
+    class ActionResult: pass
+    class ActionModel: pass
+    class AgentHistory: pass
+    class BrowserStateHistory: pass
+    class AgentEndTelemetryEvent: pass
+    class AgentRunTelemetryEvent: pass
+    class AgentStepTelemetryEvent: pass
+    def time_execution_async(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator
+    class BaseMessage: pass
+    class HumanMessage: pass
+    class AIMessage: pass
 
 from json_repair import repair_json
 from src.utils.agent_state import AgentState
@@ -251,6 +301,14 @@ class CustomAgent(Agent):
     @time_execution_async("--get_next_action")
     async def get_next_action(self, input_messages: list[BaseMessage]) -> AgentOutput:
         """Get next action from LLM based on current state"""
+
+        # LLM機能が無効の場合、LLM呼び出しを一切実行しない
+        if not ENABLE_LLM or not LLM_AGENT_AVAILABLE:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info("ℹ️ LLM disabled reason: ENABLE_LLM=false or LLM modules not available")
+            # LLM無効時は空のアクションを返すか、エラーを発生させる
+            raise ValueError("LLM functionality is disabled (ENABLE_LLM=false)")
 
         ai_message = self.llm.invoke(input_messages)
         self.message_manager._add_message_with_tokens(ai_message)

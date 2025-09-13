@@ -54,7 +54,7 @@
 | A8 | 後続の新規作成issue | Planned | 追加Issueの評価とスケジュール反映 |
 
 Progress Summary (Phase 1): Wave A1 100% / Wave A2 100% / Wave A3 100% / Wave A4 100% / Wave A5 100% / Wave A6 100% / Wave A7 100% ( #60 Security Base 完了) 残: Group B Phase 2 へ移行。Draft/試行 PR は進捗計測に含めず。
-Progress Summary (Phase2): Phase2-04 Done / Phase2-05 Done / Early focus shifts to Phase2-01 (Runner) & Phase2-07 (Metrics surfacing) / Upcoming gating: coverage (#109) & sandbox (#62)。
+Progress Summary (Phase2): Phase2-04 Done / Phase2-05 Done / Phase2-06 Done / Phase2-07 In Progress / Phase2-12 Done / Early focus shifts to Phase2-01 (Runner) & Phase2-07 (Metrics surfacing) / Upcoming gating: coverage (#109) & sandbox (#62)。
 
 ### Phase2 (拡張 / 高度化 / 継続改善 統合)
 
@@ -73,7 +73,17 @@ Progress Summary (Phase2): Phase2-04 Done / Phase2-05 Done / Early focus shifts 
 | Phase2-09 | Security / Compliance | #154 ✅ (follow-ups TBD) | Partial | 追加セキュリティギャップ分析 (#177 連携) |
 | Phase2-10 | Plugin 基盤 | #49 (part1 / part2) | Planned | 増分2段階 (Loader → Lifecycle) |
 | Phase2-11 | Docs & Automation | #66 → #67 → #92 → #81 → #178 | OPEN | 整備 / enrichment / workflow 追加 |
-| Phase2-12 | MVP 定義 & ギャップ | #177 | OPEN | Enterprise readiness matrix |
+| Phase2-12 | MVP 定義 & ギャップ | #177 | ✅ Done | Enterprise readiness matrix 実装完了 (docs/mvp/README.md) |
+
+**Phase2-12 MVP Matrix 詳細:**
+
+- **機能性軸**: Batch Processing, Artifacts, Logging & Metrics, Configuration, Runner Core
+- **透明性軸**: Execution Visibility, Error Reporting, Performance Metrics, Debug Information, Status Tracking
+- **監査性軸**: Action Logging, Data Provenance, Change Tracking, Access Control, Retention Policy
+- **セキュリティ軸**: Secret Management, Input Validation, Sandbox Execution, Network Security, Vulnerability Management
+- **成熟度レベル**: L0（Prototype）→ L1（Usable）→ L2（Hardened）→ L3（Ready）
+- **Measurable Signals**: 各軸・レベルで定量的な達成基準を定義
+- **ギャップ分析**: High Priority Gapsとして#175, #62, #109を特定
 
 Gate 条件:
 
@@ -195,12 +205,12 @@ graph LR
     subgraph P2[Phase2 Unified]
       P201["Phase2-01 Timeout (#46)"]:::planned --> P201b["Queue (#47)"]:::future --> P201c["EnvDiag (#48)"]:::future
       P205["Phase2-05 Deliverables (#175)"]:::done --> P205b["Extract Spec (#176)"]:::done
-      P207["Phase2-07 Metrics API (#59)"]:::planned --> P207b["Flags Helper (#102)"]:::future
+      P207["Phase2-07 Metrics API (#59)"]:::inprogress --> P207b["Flags Helper (#102)"]:::future
       P206["Phase2-06 Artifact Consolidation (#111)"]:::done --> P206b["Recording Fix (#110)"]:::done
       P208["Phase2-08 Coverage (#109)"]:::planned
       P202["Phase2-02 Sandbox PoC (#62)"]:::planned --> P202b["Sandbox Enforce (#52)"]:::future
       P210["Phase2-10 Plugins Part1 (#49)"]:::future
-      P212["Phase2-12 MVP Matrix (#177)"]:::inprogress --> P211["Phase2-11 Docs/Automation (#92,#81,#66,#67,#178)"]:::future
+      P212["Phase2-12 MVP Matrix (#177)"]:::done --> P211["Phase2-11 Docs/Automation (#92,#81,#66,#67,#178)"]:::future
     end
     classDef planned fil:#eef,stroke:#88f;
     classDef inprogress fill:#cfe,stroke:#393;
@@ -210,7 +220,7 @@ graph LR
 
 ### Gitツリー表示 (開発ブランチ構造)
 
-```
+```bash
 2bykilt (main)
 ├── feature/issue-155-metrics-foundation (Metrics基盤)
 ├── feature/issue-43-enable-llm-parity (LLM Toggle)
@@ -248,7 +258,7 @@ graph LR
 | 1.0.19 | 2025-09-10 | Group B B4 #39 完了反映 / Phase 2 進捗更新 / Batch Processing 展開準備 | Copilot Agent |
 | 1.0.20 | 2025-09-10 | Wave A8 抽象化 / 次アクションにMermaid/Gitツリー追加 / Wave A完了区切り | Copilot Agent |
 | 1.0.21 | 2025-09-10 | Group C追加 / 未記載OPEN IssueをPhase 3として整理 | Copilot Agent |
-| 1.0.22 | 2025-09-12 | Phase2-05 Done反映 / #175/#176 完了更新 / 派生出力物再作成 / Mermaid図更新 | Copilot Agent |
+| 1.0.24 | 2025-01-XX | Phase2-07 status updated to In Progress based on ISSUE_DEPENDENCIES.yml latest state | Copilot Agent |
 
 ---
 
@@ -281,7 +291,7 @@ graph LR
 
 PR Description 追記テンプレ:
 
-```
+```markdown
 Docs Updated: yes/no(<理由>)
 Dependency Graph: regenerated
 Validation: dependencies=pass, queue=pass (warnings=<数>)
