@@ -335,7 +335,6 @@ class FeatureFlags:
             # the previously written artifact may no longer exist relative to the new CWD.
             # Allow a second write in that case so tests see a -flags directory (Issue #91 side-effect).
             try:  # defensive; never block flag resolution
-                RunContext.get().artifact_dir("flags", ensure=False)
                 expected_dir = RunContext.get().artifact_dir("flags", ensure=False)
                 if not expected_dir.exists():
                     cls._artifact_written = False  # reset and proceed to write below
