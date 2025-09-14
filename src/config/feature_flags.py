@@ -268,6 +268,27 @@ class FeatureFlags:
                 )
         return out_dir
 
+    @classmethod
+    def get_override_source(cls, name: str) -> str | None:
+        """Return the source of override for a flag, or None if not overridden.
+
+        Returns:
+            'runtime' - if set via set_override()
+            'environment' - if set via environment variable
+            None - if using file default or undefined
+        """
+        cls._ensure_loaded()
+        with cls._lock:
+            cls._prune_expired()
+            # 1. Runtime override
+            if name in cls._overrides:
+                return "runtime"
+            # 2. Environment variable
+            if cls._get_env_override(name) is not None:
+                return "environment"
+            # 3. File default or undefined
+            return None
+
     # -------------------- Internal helpers -------------------------------- #
     @classmethod
     def _ensure_loaded(cls) -> None:
@@ -483,6 +504,7 @@ __all__.append("is_llm_enabled")
 def _reset_feature_flags_for_tests() -> None:  # pragma: no cover - test utility
     """Internal helper to clear caches & reload defaults (used by tests)."""
     try:
+        FeatureFlags.clear_all_overrides()
         FeatureFlags.reload()
     except Exception:  # noqa: BLE001
         pass

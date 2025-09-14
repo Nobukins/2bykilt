@@ -4,7 +4,7 @@ from src.runtime.run_context import RunContext
 
 
 def _legacy_msgs(caplog):
-    return [r.message for r in caplog.records if "Legacy recording path in use" in r.message]
+    return [r.message for r in caplog.records if "Legacy recording path" in r.message]
 
 
 def test_unified_recording_path_default_enabled(monkeypatch):

@@ -58,6 +58,26 @@ class TestFeatureFlags(unittest.TestCase):
         finally:
             del os.environ["ENGINE_CDP_USE"]
 
+    def test_get_override_source(self):
+        # Test no override (file default)
+        self.assertIsNone(FeatureFlags.get_override_source("engine.cdp_use"))
+
+        # Test environment override
+        os.environ["BYKILT_FLAG_ENGINE_CDP_USE"] = "false"
+        try:
+            FeatureFlags.reload()
+            self.assertEqual(FeatureFlags.get_override_source("engine.cdp_use"), "environment")
+        finally:
+            del os.environ["BYKILT_FLAG_ENGINE_CDP_USE"]
+            FeatureFlags.reload()
+
+        # Test runtime override takes precedence
+        FeatureFlags.set_override("engine.cdp_use", True)
+        self.assertEqual(FeatureFlags.get_override_source("engine.cdp_use"), "runtime")
+
+        # Test undefined flag
+        self.assertIsNone(FeatureFlags.get_override_source("nonexistent.flag"))
+
 
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()
