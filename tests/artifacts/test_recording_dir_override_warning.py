@@ -11,6 +11,25 @@ from src.config.feature_flags import FeatureFlags
 from src.runtime.run_context import RunContext
 
 
+"""Tests for ArtifactManager.resolve_recording_dir with override source detection (Issue #106)."""
+import os
+import logging
+from pathlib import Path
+from unittest.mock import patch
+
+import pytest
+
+from src.core.artifact_manager import ArtifactManager, reset_artifact_manager_singleton
+from src.config.feature_flags import FeatureFlags
+from src.runtime.run_context import RunContext
+
+
+def _clear_legacy_warning_flag():
+    """Helper function to clear the legacy recording warning flag."""
+    if hasattr(ArtifactManager, '_bykilt_legacy_recording_warned'):
+        delattr(ArtifactManager, '_bykilt_legacy_recording_warned')
+
+
 @pytest.fixture
 def setup_test():
     """Reset all state before each test."""
@@ -19,12 +38,10 @@ def setup_test():
     FeatureFlags.clear_all_overrides()
     FeatureFlags.reload()
     # Clear any previous warning flag
-    if hasattr(ArtifactManager, '_bykilt_legacy_recording_warned'):
-        delattr(ArtifactManager, '_bykilt_legacy_recording_warned')
+    _clear_legacy_warning_flag()
     yield
     # Cleanup after test
-    if hasattr(ArtifactManager, '_bykilt_legacy_recording_warned'):
-        delattr(ArtifactManager, '_bykilt_legacy_recording_warned')
+    _clear_legacy_warning_flag()
 
 
 def test_resolve_recording_dir_explicit_path(setup_test):
