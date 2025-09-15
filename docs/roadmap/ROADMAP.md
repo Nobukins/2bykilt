@@ -75,7 +75,7 @@ Progress Summary (Phase2): Phase2-04 Done / Phase2-05 Done / Phase2-06 Done / Ph
 | Phase2-11 | Docs & Automation | #66 → #67 → #92 → #81 → #178 ✅ | Done | 整備 / enrichment / workflow 追加 (dependency-pipeline workflow実装完了) |
 | Phase2-12 | MVP 定義 & ギャップ | #177 | ✅ Done | Enterprise readiness matrix 実装完了 (docs/mvp/README.md) |
 
-| Phase2-13 | Runner 構成標準化 & CI/Docs 追随 | #50 → #200 → #201 → #202, #196 → #203 | In Progress | 配置規約→代表スクリプト→CI→Docs。#196 は最小スモークCIの強化 |
+| Phase2-13 | Runner 構成標準化 & CI/Docs 追随 | #50 → #200 → #201 → #202 → #196 → #203 | In Progress | 配置規約→代表スクリプト→CI→Docs。#196 は最小スモークCIの強化 |
 | Phase2-14 | UI/UX Internationalization | #199 | Planned | JA ベース → EN 追加。辞書/ヘルパ/トグル/フォールバック |
 | Phase2-15 | Batch 安定化フォロー | #198 | Planned | CSV 入力正規化（NamedString 対応）+ 最小テスト |
 
@@ -214,7 +214,7 @@ graph LR
       P205["Phase2-05 Deliverables (#175)"]:::done --> P205b["Extract Spec (#176)"]:::done
       P207["Phase2-07 Metrics API (#59)"]:::done --> P207b["Flags Helper (#102)"]:::inprogress
       P206["Phase2-06 Artifact Consolidation (#111,#110)"]:::done
-      P213["Phase2-13 Runner Standardization (#50→#200→#201→#202,#196,#203)"]:::inprogress
+      P213["Phase2-13 Runner Standardization (#50→#200→#201→#202→#196→#203)"]:::inprogress
       P214["Phase2-14 i18n (#199)"]:::planned
       P215["Phase2-15 Batch Fix (#198)"]:::planned
       P208["Phase2-08 Coverage (#109)"]:::planned
