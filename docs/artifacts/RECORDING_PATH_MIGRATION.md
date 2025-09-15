@@ -46,17 +46,20 @@ artifacts/
 
 ## One-Time Warning
 
-When the flag is disabled:
+When the flag is explicitly disabled (via runtime override or environment variable):
 
 ```text
-Legacy recording path in use; enable artifacts.unified_recording_path (now default true) to migrate
+Legacy recording path explicitly forced; consider enabling artifacts.unified_recording_path
 ```
 
-Logged with event key: `artifact.recording.legacy_path`.
+Logged with event key: `artifact.recording.legacy_path.forced`.
+
+**Note**: As of Issue #106 (Phase 2 enforcement), warnings are only emitted when the flag is explicitly overridden to `false`. Default behavior (flag = `true`) produces no warnings.
 
 ## Test Coverage
 
 - `tests/test_unified_recording_path_rollout.py` validates default path and legacy warning behavior.
+- `tests/artifacts/test_recording_dir_override_warning.py` validates override source detection and conditional warnings (Issue #106).
 - Full suite (174 passed, 1 skipped, 1 xfailed on 2025-09-04) confirms no regressions post-migration.
 
 ## Future Enhancements
@@ -68,3 +71,4 @@ Logged with event key: `artifact.recording.legacy_path`.
 ## Changelog Entry
 
 Added in roadmap revision 1.0.13 (#91 complete).
+Updated in roadmap revision 1.0.26 (#106 Phase 2 enforcement complete).

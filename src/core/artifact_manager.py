@@ -223,18 +223,21 @@ class ArtifactManager:
         # legacy
         p = Path("./tmp/record_videos").resolve()
         p.mkdir(parents=True, exist_ok=True)
-        # Emit a one-time per-process warning to encourage migration (Issue #91)
-        flag = "_bykilt_legacy_recording_warned"
-        if not getattr(ArtifactManager, flag, False):  # type: ignore[attr-defined]
-            setattr(ArtifactManager, flag, True)
-            logger.warning(
-                "Legacy recording path in use; enable artifacts.unified_recording_path (now default true) to migrate",
-                extra={
-                    "event": "artifact.recording.legacy_path",
-                    "path": str(p),
-                    "recommendation": "Use unified artifacts run videos directory",
-                },
-            )
+        # Emit a one-time per-process warning only if explicitly overridden to false (Issue #106)
+        override_source = FeatureFlags.get_override_source("artifacts.unified_recording_path")
+        if override_source in ('runtime', 'environment'):
+            flag = "_bykilt_legacy_recording_warned"
+            if not getattr(ArtifactManager, flag, False):  # type: ignore[attr-defined]
+                setattr(ArtifactManager, flag, True)
+                logger.warning(
+                    "Legacy recording path explicitly forced; consider enabling artifacts.unified_recording_path",
+                    extra={
+                        "event": "artifact.recording.legacy_path.forced",
+                        "path": str(p),
+                        "override_source": override_source,
+                        "recommendation": "Remove explicit override to use unified artifacts run videos directory",
+                    },
+                )
         return p
 
     # ---------------- Manifest -------------------

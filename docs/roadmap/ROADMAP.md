@@ -43,12 +43,12 @@
 
 | Wave | Issues | Status | 備考 |
 |------|--------|--------|------|
-| A1 | #64 #65 #63 | ✅ Done | Feature Flags / Multi-env Loader / llms.txt Validator 実装完了 (PR #20 由来) |
+| A1 | #64 ✅ #65 ✅ #63 ✅ | ✅ Done | Feature Flags / Multi-env Loader / llms.txt Validator 実装完了 (PR #20 由来) |
 | A2 | #32 ✅ #31 ✅ #56 ✅ #57 ✅ | ✅ Done | #56 / #57 実装完了 (PR #83) |
 | A3 | #28 ✅ #30 ✅ #33 ✅ #35 ✅ #36 ✅ #34 ✅ #37 ✅ #38 ✅ #87 ✅ #88 ✅ #89 ✅ #91 ✅ | ✅ Done | 全 A3 アーティファクト系 Issue 完了 (#38 PR #103 反映) / Hardening follow-up (非機能) は別 Issue 検討 |
 | A4 | #25 ✅ #44 ✅ #45 ✅ #50 ✅ (#55) | ✅ Done | Runner Reliability / git_script 系統 完了 (PR #118, #120) |
 | A5 | #60 ✅ #61 ✅ | ✅ Done | Security Base (Mask / Scan) (PR #123 マージ完了) |
-| A6 | #58 #59 | ✅ Done | Metrics 基盤 & Run API (Issue #155 として実装完了) |
+| A6 | #58 #59 ✅ | ✅ Done | Metrics 基盤 & Run API (Issue #155 ✅ として実装完了) |
 | A7 | #43 | ✅ Done | LLM Toggle パリティ (PR #157 マージ完了) |
 | Docs | #66 → #67 | In Progress | Doc Sync >90% 維持方針 |
 | A8 | 後続の新規作成issue | Planned | 追加Issueの評価とスケジュール反映 |
@@ -62,15 +62,15 @@ Progress Summary (Phase2): Phase2-04 Done / Phase2-05 Done / Phase2-06 Done / Ph
 
 | Wave (Phase2-XX) | Focus | Issues (順序) | 状態 | 備考 |
 |------------------|-------|---------------|------|------|
-| Phase2-01 | Runner 安定化基盤 | #46 → #47 → #48 | Planned | タイムアウト→並列→環境変数診断 |
+| Phase2-01 | Runner 安定化基盤 | #46 ✅ → #47 ✅ → #48 | Planned | タイムアウト→並列→環境変数診断 |
 | Phase2-02 | Sandbox 強化 & Exec 安全性 | #62 (PoC→Enforce) → #52 | Planned | システムコール/パス制限 → allow/deny 実装 |
 | Phase2-03 | Runner 拡張 (CDP/Windows) | #53 → #54 → #51 | Planned | 調査→抽象レイヤ→Win プロファイル |
 | Phase2-04 | Batch 価値強化 (完了) | #39 ✅ → #41 ✅ → #42 ✅ → #40 ✅ | Done | CSV コア→進捗→部分リトライ→UI |
 | Phase2-05 | Batch 成果物/エクスポート | #175 ✅ → #176 ✅ | Done | ポリシー成果物 & 宣言的抽出 PoC |
-| Phase2-06 | Artifacts 安定化 / 統合 | #111 → #110 → #106 → #104 | ✅ DONE | 録画/パス統合 & flag enforcement |
-| Phase2-07 | Observability 完全化 | #58 ✅ → #59 → #102 | In Progress | Metrics API / Flag artifacts helper |
+| Phase2-06 | Artifacts 安定化 / 統合 | #111 ✅ → #110 ✅ → #106 → #104 | In Progress | 録画/パス統合 & flag enforcement |
+| Phase2-07 | Observability 完全化 | #58 ✅ → #59 ✅ → #102 | In Progress | Metrics API / Flag artifacts helper |
 | Phase2-08 | Quality / Coverage Gate | #109 → #107 → #108 | OPEN | カバレッジ→警告除去→Edge安定化 |
-| Phase2-09 | Security / Compliance | #154 ✅ (follow-ups TBD) | Partial | 追加セキュリティギャップ分析 (#177 連携) |
+| Phase2-09 | Security / Compliance | #154 ✅ (follow-ups TBD) | Partial | 追加セキュリティギャップ分析 (#177 ✅ 連携) |
 | Phase2-10 | Plugin 基盤 | #49 (part1 / part2) | Planned | 増分2段階 (Loader → Lifecycle) |
 | Phase2-11 | Docs & Automation | #66 → #67 → #92 → #81 → #178 ✅ | Done | 整備 / enrichment / workflow 追加 (dependency-pipeline workflow実装完了) |
 | Phase2-12 | MVP 定義 & ギャップ | #177 | ✅ Done | Enterprise readiness matrix 実装完了 (docs/mvp/README.md) |
@@ -156,21 +156,21 @@ Phase2 再編後の短期優先セットを以下に再定義。A フェーズ�
 ### 優先順位付け方針
 
 - **基盤機能完了**: Group A (A1-A4) の全Waveが完了したため、新機能開発を優先
-- **ユーザーインパクト重視**: #39 (CSV駆動バッチエンジン) はユーザー体験向上効果が高いため優先
-- **セキュリティ重視**: #60 (シークレットマスキング拡張) はセキュリティ強化のため優先
+- **ユーザーインパクト重視**: #39 ✅ (CSV駆動バッチエンジン) はユーザー体験向上効果が高いため優先
+- **セキュリティ重視**: #60 ✅ (シークレットマスキング拡張) はセキュリティ強化のため優先
 
 ### 短期 (Phase2 Kick Re-aligned)
 
-1. Phase2-01 着手: #46 実行タイムアウト → 成功後 #47 concurrency queue draft
-2. Phase2-07 前倒し: #59 Run Metrics API → #102 Flags artifacts helper
+1. Phase2-01 着手: #46 ✅ 実行タイムアウト → 成功後 #47 ✅ concurrency queue draft
+2. Phase2-07 前倒し: #59 ✅ Run Metrics API → #102 ✅ Flags artifacts helper
 3. Phase2-06 開始: #111 録画/パス統合 → #110 browser-control gap fix
-4. Docs ギャップ定義: #177 MVP Matrix Draft → ギャップ派生 Issue 起票
-5. ✅ Workflow 整合性: #178 dependency-pipeline workflow 実装完了 (自動生成・コミット機能統合)
+4. Docs ギャップ定義: #177 ✅ MVP Matrix Draft → ギャップ派生 Issue 起票
+5. Workflow 整合性: #178 ✅ dependency-pipeline workflow 実装完了 (自動生成・コミット機能統合)
 
 ### 中期 (Phase2 Expansion)
 
 1. Sandbox Enforcement Path: #62 PoC → enforce gate → #52 allow/deny materialization
-2. Runner Concurrency & Diagnostics: #47 queue infra → #48 env validation diagnostics
+2. Runner Concurrency & Diagnostics: #47 ✅ queue infra → #48 env validation diagnostics
 3. Plugin Increment (part1): #49 loader + registration minimal
 4. Artifact Stabilization: #111 resolver merge → #110 browser-control gap fix → #106 flag enforcement warn
 
@@ -191,8 +191,8 @@ Phase2 再編後の短期優先セットを以下に再定義。A フェーズ�
 
 ### リスク管理
 
-- **新機能リスク**: #39 は experimental だが、Phase 2 先頭として慎重に実装
-- **セキュリティ優先**: #60 を A5 と並行して早期完了
+- **新機能リスク**: #39 ✅ は experimental だが、Phase 2 先頭として慎重に実装
+- **セキュリティ優先**: #60 ✅ を A5 と並行して早期完了
 - **後方互換**: Flag ベースの段階的導入を徹底
 
 ### 開発フロー (Mermaid - Phase2 色付け試案)
@@ -258,8 +258,9 @@ graph LR
 | 1.0.19 | 2025-09-10 | Group B B4 #39 完了反映 / Phase 2 進捗更新 / Batch Processing 展開準備 | Copilot Agent |
 | 1.0.20 | 2025-09-10 | Wave A8 抽象化 / 次アクションにMermaid/Gitツリー追加 / Wave A完了区切り | Copilot Agent |
 | 1.0.21 | 2025-09-10 | Group C追加 / 未記載OPEN IssueをPhase 3として整理 | Copilot Agent |
-| 1.0.24 | 2025-01-XX | Phase2-07 status updated to In Progress based on ISSUE_DEPENDENCIES.yml latest state | Copilot Agent |
+| 1.0.24 | 2025-09-13 | Phase2-07 status updated to In Progress based on ISSUE_DEPENDENCIES.yml latest state | Copilot Agent |
 | 1.0.25 | 2025-09-14 | Phase2-11 #178 dependency-pipeline workflow 実装完了 / CIジョブ構成更新 / ワークフロー統合反映 | Copilot Agent |
+| 1.0.26 | 2025-09-14 | Phase2 status info update | Nobukins |
 
 ---
 
