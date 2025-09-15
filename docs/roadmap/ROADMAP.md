@@ -1,6 +1,6 @@
 # 2bykilt 開発ロードマップ (Baseline v1)
 
-最終更新: 2025-09-12
+最終更新: 2025-09-16
 対象リポジトリ: <https://github.com/Nobukins/2bykilt>
 
 
@@ -67,13 +67,17 @@ Progress Summary (Phase2): Phase2-04 Done / Phase2-05 Done / Phase2-06 Done / Ph
 | Phase2-03 | Runner 拡張 (CDP/Windows) | #53 → #54 → #51 | Planned | 調査→抽象レイヤ→Win プロファイル |
 | Phase2-04 | Batch 価値強化 (完了) | #39 ✅ → #41 ✅ → #42 ✅ → #40 ✅ | Done | CSV コア→進捗→部分リトライ→UI |
 | Phase2-05 | Batch 成果物/エクスポート | #175 ✅ → #176 ✅ | Done | ポリシー成果物 & 宣言的抽出 PoC |
-| Phase2-06 | Artifacts 安定化 / 統合 | #111 ✅ → #110 ✅ → #106 → #104 | In Progress | 録画/パス統合 & flag enforcement |
+| Phase2-06 | Artifacts 安定化 / 統合 | #111 ✅ → #110 ✅ → #106 → #104 | Done | 録画/パス統合 完了。flag enforcement/最終整備は反映済み (#193) |
 | Phase2-07 | Observability 完全化 | #58 ✅ → #59 ✅ → #102 | In Progress | Metrics API / Flag artifacts helper |
 | Phase2-08 | Quality / Coverage Gate | #109 → #107 → #108 | OPEN | カバレッジ→警告除去→Edge安定化 |
 | Phase2-09 | Security / Compliance | #154 ✅ (follow-ups TBD) | Partial | 追加セキュリティギャップ分析 (#177 ✅ 連携) |
 | Phase2-10 | Plugin 基盤 | #49 (part1 / part2) | Planned | 増分2段階 (Loader → Lifecycle) |
 | Phase2-11 | Docs & Automation | #66 → #67 → #92 → #81 → #178 ✅ | Done | 整備 / enrichment / workflow 追加 (dependency-pipeline workflow実装完了) |
 | Phase2-12 | MVP 定義 & ギャップ | #177 | ✅ Done | Enterprise readiness matrix 実装完了 (docs/mvp/README.md) |
+
+| Phase2-13 | Runner 構成標準化 & CI/Docs 追随 | #50 → #200 → #201 → #202 → #196 → #203 | In Progress | 配置規約→代表スクリプト→CI→Docs。#196 は最小スモークCIの強化 |
+| Phase2-14 | UI/UX Internationalization | #199 | Planned | JA ベース → EN 追加。辞書/ヘルパ/トグル/フォールバック |
+| Phase2-15 | Batch 安定化フォロー | #198 | Planned | CSV 入力正規化（NamedString 対応）+ 最小テスト |
 
 **Phase2-12 MVP Matrix 詳細:**
 
@@ -169,18 +173,21 @@ Phase2 再編後の短期優先セットを以下に再定義。A フェーズ�
 
 ### 中期 (Phase2 Expansion)
 
-1. Sandbox Enforcement Path: #62 PoC → enforce gate → #52 allow/deny materialization
-2. Runner Concurrency & Diagnostics: #47 ✅ queue infra → #48 env validation diagnostics
-3. Plugin Increment (part1): #49 loader + registration minimal
-4. Artifact Stabilization: #111 resolver merge → #110 browser-control gap fix → #106 flag enforcement warn
+1. Runner 構成標準化 & CI 整備: #200 → #201 → #196 → #202（並行: #203 Docs 追随）
+2. Sandbox Enforcement Path: #62 PoC → enforce gate → #52 allow/deny materialization
+3. Runner Concurrency & Diagnostics: #47 ✅ queue infra → #48 env validation diagnostics
+4. Plugin Increment (part1): #49 loader + registration minimal
+5. Artifact/Manifest フォロー: #106 flag enforcement warn → #104 仕上げ（必要に応じ）
 
 ### 長期 (Phase2 Later)
 
-1. Plugin Lifecycle & Hooks (#49 part2)
-2. CDP 二重エンジン: #53 research → #54 abstraction
-3. Windows Profile Persist: #51 after queue stability
-4. Quality Gate Hardening: #109 coverage gate automation + fail-fast
-5. Docs/Automation: #92 enrichment pipeline + #81 async test stabilization synergy
+1. UI/UX i18n 展開: #199（EN 辞書整備、切替UI、フォールバック最適化）
+2. Batch フォローアップ: #198（CSV 入力正規化 + 最小テスト）
+3. Plugin Lifecycle & Hooks (#49 part2)
+4. CDP 二重エンジン: #53 research → #54 abstraction
+5. Windows Profile Persist: #51 after queue stability
+6. Quality Gate Hardening: #109 coverage gate automation + fail-fast
+7. Docs/Automation: #92 enrichment pipeline + #81 async test stabilization synergy
 
 ### 完了基準 (Group A → Group B 移行)
 
@@ -205,17 +212,66 @@ graph LR
     subgraph P2[Phase2 Unified]
       P201["Phase2-01 Timeout (#46)"]:::planned --> P201b["Queue (#47)"]:::future --> P201c["EnvDiag (#48)"]:::future
       P205["Phase2-05 Deliverables (#175)"]:::done --> P205b["Extract Spec (#176)"]:::done
-      P207["Phase2-07 Metrics API (#59)"]:::inprogress --> P207b["Flags Helper (#102)"]:::future
-      P206["Phase2-06 Artifact Consolidation (#111)"]:::done --> P206b["Recording Fix (#110)"]:::done
+      P207["Phase2-07 Metrics API (#59)"]:::done --> P207b["Flags Helper (#102)"]:::inprogress
+      P206["Phase2-06 Artifact Consolidation (#111,#110)"]:::done
+      P213["Phase2-13 Runner Standardization (#50→#200→#201→#202→#196→#203)"]:::inprogress
+      P214["Phase2-14 i18n (#199)"]:::planned
+      P215["Phase2-15 Batch Fix (#198)"]:::planned
       P208["Phase2-08 Coverage (#109)"]:::planned
       P202["Phase2-02 Sandbox PoC (#62)"]:::planned --> P202b["Sandbox Enforce (#52)"]:::future
       P210["Phase2-10 Plugins Part1 (#49)"]:::future
-      P212["Phase2-12 MVP Matrix (#177)"]:::done --> P211["Phase2-11 Docs/Automation (#92,#81,#66,#67,#178)"]:::future
+      P212["Phase2-12 MVP Matrix (#177)"]:::done --> P211["Phase2-11 Docs/Automation (#92,#81,#66,#67,#178)"]:::done
     end
-    classDef planned fil:#eef,stroke:#88f;
+    classDef planned fill:#eef,stroke:#88f;
     classDef inprogress fill:#cfe,stroke:#393;
     classDef done fill:#9f9,stroke:#363;
     classDef future fill:#fff,stroke:#999,stroke-dasharray: 4 2;
+```
+
+### Gantt (Phase2 Timeline)
+
+```mermaid
+gantt
+    title Phase2 Roadmap (High-level)
+    dateFormat  YYYY-MM-DD
+    section Runner/Infra
+    Phase2-01 Timeout/Queue/EnvDiag         :active, 2025-09-20, 20d
+    Phase2-13 Runner Standardization        :crit, 2025-09-15, 25d
+    section Artifacts/Obs
+    Phase2-06 Artifact Consolidation (done) :done, 2025-09-10, 2d
+    Phase2-07 Metrics Helper (#102)         :active, 2025-09-16, 10d
+    Phase2-08 Coverage Gate                  :2025-10-05, 15d
+    section Security/Sandbox
+    Phase2-02 Sandbox PoC                    :2025-10-01, 14d
+    section UI/UX & Docs
+    Phase2-14 i18n                           :2025-10-10, 14d
+    Phase2-11 Docs/Automation (follow-ups)   :2025-09-25, 10d
+```
+
+### Git Flow (Branching Strategy)
+
+```mermaid
+gitGraph
+   commit id: "start"
+   branch document-update-after-phase2
+   checkout document-update-after-phase2
+   commit id: "roadmap-updates"
+   checkout main
+   branch feature/issue-200-policy
+   commit id: "policy-doc"
+   branch feature/issue-201-scripts
+   commit id: "scripts-update"
+   branch feature/issue-202-ci
+   commit id: "ci-update"
+   branch feature/issue-203-docs
+   commit id: "docs-update"
+   checkout document-update-after-phase2
+   merge feature/issue-200-policy
+   merge feature/issue-201-scripts
+   merge feature/issue-202-ci
+   merge feature/issue-203-docs
+   checkout main
+   merge document-update-after-phase2 tag: "phase2-roadmap-sync"
 ```
 
 ### Gitツリー表示 (開発ブランチ構造)
@@ -261,6 +317,7 @@ graph LR
 | 1.0.24 | 2025-09-13 | Phase2-07 status updated to In Progress based on ISSUE_DEPENDENCIES.yml latest state | Copilot Agent |
 | 1.0.25 | 2025-09-14 | Phase2-11 #178 dependency-pipeline workflow 実装完了 / CIジョブ構成更新 / ワークフロー統合反映 | Copilot Agent |
 | 1.0.26 | 2025-09-14 | Phase2 status info update | Nobukins |
+| 1.0.27 | 2025-09-16 | Phase2-06 Done設定、Phase2-13/14/15追加、Next Actions更新、Mermaid図更新、ISSUE_DEPENDENCIES.yml新規issue追加、myscript-directory-policy.md新規作成 | Nobukins |
 
 ---
 
