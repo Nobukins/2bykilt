@@ -1,47 +1,48 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-09-15T03:22:59+00:00
+Generated at (UTC): 2025-09-15T21:40:12+00:00
 
 ## 1. メタサマリー
 
-- Total Issues: 57
+- Total Issues: 64
 - High Risk (declared): 6 → 31, 46, 49, 54, 62, 176
 - Cycle Detected: false (none)
-- Strict Orphans: 4
-- Curated Orphan List Count: 4
+- Strict Orphans: 5
+- Curated Orphan List Count: 5
 
 ## 2. 分布 (Distribution)
 
 ### Priority
-- P0: 17 (29.8%)
-- P1: 19 (33.3%)
-- P2: 19 (33.3%)
-- P3: 2 (3.5%)
+- P0: 17 (26.6%)
+- P1: 20 (31.2%)
+- P2: 25 (39.1%)
+- P3: 2 (3.1%)
 
 ### Phase
-- (none): 1 (1.8%)
-- 1: 19 (33.3%)
-- 1-late: 12 (21.1%)
-- 2: 25 (43.9%)
+- (none): 1 (1.6%)
+- 1: 19 (29.7%)
+- 1-late: 12 (18.8%)
+- 2: 32 (50.0%)
 
 ### Area
-- (none): 1 (1.8%)
-- artifacts: 14 (24.6%)
-- automation: 2 (3.5%)
-- batch: 6 (10.5%)
-- config: 4 (7.0%)
-- docs: 3 (5.3%)
-- logging: 3 (5.3%)
-- observability: 3 (5.3%)
-- plugins: 1 (1.8%)
-- runner: 16 (28.1%)
-- security: 4 (7.0%)
+- (none): 1 (1.6%)
+- artifacts: 14 (21.9%)
+- automation: 4 (6.2%)
+- batch: 7 (10.9%)
+- config: 4 (6.2%)
+- docs: 5 (7.8%)
+- logging: 3 (4.7%)
+- observability: 3 (4.7%)
+- plugins: 1 (1.6%)
+- runner: 17 (26.6%)
+- security: 4 (6.2%)
+- uiux: 1 (1.6%)
 
 ### Risk
-- high: 6 (10.5%)
-- low: 2 (3.5%)
-- medium: 2 (3.5%)
-- none: 47 (82.5%)
+- high: 6 (9.4%)
+- low: 8 (12.5%)
+- medium: 3 (4.7%)
+- none: 47 (73.4%)
 
 ## 3. リスク詳細 (High / Medium / etc.)
 
@@ -60,12 +61,14 @@ Strict Orphans (自動抽出 = 依存なし & 参照されず):
 - 81: Async/Browser テスト安定化計画
 - 90: Temp test issue for enrichment
 - 154: pip-audit stabilization in CI with normalizer + targeted suppressions
+- 199: [ui/ux] Internationalization (i18n): JA base → EN 追加
 
 Curated Orphan List (summary.data_quality_checks.orphan_issues_without_dependents_or_depends):
 - 55: browser_control pytest パス修正
 - 81: Async/Browser テスト安定化計画
 - 90: Temp test issue for enrichment
 - 154: pip-audit stabilization in CI with normalizer + targeted suppressions
+- 199: [ui/ux] Internationalization (i18n): JA base → EN 追加
 
 Missing Strict Orphans in curated list: (none)
 Extra non-strict entries in curated list: (none)
@@ -75,7 +78,7 @@ Extra non-strict entries in curated list: (none)
 Critical Path (自動算出): depends の有向エッジ (B→A) を距離 0 起点から最長距離でトレースしたパス。 実際の期間や見積りを考慮せず、依存段数のみで推定。
 
 Auto Estimated Path (Longest Distance):
-32 → 28 → 30 → 37 → 38
+25 → 50 → 200 → 201 → 196 → 202 → 203
 
 Provided Example (existing IDs only):
 65 → 64 → 63 → 66 → 67
@@ -103,7 +106,7 @@ Sorted By: critical_path_rank
 | 33 | スクリーンショット取得ユーティリティ | P0 | 1 | artifacts |  | 2 | 1 | 1 | 3 |  |
 | 36 | アーティファクト一覧 API | P1 | 1 | artifacts |  | 2 | 2 | 1 | 1 | #95 |
 | 37 | 動画アーティファクト保持期間 | P1 | 1 | artifacts |  | 2 | 3 | 1 | 1 | #99 |
-| 39 | CSV 駆動バッチエンジンコア | P1 | 2 | batch |  | 2 | 1 | 1 | 3 | #164 |
+| 39 | CSV 駆動バッチエンジンコア | P1 | 2 | batch |  | 2 | 1 | 1 | 4 | #164 |
 | 44 | git_script 解決ロジック不具合修正 | P0 | 1 | runner |  | 2 | 1 | 1 | 1 | #120 |
 | 47 | 並列実行キュー & 制限 | P2 | 2 | runner |  | 2 | 2 | 1 | 1 |  |
 | 53 | cdp-use 追加タイプ調査 | P2 | 2 | runner |  | 2 | 0 | 0 | 1 |  |
@@ -119,6 +122,13 @@ Sorted By: critical_path_rank
 | 174 | [artifacts][batch] Clarify Artifact Output & Access Flow | P3 | 2 | artifacts | low | 1 | 3 | 5 | 0 |  |
 | 177 | MVP エンタープライズ Readiness マトリクス定義 | P1 | 2 | docs |  | 1 | 4 | 5 | 0 | #189 |
 | 178 | CI: dependency-pipeline workflow 追加 (生成物 idempotent 検証自動化) | P2 | 2 | automation | low | 1 | 3 | 1 | 0 |  |
+| 196 | CI: local selector smoke を統合 | P2 | 2 | automation | low | 1 | 4 | 1 | 1 |  |
+| 198 | [batch] CSV NamedString 入力の正規化 | P1 | 2 | batch | medium | 1 | 2 | 1 | 0 |  |
+| 199 | [ui/ux] Internationalization (i18n): JA base → EN 追加 | P2 | 2 | uiux | low | 1 | 0 | 0 | 0 |  |
+| 200 | [policy] myscript 配置規約の策定 | P2 | 2 | docs | low | 1 | 2 | 1 | 2 |  |
+| 201 | [runner] myscript スクリプト修正（パス統一・生成物出力） | P2 | 2 | runner | low | 1 | 3 | 1 | 3 |  |
+| 202 | [ci] アーティファクト収集/キャッシュ更新（myscript 構成対応） | P2 | 2 | automation | low | 1 | 5 | 2 | 0 |  |
+| 203 | [docs] README/チュートリアル/ガイド更新（myscript 構成・出力ポリシー） | P2 | 2 | docs | low | 1 | 6 | 3 | 0 |  |
 | 34 | 要素値キャプチャ & エクスポート | P1 | 1 | artifacts |  | 1 | 2 | 2 | 0 | #93 |
 | 38 | 録画統一後回帰テストスイート | P2 | 1-late | artifacts |  | 1 | 4 | 5 | 0 | #103 |
 | 40 | CSV D&D UI 連携 | P2 | 2 | batch |  | 1 | 2 | 1 | 0 | #172 |
@@ -128,13 +138,13 @@ Sorted By: critical_path_rank
 | 45 | git_script 認証 & プロキシ | P1 | 1 | runner |  | 1 | 2 | 2 | 0 | #120 |
 | 48 | 環境変数バリデーション & 診断 | P2 | 2 | runner |  | 1 | 1 | 1 | 0 |  |
 | 49 | ユーザースクリプト プラグインアーキテクチャ | P3 | 2 | plugins | high | 1 | 2 | 2 | 0 |  |
-| 50 | ディレクトリ名変更 & 移行 | P1 | 1 | runner |  | 1 | 1 | 1 | 0 | #120 |
+| 50 | ディレクトリ名変更 & 移行 | P1 | 1 | runner |  | 1 | 1 | 1 | 1 |  |
 | 51 | Windows プロファイル永続化 | P2 | 2 | runner |  | 1 | 3 | 1 | 0 |  |
 | 52 | サンドボックス allow/deny パス | P2 | 2 | runner |  | 1 | 2 | 1 | 0 |  |
 | 54 | cdp-use デュアルエンジン抽象レイヤ | P1 | 2 | runner | high | 1 | 1 | 2 | 0 |  |
 | 55 | browser_control pytest パス修正 | P0 | 1 | runner |  | 1 | 0 | 0 | 0 |  |
 | 57 | ログ保持期間 & ローテーション | P1 | 1-late | logging |  | 1 | 3 | 1 | 0 | #83 |
-| 59 | Run メトリクス API | P2 | 2 | observability |  | 1 | 2 | 1 | 0 |  |
+| 59 | Run メトリクス API | P2 | 2 | observability |  | 1 | 2 | 1 | 0 | #185 |
 | 60 | シークレットマスキング拡張 | P1 | 1-late | security |  | 1 | 3 | 1 | 0 |  |
 | 61 | [maint][security] 既存依存セキュリティスキャン基盤の最適化 & 運用強化 | P1 | 2 | security | medium | 1 | 1 | 1 | 0 |  |
 | 67 | ドキュメント整備 第2弾 | P2 | 1-late | docs |  | 1 | 4 | 1 | 0 |  |
@@ -299,7 +309,7 @@ Sorted By: critical_path_rank
 - CriticalPathRank: 2
 - LongestDistance: 1
 - Depends (1): 32
-- Dependents (3): 40, 41, 42
+- Dependents (4): 40, 41, 42, 198
 - Progress: {"state": "done", "primary_pr": 164}
 
 ### Issue 44: git_script 解決ロジック不具合修正
@@ -428,6 +438,69 @@ Sorted By: critical_path_rank
 - Depends (1): 76
 - Dependents (0): (none)
 
+### Issue 196: CI: local selector smoke を統合
+- Priority: P2, Phase: 2, Area: automation
+- Risk: low
+- CriticalPathRank: 1
+- LongestDistance: 4
+- Depends (1): 201
+- Dependents (1): 202
+- Progress: {"state": "planned"}
+
+### Issue 198: [batch] CSV NamedString 入力の正規化
+- Priority: P1, Phase: 2, Area: batch
+- Risk: medium
+- CriticalPathRank: 1
+- LongestDistance: 2
+- Depends (1): 39
+- Dependents (0): (none)
+- Progress: {"state": "planned"}
+
+### Issue 199: [ui/ux] Internationalization (i18n): JA base → EN 追加
+- Priority: P2, Phase: 2, Area: uiux
+- Risk: low
+- CriticalPathRank: 1
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+- Progress: {"state": "planned"}
+
+### Issue 200: [policy] myscript 配置規約の策定
+- Priority: P2, Phase: 2, Area: docs
+- Risk: low
+- CriticalPathRank: 1
+- LongestDistance: 2
+- Depends (1): 50
+- Dependents (2): 201, 203
+- Progress: {"state": "in-progress"}
+
+### Issue 201: [runner] myscript スクリプト修正（パス統一・生成物出力）
+- Priority: P2, Phase: 2, Area: runner
+- Risk: low
+- CriticalPathRank: 1
+- LongestDistance: 3
+- Depends (1): 200
+- Dependents (3): 196, 202, 203
+- Progress: {"state": "planned"}
+
+### Issue 202: [ci] アーティファクト収集/キャッシュ更新（myscript 構成対応）
+- Priority: P2, Phase: 2, Area: automation
+- Risk: low
+- CriticalPathRank: 1
+- LongestDistance: 5
+- Depends (2): 201, 196
+- Dependents (0): (none)
+- Progress: {"state": "planned"}
+
+### Issue 203: [docs] README/チュートリアル/ガイド更新（myscript 構成・出力ポリシー）
+- Priority: P2, Phase: 2, Area: docs
+- Risk: low
+- CriticalPathRank: 1
+- LongestDistance: 6
+- Depends (3): 200, 201, 202
+- Dependents (0): (none)
+- Progress: {"state": "planned"}
+
 ### Issue 34: 要素値キャプチャ & エクスポート
 - Priority: P1, Phase: 1, Area: artifacts
 - Risk: (none)
@@ -512,8 +585,8 @@ Sorted By: critical_path_rank
 - CriticalPathRank: 1
 - LongestDistance: 1
 - Depends (1): 25
-- Dependents (0): (none)
-- Progress: {"state": "done", "primary_pr": 120}
+- Dependents (1): 200
+- Progress: {"state": "in-progress"}
 
 ### Issue 51: Windows プロファイル永続化
 - Priority: P2, Phase: 2, Area: runner
@@ -563,7 +636,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 2
 - Depends (1): 58
 - Dependents (0): (none)
-- Progress: {"state": "in-progress"}
+- Progress: {"state": "done", "primary_pr": 185}
 
 ### Issue 60: シークレットマスキング拡張
 - Priority: P1, Phase: 1-late, Area: security
