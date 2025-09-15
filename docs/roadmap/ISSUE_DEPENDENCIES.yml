@@ -71,7 +71,7 @@ issues:
         priority: P3, phase: "2", stability: experimental}, depends: ["64", "25"],
     dependents: [], risk: high, critical_path_rank: 1}
   "50": {title: "ディレクトリ名変更 & 移行", meta: {area: runner, type: chore, priority: P1,
-    phase: "1", stability: core}, depends: ["25"], dependents: ["200"], risk: null, 
+        phase: "1", stability: core}, depends: ["25"], dependents: ["200"], risk: null, 
     progress: {state: in-progress}, critical_path_rank: 1}
   "51": {title: "Windows プロファイル永続化", meta: {area: runner, type: feat, priority: 
         P2, phase: "2", stability: core}, depends: ["47"], dependents: [], risk: 
