@@ -16,6 +16,8 @@ on:
 jobs:
   local-selector-test:
     runs-on: ubuntu-latest
+    env:
+      RECORDING_PATH: /tmp/test_recordings
 
     steps:
     - name: Checkout code
@@ -56,14 +58,13 @@ jobs:
         if [ -z "$RECORDING_PATH" ]; then
           echo "❌ RECORDING_PATH environment variable is not set"
           echo "💡 Please set RECORDING_PATH to specify where recordings should be saved"
+          echo "💡 Example: RECORDING_PATH=/tmp/recordings"
           exit 1
         fi
         echo "✅ RECORDING_PATH is set to: $RECORDING_PATH"
-
-    - name: Create recording directory
-      run: |
+        # Create the recording directory
         mkdir -p "$RECORDING_PATH"
-        echo "Created recording directory: $RECORDING_PATH"
+        echo "✅ Created recording directory: $RECORDING_PATH"
 
     - name: Run local selector smoke test (with retry)
       uses: nick-invision/retry@v2
@@ -71,8 +72,7 @@ jobs:
         timeout_minutes: 10
         max_attempts: 2
         command: |
-          cd myscript
-          python -m pytest -v --tb=short --cov=. --cov-report=xml --cov-report=html --cov-report=term
+          cd myscript && python -m pytest -v --tb=short --cov=. --cov-report=xml --cov-report=html --cov-report=term
 
     - name: Validate recording output and collect artifacts
       run: |
@@ -154,7 +154,8 @@ jobs:
         fi
         if [ -d "myscript/htmlcov" ]; then
           echo "Copying HTML coverage report to artifacts/"
-          cp -r myscript/htmlcov artifacts/
+          mkdir -p artifacts/htmlcov
+          cp -r myscript/htmlcov/* artifacts/htmlcov/
         fi
         
         echo "Artifact collection completed"
@@ -168,7 +169,7 @@ jobs:
         path: |
           artifacts/
           !artifacts/**/*.tmp
-        retention-days: 7
+        retention-days: 30
 
     - name: Upload coverage reports
       if: always()
