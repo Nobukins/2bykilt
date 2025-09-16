@@ -8,10 +8,11 @@ still run: pytest tmp/myscript/search_script.py --query ...
 
 from __future__ import annotations
 
+import pytest
 from typing import Any
 
 
-def pytest_addoption(parser):  # type: ignore[override]
+def pytest_addoption(parser: pytest.Parser) -> None:
     try:
         from myscript.conftest import pytest_addoption as _orig_addoption  # noqa: WPS433
         return _orig_addoption(parser)
@@ -20,7 +21,7 @@ def pytest_addoption(parser):  # type: ignore[override]
         parser.addoption("--query", action="store", default="", help="Search query for the test (compat)")
 
 
-def pytest_configure(config):  # type: ignore[override]
+def pytest_configure(config: pytest.Config) -> None:
     try:
         from myscript.conftest import pytest_configure as _orig_configure  # noqa: WPS433
         return _orig_configure(config)
