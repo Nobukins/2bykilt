@@ -49,6 +49,7 @@ jobs:
     - name: Install Python dependencies
       run: |
         python -m pip install -r requirements.txt
+        python -m pip install pytest-cov
 
     - name: Validate RECORDING_PATH environment
       run: |
@@ -71,7 +72,7 @@ jobs:
         max_attempts: 2
         command: |
           cd myscript
-          python -m pytest local_selector_test.py::test_basic_browser_setup -v --tb=short
+          python -m pytest -v --tb=short --cov=. --cov-report=xml --cov-report=html --cov-report=term
 
     - name: Validate recording output and collect artifacts
       run: |
@@ -146,6 +147,16 @@ jobs:
           find "$RECORDING_PATH" -name '*manifest*.json' -exec cp {} artifacts/ \;
         fi
         
+        # Copy coverage reports
+        if [ -f "myscript/coverage.xml" ]; then
+          echo "Copying coverage report to artifacts/"
+          cp myscript/coverage.xml artifacts/
+        fi
+        if [ -d "myscript/htmlcov" ]; then
+          echo "Copying HTML coverage report to artifacts/"
+          cp -r myscript/htmlcov artifacts/
+        fi
+        
         echo "Artifact collection completed"
         ls -la artifacts/
 
@@ -158,3 +169,13 @@ jobs:
           artifacts/
           !artifacts/**/*.tmp
         retention-days: 7
+
+    - name: Upload coverage reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-reports
+        path: |
+          myscript/coverage.xml
+          myscript/htmlcov/
+        retention-days: 30
