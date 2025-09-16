@@ -95,7 +95,7 @@ async def test_browser_automation():
     
     try:
         # browser_baseをインポートしてテスト
-        from tmp.myscript.browser_base import BrowserAutomationBase
+        from myscript.browser_base import BrowserAutomationBase
         
         automation = BrowserAutomationBase(
             headless=True,
