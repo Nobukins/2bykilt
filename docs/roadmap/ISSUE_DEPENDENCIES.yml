@@ -2,9 +2,7 @@
 ### Canonical machine-readable dependency graph
 
 issues:
-  "25": {title: "git_script が llms.txt で指定したスクリプトを正しく解決するよう修正", meta: {area: 
-        runner, type: bug, priority: P0, phase: "1", stability: core}, depends: [],
-    dependents: ["44", "45", "49", "50"], progress: {state: done, primary_pr: 118}, risk: null, critical_path_rank: 3}
+  "25": {title: "git_script が llms.txt で指定したスクリプトを正しく解決するよう修正", meta: {area: runner, type: bug, priority: P0, phase: "1", stability: core}, depends: [], dependents: ["44", "45", "49", "50"], progress: {state: done, primary_pr: 118}, risk: null, critical_path_rank: 3}
   "28": {title: "録画ファイル保存パス統一", meta: {area: artifacts, type: bug, priority: P0, 
         phase: "1", stability: core}, depends: ["32"], dependents: ["30"], risk: 
   null, progress: {state: done, primary_pr: 112}, critical_path_rank: 4}
@@ -139,9 +137,7 @@ issues:
   "88": {title: "スクリーンショット例外分類と特定例外キャッチ", meta: {area: artifacts, type: feat, 
         priority: P2, phase: "1-late", stability: core}, depends: ["33", "35"], 
       dependents: [], risk: null, progress: {state: done, primary_pr: 97}, critical_path_rank: 1} # Adjusted depends: removed invalid 82 -> aligns with screenshot/manifest prerequisites
-  "89": {title: "Screenshot ログイベント整備 (metrics 連携準備)", meta: {area: observability,
-  type: chore, priority: P2, phase: "1-late", stability: core}, depends: ["33",
-  "58"], dependents: [], risk: null, progress: {state: done, primary_pr: 98}, critical_path_rank: 1}
+  "89": {title: "Screenshot ログイベント整備 (metrics 連携準備)", meta: {area: observability, type: chore, priority: P2, phase: "1-late", stability: core}, depends: ["33", "58"], dependents: [], risk: null, progress: {state: done, primary_pr: 98}, critical_path_rank: 1}
   '90':
     title: Temp test issue for enrichment
     meta:
@@ -165,7 +161,7 @@ issues:
   "199": {title: "[ui/ux] Internationalization (i18n): JA base → EN 追加", meta: {area: uiux, type: feat, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: low, progress: {state: planned}, critical_path_rank: 1}
   "200": {title: "[policy] myscript 配置規約の策定", meta: {area: docs, type: docs, priority: P2, phase: "2", stability: core}, depends: ["50"], dependents: ["201", "203"], risk: low, progress: {state: in-progress}, critical_path_rank: 1}
   "201": {title: "[runner] myscript スクリプト修正（パス統一・生成物出力）", meta: {area: runner, type: chore, priority: P2, phase: "2", stability: core}, depends: ["200"], dependents: ["196", "202", "203"], risk: low, progress: {state: done, primary_pr: 213}, critical_path_rank: 1}
-    "202": {title: "[ci] アーティファクト収集/キャッシュ更新（myscript 構成対応）", meta: {area: automation, type: chore, priority: P2, phase: "2", stability: core}, depends: ["201", "196"], dependents: ["203"], risk: low, progress: {state: done, primary_pr: 214}, critical_path_rank: 1}
+  "202": {title: "[ci] アーティファクト収集/キャッシュ更新（myscript 構成対応）", meta: {area: automation, type: chore, priority: P2, phase: "2", stability: core}, depends: ["201", "196"], dependents: ["203"], risk: low, progress: {state: done, primary_pr: 214}, critical_path_rank: 1}
   "203": {title: "[docs] README/チュートリアル/ガイド更新（myscript 構成・出力ポリシー）", meta: {area: docs, type: docs, priority: P2, phase: "2", stability: core}, depends: ["200", "201", "202"], dependents: [], risk: low, progress: {state: planned}, critical_path_rank: 1}
   "208": {title: "[ui/ux] Option Availability - 利用可能なオプションの可視化改善", meta: {area: uiux, type: enhancement, priority: P2, phase: "2", stability: core}, depends: ["199"], dependents: [], risk: low, progress: {state: open}, critical_path_rank: 1}
   "209": {title: "[ui/ux] Results menu - 実行結果表示メニューの改善", meta: {area: uiux, type: enhancement, priority: P2, phase: "2", stability: core}, depends: ["199"], dependents: [], risk: low, progress: {state: open}, critical_path_rank: 1}
