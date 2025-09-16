@@ -67,7 +67,7 @@ jobs:
         echo "✅ Created recording directory: $RECORDING_PATH"
 
     - name: Run local selector smoke test (with retry)
-      uses: nick-invision/retry@v2
+      uses: nick-invision/retry@9417ab499314dfe692edb043ded2ff9b3f5f0a68
       with:
         timeout_minutes: 10
         max_attempts: 2
@@ -87,10 +87,10 @@ jobs:
           exit 1
         else
           echo "✅ Video files found and validated:"
-          echo "$VIDEO_FILES" | while read -r file; do
+          while read -r file; do
             FILE_SIZE=$(stat -c%s "$file")
             echo "  📹 $file (${FILE_SIZE} bytes)"
-          done
+          done < <(echo "$VIDEO_FILES")
         fi
 
         # Check for generated screenshots
@@ -98,10 +98,10 @@ jobs:
         SCREENSHOT_FILES=$(find "$RECORDING_PATH" -name '*.png' -size +0 2>/dev/null)
         if [ -n "$SCREENSHOT_FILES" ]; then
           echo "✅ Screenshots found and validated:"
-          echo "$SCREENSHOT_FILES" | while read -r file; do
+          while read -r file; do
             FILE_SIZE=$(stat -c%s "$file")
             echo "  📸 $file (${FILE_SIZE} bytes)"
-          done
+          done < <(echo "$SCREENSHOT_FILES")
         else
           echo "ℹ️ No screenshots found (this is OK for basic smoke test)"
         fi
@@ -111,10 +111,10 @@ jobs:
         MANIFEST_FILES=$(find "$RECORDING_PATH" -name '*manifest*.json' 2>/dev/null)
         if [ -n "$MANIFEST_FILES" ]; then
           echo "✅ Manifest files found:"
-          echo "$MANIFEST_FILES" | while read -r file; do
+          while read -r file; do
             FILE_SIZE=$(stat -c%s "$file")
             echo "  📋 $file (${FILE_SIZE} bytes)"
-          done
+          done < <(echo "$MANIFEST_FILES")
         else
           echo "⚠️ No manifest files found"
         fi
