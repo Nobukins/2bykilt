@@ -1,6 +1,6 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-09-16T14:27:56+00:00
+Generated at (UTC): 2025-09-16T23:57:06+00:00
 
 ## 1. メタサマリー
 
@@ -19,13 +19,11 @@ Generated at (UTC): 2025-09-16T14:27:56+00:00
 - P3: 2 (2.9%)
 
 ### Phase
-- (none): 1 (1.4%)
 - 1: 19 (27.5%)
 - 1-late: 12 (17.4%)
-- 2: 37 (53.6%)
+- 2: 38 (55.1%)
 
 ### Area
-- (none): 1 (1.4%)
 - artifacts: 14 (20.3%)
 - automation: 4 (5.8%)
 - batch: 7 (10.1%)
@@ -36,6 +34,7 @@ Generated at (UTC): 2025-09-16T14:27:56+00:00
 - plugins: 1 (1.4%)
 - runner: 18 (26.1%)
 - security: 4 (5.8%)
+- test: 1 (1.4%)
 - uiux: 4 (5.8%)
 
 ### Risk
@@ -100,7 +99,7 @@ Sorted By: critical_path_rank
 | 110 | browser-control gap fix | P0 | 2 | runner |  | 3 | 0 | 1 | 1 | #188 |
 | 111 | 録画/パス統合 | P0 | 2 | artifacts |  | 3 | 2 | 1 | 1 | #188 |
 | 25 | git_script が llms.txt で指定したスクリプトを正しく解決するよう修正 | P0 | 1 | runner |  | 3 | 0 | 0 | 4 | #118 |
-| 30 | 録画タイプ間不整合是正 | P0 | 1 | artifacts |  | 3 | 2 | 1 | 2 |  |
+| 30 | 録画タイプ間不整合是正 | P0 | 1 | artifacts |  | 3 | 2 | 1 | 2 | #112 |
 | 31 | 統一ログ設計 (JSON Lines) | P0 | 1 | logging | high | 3 | 1 | 1 | 1 | #80 |
 | 35 | アーティファクト manifest v2 | P0 | 1 | artifacts |  | 3 | 1 | 1 | 3 | #94 |
 | 46 | Run/Job タイムアウト & キャンセル | P2 | 2 | runner | high | 3 | 1 | 1 | 1 |  |
@@ -131,7 +130,7 @@ Sorted By: critical_path_rank
 | 199 | [ui/ux] Internationalization (i18n): JA base → EN 追加 | P2 | 2 | uiux | low | 1 | 0 | 0 | 0 |  |
 | 200 | [policy] myscript 配置規約の策定 | P2 | 2 | docs | low | 1 | 2 | 1 | 2 |  |
 | 201 | [runner] myscript スクリプト修正（パス統一・生成物出力） | P2 | 2 | runner | low | 1 | 3 | 1 | 3 | #213 |
-| 202 | [ci] アーティファクト収集/キャッシュ更新（myscript 構成対応） | P2 | 2 | automation | low | 1 | 5 | 2 | 0 |  |
+| 202 | [ci] アーティファクト収集/キャッシュ更新（myscript 構成対応） | P2 | 2 | automation | low | 1 | 5 | 2 | 1 | #214 |
 | 203 | [docs] README/チュートリアル/ガイド更新（myscript 構成・出力ポリシー） | P2 | 2 | docs | low | 1 | 6 | 3 | 0 |  |
 | 208 | [ui/ux] Option Availability - 利用可能なオプションの可視化改善 | P2 | 2 | uiux | low | 1 | 1 | 1 | 0 |  |
 | 209 | [ui/ux] Results menu - 実行結果表示メニューの改善 | P2 | 2 | uiux | low | 1 | 1 | 1 | 0 |  |
@@ -161,7 +160,7 @@ Sorted By: critical_path_rank
 | 88 | スクリーンショット例外分類と特定例外キャッチ | P2 | 1-late | artifacts |  | 1 | 2 | 2 | 0 | #97 |
 | 89 | Screenshot ログイベント整備 (metrics 連携準備) | P2 | 1-late | observability |  | 1 | 2 | 2 | 0 | #98 |
 | 91 | 統一録画パス Rollout (flag default 有効化 & legacy 廃止) | P0 | 1-late | artifacts |  | 1 | 2 | 1 | 0 | #105 |
-| 90 | Temp test issue for enrichment | P2 |  |  |  |  | 0 | 0 | 0 |  |
+| 90 | Temp test issue for enrichment | P2 | 2 | test |  |  | 0 | 0 | 0 |  |
 
 ## 7. 依存詳細 (Fan-in / Fan-out)
 
@@ -233,6 +232,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 2
 - Depends (1): 28
 - Dependents (2): 37, 38
+- Progress: {"state": "done", "primary_pr": 112}
 
 ### Issue 31: 統一ログ設計 (JSON Lines)
 - Priority: P0, Phase: 1, Area: logging
@@ -498,8 +498,8 @@ Sorted By: critical_path_rank
 - CriticalPathRank: 1
 - LongestDistance: 5
 - Depends (2): 201, 196
-- Dependents (0): (none)
-- Progress: {"state": "planned"}
+- Dependents (1): 203
+- Progress: {"state": "done", "primary_pr": 214}
 
 ### Issue 203: [docs] README/チュートリアル/ガイド更新（myscript 構成・出力ポリシー）
 - Priority: P2, Phase: 2, Area: docs
@@ -753,7 +753,7 @@ Sorted By: critical_path_rank
 - Progress: {"state": "done", "primary_pr": 105}
 
 ### Issue 90: Temp test issue for enrichment
-- Priority: P2, Phase: None, Area: None
+- Priority: P2, Phase: 2, Area: test
 - Risk: (none)
 - CriticalPathRank: None
 - LongestDistance: 0
