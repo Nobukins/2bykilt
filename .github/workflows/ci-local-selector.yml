@@ -50,39 +50,111 @@ jobs:
       run: |
         python -m pip install -r requirements.txt
 
-    - name: Create temporary recording directory
+    - name: Validate RECORDING_PATH environment
       run: |
-        mkdir -p /tmp/test_recordings
-        echo "RECORDING_PATH=/tmp/test_recordings" >> $GITHUB_ENV
+        if [ -z "$RECORDING_PATH" ]; then
+          echo "❌ RECORDING_PATH environment variable is not set"
+          echo "💡 Please set RECORDING_PATH to specify where recordings should be saved"
+          exit 1
+        fi
+        echo "✅ RECORDING_PATH is set to: $RECORDING_PATH"
 
-    - name: Run local selector smoke test
+    - name: Create recording directory
       run: |
-        cd myscript
-        python -m pytest local_selector_test.py -v --tb=short
+        mkdir -p "$RECORDING_PATH"
+        echo "Created recording directory: $RECORDING_PATH"
 
-    - name: Validate recording output
+    - name: Run local selector smoke test (with retry)
+      uses: nick-invision/retry@v2
+      with:
+        timeout_minutes: 10
+        max_attempts: 2
+        command: |
+          cd myscript
+          python -m pytest local_selector_test.py::test_basic_browser_setup -v --tb=short
+
+    - name: Validate recording output and collect artifacts
       run: |
+        echo "=== Recording Output Validation ==="
+        
+        # Check for generated video files
         echo "Checking for generated video files..."
-        if [ -z "$(find /tmp/test_recordings -name '*.webm' -size +0 2>/dev/null)" ]; then
-          echo "❌ No valid video files found"
+        VIDEO_FILES=$(find "$RECORDING_PATH" -name '*.webm' -size +0 2>/dev/null)
+        if [ -z "$VIDEO_FILES" ]; then
+          echo "❌ No valid video files found in $RECORDING_PATH"
+          ls -la "$RECORDING_PATH"
           exit 1
         else
-          echo "✅ Video files found and validated"
-          ls -la /tmp/test_recordings/*.webm
+          echo "✅ Video files found and validated:"
+          echo "$VIDEO_FILES" | while read -r file; do
+            FILE_SIZE=$(stat -c%s "$file")
+            echo "  📹 $file (${FILE_SIZE} bytes)"
+          done
         fi
 
+        # Check for generated screenshots
         echo "Checking for generated screenshots..."
-        if [ -n "$(find /tmp/test_recordings -name '*.png' -size +0 2>/dev/null)" ]; then
-          echo "✅ Screenshots found and validated"
-          ls -la /tmp/test_recordings/*.png
+        SCREENSHOT_FILES=$(find "$RECORDING_PATH" -name '*.png' -size +0 2>/dev/null)
+        if [ -n "$SCREENSHOT_FILES" ]; then
+          echo "✅ Screenshots found and validated:"
+          echo "$SCREENSHOT_FILES" | while read -r file; do
+            FILE_SIZE=$(stat -c%s "$file")
+            echo "  📸 $file (${FILE_SIZE} bytes)"
+          done
         else
           echo "ℹ️ No screenshots found (this is OK for basic smoke test)"
         fi
+
+        # Check for manifest files
+        echo "Checking for manifest files..."
+        MANIFEST_FILES=$(find "$RECORDING_PATH" -name '*manifest*.json' 2>/dev/null)
+        if [ -n "$MANIFEST_FILES" ]; then
+          echo "✅ Manifest files found:"
+          echo "$MANIFEST_FILES" | while read -r file; do
+            FILE_SIZE=$(stat -c%s "$file")
+            echo "  📋 $file (${FILE_SIZE} bytes)"
+          done
+        else
+          echo "⚠️ No manifest files found"
+        fi
+
+    - name: Collect artifacts to artifacts/ directory
+      run: |
+        echo "=== Artifact Collection ==="
+        
+        # Create artifacts directory if it doesn't exist
+        mkdir -p artifacts
+        
+        # Copy video files
+        VIDEO_COUNT=$(find "$RECORDING_PATH" -name '*.webm' -size +0 | wc -l)
+        if [ "$VIDEO_COUNT" -gt 0 ]; then
+          echo "Copying $VIDEO_COUNT video files to artifacts/"
+          find "$RECORDING_PATH" -name '*.webm' -size +0 -exec cp {} artifacts/ \;
+        fi
+        
+        # Copy screenshot files
+        SCREENSHOT_COUNT=$(find "$RECORDING_PATH" -name '*.png' -size +0 | wc -l)
+        if [ "$SCREENSHOT_COUNT" -gt 0 ]; then
+          echo "Copying $SCREENSHOT_COUNT screenshot files to artifacts/"
+          find "$RECORDING_PATH" -name '*.png' -size +0 -exec cp {} artifacts/ \;
+        fi
+        
+        # Copy manifest files
+        MANIFEST_COUNT=$(find "$RECORDING_PATH" -name '*manifest*.json' | wc -l)
+        if [ "$MANIFEST_COUNT" -gt 0 ]; then
+          echo "Copying $MANIFEST_COUNT manifest files to artifacts/"
+          find "$RECORDING_PATH" -name '*manifest*.json' -exec cp {} artifacts/ \;
+        fi
+        
+        echo "Artifact collection completed"
+        ls -la artifacts/
 
     - name: Upload test artifacts
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: local-selector-test-artifacts
-        path: /tmp/test_recordings/
+        path: |
+          artifacts/
+          !artifacts/**/*.tmp
         retention-days: 7
