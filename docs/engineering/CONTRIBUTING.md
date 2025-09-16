@@ -105,6 +105,8 @@ python -m pytest tests/ -m "unit" -v
 python -m pytest tests/ --cov=src --cov-report=html
 ```
 
+補足: インポートパスの設定は `tests/conftest.py` が自動で行います。標準ではリポジトリルートと `src/` を `sys.path` に追加します。非標準レイアウトで実行する場合は、環境変数 `BYKILT_ROOT` にプロジェクトのルートパスを設定してください。
+
 ### 3. テスト品質
 
 - Edge case の考慮
