@@ -7,7 +7,6 @@ import os
 import tempfile
 import subprocess
 import sys
-sys.path.append('/Users/nobuaki/Documents/Github/copilot-ports/magic-trainings/2bykilt')
 
 from src.utils.memory_monitor import memory_monitor
 

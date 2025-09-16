@@ -4,8 +4,6 @@ Test the pipe-delimited browser argument serialization
 """
 
 import os
-import sys
-sys.path.append('/Users/nobuaki/Documents/Github/copilot-ports/magic-trainings/2bykilt')
 
 from src.utils.memory_monitor import memory_monitor
 
