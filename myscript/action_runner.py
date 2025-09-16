@@ -5,7 +5,114 @@ import os
 import sys
 from pathlib import Path
 from datetime import datetime
+import json
 from browser_base import BrowserAutomationBase
+
+def log_message(message):
+    """ログメッセージを標準出力、標準エラー出力、およびファイルに出力"""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    formatted_message = f"[{timestamp}] {message}"
+    
+    # 標準出力と標準エラー出力
+    print(formatted_message)
+    print(formatted_message, file=sys.stderr)
+    sys.stdout.flush()
+    sys.stderr.flush()
+    
+    # ログファイルにも出力
+    try:
+        log_dir = Path(__file__).parent.parent.parent / "logs"
+        log_dir.mkdir(exist_ok=True)
+        log_file = log_dir / "action_runner_debug.log"
+        
+        with open(log_file, "a", encoding="utf-8") as f:
+            f.write(f"{formatted_message}\n")
+            f.flush()
+    except Exception as e:
+        print(f"ログファイル書き込みエラー: {e}", file=sys.stderr)
+
+def ensure_recording_path():
+    """RECORDING_PATH環境変数を確認し、ディレクトリを作成"""
+    recording_path = os.environ.get("RECORDING_PATH")
+    if not recording_path:
+        log_message("❌ [action_runner] エラー: RECORDING_PATH環境変数が設定されていません。")
+        log_message("💡 [action_runner] 例: export RECORDING_PATH=/path/to/recordings")
+        sys.exit(1)
+    
+    recording_dir = Path(recording_path)
+    recording_dir.mkdir(parents=True, exist_ok=True)
+    log_message(f"📁 [action_runner] RECORDING_PATH確認: {recording_dir}")
+    return recording_dir
+
+def get_base_dir():
+    """プロジェクトのベースディレクトリを取得"""
+    # __file__の3階層上（myscript/の親ディレクトリ）
+    return Path(__file__).parent.parent.parent
+
+def collect_artifacts(source_dir, target_dir, action_name):
+    """生成物をartifacts/に収集し、Tab-XXプレフィックスを適用"""
+    if not source_dir.exists():
+        log_message(f"⚠️ [action_runner] ソースディレクトリが存在しません: {source_dir}")
+        return []
+    
+    artifacts_dir = get_base_dir() / "artifacts" / action_name
+    artifacts_dir.mkdir(parents=True, exist_ok=True)
+    
+    collected_files = []
+    tab_index = 1
+    
+    # 動画ファイルとスクリーンショットを収集
+    for file_path in source_dir.glob("*.webm"):
+        new_name = f"Tab-{tab_index:02d}-{file_path.name}"
+        new_path = artifacts_dir / new_name
+        file_path.rename(new_path)
+        collected_files.append({
+            "index": tab_index,
+            "original_name": file_path.name,
+            "new_name": new_name,
+            "path": str(new_path),
+            "type": "video"
+        })
+        tab_index += 1
+        log_message(f"📹 [action_runner] 動画ファイル収集: {new_name}")
+    
+    for file_path in source_dir.glob("*.png"):
+        new_name = f"Tab-{tab_index:02d}-{file_path.name}"
+        new_path = artifacts_dir / new_name
+        file_path.rename(new_path)
+        collected_files.append({
+            "index": tab_index,
+            "original_name": file_path.name,
+            "new_name": new_name,
+            "path": str(new_path),
+            "type": "screenshot"
+        })
+        tab_index += 1
+        log_message(f"📸 [action_runner] スクリーンショット収集: {new_name}")
+    
+    return collected_files
+
+def generate_manifest(artifacts, action_name):
+    """アーティファクトのmanifestを生成"""
+    artifacts_dir = get_base_dir() / "artifacts" / action_name
+    manifest_path = artifacts_dir / "tab_index_manifest.json"
+    
+    manifest = {
+        "action": action_name,
+        "timestamp": datetime.now().isoformat(),
+        "artifacts": artifacts,
+        "summary": {
+            "total_files": len(artifacts),
+            "videos": len([a for a in artifacts if a["type"] == "video"]),
+            "screenshots": len([a for a in artifacts if a["type"] == "screenshot"])
+        }
+    }
+    
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, indent=2, ensure_ascii=False)
+    
+    log_message(f"📋 [action_runner] Manifest生成完了: {manifest_path}")
+    return manifest_path
 
 def log_message(message):
     """ログメッセージを標準出力、標準エラー出力、およびファイルに出力"""
@@ -44,6 +151,10 @@ async def run_scenario(action_file, query=None, slowmo=0, headless=False, countd
     """
     log_message(f"🚀 [action_runner] シナリオ開始 - ファイル: {action_file}")
     log_message(f"🔍 [action_runner] パラメータ - query: {query}, slowmo: {slowmo}, headless: {headless}, countdown: {countdown}, browser: {browser_type}")
+    
+    # RECORDING_PATHの確認
+    recording_dir = ensure_recording_path()
+    action_name = Path(action_file).stem
     
     # アクションモジュールの動的読み込み
     if not os.path.exists(action_file):
@@ -96,6 +207,17 @@ async def run_scenario(action_file, query=None, slowmo=0, headless=False, countd
         log_message(f"🧹 [action_runner] リソース解放中...")
         await automation.cleanup()
         log_message(f"🧹 [action_runner] リソース解放完了")
+        
+        # 生成物の収集と整理
+        log_message(f"📦 [action_runner] 生成物収集中...")
+        collected_artifacts = collect_artifacts(recording_dir, get_base_dir() / "artifacts", action_name)
+        
+        if collected_artifacts:
+            log_message(f"📋 [action_runner] Manifest生成中...")
+            manifest_path = generate_manifest(collected_artifacts, action_name)
+            log_message(f"✅ [action_runner] {len(collected_artifacts)}個のファイルをartifacts/{action_name}/に移動しました")
+        else:
+            log_message(f"⚠️ [action_runner] 収集可能な生成物が見つかりませんでした")
 
 def create_action_template(action_name):
     """新しいアクションファイルのテンプレートを作成"""
