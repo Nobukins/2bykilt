@@ -56,39 +56,49 @@ def collect_artifacts(source_dir, target_dir, action_name):
         return []
     
     artifacts_dir = get_base_dir() / "artifacts" / action_name
-    artifacts_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        artifacts_dir.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        log_message(f"❌ [action_runner] アーティファクトディレクトリ作成エラー: {e}")
+        return []
     
     collected_files = []
     tab_index = 1
     
     # 動画ファイルとスクリーンショットを収集
     for file_path in source_dir.glob("*.webm"):
-        new_name = f"Tab-{tab_index:02d}-{file_path.name}"
-        new_path = artifacts_dir / new_name
-        file_path.rename(new_path)
-        collected_files.append({
-            "index": tab_index,
-            "original_name": file_path.name,
-            "new_name": new_name,
-            "path": str(new_path),
-            "type": "video"
-        })
-        tab_index += 1
-        log_message(f"📹 [action_runner] 動画ファイル収集: {new_name}")
+        try:
+            new_name = f"Tab-{tab_index:02d}-{file_path.name}"
+            new_path = artifacts_dir / new_name
+            file_path.rename(new_path)
+            collected_files.append({
+                "index": tab_index,
+                "original_name": file_path.name,
+                "new_name": new_name,
+                "path": str(new_path),
+                "type": "video"
+            })
+            tab_index += 1
+            log_message(f"📹 [action_runner] 動画ファイル収集: {new_name}")
+        except Exception as e:
+            log_message(f"❌ [action_runner] 動画ファイル移動エラー: {file_path} -> {e}")
     
     for file_path in source_dir.glob("*.png"):
-        new_name = f"Tab-{tab_index:02d}-{file_path.name}"
-        new_path = artifacts_dir / new_name
-        file_path.rename(new_path)
-        collected_files.append({
-            "index": tab_index,
-            "original_name": file_path.name,
-            "new_name": new_name,
-            "path": str(new_path),
-            "type": "screenshot"
-        })
-        tab_index += 1
-        log_message(f"📸 [action_runner] スクリーンショット収集: {new_name}")
+        try:
+            new_name = f"Tab-{tab_index:02d}-{file_path.name}"
+            new_path = artifacts_dir / new_name
+            file_path.rename(new_path)
+            collected_files.append({
+                "index": tab_index,
+                "original_name": file_path.name,
+                "new_name": new_name,
+                "path": str(new_path),
+                "type": "screenshot"
+            })
+            tab_index += 1
+            log_message(f"📸 [action_runner] スクリーンショット収集: {new_name}")
+        except Exception as e:
+            log_message(f"❌ [action_runner] スクリーンショット移動エラー: {file_path} -> {e}")
     
     return collected_files
 
@@ -108,34 +118,14 @@ def generate_manifest(artifacts, action_name):
         }
     }
     
-    with open(manifest_path, "w", encoding="utf-8") as f:
-        json.dump(manifest, f, indent=2, ensure_ascii=False)
-    
-    log_message(f"📋 [action_runner] Manifest生成完了: {manifest_path}")
-    return manifest_path
-
-def log_message(message):
-    """ログメッセージを標準出力、標準エラー出力、およびファイルに出力"""
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    formatted_message = f"[{timestamp}] {message}"
-    
-    # 標準出力と標準エラー出力
-    print(formatted_message)
-    print(formatted_message, file=sys.stderr)
-    sys.stdout.flush()
-    sys.stderr.flush()
-    
-    # ログファイルにも出力
     try:
-        log_dir = Path(__file__).parent.parent.parent / "logs"
-        log_dir.mkdir(exist_ok=True)
-        log_file = log_dir / "action_runner_debug.log"
-        
-        with open(log_file, "a", encoding="utf-8") as f:
-            f.write(f"{formatted_message}\n")
-            f.flush()
+        with open(manifest_path, "w", encoding="utf-8") as f:
+            json.dump(manifest, f, indent=2, ensure_ascii=False)
+        log_message(f"📋 [action_runner] Manifest生成完了: {manifest_path}")
+        return manifest_path
     except Exception as e:
-        print(f"ログファイル書き込みエラー: {e}", file=sys.stderr)
+        log_message(f"❌ [action_runner] Manifest生成エラー: {e}")
+        return None
 
 async def run_scenario(action_file, query=None, slowmo=0, headless=False, countdown=5, browser_type="chromium"):
     """
