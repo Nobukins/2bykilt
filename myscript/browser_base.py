@@ -358,11 +358,15 @@ class BrowserAutomationBase:
     async def cleanup(self):
         """リソースの解放（録画完了待機付き）"""
         try:
-            # 録画完了のための待機
+            # 録画完了のための待機（より長い時間待機）
             if self.context and self.page:
                 print("[Info] Waiting for recording to complete...")
                 try:
-                    await self.page.wait_for_timeout(1000)
+                    # ページ操作後の録画書き込みを待機
+                    await self.page.wait_for_timeout(2000)
+                    
+                    # 追加の待機時間を設定
+                    await asyncio.sleep(1)
                 except Exception as page_error:
                     print(f"[Warning] Wait timeout error (safe to ignore): {page_error}")
             

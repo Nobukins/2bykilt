@@ -1,0 +1,88 @@
+name: Local Selector Smoke Test
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'myscript/**'
+      - '.github/workflows/ci-local-selector.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'myscript/**'
+      - '.github/workflows/ci-local-selector.yml'
+  workflow_dispatch:
+
+jobs:
+  local-selector-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libnss3 \
+          libatk-bridge2.0-0 \
+          libdrm2 \
+          libxkbcommon0 \
+          libxcomposite1 \
+          libxdamage1 \
+          libxrandr2 \
+          libgbm1 \
+          libxss1 \
+          libasound2
+
+    - name: Install Playwright browsers
+      run: |
+        python -m pip install playwright
+        playwright install --with-deps chromium
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install -r requirements.txt
+
+    - name: Create temporary recording directory
+      run: |
+        mkdir -p /tmp/test_recordings
+        echo "RECORDING_PATH=/tmp/test_recordings" >> $GITHUB_ENV
+
+    - name: Run local selector smoke test
+      run: |
+        cd myscript
+        python -m pytest local_selector_test.py -v --tb=short
+
+    - name: Validate recording output
+      run: |
+        echo "Checking for generated video files..."
+        if [ -z "$(find /tmp/test_recordings -name '*.webm' -size +0 2>/dev/null)" ]; then
+          echo "❌ No valid video files found"
+          exit 1
+        else
+          echo "✅ Video files found and validated"
+          ls -la /tmp/test_recordings/*.webm
+        fi
+
+        echo "Checking for generated screenshots..."
+        if [ -n "$(find /tmp/test_recordings -name '*.png' -size +0 2>/dev/null)" ]; then
+          echo "✅ Screenshots found and validated"
+          ls -la /tmp/test_recordings/*.png
+        else
+          echo "ℹ️ No screenshots found (this is OK for basic smoke test)"
+        fi
+
+    - name: Upload test artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: local-selector-test-artifacts
+        path: /tmp/test_recordings/
+        retention-days: 7

@@ -160,16 +160,21 @@ issues:
   "111": {title: "録画/パス統合", meta: {area: artifacts, type: feat, priority: P0, phase: "2", stability: core}, depends: ["28"], dependents: ["110"], progress: {state: done, primary_pr: 188}, risk: null, critical_path_rank: 3}
   "110": {title: "browser-control gap fix", meta: {area: runner, type: bug, priority: P0, phase: "2", stability: core}, depends: ["111"], dependents: ["106"], progress: {state: done, primary_pr: 188}, risk: null, critical_path_rank: 3}
 
-  "196": {title: "CI: local selector smoke を統合", meta: {area: automation, type: chore, priority: P2, phase: "2", stability: core}, depends: ["201"], dependents: ["202"], risk: low, progress: {state: planned}, critical_path_rank: 1}
+  "196": {title: "CI: local selector smoke を統合", meta: {area: automation, type: chore, priority: P2, phase: "2", stability: core}, depends: ["201"], dependents: ["202"], risk: low, progress: {state: done, primary_pr: 213}, critical_path_rank: 1}
   "198": {title: "[batch] CSV NamedString 入力の正規化", meta: {area: batch, type: bug, priority: P1, phase: "2", stability: experimental}, depends: ["39"], dependents: [], risk: medium, progress: {state: planned}, critical_path_rank: 1}
   "199": {title: "[ui/ux] Internationalization (i18n): JA base → EN 追加", meta: {area: uiux, type: feat, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: low, progress: {state: planned}, critical_path_rank: 1}
   "200": {title: "[policy] myscript 配置規約の策定", meta: {area: docs, type: docs, priority: P2, phase: "2", stability: core}, depends: ["50"], dependents: ["201", "203"], risk: low, progress: {state: in-progress}, critical_path_rank: 1}
-  "201": {title: "[runner] myscript スクリプト修正（パス統一・生成物出力）", meta: {area: runner, type: chore, priority: P2, phase: "2", stability: core}, depends: ["200"], dependents: ["196", "202", "203"], risk: low, progress: {state: planned}, critical_path_rank: 1}
+  "201": {title: "[runner] myscript スクリプト修正（パス統一・生成物出力）", meta: {area: runner, type: chore, priority: P2, phase: "2", stability: core}, depends: ["200"], dependents: ["196", "202", "203"], risk: low, progress: {state: done, primary_pr: 213}, critical_path_rank: 1}
   "202": {title: "[ci] アーティファクト収集/キャッシュ更新（myscript 構成対応）", meta: {area: automation, type: chore, priority: P2, phase: "2", stability: core}, depends: ["201", "196"], dependents: [], risk: low, progress: {state: planned}, critical_path_rank: 1}
   "203": {title: "[docs] README/チュートリアル/ガイド更新（myscript 構成・出力ポリシー）", meta: {area: docs, type: docs, priority: P2, phase: "2", stability: core}, depends: ["200", "201", "202"], dependents: [], risk: low, progress: {state: planned}, critical_path_rank: 1}
+  "208": {title: "[ui/ux] Option Availability - 利用可能なオプションの可視化改善", meta: {area: uiux, type: enhancement, priority: P2, phase: "2", stability: core}, depends: ["199"], dependents: [], risk: low, progress: {state: open}, critical_path_rank: 1}
+  "209": {title: "[ui/ux] Results menu - 実行結果表示メニューの改善", meta: {area: uiux, type: enhancement, priority: P2, phase: "2", stability: core}, depends: ["199"], dependents: [], risk: low, progress: {state: open}, critical_path_rank: 1}
+  "210": {title: "[ui/ux] Recordings menu - 録画ファイル管理メニューの改善", meta: {area: uiux, type: enhancement, priority: P2, phase: "2", stability: core}, depends: ["199"], dependents: [], risk: low, progress: {state: open}, critical_path_rank: 1}
+  "211": {title: "[docs] LLM 統合ドキュメント整備", meta: {area: docs, type: docs, priority: P1, phase: "2", stability: core}, depends: ["43"], dependents: [], risk: low, progress: {state: open}, critical_path_rank: 1}
+  "212": {title: "[feat] Playwright Codegen 統合機能", meta: {area: runner, type: feat, priority: P1, phase: "2", stability: experimental}, depends: ["64"], dependents: [], risk: medium, progress: {state: open}, critical_path_rank: 1}
 
 summary:
-  total_issues: 64
+  total_issues: 69
   high_risk: ["31", "46", "49", "54", "62", "176"]
   longest_chain_example: ["65", "64", "63", "66", "67"]
   data_quality_checks:
@@ -180,7 +185,12 @@ summary:
       - "90"
       - "154"
       - "199"
-  generated_at_utc: "2025-09-16T00:00:00Z"
+      - "208"
+      - "209"
+      - "210"
+      - "211"
+      - "212"
+  generated_at_utc: "2025-09-16T14:09:31Z"
 
 validation_rules:
   - "All blocking dependencies must be completed before starting an issue"
