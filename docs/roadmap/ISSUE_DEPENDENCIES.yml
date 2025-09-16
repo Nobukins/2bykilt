@@ -3,16 +3,51 @@
 
 issues:
   "25": {title: "git_script が llms.txt で指定したスクリプトを正しく解決するよう修正", meta: {area: runner, type: bug, priority: P0, phase: "1", stability: core}, depends: [], dependents: ["44", "45", "49", "50"], progress: {state: done, primary_pr: 118}, risk: null, critical_path_rank: 3}
-  "28": {title: "録画ファイル保存パス統一", meta: {area: artifacts, type: bug, priority: P0, 
-        phase: "1", stability: core}, depends: ["32"], dependents: ["30"], risk: 
-  null, progress: {state: done, primary_pr: 112}, critical_path_rank: 4}
-  "30": {title: "録画タイプ間不整合是正", meta: {area: artifacts, type: bug, priority: P0, 
-        phase: "1", stability: core}, depends: ["28"], dependents: ["37", "38"], 
-      risk: null, critical_path_rank: 3}
-  "31": {title: "統一ログ設計 (JSON Lines)", meta: {area: logging, type: feat, 
-        priority: P0, phase: "1", stability: core}, depends: ["32"], dependents: [
-      "56"], risk: high, progress: {state: done, primary_pr: 80}, 
-      critical_path_rank: 3}
+  "28": 
+    title: "録画ファイル保存パス統一"
+    meta: 
+      area: artifacts
+      type: bug
+      priority: P0
+      phase: "1"
+      stability: core
+    depends: ["32"]
+    dependents: ["30"]
+    risk: null
+    progress: 
+      state: done
+      primary_pr: 112
+    critical_path_rank: 4
+  "30": 
+    title: "録画タイプ間不整合是正"
+    meta: 
+      area: artifacts
+      type: bug
+      priority: P0
+      phase: "1"
+      stability: core
+    depends: ["28"]
+    dependents: ["37", "38"]
+    risk: null
+    progress: 
+      state: done
+      primary_pr: 112
+    critical_path_rank: 3
+  "31": 
+    title: "統一ログ設計 (JSON Lines)"
+    meta: 
+      area: logging
+      type: feat
+      priority: P0
+      phase: "1"
+      stability: core
+    depends: ["32"]
+    dependents: ["56"]
+    risk: high
+    progress: 
+      state: done
+      primary_pr: 80
+    critical_path_rank: 3
   "32": {title: "Run/Job ID 基盤", meta: {area: runner, type: feat, priority: P0, 
         phase: "1", stability: core}, depends: [], dependents: ["28", "31", "33",
       "35", "46", "54", "56", "58", "39", "62"], progress: {state: done, 
