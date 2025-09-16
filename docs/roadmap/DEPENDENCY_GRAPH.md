@@ -1,6 +1,6 @@
 ```mermaid
 %% Auto-generated dependency graph
-%% Generated at: 2025-09-16T03:15:14.708815+00:00
+%% Generated at: 2025-09-16T14:27:56.870106+00:00
 %% Edge方向: dependency --> dependent
 graph LR
 
@@ -77,6 +77,11 @@ subgraph R1[Rank 1]
   201["201 [runner] myscript ス…"]
   202["202 [ci] アーティファクト収集/キャッ…"]
   203["203 [docs] README/チュートリ…"]
+  208["208 [ui/ux] Option Avai…"]
+  209["209 [ui/ux] Results men…"]
+  210["210 [ui/ux] Recordings …"]
+  211["211 [docs] LLM 統合ドキュメント…"]
+  212["212 [feat] Playwright C…"]
 end
 
 %% Edges (depends --> dependent)
@@ -171,6 +176,11 @@ end
 200 --> 203
 201 --> 203
 202 --> 203
+199 --> 208
+199 --> 209
+199 --> 210
+43 --> 211
+64 --> 212
 
 %% Styling definitions (Mermaid syntax uses colon)
 classDef highrisk fill:#ffe6e6,stroke:#d40000,stroke-width:2px,color:#000;
@@ -178,7 +188,7 @@ classDef progress fill:#e6f4ff,stroke:#0366d6,stroke-width:2px,color:#000;
 
 %% Class assignments
 class 31,46,49,54,62,176 highrisk;
-class 25,28,31,32,34,35,36,37,38,39,40,41,42,44,45,50,56,57,58,59,87,88,89,91,102,110,111,154,175,176,177,196,198,199,200,201,202,203 progress;
+class 25,28,31,32,34,35,36,37,38,39,40,41,42,44,45,50,56,57,58,59,87,88,89,91,102,110,111,154,175,176,177,196,198,199,200,201,202,203,208,209,210,211,212 progress;
 
 %% Legend (pseudo nodes)
 subgraph Legend[Legend]
