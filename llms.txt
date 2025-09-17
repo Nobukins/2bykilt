@@ -7,7 +7,7 @@ actions:
         required: true
         type: string
         description: "検索クエリ"
-    command: pytest ./tmp/myscript/search_script.py --query ${params.query}
+    command: pytest myscript/search_script.py --query ${params.query}
     slowmo: 2500
 
   - name: search-beatport
@@ -18,7 +18,7 @@ actions:
         required: true
         type: string
         description: "検索クエリ"
-    command: pytest ./tmp/myscript/search_script_music.py --query ${params.query}
+    command: pytest myscript/search_script_music.py --query ${params.query}
     slowmo: 2500
 
   - name: phrase-search

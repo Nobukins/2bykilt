@@ -13,12 +13,37 @@
 - 一貫したフィールド構造
 - 機械読み取り可能な形式
 
-### 2. コンテキスト情報
+### 2. ディレクトリ構造標準化
+- **ルートログディレクトリ**: `./logs/` (リポジトリルート基準)
+- **廃止ディレクトリ**: `src/logs/` (互換性維持期間終了後は削除)
+- **カテゴリ別ログファイル**:
+  - `logs/app.log`: 全般アプリケーションイベント
+  - `logs/error.log`: ERROR/CRITICAL レベルのみ
+  - `logs/audit.log`: セキュリティ/監査関連イベント
+  - `logs/runner.log`: 実行関連イベント
+  - `logs/artifacts.log`: アーティファクト関連イベント
+
+### 3. ログカテゴリ定義
+```python
+LOG_CATEGORIES = {
+    'runner': '実行制御・スクリプト実行関連',
+    'artifacts': '録画・スクリーンショット・ファイル生成関連', 
+    'browser': 'ブラウザ操作・Playwright関連',
+    'config': '設定読み込み・Flag関連',
+    'metrics': 'パフォーマンス計測・統計情報',
+    'security': '認証・認可・機密情報処理',
+    'batch': 'CSV処理・バッチ実行関連',
+    'api': '外部API連携関連',
+    'system': 'インフラ・環境関連'
+}
+```
+
+### 4. コンテキスト情報
 - Request ID による追跡
 - User ID やセッション情報
 - 実行環境とバージョン情報
 
-### 3. セキュリティ配慮
+### 5. セキュリティ配慮
 - 機密情報のマスキング
 - PII データの除外
 - 適切なログレベル設定
@@ -69,7 +94,7 @@ logger.debug("Processing batch item", extra={
 })
 ```
 
-### 2. 環境別設定
+### 2. 環境別設定 & LOG_LEVEL 環境変数
 ```yaml
 # development環境
 logging:
@@ -90,6 +115,22 @@ logging:
   file: true
   structured: true
 ```
+
+#### LOG_LEVEL 環境変数設定
+```bash
+# 環境変数でのログレベル制御
+export LOG_LEVEL=DEBUG    # DEBUG, INFO, WARNING, ERROR, CRITICAL
+export LOG_BASE_DIR=./logs  # ログ出力ディレクトリ（デフォルト: ./logs）
+
+# 実行例
+LOG_LEVEL=ERROR python bykilt.py  # ERROR以上のログのみ出力
+LOG_LEVEL=DEBUG python bykilt.py  # 全てのログレベルを出力
+```
+
+#### 初期化順序の重要性
+- 環境変数 `LOG_LEVEL` はロガー初期化時に一度だけ読み込まれます
+- 初期化後の動的変更は `logging.getLogger().setLevel()` を使用してください
+- 推奨: アプリケーション起動直後に `init_logging()` 関数を呼び出す
 
 ## ログ構造標準
 
