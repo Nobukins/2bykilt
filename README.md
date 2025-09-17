@@ -7,11 +7,13 @@
 
 # 💫 2bykilt - 伝説の業務効率化の魔法
 
-**# スクリプト実行の基本
+# スクリプト実行の基本
 
 myscriptを使用した基本的な実行例：
 
-`## ⚙️ スクリプト実行環境の準備（myscript）`bash
+## ⚙️ スクリプト実行環境の準備（myscript）
+
+```bash
 # 環境変数を設定
 export RECORDING_PATH="./artifacts/my-task"
 
@@ -392,7 +394,7 @@ cp .env.example .env
         return {"status": "success"}
 ```
 
-## �️ スクリプト実行環境の準備（myscript）
+## ⚙️ スクリプト実行環境の準備（myscript）
 
 ### myscript ディレクトリの役割
 
@@ -440,7 +442,7 @@ export RECORDING_PATH="./artifacts/my-task"
 python myscript/bin/my_script.py --target https://example.com
 ```
 
-## ⚙️ ビジネスでの魔法の使い方
+## 💎 ビジネスでの魔法の使い方
 
 ### 🏢 経理部門の英雄
 
