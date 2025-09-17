@@ -3,6 +3,7 @@ from pathlib import Path
 from src.runtime.run_context import RunContext
 from src.config.multi_env_loader import MultiEnvConfigLoader
 from src.config.feature_flags import FeatureFlags
+from tests.fixtures.feature_flags_fixtures import ensure_flags_artifact_helper
 
 
 def test_run_context_unifies_artifact_prefix(tmp_path, monkeypatch):
@@ -23,8 +24,8 @@ def test_run_context_unifies_artifact_prefix(tmp_path, monkeypatch):
     os.environ["BYKILT_ENV"] = "dev"
     loader.load()
 
-    # Trigger flags artifact
-    FeatureFlags.is_enabled("nonexistent.flag.for.test")  # will write artifact
+    # Use helper to ensure flags artifact exists (more reliable than direct access)
+    ensure_flags_artifact_helper(tmp_path)
 
     dirs = [p.name for p in (Path("artifacts") / "runs").iterdir() if p.is_dir()]
     cfg_dir = next(d for d in dirs if d.endswith("-cfg"))

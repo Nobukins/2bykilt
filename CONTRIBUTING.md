@@ -204,6 +204,90 @@ pytest tests/test_specific_feature.py
 pytest --cov=src --cov-report=html
 ```
 
+### Feature Flags Testing
+
+#### Using Feature Flags Artifacts in Tests
+
+For tests that need to ensure feature flags artifacts are created, use the provided fixtures and helpers:
+
+```python
+import pytest
+from src.config.feature_flags import FeatureFlags
+from tests.fixtures.feature_flags_fixtures import ensure_flags_artifact
+
+def test_with_flags_artifact(ensure_flags_artifact):
+    """Test that automatically ensures flags artifact exists."""
+    # ensure_flags_artifact fixture creates artifact if needed
+    assert (ensure_flags_artifact / "feature_flags_resolved.json").exists()
+
+    # Your test logic here
+    flag_value = FeatureFlags.is_enabled("test.flag")
+    assert isinstance(flag_value, bool)
+
+def test_with_custom_overrides(tmp_path):
+    """Test with custom flag overrides and artifact creation."""
+    from tests.fixtures.feature_flags_fixtures import ensure_flags_artifact_with_overrides_helper
+
+    overrides = {
+        "test.enabled": True,
+        "test.value": "custom_value",
+        "test.number": 42
+    }
+
+    artifact_dir = ensure_flags_artifact_with_overrides_helper(overrides, tmp_path)
+    assert (artifact_dir / "feature_flags_resolved.json").exists()
+
+    # Verify overrides are applied
+    assert FeatureFlags.is_enabled("test.enabled") is True
+    assert FeatureFlags.get("test.value") == "custom_value"
+    assert FeatureFlags.get("test.number") == 42
+```
+
+#### Controlling Lazy Artifact Creation
+
+By default, accessing undefined feature flags will automatically create artifacts. You can control this behavior:
+
+```python
+# Disable lazy artifact creation
+FeatureFlags.set_lazy_artifact_enabled(False)
+
+# Check current setting
+is_enabled = FeatureFlags.is_lazy_artifact_enabled()
+
+# Re-enable (default behavior)
+FeatureFlags.set_lazy_artifact_enabled(True)
+```
+
+#### Environment Variable Control
+
+You can also control lazy artifact creation via environment variable:
+
+```bash
+# Disable lazy artifacts
+export BYKILT_FLAGS_LAZY_ARTIFACT_ENABLED=false
+
+# Enable lazy artifacts (default)
+export BYKILT_FLAGS_LAZY_ARTIFACT_ENABLED=true
+```
+
+#### Manual Artifact Creation
+
+For tests that need explicit control over artifact creation:
+
+```python
+def test_manual_artifact_creation(tmp_path):
+    """Test with manual artifact creation."""
+    import os
+    os.chdir(tmp_path)
+
+    # Manually create artifact
+    artifact_dir = FeatureFlags.dump_snapshot()
+    assert (artifact_dir / "feature_flags_resolved.json").exists()
+
+    # Your test logic here
+    # ...
+```
+
 ### Browser Testing
 
 ```bash
