@@ -46,6 +46,25 @@ from src.security.secret_masker import mask_text, mask_dict, is_masking_enabled
 
 Hook = Callable[[dict], dict]
 
+# Log level mapping constants
+_LOG_LEVEL_MAP = {
+    "DEBUG": 10,
+    "INFO": 20,
+    "WARNING": 30,
+    "WARN": 30,  # Allow WARN as alias for WARNING
+    "ERROR": 40,
+    "CRITICAL": 50,
+    "FATAL": 50,  # Allow FATAL as alias for CRITICAL
+}
+
+_LOG_LEVEL_VALUE_MAP = {
+    "DEBUG": 10,
+    "INFO": 20,
+    "WARNING": 30,
+    "ERROR": 40,
+    "CRITICAL": 50,
+}
+
 @dataclass(slots=True)
 class _LoggerCore:
     component: str
@@ -268,27 +287,11 @@ def _get_log_level() -> int:
     Returns the numeric level (10=DEBUG, 20=INFO, 30=WARNING, 40=ERROR, 50=CRITICAL).
     Defaults to INFO (20) if not set or invalid.
     """
-    level_map = {
-        "DEBUG": 10,
-        "INFO": 20,
-        "WARNING": 30,
-        "WARN": 30,  # Allow WARN as alias for WARNING
-        "ERROR": 40,
-        "CRITICAL": 50,
-        "FATAL": 50,  # Allow FATAL as alias for CRITICAL
-    }
     v = os.getenv("LOG_LEVEL", "INFO").upper()
-    return level_map.get(v, 20)  # Default to INFO if invalid
+    return _LOG_LEVEL_MAP.get(v, 20)  # Default to INFO if invalid
 
 
 def _get_level_value(level: str) -> int:
     """Convert log level string to numeric value."""
-    level_map = {
-        "DEBUG": 10,
-        "INFO": 20,
-        "WARNING": 30,
-        "ERROR": 40,
-        "CRITICAL": 50,
-    }
-    return level_map.get(level.upper(), 20)
+    return _LOG_LEVEL_VALUE_MAP.get(level.upper(), 20)
 
