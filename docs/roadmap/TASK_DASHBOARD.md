@@ -1,47 +1,47 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-09-17T08:55:55+00:00
+Generated at (UTC): 2025-09-17T23:27:52+00:00
 
 ## 1. メタサマリー
 
-- Total Issues: 75
+- Total Issues: 76
 - High Risk (declared): 6 → 31, 46, 49, 54, 62, 176
 - Cycle Detected: false (none)
 - Strict Orphans: 4
-- Curated Orphan List Count: 10
+- Curated Orphan List Count: 11
 
 ## 2. 分布 (Distribution)
 
 ### Priority
-- P0: 19 (25.3%)
-- P1: 26 (34.7%)
-- P2: 28 (37.3%)
-- P3: 2 (2.7%)
+- P0: 20 (26.3%)
+- P1: 26 (34.2%)
+- P2: 28 (36.8%)
+- P3: 2 (2.6%)
 
 ### Phase
-- 1: 19 (25.3%)
-- 1-late: 12 (16.0%)
-- 2: 44 (58.7%)
+- 1: 19 (25.0%)
+- 1-late: 12 (15.8%)
+- 2: 45 (59.2%)
 
 ### Area
-- artifacts: 15 (20.0%)
+- artifacts: 15 (19.7%)
 - automation: 4 (5.3%)
-- batch: 7 (9.3%)
+- batch: 7 (9.2%)
 - config: 4 (5.3%)
-- docs: 6 (8.0%)
-- logging: 5 (6.7%)
-- observability: 3 (4.0%)
+- docs: 6 (7.9%)
+- logging: 5 (6.6%)
+- observability: 3 (3.9%)
 - plugins: 1 (1.3%)
-- runner: 20 (26.7%)
+- runner: 21 (27.6%)
 - security: 4 (5.3%)
 - test: 1 (1.3%)
-- uiux: 5 (6.7%)
+- uiux: 5 (6.6%)
 
 ### Risk
-- high: 6 (8.0%)
-- low: 12 (16.0%)
+- high: 6 (7.9%)
+- low: 12 (15.8%)
 - medium: 4 (5.3%)
-- none: 53 (70.7%)
+- none: 54 (71.1%)
 
 ## 3. リスク詳細 (High / Medium / etc.)
 
@@ -72,9 +72,10 @@ Curated Orphan List (summary.data_quality_checks.orphan_issues_without_dependent
 - 210: [ui/ux] Recordings menu - 録画ファイル管理メニューの改善
 - 211: [docs] LLM 統合ドキュメント整備
 - 212: [feat] Playwright Codegen 統合機能
+- 226: [runner][bug] search-linkedin 実行時エラー修正
 
 Missing Strict Orphans in curated list: (none)
-Extra non-strict entries in curated list (WARNING only): 199, 208, 209, 210, 211, 212
+Extra non-strict entries in curated list (WARNING only): 199, 208, 209, 210, 211, 212, 226
 
 ## 5. クリティカルパス推定
 
@@ -92,7 +93,7 @@ Sorted By: critical_path_rank
 
 | ID | Title | Pri | Phase | Area | Risk | CP Rank | LongestDist | Depends | Dependents | PrimaryPR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 219 | [runner][bug] search-linkedin 初期コマンド失敗 (pytest経由引数未解釈) | P0 | 2 | runner |  | 5 | 4 | 2 | 2 |  |
+| 219 | [runner][bug] search-linkedin 初期コマンド失敗 (pytest経由引数未解釈) | P0 | 2 | runner |  | 5 | 4 | 2 | 2 | #232 |
 | 32 | Run/Job ID 基盤 | P0 | 1 | runner |  | 5 | 0 | 0 | 10 | #79 |
 | 65 | マルチ環境設定ローダ | P0 | 1 | config |  | 5 | 0 | 0 | 4 |  |
 | 220 | [runner][bug] browser-control タイプ実行失敗の調査と修正 | P1 | 2 | runner |  | 4 | 0 | 1 | 1 |  |
@@ -141,8 +142,9 @@ Sorted By: critical_path_rank
 | 210 | [ui/ux] Recordings menu - 録画ファイル管理メニューの改善 | P2 | 2 | uiux | low | 1 | 1 | 1 | 0 |  |
 | 211 | [docs] LLM 統合ドキュメント整備 | P1 | 2 | docs | low | 1 | 3 | 1 | 0 |  |
 | 212 | [feat] Playwright Codegen 統合機能 | P1 | 2 | runner | medium | 1 | 2 | 1 | 0 |  |
-| 223 | [logging][bug] LOG_LEVEL 環境変数が反映されない (初期化順序バグ) | P0 | 2 | logging |  | 1 | 0 | 1 | 0 |  |
+| 223 | [logging][bug] LOG_LEVEL 環境変数が反映されない (初期化順序バグ) | P0 | 2 | logging |  | 1 | 0 | 1 | 0 | #233 |
 | 224 | [ui/ux][config] RECORDING_PATH UI と環境変数の競合解消 | P1 | 2 | uiux |  | 1 | 0 | 1 | 0 |  |
+| 226 | [runner][bug] search-linkedin 実行時エラー修正 | P0 | 2 | runner |  | 1 | 4 | 2 | 0 | #232 |
 | 34 | 要素値キャプチャ & エクスポート | P1 | 1 | artifacts |  | 1 | 2 | 2 | 0 | #93 |
 | 38 | 録画統一後回帰テストスイート | P2 | 1-late | artifacts |  | 1 | 4 | 5 | 0 | #103 |
 | 40 | CSV D&D UI 連携 | P2 | 2 | batch |  | 1 | 2 | 1 | 0 | #172 |
@@ -177,7 +179,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 4
 - Depends (2): 200, 201
 - Dependents (2): 220, 221
-- Progress: {"state": "open"}
+- Progress: {"state": "done", "primary_pr": 232}
 
 ### Issue 32: Run/Job ID 基盤
 - Priority: P0, Phase: 1, Area: runner
@@ -604,7 +606,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 0
 - Depends (1): 222
 - Dependents (0): (none)
-- Progress: {"state": "open"}
+- Progress: {"state": "done", "primary_pr": 233}
 
 ### Issue 224: [ui/ux][config] RECORDING_PATH UI と環境変数の競合解消
 - Priority: P1, Phase: 2, Area: uiux
@@ -614,6 +616,15 @@ Sorted By: critical_path_rank
 - Depends (1): 221
 - Dependents (0): (none)
 - Progress: {"state": "open"}
+
+### Issue 226: [runner][bug] search-linkedin 実行時エラー修正
+- Priority: P0, Phase: 2, Area: runner
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 4
+- Depends (2): 200, 201
+- Dependents (0): (none)
+- Progress: {"state": "done", "primary_pr": 232}
 
 ### Issue 34: 要素値キャプチャ & エクスポート
 - Priority: P1, Phase: 1, Area: artifacts
