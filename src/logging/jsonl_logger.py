@@ -57,13 +57,12 @@ _LOG_LEVEL_MAP = {
     "FATAL": 50,  # Allow FATAL as alias for CRITICAL
 }
 
-_LOG_LEVEL_VALUE_MAP = {
-    "DEBUG": 10,
-    "INFO": 20,
-    "WARNING": 30,
-    "ERROR": 40,
-    "CRITICAL": 50,
-}
+# Canonical log level names (exclude aliases)
+_CANONICAL_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+_LOG_LEVEL_VALUE_MAP = {k: v for k, v in _LOG_LEVEL_MAP.items() if k in _CANONICAL_LOG_LEVELS}
+
+# Default log level constant for consistency
+_DEFAULT_LOG_LEVEL = 20  # INFO level
 
 @dataclass(slots=True)
 class _LoggerCore:
@@ -288,10 +287,10 @@ def _get_log_level() -> int:
     Defaults to INFO (20) if not set or invalid.
     """
     v = os.getenv("LOG_LEVEL", "INFO").upper()
-    return _LOG_LEVEL_MAP.get(v, 20)  # Default to INFO if invalid
+    return _LOG_LEVEL_MAP.get(v, _DEFAULT_LOG_LEVEL)  # Default to INFO if invalid
 
 
 def _get_level_value(level: str) -> int:
     """Convert log level string to numeric value."""
-    return _LOG_LEVEL_VALUE_MAP.get(level.upper(), 20)
+    return _LOG_LEVEL_VALUE_MAP.get(level.upper(), _DEFAULT_LOG_LEVEL)
 
