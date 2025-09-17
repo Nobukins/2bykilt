@@ -336,8 +336,15 @@ issues:
   "211": {title: "[docs] LLM 統合ドキュメント整備", meta: {area: docs, type: docs, priority: P1, phase: "2", stability: core}, depends: ["43"], dependents: [], risk: low, progress: {state: open}, critical_path_rank: 1}
   "212": {title: "[feat] Playwright Codegen 統合機能", meta: {area: runner, type: feat, priority: P1, phase: "2", stability: experimental}, depends: ["64"], dependents: [], risk: medium, progress: {state: open}, critical_path_rank: 1}
 
+  "219": {title: "[runner][bug] search-linkedin 初期コマンド失敗 (pytest経由引数未解釈)", meta: {area: runner, type: bug, priority: P0, phase: "2", stability: core}, depends: ["200", "201"], dependents: ["220", "221"], risk: null, progress: {state: open}, critical_path_rank: 5}
+  "220": {title: "[runner][bug] browser-control タイプ実行失敗の調査と修正", meta: {area: runner, type: bug, priority: P1, phase: "2", stability: core}, depends: ["219"], dependents: ["221"], risk: null, progress: {state: open}, critical_path_rank: 4}
+  "221": {title: "[artifacts][bug] script 以外で録画ファイル未生成 (browser-control/git-script)", meta: {area: artifacts, type: bug, priority: P1, phase: "2", stability: core}, depends: ["219", "220"], dependents: ["224"], risk: null, progress: {state: open}, critical_path_rank: 3}
+  "222": {title: "[logging][feat] ログ出力ディレクトリ/カテゴリ標準化 & src/logs/ 廃止", meta: {area: logging, type: feat, priority: P1, phase: "2", stability: core}, depends: ["56", "57"], dependents: ["223"], risk: null, progress: {state: open}, critical_path_rank: 2}
+  "223": {title: "[logging][bug] LOG_LEVEL 環境変数が反映されない (初期化順序バグ)", meta: {area: logging, type: bug, priority: P0, phase: "2", stability: core}, depends: ["222"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "224": {title: "[ui/ux][config] RECORDING_PATH UI と環境変数の競合解消", meta: {area: uiux, type: enhancement, priority: P1, phase: "2", stability: core}, depends: ["221"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+
 summary:
-  total_issues: 69
+  total_issues: 75
   high_risk: ["31", "46", "49", "54", "62", "176"]
   longest_chain_example: ["65", "64", "63", "66", "67"]
   data_quality_checks:

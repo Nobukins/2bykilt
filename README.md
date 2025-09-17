@@ -21,6 +21,30 @@ export RECORDING_PATH="./artifacts/my-task"
 python myscript/bin/my_script.py --target https://example.com
 ```
 
+### RECORDING_PATH 設定ガイド
+
+#### 優先順位と競合解消
+2bykiltでは、録画ファイルの保存先を以下の優先順位で決定します：
+
+1. **UI設定 (Browser Settings)**: 実行時のUIで指定されたパス（最も優先）
+2. **環境変数 RECORDING_PATH**: シェルで設定されたパス
+3. **デフォルトパス**: `./record_videos`（上記いずれも未設定時）
+
+#### 設定例
+```bash
+# 環境変数のみ設定
+export RECORDING_PATH="./artifacts/my-session"
+python myscript/bin/script.py
+
+# UI設定が優先される場合
+# UIのBrowser Settingsで "./custom/path" を指定すると環境変数より優先
+```
+
+#### 注意点
+- UI設定が空欄の場合のみ環境変数が使用されます
+- 実行ログに最終採用パスが `recording_path_resolved` イベントとして記録されます
+- パスが存在しない場合は自動作成されます
+
 ### 実践的な使用例
 
 #### 1. 検索スクリプトの実行
