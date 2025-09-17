@@ -1,5 +1,6 @@
 import os
 import json
+import pytest
 from pathlib import Path
 
 from src.logging.jsonl_logger import JsonlLogger
@@ -162,3 +163,153 @@ def test_log_level_invalid_defaults_to_info(tmp_path, monkeypatch):
     assert "debug message" not in messages
     assert "info message" in messages
     assert "warning message" in messages
+
+
+def test_log_base_dir_custom_path(tmp_path, monkeypatch):
+    """Test LOG_BASE_DIR environment variable sets custom log directory."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("BYKILT_RUN_ID", "runcustom")
+    RunContext._instance = None  # type: ignore[attr-defined]
+    JsonlLogger._instances.clear()  # type: ignore[attr-defined]
+    
+    custom_log_dir = tmp_path / "custom_logs"
+    monkeypatch.setenv("LOG_BASE_DIR", str(custom_log_dir))
+    
+    logger = JsonlLogger.get("custom_test")
+    logger.info("test message")
+    
+    # Check that log was written to custom directory
+    expected_path = custom_log_dir / "custom_test" / "app.log.jsonl"
+    assert expected_path.exists()
+    
+    content = expected_path.read_text(encoding="utf-8").strip().splitlines()
+    assert len(content) == 1
+    rec = json.loads(content[0])
+    assert rec["msg"] == "test message"
+    assert rec["component"] == "custom_test"
+
+
+def test_log_base_dir_default_fallback(tmp_path, monkeypatch):
+    """Test that unset LOG_BASE_DIR defaults to ./logs."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("BYKILT_RUN_ID", "rundefault")
+    RunContext._instance = None  # type: ignore[attr-defined]
+    JsonlLogger._instances.clear()  # type: ignore[attr-defined]
+    
+    # Don't set LOG_BASE_DIR
+    logger = JsonlLogger.get("default_test")
+    logger.info("test message")
+    
+    # Check that log was written to ./logs
+    expected_path = tmp_path / "logs" / "default_test" / "app.log.jsonl"
+    assert expected_path.exists()
+    
+    content = expected_path.read_text(encoding="utf-8").strip().splitlines()
+    assert len(content) == 1
+    rec = json.loads(content[0])
+    assert rec["msg"] == "test message"
+    assert rec["component"] == "default_test"
+
+
+def test_log_base_dir_src_guard(tmp_path, monkeypatch):
+    """Test that LOG_BASE_DIR cannot point to src/ directory."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("BYKILT_RUN_ID", "runguard")
+    RunContext._instance = None  # type: ignore[attr-defined]
+    JsonlLogger._instances.clear()  # type: ignore[attr-defined]
+    
+    # Create src directory
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+    
+    # Try to set LOG_BASE_DIR to src/
+    monkeypatch.setenv("LOG_BASE_DIR", str(src_dir))
+    
+    # Should raise ValueError
+    with pytest.raises(ValueError, match="LOG_BASE_DIR cannot point to src/ directory"):
+        JsonlLogger.get("guard_test")
+
+
+def test_log_base_dir_src_subdirectory_guard(tmp_path, monkeypatch):
+    """Test that LOG_BASE_DIR cannot point to src/ subdirectories."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("BYKILT_RUN_ID", "runsubguard")
+    RunContext._instance = None  # type: ignore[attr-defined]
+    JsonlLogger._instances.clear()  # type: ignore[attr-defined]
+    
+    # Create src/logs directory
+    src_logs_dir = tmp_path / "src" / "logs"
+    src_logs_dir.mkdir(parents=True)
+    
+    # Try to set LOG_BASE_DIR to src/logs/
+    monkeypatch.setenv("LOG_BASE_DIR", str(src_logs_dir))
+    
+    # Should raise ValueError
+    with pytest.raises(ValueError, match="LOG_BASE_DIR cannot point to src/ directory"):
+        JsonlLogger.get("subguard_test")
+
+
+def test_category_based_directory_structure(tmp_path, monkeypatch):
+    """Test that logs are organized by category in separate directories."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("BYKILT_RUN_ID", "runcategory")
+    RunContext._instance = None  # type: ignore[attr-defined]
+    JsonlLogger._instances.clear()  # type: ignore[attr-defined]
+    
+    # Get loggers for different categories
+    runner_logger = JsonlLogger.get("runner")
+    artifacts_logger = JsonlLogger.get("artifacts")
+    browser_logger = JsonlLogger.get("browser")
+    
+    # Log messages
+    runner_logger.info("runner event")
+    artifacts_logger.info("artifacts event")
+    browser_logger.info("browser event")
+    
+    # Check directory structure
+    logs_dir = tmp_path / "logs"
+    assert (logs_dir / "runner" / "app.log.jsonl").exists()
+    assert (logs_dir / "artifacts" / "app.log.jsonl").exists()
+    assert (logs_dir / "browser" / "app.log.jsonl").exists()
+    
+    # Verify content in each category
+    runner_content = json.loads((logs_dir / "runner" / "app.log.jsonl").read_text().strip())
+    assert runner_content["component"] == "runner"
+    assert runner_content["msg"] == "runner event"
+    
+    artifacts_content = json.loads((logs_dir / "artifacts" / "app.log.jsonl").read_text().strip())
+    assert artifacts_content["component"] == "artifacts"
+    assert artifacts_content["msg"] == "artifacts event"
+    
+    browser_content = json.loads((logs_dir / "browser" / "app.log.jsonl").read_text().strip())
+    assert browser_content["component"] == "browser"
+    assert browser_content["msg"] == "browser event"
+
+
+def test_single_path_output_verification(tmp_path, monkeypatch):
+    """Test that all logs go to single base directory (no scattered outputs)."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("BYKILT_RUN_ID", "runsingle")
+    RunContext._instance = None  # type: ignore[attr-defined]
+    JsonlLogger._instances.clear()  # type: ignore[attr-defined]
+    
+    # Get multiple loggers
+    categories = ["runner", "artifacts", "browser", "config", "metrics", "security"]
+    loggers = [JsonlLogger.get(cat) for cat in categories]
+    
+    # Log messages
+    for i, logger in enumerate(loggers):
+        logger.info(f"test message {i}")
+    
+    # Verify all logs are under ./logs/
+    logs_dir = tmp_path / "logs"
+    for category in categories:
+        log_file = logs_dir / category / "app.log.jsonl"
+        assert log_file.exists(), f"Log file for {category} should exist"
+        
+        content = json.loads(log_file.read_text().strip())
+        assert content["component"] == category
+        assert content["msg"] == f"test message {categories.index(category)}"
+    
+    # Ensure no logs exist outside ./logs/
+    # (This would be a more comprehensive check in real implementation)

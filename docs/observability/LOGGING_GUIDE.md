@@ -13,15 +13,52 @@
 - 一貫したフィールド構造
 - 機械読み取り可能な形式
 
-### 2. ディレクトリ構造標準化
+### 2. ディレクトリ構造標準化 (Issue #222)
 - **ルートログディレクトリ**: `./logs/` (リポジトリルート基準)
+- **LOG_BASE_DIR環境変数**: ログ出力ディレクトリのカスタマイズが可能
+  - 未設定時: `./logs` (デフォルト)
+  - 設定例: `LOG_BASE_DIR=/var/log/bykilt`
 - **廃止ディレクトリ**: `src/logs/` (互換性維持期間終了後は削除)
 - **カテゴリ別ログファイル**:
-  - `logs/app.log`: 全般アプリケーションイベント
-  - `logs/error.log`: ERROR/CRITICAL レベルのみ
-  - `logs/audit.log`: セキュリティ/監査関連イベント
-  - `logs/runner.log`: 実行関連イベント
-  - `logs/artifacts.log`: アーティファクト関連イベント
+  - `logs/runner/app.log.jsonl`: 実行制御・スクリプト実行関連
+  - `logs/artifacts/app.log.jsonl`: 録画・スクリーンショット・ファイル生成関連
+  - `logs/browser/app.log.jsonl`: ブラウザ操作・Playwright関連
+  - `logs/config/app.log.jsonl`: 設定読み込み・Flag関連
+  - `logs/metrics/app.log.jsonl`: パフォーマンス計測・統計情報
+  - `logs/security/app.log.jsonl`: 認証・認可・機密情報処理
+  - `logs/system/app.log.jsonl`: インフラ・環境関連
+
+#### LOG_BASE_DIR 環境変数設定
+```bash
+# デフォルト設定（./logs）
+python bykilt.py
+
+# カスタムディレクトリ指定
+LOG_BASE_DIR=/var/log/bykilt python bykilt.py
+
+# 相対パス指定
+LOG_BASE_DIR=../shared/logs python bykilt.py
+```
+
+#### ログローテーション & 保存期間 (Issue #57)
+各カテゴリログは以下のローテーション設定で管理されます：
+
+- **最大ファイルサイズ**: `BYKILT_LOG_MAX_SIZE` 環境変数 (デフォルト: 1MB)
+- **保持ファイル数**: `BYKILT_LOG_MAX_FILES` 環境変数 (デフォルト: 5)
+- **ローテーション方式**: サイズ超過時に自動ローテーション
+  - `app.log.jsonl` (アクティブ)
+  - `app.log.jsonl.1` (最新)
+  - `app.log.jsonl.2` (2番目) ...
+  - `app.log.jsonl.5` (最古、削除対象)
+
+```bash
+# ローテーション設定例
+BYKILT_LOG_MAX_SIZE=5242880  # 5MB
+BYKILT_LOG_MAX_FILES=10      # 10ファイル保持
+LOG_BASE_DIR=./logs python bykilt.py
+```
+
+**注意**: ローテーションは各カテゴリディレクトリ(`logs/{category}/`)内で個別に管理されます。
 
 ### 3. ログカテゴリ定義
 ```python

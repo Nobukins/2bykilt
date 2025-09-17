@@ -111,10 +111,12 @@ class JsonlLogger:
             return cls._instances[key]
         with cls._instances_lock:
             if key not in cls._instances:
-                rc = RunContext.get()
-                # Strategy A: directory `<run_id_base>-log/` containing app.log.jsonl
-                base_dir = rc.artifact_dir("log")  # creates directory
-                file_path = base_dir / "app.log.jsonl"
+                # Use LOG_BASE_DIR environment variable, default to ./logs
+                log_base_dir = _get_log_base_dir()
+                # Create category subdirectory: logs/{component}/
+                category_dir = log_base_dir / component
+                category_dir.mkdir(parents=True, exist_ok=True)
+                file_path = category_dir / "app.log.jsonl"
                 core = _LoggerCore(component=key, file_path=file_path)
                 cls._instances[key] = JsonlLogger(core)
             return cls._instances[key]
@@ -290,6 +292,33 @@ def _get_log_level() -> int:
     return _LOG_LEVEL_MAP.get(v, _DEFAULT_LOG_LEVEL)  # Default to INFO if invalid
 
 
+def _get_log_base_dir() -> Path:
+    """Get the base directory for logs from LOG_BASE_DIR environment variable.
+    
+    Returns Path("./logs") if not set or invalid.
+    Guards against writing to src/ directory.
+    """
+    v = os.getenv("LOG_BASE_DIR")
+    if not v:
+        return Path("./logs")
+    try:
+        path = Path(v)
+        # Ensure it's an absolute path or resolve relative to current directory
+        if not path.is_absolute():
+            path = Path.cwd() / path
+        
+        # Guard against writing to src/ directory
+        resolved_path = path.resolve()
+        src_path = Path.cwd() / "src"
+        if resolved_path.is_relative_to(src_path) or str(resolved_path).startswith(str(src_path)):
+            raise ValueError(f"LOG_BASE_DIR cannot point to src/ directory or its subdirectories: {v}")
+        
+        return path
+    except Exception as e:
+        # If path construction fails or guard triggers, fall back to default
+        if "src/" in str(e):
+            raise e  # Re-raise guard violations
+        return Path("./logs")
 def _get_level_value(level: str) -> int:
     """Convert log level string to numeric value (accepts aliases)."""
     return _LOG_LEVEL_MAP.get(level.upper(), _DEFAULT_LOG_LEVEL)
