@@ -155,11 +155,10 @@ async def run_browser_automation(recording_dir):
         # ブラウザを起動
         browser = await p.chromium.launch(headless=False)
 
-        # 新しいページを作成
-        page = await browser.new_page()
-
-        # 録画を開始
-        await page.context.new_page()  # 録画用の新しいページ
+        # 録画設定付きのコンテキストを作成
+        context = await browser.new_context(record_video_dir=str(recording_dir))
+        page = await context.new_page()
+        # 録画は context 作成時に自動で開始されます
 
         try:
             # Google にアクセス
@@ -340,6 +339,13 @@ def load_config(config_path: Optional[Path] = None) -> dict:
             return json.load(f)
 
     return {}
+
+def get_recording_path():
+    """RECORDING_PATH環境変数からパスを取得"""
+    recording_path = os.environ.get("RECORDING_PATH")
+    if not recording_path:
+        raise ValueError("RECORDING_PATH環境変数が設定されていません")
+    return Path(recording_path)
 
 def setup_browser_context(playwright, config: dict):
     """ブラウザコンテキストを設定"""
