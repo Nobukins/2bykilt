@@ -960,7 +960,7 @@ async def test_nogtips_search(request) -> None:
                 await page.screenshot(path=os.path.join(recording_dir, "nogtips_no_search_box.png"))
                 raise Exception("Search box not found on nogtips.wordpress.com")
             
-            print("� Clicking search box...")
+            print("🖱️ Clicking search box...")
             await search_box.click()
             
             print(f"⌨️ Filling search query: {query}")
