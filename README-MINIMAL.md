@@ -54,7 +54,7 @@ ENABLE_LLM=false python bykilt.py --port 7789
 
 ```bash
 # LinkedIn検索
-@search-linkedin query=python
+@script-nogtips query=python
 
 # サイト内検索  
 @phrase-search site=example.com query=tutorial

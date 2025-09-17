@@ -45,7 +45,7 @@ def default_config():
         "save_recording_path": "./tmp/record_videos",
         "save_trace_path": "./tmp/traces",
         "save_agent_history_path": "./tmp/agent_history",
-        "task": "search-linkedin query=Personal_AI_Assistant",
+        "task": "script-nogtips query=Personal_AI_Assistant",
         "dev_mode": False,  # Add dev mode setting
     }
 

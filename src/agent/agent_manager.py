@@ -421,7 +421,7 @@ async def run_browser_agent(
             return (
                 "⚠️ LLM機能が無効のため、自然言語による指示は処理できません。\n\n" +
                 "以下のオプションを使用してください:\n" +
-                "1. 事前登録されたコマンド（例: @search-linkedin query=test）\n" +
+                "1. 事前登録されたコマンド（例: @script-nogtips query=test）\n" +
                 "2. 直接URL（例: https://www.google.com）\n" +
                 "3. JSON形式のアクション定義",
                 "LLM機能が無効です",
