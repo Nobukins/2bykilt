@@ -7,7 +7,83 @@
 
 # 💫 2bykilt - 伝説の業務効率化の魔法
 
-**「呪文を唱えよ。さすれば扉は開かれん」**
+# スクリプト実行の基本
+
+myscriptを使用した基本的な実行例：
+
+## ⚙️ スクリプト実行環境の準備（myscript）
+
+```bash
+# 環境変数を設定
+export RECORDING_PATH="./artifacts/my-task"
+
+# スクリプトを実行
+python myscript/bin/my_script.py --target https://example.com
+```
+
+### 実践的な使用例
+
+#### 1. 検索スクリプトの実行
+
+```bash
+# 環境変数を設定
+export RECORDING_PATH="./artifacts/search-demo"
+
+# pytestで検索スクリプトを実行
+cd myscript
+pytest search_script.py --query "業務効率化ツール" --browser-type chrome
+```
+
+#### 2. アクションランナーの使用
+
+```bash
+# RECORDING_PATHを設定
+export RECORDING_PATH="./artifacts/action-demo"
+
+# アクションランナーを実行
+python myscript/action_runner.py --action login --url https://example.com
+```
+
+#### 3. アーティファクト収集の確認
+
+実行後に生成されるファイル構造：
+
+```
+artifacts/
+  search-demo/
+    Tab-01-recording.webm      # 録画ファイル
+    Tab-02-screenshot.png      # スクリーンショット
+    tab_index_manifest.json    # マニフェストファイル
+    logs/
+      action_runner_debug.log  # 実行ログ
+```
+
+### 高度な使用例
+
+#### プロファイルを使用した実行
+
+```bash
+# Chromeプロファイルを指定
+export RECORDING_PATH="./artifacts/profile-demo"
+export CHROME_USER_DATA="/Users/username/Library/Application Support/Google/Chrome"
+
+# プロファイルを使用して実行
+cd myscript
+pytest search_script.py --query "test" --use-profile --browser-type chrome
+```
+
+#### 複数タスクのバッチ実行
+
+```bash
+# 異なるタスクごとにRECORDING_PATHを設定
+export RECORDING_PATH="./artifacts/batch-task-1"
+python myscript/bin/task1.py
+
+export RECORDING_PATH="./artifacts/batch-task-2"
+python myscript/bin/task2.py
+```
+
+## ⚙️ スクリプト実行の基本
 
 業務の冒険者たちよ、もはや複雑な作業に時間を費やす必要はない。**2bykilt**（ツーバイキルト）は、あなたの日々の作業を自動化する伝説の魔法道具だ。ブラウザ操作を簡単に録画し、再生し、共有できる。まるで伝説の魔法書のように。
 
@@ -316,6 +392,54 @@ cp .env.example .env
         await page.click('button[type="submit"]')
         await page.wait_for_navigation()
         return {"status": "success"}
+```
+
+## ⚙️ スクリプト実行環境の準備（myscript）
+
+### myscript ディレクトリの役割
+
+**「魔法の実行を支える堅牢な基盤を整えよ」**
+
+2bykiltでは、ブラウザ自動化スクリプトを `myscript/` ディレクトリで一元管理しています。このディレクトリは以下の役割を担います：
+
+- **実行スクリプトの格納**: `myscript/bin/` に実行可能なスクリプトを配置
+- **テンプレート管理**: `myscript/templates/` にスクリプトテンプレートを保管
+- **ヘルパーモジュール**: `myscript/helpers/` に再利用可能な機能を配置
+
+### 環境変数の設定
+
+スクリプト実行には以下の環境変数を設定する必要があります：
+
+```bash
+# 録画・生成物の出力先ディレクトリ（必須）
+export RECORDING_PATH="./artifacts"
+
+# スクリプトの基点ディレクトリ（オプション）
+export BASE_DIR="$(pwd)"
+```
+
+### 出力先の構成
+
+生成物は以下のルールに従って配置されます：
+
+```
+artifacts/
+  <task>/                    # タスクごとのディレクトリ
+    Tab-XX-<name>.webm       # 録画ファイル（XXは2桁ゼロ詰め）
+    tab_index_manifest.json  # マニフェストファイル
+    logs/                    # ログファイル
+```
+
+### スクリプト実行の基本
+
+myscriptを使用した基本的な実行例：
+
+```bash
+# 環境変数を設定
+export RECORDING_PATH="./artifacts/my-task"
+
+# スクリプトを実行
+python myscript/bin/my_script.py --target https://example.com
 ```
 
 ## 💎 ビジネスでの魔法の使い方
