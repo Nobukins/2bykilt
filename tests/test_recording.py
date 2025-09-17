@@ -4,7 +4,7 @@
 import asyncio
 import sys
 from pathlib import Path
-from tmp.myscript.browser_base import BrowserAutomationBase
+from myscript.browser_base import BrowserAutomationBase
 
 async def test_recording():
     """録画機能をテストする"""
