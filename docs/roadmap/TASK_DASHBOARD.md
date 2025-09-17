@@ -1,10 +1,10 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-09-17T03:14:15+00:00
+Generated at (UTC): 2025-09-17T08:55:55+00:00
 
 ## 1. メタサマリー
 
-- Total Issues: 69
+- Total Issues: 75
 - High Risk (declared): 6 → 31, 46, 49, 54, 62, 176
 - Cycle Detected: false (none)
 - Strict Orphans: 4
@@ -13,35 +13,35 @@ Generated at (UTC): 2025-09-17T03:14:15+00:00
 ## 2. 分布 (Distribution)
 
 ### Priority
-- P0: 17 (24.6%)
-- P1: 22 (31.9%)
-- P2: 28 (40.6%)
-- P3: 2 (2.9%)
+- P0: 19 (25.3%)
+- P1: 26 (34.7%)
+- P2: 28 (37.3%)
+- P3: 2 (2.7%)
 
 ### Phase
-- 1: 19 (27.5%)
-- 1-late: 12 (17.4%)
-- 2: 38 (55.1%)
+- 1: 19 (25.3%)
+- 1-late: 12 (16.0%)
+- 2: 44 (58.7%)
 
 ### Area
-- artifacts: 14 (20.3%)
-- automation: 4 (5.8%)
-- batch: 7 (10.1%)
-- config: 4 (5.8%)
-- docs: 6 (8.7%)
-- logging: 3 (4.3%)
-- observability: 3 (4.3%)
-- plugins: 1 (1.4%)
-- runner: 18 (26.1%)
-- security: 4 (5.8%)
-- test: 1 (1.4%)
-- uiux: 4 (5.8%)
+- artifacts: 15 (20.0%)
+- automation: 4 (5.3%)
+- batch: 7 (9.3%)
+- config: 4 (5.3%)
+- docs: 6 (8.0%)
+- logging: 5 (6.7%)
+- observability: 3 (4.0%)
+- plugins: 1 (1.3%)
+- runner: 20 (26.7%)
+- security: 4 (5.3%)
+- test: 1 (1.3%)
+- uiux: 5 (6.7%)
 
 ### Risk
-- high: 6 (8.7%)
-- low: 12 (17.4%)
-- medium: 4 (5.8%)
-- none: 47 (68.1%)
+- high: 6 (8.0%)
+- low: 12 (16.0%)
+- medium: 4 (5.3%)
+- none: 53 (70.7%)
 
 ## 3. リスク詳細 (High / Medium / etc.)
 
@@ -92,12 +92,15 @@ Sorted By: critical_path_rank
 
 | ID | Title | Pri | Phase | Area | Risk | CP Rank | LongestDist | Depends | Dependents | PrimaryPR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 219 | [runner][bug] search-linkedin 初期コマンド失敗 (pytest経由引数未解釈) | P0 | 2 | runner |  | 5 | 4 | 2 | 2 |  |
 | 32 | Run/Job ID 基盤 | P0 | 1 | runner |  | 5 | 0 | 0 | 10 | #79 |
 | 65 | マルチ環境設定ローダ | P0 | 1 | config |  | 5 | 0 | 0 | 4 |  |
+| 220 | [runner][bug] browser-control タイプ実行失敗の調査と修正 | P1 | 2 | runner |  | 4 | 0 | 1 | 1 |  |
 | 28 | 録画ファイル保存パス統一 | P0 | 1 | artifacts |  | 4 | 1 | 1 | 1 | #112 |
 | 64 | フィーチャーフラグフレームワーク | P0 | 1 | config |  | 4 | 1 | 1 | 3 |  |
 | 110 | browser-control gap fix | P0 | 2 | runner |  | 3 | 0 | 1 | 1 | #188 |
 | 111 | 録画/パス統合 | P0 | 2 | artifacts |  | 3 | 2 | 1 | 1 | #188 |
+| 221 | [artifacts][bug] script 以外で録画ファイル未生成 (browser-control/git-script) | P1 | 2 | artifacts |  | 3 | 0 | 2 | 1 |  |
 | 25 | git_script が llms.txt で指定したスクリプトを正しく解決するよう修正 | P0 | 1 | runner |  | 3 | 0 | 0 | 4 | #118 |
 | 30 | 録画タイプ間不整合是正 | P0 | 1 | artifacts |  | 3 | 2 | 1 | 2 | #112 |
 | 31 | 統一ログ設計 (JSON Lines) | P0 | 1 | logging | high | 3 | 1 | 1 | 1 | #80 |
@@ -106,6 +109,7 @@ Sorted By: critical_path_rank
 | 63 | llms.txt スキーマ & バリデータ | P0 | 1-late | config |  | 3 | 2 | 2 | 1 |  |
 | 175 | バッチ行単位成果物キャプチャ基盤 (スクリーンショット/要素値/ログ関連紐付け) | P1 | 2 | artifacts | medium | 2 | 4 | 6 | 1 | #181 |
 | 176 | 宣言的抽出スキーマ (CSV列→コマンド引数/抽出ポリシーマッピング) | P1 | 2 | batch | high | 2 | 3 | 3 | 0 | #181 |
+| 222 | [logging][feat] ログ出力ディレクトリ/カテゴリ標準化 & src/logs/ 廃止 | P1 | 2 | logging |  | 2 | 4 | 2 | 1 |  |
 | 33 | スクリーンショット取得ユーティリティ | P0 | 1 | artifacts |  | 2 | 1 | 1 | 3 |  |
 | 36 | アーティファクト一覧 API | P1 | 1 | artifacts |  | 2 | 2 | 1 | 1 | #95 |
 | 37 | 動画アーティファクト保持期間 | P1 | 1 | artifacts |  | 2 | 3 | 1 | 1 | #99 |
@@ -137,6 +141,8 @@ Sorted By: critical_path_rank
 | 210 | [ui/ux] Recordings menu - 録画ファイル管理メニューの改善 | P2 | 2 | uiux | low | 1 | 1 | 1 | 0 |  |
 | 211 | [docs] LLM 統合ドキュメント整備 | P1 | 2 | docs | low | 1 | 3 | 1 | 0 |  |
 | 212 | [feat] Playwright Codegen 統合機能 | P1 | 2 | runner | medium | 1 | 2 | 1 | 0 |  |
+| 223 | [logging][bug] LOG_LEVEL 環境変数が反映されない (初期化順序バグ) | P0 | 2 | logging |  | 1 | 0 | 1 | 0 |  |
+| 224 | [ui/ux][config] RECORDING_PATH UI と環境変数の競合解消 | P1 | 2 | uiux |  | 1 | 0 | 1 | 0 |  |
 | 34 | 要素値キャプチャ & エクスポート | P1 | 1 | artifacts |  | 1 | 2 | 2 | 0 | #93 |
 | 38 | 録画統一後回帰テストスイート | P2 | 1-late | artifacts |  | 1 | 4 | 5 | 0 | #103 |
 | 40 | CSV D&D UI 連携 | P2 | 2 | batch |  | 1 | 2 | 1 | 0 | #172 |
@@ -164,6 +170,15 @@ Sorted By: critical_path_rank
 
 ## 7. 依存詳細 (Fan-in / Fan-out)
 
+### Issue 219: [runner][bug] search-linkedin 初期コマンド失敗 (pytest経由引数未解釈)
+- Priority: P0, Phase: 2, Area: runner
+- Risk: (none)
+- CriticalPathRank: 5
+- LongestDistance: 4
+- Depends (2): 200, 201
+- Dependents (2): 220, 221
+- Progress: {"state": "open"}
+
 ### Issue 32: Run/Job ID 基盤
 - Priority: P0, Phase: 1, Area: runner
 - Risk: (none)
@@ -180,6 +195,15 @@ Sorted By: critical_path_rank
 - LongestDistance: 0
 - Depends (0): (none)
 - Dependents (4): 64, 63, 43, 48
+
+### Issue 220: [runner][bug] browser-control タイプ実行失敗の調査と修正
+- Priority: P1, Phase: 2, Area: runner
+- Risk: (none)
+- CriticalPathRank: 4
+- LongestDistance: 0
+- Depends (1): 219
+- Dependents (1): 221
+- Progress: {"state": "open"}
 
 ### Issue 28: 録画ファイル保存パス統一
 - Priority: P0, Phase: 1, Area: artifacts
@@ -215,6 +239,15 @@ Sorted By: critical_path_rank
 - Depends (1): 28
 - Dependents (1): 110
 - Progress: {"state": "done", "primary_pr": 188}
+
+### Issue 221: [artifacts][bug] script 以外で録画ファイル未生成 (browser-control/git-script)
+- Priority: P1, Phase: 2, Area: artifacts
+- Risk: (none)
+- CriticalPathRank: 3
+- LongestDistance: 0
+- Depends (2): 219, 220
+- Dependents (1): 224
+- Progress: {"state": "open"}
 
 ### Issue 25: git_script が llms.txt で指定したスクリプトを正しく解決するよう修正
 - Priority: P0, Phase: 1, Area: runner
@@ -285,6 +318,15 @@ Sorted By: critical_path_rank
 - Depends (3): 175, 39, 40
 - Dependents (0): (none)
 - Progress: {"state": "done", "primary_pr": 181}
+
+### Issue 222: [logging][feat] ログ出力ディレクトリ/カテゴリ標準化 & src/logs/ 廃止
+- Priority: P1, Phase: 2, Area: logging
+- Risk: (none)
+- CriticalPathRank: 2
+- LongestDistance: 4
+- Depends (2): 56, 57
+- Dependents (1): 223
+- Progress: {"state": "open"}
 
 ### Issue 33: スクリーンショット取得ユーティリティ
 - Priority: P0, Phase: 1, Area: artifacts
@@ -552,6 +594,24 @@ Sorted By: critical_path_rank
 - CriticalPathRank: 1
 - LongestDistance: 2
 - Depends (1): 64
+- Dependents (0): (none)
+- Progress: {"state": "open"}
+
+### Issue 223: [logging][bug] LOG_LEVEL 環境変数が反映されない (初期化順序バグ)
+- Priority: P0, Phase: 2, Area: logging
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 0
+- Depends (1): 222
+- Dependents (0): (none)
+- Progress: {"state": "open"}
+
+### Issue 224: [ui/ux][config] RECORDING_PATH UI と環境変数の競合解消
+- Priority: P1, Phase: 2, Area: uiux
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 0
+- Depends (1): 221
 - Dependents (0): (none)
 - Progress: {"state": "open"}
 

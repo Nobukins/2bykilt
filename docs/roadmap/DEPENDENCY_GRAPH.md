@@ -1,16 +1,18 @@
 ```mermaid
 %% Auto-generated dependency graph
-%% Generated at: 2025-09-17T03:14:14.945978+00:00
+%% Generated at: 2025-09-17T08:55:55.123076+00:00
 %% Edge方向: dependency --> dependent
 graph LR
 
 subgraph R5[Rank 5]
   32["32 Run/Job ID 基盤"]
   65["65 マルチ環境設定ローダ"]
+  219["219 [runner][bug] searc…"]
 end
 subgraph R4[Rank 4]
   28["28 録画ファイル保存パス統一"]
   64["64 フィーチャーフラグフレームワーク"]
+  220["220 [runner][bug] brows…"]
 end
 subgraph R3[Rank 3]
   25["25 git_script が llms.t…"]
@@ -21,6 +23,7 @@ subgraph R3[Rank 3]
   63["63 llms.txt スキーマ & バリデ…"]
   110["110 browser-control gap…"]
   111["111 録画/パス統合"]
+  221["221 [artifacts][bug] sc…"]
 end
 subgraph R2[Rank 2]
   33["33 スクリーンショット取得ユーティリティ"]
@@ -38,6 +41,7 @@ subgraph R2[Rank 2]
   81["81 Async/Browser テスト安定…"]
   175["175 バッチ行単位成果物キャプチャ基盤 (ス…"]
   176["176 宣言的抽出スキーマ (CSV列→コマン…"]
+  222["222 [logging][feat] ログ出…"]
 end
 subgraph R1[Rank 1]
   34["34 要素値キャプチャ & エクスポート"]
@@ -82,6 +86,8 @@ subgraph R1[Rank 1]
   210["210 [ui/ux] Recordings …"]
   211["211 [docs] LLM 統合ドキュメント…"]
   212["212 [feat] Playwright C…"]
+  223["223 [logging][bug] LOG_…"]
+  224["224 [ui/ux][config] REC…"]
 end
 
 %% Edges (depends --> dependent)
@@ -181,6 +187,15 @@ end
 199 --> 210
 43 --> 211
 64 --> 212
+200 --> 219
+201 --> 219
+219 --> 220
+219 --> 221
+220 --> 221
+56 --> 222
+57 --> 222
+222 --> 223
+221 --> 224
 
 %% Styling definitions (Mermaid syntax uses colon)
 classDef highrisk fill:#ffe6e6,stroke:#d40000,stroke-width:2px,color:#000;
@@ -188,7 +203,7 @@ classDef progress fill:#e6f4ff,stroke:#0366d6,stroke-width:2px,color:#000;
 
 %% Class assignments
 class 31,46,49,54,62,176 highrisk;
-class 25,28,30,31,32,34,35,36,37,38,39,40,41,42,44,45,50,56,57,58,59,87,88,89,91,102,110,111,154,175,176,177,196,198,199,200,201,202,203,208,209,210,211,212 progress;
+class 25,28,30,31,32,34,35,36,37,38,39,40,41,42,44,45,50,56,57,58,59,87,88,89,91,102,110,111,154,175,176,177,196,198,199,200,201,202,203,208,209,210,211,212,219,220,221,222,223,224 progress;
 
 %% Legend (pseudo nodes)
 subgraph Legend[Legend]
