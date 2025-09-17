@@ -11,6 +11,7 @@ Environment overrides:
     BYKILT_LOG_MAX_SIZE: int (bytes)   – default 1_000_000 (~1MB)
     BYKILT_LOG_MAX_FILES: int          – number of *rotated* files to keep (default 5)
     BYKILT_LOG_FLUSH_ALWAYS: bool-like – if truthy, flush+fsync on every write (slower; default false)
+    LOG_LEVEL: str                     – minimum log level (DEBUG, INFO, WARNING, ERROR, CRITICAL) – default INFO
 
 Rotation scheme:
     active: app.log.jsonl
@@ -44,6 +45,24 @@ from src.runtime.run_context import RunContext
 from src.security.secret_masker import mask_text, mask_dict, is_masking_enabled
 
 Hook = Callable[[dict], dict]
+
+# Log level mapping constants
+_LOG_LEVEL_MAP = {
+    "DEBUG": 10,
+    "INFO": 20,
+    "WARNING": 30,
+    "WARN": 30,  # Allow WARN as alias for WARNING
+    "ERROR": 40,
+    "CRITICAL": 50,
+    "FATAL": 50,  # Allow FATAL as alias for CRITICAL
+}
+
+# Canonical log level names (exclude aliases)
+_CANONICAL_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+
+# Default log level constants for consistency
+_DEFAULT_LOG_LEVEL = 20  # INFO level
+_DEFAULT_LOG_LEVEL_NAME = "INFO"  # Default level name
 
 @dataclass(slots=True)
 class _LoggerCore:
@@ -103,6 +122,12 @@ class JsonlLogger:
     # ------------- Public API (skeleton) -------------
     # ------------- Core Emit -------------
     def _emit(self, level: str, msg: str, extra: Dict[str, Any]) -> None:
+        # Filter by LOG_LEVEL environment variable
+        min_level = _get_log_level()
+        current_level = _get_level_value(level)
+        if current_level < min_level:
+            return  # Skip logging if below minimum level
+        
         if not isinstance(msg, str):  # defensive
             msg = str(msg)
         rc = RunContext.get()
@@ -253,4 +278,19 @@ def _get_env_bool(name: str, default: bool) -> bool:
     if v is None:
         return default
     return v.lower() in {"1", "true", "yes", "on"}
+
+
+def _get_log_level() -> int:
+    """Get the minimum log level from LOG_LEVEL environment variable.
+    
+    Returns the numeric level (10=DEBUG, 20=INFO, 30=WARNING, 40=ERROR, 50=CRITICAL).
+    Defaults to INFO (20) if not set or invalid.
+    """
+    v = os.getenv("LOG_LEVEL", _DEFAULT_LOG_LEVEL_NAME).upper()
+    return _LOG_LEVEL_MAP.get(v, _DEFAULT_LOG_LEVEL)  # Default to INFO if invalid
+
+
+def _get_level_value(level: str) -> int:
+    """Convert log level string to numeric value (accepts aliases)."""
+    return _LOG_LEVEL_MAP.get(level.upper(), _DEFAULT_LOG_LEVEL)
 
