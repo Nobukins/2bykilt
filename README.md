@@ -11,7 +11,7 @@
 
 myscriptを使用した基本的な実行例：
 
-```bash
+`## ⚙️ スクリプト実行環境の準備（myscript）`bash
 # 環境変数を設定
 export RECORDING_PATH="./artifacts/my-task"
 
@@ -81,7 +81,7 @@ export RECORDING_PATH="./artifacts/batch-task-2"
 python myscript/bin/task2.py
 ```
 
-## 💎 ビジネスでの魔法の使い方は開かれん」**
+## ⚙️ スクリプト実行の基本**
 
 業務の冒険者たちよ、もはや複雑な作業に時間を費やす必要はない。**2bykilt**（ツーバイキルト）は、あなたの日々の作業を自動化する伝説の魔法道具だ。ブラウザ操作を簡単に録画し、再生し、共有できる。まるで伝説の魔法書のように。
 
@@ -440,7 +440,7 @@ export RECORDING_PATH="./artifacts/my-task"
 python myscript/bin/my_script.py --target https://example.com
 ```
 
-## �💎 ビジネスでの魔法の使い方
+## ⚙️ ビジネスでの魔法の使い方
 
 ### 🏢 経理部門の英雄
 
