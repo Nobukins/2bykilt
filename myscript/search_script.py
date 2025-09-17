@@ -816,7 +816,6 @@ async def test_nogtips_simple(request) -> None:
             await page.goto("https://nogtips.wordpress.com", wait_until='domcontentloaded', timeout=30000)
             
             # 検索ボックスを操作（779-785行目のシンプルなスタイル）
-            # await page.get_by_role("button", name="閉じて承認").click()
             await page.get_by_role("link", name="nogtips").click()
             await page.get_by_role("heading", name="LLMs.txtについて").get_by_role("link").click()
             await page.get_by_role("searchbox", name="検索:").click()
