@@ -59,7 +59,7 @@ _LOG_LEVEL_MAP = {
 
 # Canonical log level names (exclude aliases)
 _CANONICAL_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
-_LOG_LEVEL_VALUE_MAP = {k: v for k, v in _LOG_LEVEL_MAP.items() if k in _CANONICAL_LOG_LEVELS}
+_LOG_LEVEL_VALUE_MAP = {k: _LOG_LEVEL_MAP[k] for k in _CANONICAL_LOG_LEVELS}
 
 # Default log level constant for consistency
 _DEFAULT_LOG_LEVEL = 20  # INFO level
@@ -291,6 +291,6 @@ def _get_log_level() -> int:
 
 
 def _get_level_value(level: str) -> int:
-    """Convert log level string to numeric value."""
-    return _LOG_LEVEL_VALUE_MAP.get(level.upper(), _DEFAULT_LOG_LEVEL)
+    """Convert log level string to numeric value (accepts aliases)."""
+    return _LOG_LEVEL_MAP.get(level.upper(), _DEFAULT_LOG_LEVEL)
 
