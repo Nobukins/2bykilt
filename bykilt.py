@@ -2537,7 +2537,7 @@ async def on_run_agent_click(task, add_infos, llm_provider, llm_model_name, llm_
 **入力された指示**: {task}
 
 **利用可能な操作**:
-- 事前登録されたコマンド (例: @search-linkedin query=test)
+- 事前登録されたコマンド (例: @script-nogtips query=test)
 - URLの直接入力 (例: https://www.google.com)
 - Playwright Codegenで生成されたスクリプトの実行
 - JSON形式のアクション実行

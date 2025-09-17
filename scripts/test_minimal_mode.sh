@@ -24,7 +24,7 @@ echo "🧪 事前登録コマンドの動作テスト"
 echo "Testing standalone prompt evaluation..."
 python -c "
 from src.config.standalone_prompt_evaluator import pre_evaluate_prompt_standalone, extract_params_standalone
-prompt = '@search-linkedin query=test'
+prompt = '@script-nogtips query=test'
 result = pre_evaluate_prompt_standalone(prompt)
 print(f'✅ Command evaluation result: {result is not None}')
 if result:
@@ -39,7 +39,7 @@ echo "1. ✅ アプリケーションが正常に起動すること"
 echo "2. ✅ LLM Configurationタブで「LLM機能が無効化されています」と表示されること"
 echo "3. ✅ Run Agentタブで「ブラウザ自動化モード」と表示されること"
 echo "4. ✅ URLの直接入力（例: https://www.google.com）が動作すること"
-echo "5. ✅ 事前登録コマンド（例: @search-linkedin query=test）が動作すること"
+echo "5. ✅ 事前登録コマンド（例: @script-nogtips query=test）が動作すること"
 echo "6. ✅ Playwright Codegenが利用可能であること"
 
 echo ""

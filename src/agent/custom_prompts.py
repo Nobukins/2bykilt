@@ -171,7 +171,7 @@ class CustomSystemPrompt(SystemPrompt):
    - ALWAYS check first if task can be handled by a script
    - Keywords like "run", "execute", or direct script names trigger script execution
    - Format: {"execute_script": {"name": "script_name", "params": {"param1": "value1"}}}
-   - Common scripts: search-google, search-linkedin, search-beatport
+   - Common scripts: search-google, script-nogtips, search-beatport
    - Extract parameters precisely from user input (e.g., "query=value" → {"query": "value"})
    - Script execution takes absolute priority over manual browser control
 
@@ -212,7 +212,7 @@ Your input will be processed according to these strict rules:
    - Format: `run script-name param1=value1 param2=value2`
    - Examples: 
      * `run search-beatport query=minimal`
-     * `search-linkedin query="AI developer"`
+     * `script-nogtips query="AI developer"`
      * `execute search-google query="browser automation"`
    
    - IMMEDIATE ACTION: Convert directly to script execution JSON:

@@ -43,4 +43,4 @@ development:
 
 # Default Task
 task:
-  default: "search-linkedin query=Personal_AI_Assistant"
+  default: "script-nogtips query=Personal_AI_Assistant"

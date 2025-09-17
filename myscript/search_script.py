@@ -793,6 +793,238 @@ async def test_text_search(request) -> None:
         if browser:
             await browser.close()
 
+@pytest.mark.asyncio
+async def test_nogtips_simple(request) -> None:
+    """シンプルなnogtips検索テスト関数（779-785行目のスタイルを採用）"""
+    query = request.config.getoption("--query")
+    slowmo = request.config.getoption("--slowmo", default=0)
+    
+    if not query:
+        pytest.skip("No query provided. Use --query to specify a search term.")
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(
+            headless=False, 
+            slow_mo=slowmo, 
+            args=['--no-sandbox', '--disable-setuid-sandbox']
+        )
+        context = await browser.new_context()
+        page = await context.new_page()
+        
+        try:
+            # nogtips.wordpress.comにアクセス（779行目のスタイル）
+            await page.goto("https://nogtips.wordpress.com", wait_until='domcontentloaded', timeout=30000)
+            
+            # 検索ボックスを操作（779-785行目のシンプルなスタイル）
+            await page.get_by_role("link", name="nogtips").click()
+            await page.get_by_role("heading", name="LLMs.txtについて").get_by_role("link").click()
+            await page.get_by_role("searchbox", name="検索:").click()
+            await page.get_by_role("searchbox", name="検索:").fill(query)
+            await page.get_by_role("searchbox", name="検索:").press("Enter")
+            
+            # 結果を表示
+            await page.wait_for_timeout(5000)
+            
+        except Exception as e:
+            print(f"❌ nogtips search failed: {e}")
+            raise
+        
+        finally:
+            await context.close()
+            await browser.close()
+
+async def test_nogtips_search(request) -> None:
+    """nogtips.wordpress.com検索テスト関数"""
+    query = request.config.getoption("--query")
+    slowmo = request.config.getoption("--slowmo", default=0)
+    browser_type = request.config.getoption("--browser-type")
+    browser_executable = request.config.getoption("--browser-executable")
+    use_profile = request.config.getoption("--use-profile")
+    custom_profile_path = request.config.getoption("--profile-path")
+    
+    if not query:
+        pytest.skip("No query provided. Use --query to specify a search term.")
+
+    # 録画ディレクトリの設定
+    recording_dir = get_recording_path("./tmp/record_videos")
+    
+    # 環境変数からブラウザ設定を取得
+    if not browser_type:
+        browser_type = os.environ.get('BYKILT_OVERRIDE_BROWSER_TYPE') or os.environ.get('BYKILT_BROWSER_TYPE', 'chrome')
+    
+    # ブラウザタイプに応じて実行ファイルパスを設定
+    if not browser_executable:
+        if browser_type == 'edge':
+            browser_executable = os.environ.get('EDGE_PATH') or "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"
+        elif browser_type == 'chrome':
+            browser_executable = os.environ.get('CHROME_PATH') or os.environ.get('PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH') or "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+        else:
+            browser_executable = os.environ.get('PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH')
+    
+    # ユーザープロファイル設定を取得
+    chrome_user_data = custom_profile_path or os.environ.get('CHROME_USER_DATA')
+    edge_user_data = custom_profile_path or os.environ.get('EDGE_USER_DATA')
+    
+    print(f"🔍 Using browser type: {browser_type}")
+    print(f"🔍 Use profile: {use_profile}")
+    print(f"🔍 nogtips.wordpress.com search query: {query}")
+    
+    async with async_playwright() as p:
+        # ブラウザ起動設定
+        launch_options = {
+            'headless': False, 
+            'slow_mo': slowmo, 
+            'args': [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--window-position=50,50',
+                '--window-size=1280,720',
+                '--disable-blink-features=AutomationControlled'
+            ]
+        }
+        
+        if browser_type == 'chrome' and browser_executable:
+            browser = await p.chromium.launch(**launch_options, executable_path=browser_executable)
+        elif browser_type == 'edge' and browser_executable:
+            browser = await p.chromium.launch(**launch_options, executable_path=browser_executable)
+        else:
+            browser = await p.chromium.launch(**launch_options)
+        
+        context = await browser.new_context(
+            record_video_dir=recording_dir,
+            record_video_size={"width": 1280, "height": 720}
+        )
+        page = await context.new_page()
+        
+        try:
+            # nogtips.wordpress.comにアクセス
+            print("🔍 Navigating to nogtips.wordpress.com...")
+            await page.goto("https://nogtips.wordpress.com", wait_until='domcontentloaded', timeout=60000)
+            
+            # 自動操作中であることを示すオーバーレイを表示
+            await page.evaluate("""() => {
+                const overlay = document.createElement('div');
+                overlay.id = 'automation-indicator';
+                overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;'+
+                    'background:rgba(0,119,181,0.8);padding:10px;text-align:center;'+
+                    'font-weight:bold;color:white;font-size:18px;';
+                overlay.textContent = '🤖 nogtips.wordpress.com検索テスト実行中';
+                document.body.appendChild(overlay);
+            }""")
+            
+            await page.wait_for_timeout(3000)
+            
+            # 検索ボックスを探して入力（nogtipsスタイルで安定した操作）
+            print(f"🔍 Searching for: {query}")
+            
+            # nogtips.wordpress.comの検索ボックスを操作（安定したスタイルを採用）
+            print("🔎 Finding nogtips.wordpress.com search box...")
+            
+            # 複数のセレクタで検索ボックスを探す
+            search_selectors = [
+                'input[type="search"]',
+                'input[name="q"]',
+                'input[name="query"]',
+                'input[name="search"]',
+                'input[placeholder*="検索" i]',
+                'input[placeholder*="search" i]',
+                '.search-input',
+                '.search-box input',
+                '#search-input',
+                '#search-box input'
+            ]
+            
+            search_box = None
+            for selector in search_selectors:
+                try:
+                    search_box = await page.query_selector(selector)
+                    if search_box:
+                        print(f"✅ Found search box with selector: {selector}")
+                        break
+                except:
+                    continue
+            
+            if not search_box:
+                # フォールバックとしてrole="searchbox"を使用
+                try:
+                    search_box = await page.get_by_role("searchbox").first
+                    print("✅ Found search box with role='searchbox'")
+                except:
+                    pass
+            
+            if not search_box:
+                print("❌ Could not find search box on nogtips.wordpress.com")
+                # ページのスクリーンショットを撮ってデバッグ
+                await page.screenshot(path=os.path.join(recording_dir, "nogtips_no_search_box.png"))
+                raise Exception("Search box not found on nogtips.wordpress.com")
+            
+            print("🖱️ Clicking search box...")
+            await search_box.click()
+            
+            print(f"⌨️ Filling search query: {query}")
+            await search_box.fill(query)
+            
+            print("⏎ Pressing Enter...")
+            await search_box.press("Enter")
+            
+            print("✅ Search query submitted")
+            
+            # 検索結果が表示されるまで待機
+            await page.wait_for_timeout(5000)
+            
+            # 検索結果の確認
+            try:
+                # nogtips.wordpress.comの検索結果セレクタ（適宜調整）
+                results_selectors = [
+                    '.search-result',
+                    '.result-item',
+                    '.search-item',
+                    '[data-testid*="result"]',
+                    '.content-item',
+                    'article',
+                    '.post',
+                    '.entry'
+                ]
+                
+                results_count = 0
+                for selector in results_selectors:
+                    try:
+                        elements = await page.query_selector_all(selector)
+                        if elements:
+                            results_count = len(elements)
+                            print(f"📊 Found {results_count} search results with selector: {selector}")
+                            break
+                    except:
+                        continue
+                
+                if results_count == 0:
+                    print("📊 Could not count search results or no results found")
+            except Exception as e:
+                print(f"📊 Could not count search results: {e}")
+            
+            # 結果を表示するために少し待機
+            await page.wait_for_timeout(3000)
+            
+            print("✅ nogtips.wordpress.com search test completed successfully")
+            
+        except Exception as e:
+            print(f"❌ nogtips.wordpress.com search test failed: {e}")
+            # エラーが発生してもスクリーンショットを撮る
+            try:
+                await page.screenshot(path=os.path.join(recording_dir, "nogtips_error.png"))
+                print("📸 Error screenshot saved")
+            except:
+                pass
+            raise
+        
+        finally:
+            # ブラウザを閉じる前にカウントダウン表示
+            await show_countdown_overlay(page, 3)
+            
+            await context.close()
+            await browser.close()
+
 async def edge_profile_verification():
     """Edge プロファイル検証用の関数（pytestの自動実行を防ぐため名前変更）"""
     # この関数は手動での検証専用です
