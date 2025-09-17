@@ -59,10 +59,10 @@ _LOG_LEVEL_MAP = {
 
 # Canonical log level names (exclude aliases)
 _CANONICAL_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
-_LOG_LEVEL_VALUE_MAP = {k: _LOG_LEVEL_MAP[k] for k in _CANONICAL_LOG_LEVELS}
 
-# Default log level constant for consistency
+# Default log level constants for consistency
 _DEFAULT_LOG_LEVEL = 20  # INFO level
+_DEFAULT_LOG_LEVEL_NAME = "INFO"  # Default level name
 
 @dataclass(slots=True)
 class _LoggerCore:
@@ -286,7 +286,7 @@ def _get_log_level() -> int:
     Returns the numeric level (10=DEBUG, 20=INFO, 30=WARNING, 40=ERROR, 50=CRITICAL).
     Defaults to INFO (20) if not set or invalid.
     """
-    v = os.getenv("LOG_LEVEL", "INFO").upper()
+    v = os.getenv("LOG_LEVEL", _DEFAULT_LOG_LEVEL_NAME).upper()
     return _LOG_LEVEL_MAP.get(v, _DEFAULT_LOG_LEVEL)  # Default to INFO if invalid
 
 
