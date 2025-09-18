@@ -85,139 +85,166 @@ async def _execute_browser_operation_impl(action: Dict[str, Any], params: Dict[s
         # Execute the commands using the browser context
         logger.info(f"🔍 Executing browser-control with NEW_METHOD, browser_type={browser_type}")
 
-        async with automator.browser_context(temp_workspace, headless=False) as context:
-            page = await context.new_page()
+        # Initialize recording if enabled
+        recording_context = None
+        if params.get('save_recording_path') or params.get('enable_recording', True):
+            from src.utils.recording_factory import RecordingFactory
+            run_context = {
+                'run_id': action.get('name', 'browser_control'),
+                'run_type': 'browser-control',
+                'save_recording_path': params.get('save_recording_path'),
+                'enable_recording': params.get('enable_recording', True)
+            }
+            recording_context = RecordingFactory.init_recorder(run_context)
 
-            # Execute each command with timeout protection
-            for cmd in commands:
-                # Check for cancellation between commands
-                if timeout_manager.is_cancelled():
-                    logger.warning(f"Browser control cancelled during command execution")
-                    return False
+        # Use recording context if available
+        if recording_context:
+            async with recording_context:
+                async with automator.browser_context(temp_workspace, headless=False, record_video_dir=str(recording_context.recording_path)) as context:
+                    return await _execute_with_context(context, commands, timeout_manager, slowmo, action)
+        else:
+            async with automator.browser_context(temp_workspace, headless=False) as context:
+                return await _execute_with_context(context, commands, timeout_manager, slowmo, action)
 
-                cmd_action = cmd["action"]
-                args = cmd.get("args", [])
-                logger.info(f"Executing: {cmd_action} {args}")
+async def _execute_with_context(context, commands: List[Dict[str, Any]], timeout_manager: TimeoutManager, slowmo: int, action: Dict[str, Any]) -> bool:
+    """Execute commands within the browser context"""
+    page = await context.new_page()
 
-                try:
-                    # Use network timeout for page operations
-                    if cmd_action == "go_to_url" and args:
+    try:
+        # Execute each command with timeout protection
+        for cmd in commands:
+            # Check for cancellation between commands
+            if timeout_manager.is_cancelled():
+                logger.warning(f"Browser control cancelled during command execution")
+                return False
+
+            cmd_action = cmd["action"]
+            args = cmd.get("args", [])
+            logger.info(f"Executing: {cmd_action} {args}")
+
+            try:
+                # Use network timeout for page operations
+                if cmd_action == "go_to_url" and args:
+                    await timeout_manager.apply_timeout_to_coro(
+                        page.goto(args[0], wait_until="domcontentloaded"),
+                        TimeoutScope.NETWORK
+                    )
+                    logger.info(f"Navigated to: {args[0]}")
+                elif cmd_action == "wait_for_navigation":
+                    try:
                         await timeout_manager.apply_timeout_to_coro(
-                            page.goto(args[0], wait_until="domcontentloaded"),
+                            page.wait_for_load_state("networkidle", timeout=15000),
                             TimeoutScope.NETWORK
                         )
-                        logger.info(f"Navigated to: {args[0]}")
-                    elif cmd_action == "wait_for_navigation":
+                        logger.info("Navigation completed")
+                    except Exception as e:
+                        logger.warning(f"Navigation wait timed out, continuing: {e}")
+                elif cmd_action == "input_text" and len(args) >= 2:
+                    selector, value = args[0], args[1]
+                    await timeout_manager.apply_timeout_to_coro(
+                        page.wait_for_selector(selector, timeout=10000),
+                        TimeoutScope.NETWORK
+                    )
+                    await timeout_manager.apply_timeout_to_coro(
+                        page.fill(selector, value),
+                        TimeoutScope.OPERATION
+                    )
+                    logger.info(f"Filled form field '{selector}' with '{value}'")
+                elif cmd_action == "click_element" and args:
+                    selector = args[0]
+                    await timeout_manager.apply_timeout_to_coro(
+                        page.wait_for_selector(selector, timeout=10000),
+                        TimeoutScope.NETWORK
+                    )
+                    await timeout_manager.apply_timeout_to_coro(
+                        page.click(selector),
+                        TimeoutScope.OPERATION
+                    )
+                    logger.info(f"Clicked element '{selector}'")
+                elif cmd_action == "keyboard_press" and args:
+                    key = args[0]
+                    await timeout_manager.apply_timeout_to_coro(
+                        page.keyboard.press(key),
+                        TimeoutScope.OPERATION
+                    )
+                    logger.info(f"Pressed key '{key}'")
+                elif cmd_action == "extract_content":
+                    selectors = args if args else ["h1", "h2", "h3", "p"]
+                    content = {}
+                    for selector in selectors:
                         try:
-                            await timeout_manager.apply_timeout_to_coro(
-                                page.wait_for_load_state("networkidle", timeout=15000),
+                            elements = await timeout_manager.apply_timeout_to_coro(
+                                page.query_selector_all(selector),
                                 TimeoutScope.NETWORK
                             )
-                            logger.info("Navigation completed")
-                        except Exception as e:
-                            logger.warning(f"Navigation wait timed out, continuing: {e}")
-                    elif cmd_action == "input_text" and len(args) >= 2:
-                        selector, value = args[0], args[1]
-                        await timeout_manager.apply_timeout_to_coro(
-                            page.wait_for_selector(selector, timeout=10000),
-                            TimeoutScope.NETWORK
-                        )
-                        await timeout_manager.apply_timeout_to_coro(
-                            page.fill(selector, value),
-                            TimeoutScope.OPERATION
-                        )
-                        logger.info(f"Filled form field '{selector}' with '{value}'")
-                    elif cmd_action == "click_element" and args:
-                        selector = args[0]
-                        await timeout_manager.apply_timeout_to_coro(
-                            page.wait_for_selector(selector, timeout=10000),
-                            TimeoutScope.NETWORK
-                        )
-                        await timeout_manager.apply_timeout_to_coro(
-                            page.click(selector),
-                            TimeoutScope.OPERATION
-                        )
-                        logger.info(f"Clicked element '{selector}'")
-                    elif cmd_action == "keyboard_press" and args:
-                        key = args[0]
-                        await timeout_manager.apply_timeout_to_coro(
-                            page.keyboard.press(key),
-                            TimeoutScope.OPERATION
-                        )
-                        logger.info(f"Pressed key '{key}'")
-                    elif cmd_action == "extract_content":
-                        selectors = args if args else ["h1", "h2", "h3", "p"]
-                        content = {}
-                        for selector in selectors:
-                            try:
-                                elements = await timeout_manager.apply_timeout_to_coro(
-                                    page.query_selector_all(selector),
-                                    TimeoutScope.NETWORK
+                            texts = []
+                            for element in elements:
+                                text = await timeout_manager.apply_timeout_to_coro(
+                                    element.text_content(),
+                                    TimeoutScope.OPERATION
                                 )
-                                texts = []
-                                for element in elements:
-                                    text = await timeout_manager.apply_timeout_to_coro(
-                                        element.text_content(),
-                                        TimeoutScope.OPERATION
-                                    )
-                                    if text and text.strip():
-                                        texts.append(text.strip())
-                                content[selector] = texts
-                            except Exception as e:
-                                logger.warning(f"Failed to extract content for selector '{selector}': {e}")
-                                content[selector] = []
-                        logger.info("Extracted content:")
-                        logger.info(json.dumps(content, indent=2, ensure_ascii=False))
+                                if text and text.strip():
+                                    texts.append(text.strip())
+                            content[selector] = texts
+                        except Exception as e:
+                            logger.warning(f"Failed to extract content for selector '{selector}': {e}")
+                            content[selector] = []
+                    logger.info("Extracted content:")
+                    logger.info(json.dumps(content, indent=2, ensure_ascii=False))
 
-                    # Add slowmo delay with cancellation check
-                    if timeout_manager.is_cancelled():
-                        logger.warning("Operation cancelled during slowmo delay")
-                        return False
-                    await asyncio.sleep(slowmo / 1000.0)
-
-                except TimeoutError as e:
-                    logger.error(f"Browser operation timed out: {cmd_action}")
+                # Add slowmo delay with cancellation check
+                if timeout_manager.is_cancelled():
+                    logger.warning("Operation cancelled during slowmo delay")
                     return False
-                except CancellationError:
-                    logger.warning(f"Browser operation cancelled: {cmd_action}")
-                    return False
+                await asyncio.sleep(slowmo / 1000.0)
 
-            # Close the page
-            await page.close()
+            except TimeoutError as e:
+                logger.error(f"Browser operation timed out: {cmd_action}")
+                return False
+            except CancellationError:
+                logger.warning(f"Browser operation cancelled: {cmd_action}")
+                return False
+
+        # Close the page
+        await page.close()
 
         logger.info(f"Successfully executed direct browser control for action: {action['name']}")
         return True
 
-async def execute_direct_browser_control(action: Dict[str, Any], **params) -> bool:
-    """Execute browser control directly using modular components with new method"""
-    logger.info(f"Executing direct browser control for action: {action['name']}")
+    except Exception as e:
+        logger.error(f"Error in browser context execution: {e}")
+        await page.close()
+        raise
 
-    timeout_manager = get_timeout_manager()
+async def execute_direct_browser_control(action: Dict[str, Any], params: Dict[str, Any]) -> bool:
+    """Execute direct browser control with recording support"""
+    logger.info(f"🔍 Executing direct browser control for action: {action['name']}")
 
-    # Check for cancellation before starting
-    if timeout_manager.is_cancelled():
-        logger.warning(f"Browser control action '{action['name']}' cancelled")
-        return False
+    # Extract recording parameters from action or params
+    recording_params = {
+        'save_recording_path': action.get('save_recording_path') or params.get('save_recording_path'),
+        'enable_recording': action.get('enable_recording', params.get('enable_recording', True)),
+        'run_id': action.get('name', 'browser_control'),
+        'run_type': 'browser-control'
+    }
+
+    # Merge recording params into the main params dict
+    params.update(recording_params)
+
+    # Create timeout manager
+    timeout_manager = TimeoutManager()
 
     try:
-        # Execute with operation timeout
-        result = await timeout_manager.apply_timeout_to_coro(
-            _execute_browser_operation_impl(action, params, timeout_manager),
-            TimeoutScope.OPERATION
-        )
+        # Execute the browser operation
+        result = await _execute_browser_operation_impl(action, params, timeout_manager)
+
+        if result:
+            logger.info(f"✅ Successfully executed direct browser control for action: {action['name']}")
+        else:
+            logger.warning(f"⚠️ Browser control execution failed for action: {action['name']}")
 
         return result
 
-    except TimeoutError as e:
-        logger.error(f"Browser control action timed out: {e}")
-        return False
-    except CancellationError as e:
-        logger.warning(f"Browser control action cancelled: {e}")
-        return False
     except Exception as e:
-        logger.error(f"Error executing direct browser control: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
-        return False
-
-
+        logger.error(f"❌ Error executing direct browser control: {e}")
+        raise
