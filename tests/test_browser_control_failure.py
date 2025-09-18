@@ -14,38 +14,6 @@ from src.modules.direct_browser_control import execute_direct_browser_control
 class TestBrowserControlFailure:
     """Test cases to reproduce and fix browser-control execution failures"""
 
-    async def _mock_apply_timeout(self, coro, scope):
-        """Helper method to mock apply_timeout_to_coro functionality with proper timeout simulation"""
-        # Simulate timeout behavior by using asyncio.wait_for with configurable timeout
-        # This ensures timeout testing is not bypassed and uses appropriate timeout values
-        
-        # Try to get timeout from scope if it's a TimeoutScope enum
-        timeout_value = 30  # default fallback
-        
-        if hasattr(scope, 'value'):
-            # It's a TimeoutScope enum, get appropriate timeout value
-            from src.utils.timeout_manager import TimeoutScope, TimeoutConfig
-            config = TimeoutConfig()
-            if scope == TimeoutScope.JOB:
-                timeout_value = config.job_timeout
-            elif scope == TimeoutScope.OPERATION:
-                timeout_value = config.operation_timeout
-            elif scope == TimeoutScope.STEP:
-                timeout_value = config.step_timeout
-            elif scope == TimeoutScope.NETWORK:
-                timeout_value = config.network_timeout
-        
-        if asyncio.iscoroutine(coro):
-            try:
-                return await asyncio.wait_for(coro, timeout=timeout_value)
-            except asyncio.TimeoutError:
-                from src.utils.timeout_manager import TimeoutError
-                raise TimeoutError(f"Mock timeout occurred after {timeout_value} seconds")
-        
-        # For non-coroutine objects, return directly
-        # Since this is an async function, the caller will handle awaiting if needed
-        return coro
-
     @pytest.mark.asyncio
     async def test_browser_control_basic_execution(self):
         """Test basic browser-control execution with minimal flow"""
@@ -76,11 +44,12 @@ class TestBrowserControlFailure:
                 {'action': 'wait_for_element', 'args': ['input[name="q"]']}
             ]
 
-            # Mock timeout manager completely
+            # Mock timeout manager
             mock_timeout_manager = MagicMock()
             mock_timeout_manager.is_cancelled.return_value = False
-            
-            mock_timeout_manager.apply_timeout_to_coro = self._mock_apply_timeout
+            async def mock_apply(coro, scope):
+                return await coro
+            mock_timeout_manager.apply_timeout_to_coro = AsyncMock(side_effect=mock_apply)
             mock_get_timeout.return_value = mock_timeout_manager
 
             # Mock GitScriptAutomator and browser components
@@ -143,46 +112,47 @@ class TestBrowserControlFailure:
 
             # Mock environment variable
             with patch.dict(os.environ, {'RECORDING_PATH': str(recording_path)}):
-                with patch('src.modules.direct_browser_control.convert_flow_to_commands') as mock_convert:
-                    with patch('src.modules.direct_browser_control.get_timeout_manager') as mock_timeout:
-                        # Mock conversion
-                        mock_convert.return_value = [
-                            {'action': 'go_to_url', 'args': ['https://example.com']}
-                        ]
+                with patch('src.modules.direct_browser_control.convert_flow_to_commands') as mock_convert, \
+                     patch('src.modules.direct_browser_control.get_timeout_manager') as mock_get_timeout:
+                    # Mock conversion
+                    mock_convert.return_value = [
+                        {'action': 'go_to_url', 'args': ['https://example.com']}
+                    ]
 
-                        # Mock timeout manager
-                        mock_timeout_manager = MagicMock()
-                        mock_timeout_manager.is_cancelled.return_value = False
-                        
-                        mock_timeout_manager.apply_timeout_to_coro = self._mock_apply_timeout
-                        mock_timeout.return_value = mock_timeout_manager
+                    # Mock timeout manager
+                    mock_timeout_manager = MagicMock()
+                    mock_timeout_manager.is_cancelled.return_value = False
+                    async def mock_apply(coro, scope):
+                        return await coro
+                    mock_timeout_manager.apply_timeout_to_coro = AsyncMock(side_effect=mock_apply)
+                    mock_get_timeout.return_value = mock_timeout_manager
 
-                        # Mock GitScriptAutomator
-                        with patch('src.modules.direct_browser_control.GitScriptAutomator') as mock_automator_class, \
-                             patch('src.browser.browser_config.BrowserConfig') as mock_browser_config_class:
-                            mock_automator = MagicMock()
-                            mock_automator_class.return_value = mock_automator
+                    # Mock GitScriptAutomator
+                    with patch('src.modules.direct_browser_control.GitScriptAutomator') as mock_automator_class, \
+                         patch('src.browser.browser_config.BrowserConfig') as mock_browser_config_class:
+                        mock_automator = MagicMock()
+                        mock_automator_class.return_value = mock_automator
 
-                            # Mock browser context
-                            mock_context = MagicMock()
-                            mock_context.__aenter__ = AsyncMock(return_value=mock_context)
-                            mock_context.__aexit__ = AsyncMock(return_value=None)
-                            mock_automator.browser_context.return_value = mock_context
+                        # Mock browser context
+                        mock_context = MagicMock()
+                        mock_context.__aenter__ = AsyncMock(return_value=mock_context)
+                        mock_context.__aexit__ = AsyncMock(return_value=None)
+                        mock_automator.browser_context.return_value = mock_context
 
-                            mock_page = MagicMock()
-                            mock_context.new_page = AsyncMock(return_value=mock_page)
-                            mock_page.close = AsyncMock()
-                            mock_page.goto = AsyncMock()
+                        mock_page = MagicMock()
+                        mock_context.new_page = AsyncMock(return_value=mock_page)
+                        mock_page.close = AsyncMock()
+                        mock_page.goto = AsyncMock()
 
-                            mock_browser_config = MagicMock()
-                            mock_browser_config.get_current_browser.return_value = "firefox"
-                            mock_browser_config_class.return_value = mock_browser_config
+                        mock_browser_config = MagicMock()
+                        mock_browser_config.get_current_browser.return_value = "firefox"
+                        mock_browser_config_class.return_value = mock_browser_config
 
-                            # Execute
-                            result = await execute_direct_browser_control(action)
+                        # Execute
+                        result = await execute_direct_browser_control(action)
 
-                            # Verify
-                            assert result is True
+                        # Verify
+                        assert result is True
 
     @pytest.mark.asyncio
     async def test_browser_control_error_handling(self):
@@ -200,40 +170,41 @@ class TestBrowserControlFailure:
         }
 
         # Test with mocked failure
-        with patch('src.modules.direct_browser_control.convert_flow_to_commands') as mock_convert:
-            with patch('src.modules.direct_browser_control.get_timeout_manager') as mock_timeout:
-                # Mock conversion
-                mock_convert.return_value = [
-                    {'action': 'go_to_url', 'args': ['https://invalid-url-that-will-fail.com']}
-                ]
+        with patch('src.modules.direct_browser_control.convert_flow_to_commands') as mock_convert, \
+             patch('src.modules.direct_browser_control.get_timeout_manager') as mock_get_timeout:
+            # Mock conversion
+            mock_convert.return_value = [
+                {'action': 'go_to_url', 'args': ['https://invalid-url-that-will-fail.com']}
+            ]
 
-                # Mock timeout manager
-                mock_timeout_manager = MagicMock()
-                mock_timeout_manager.is_cancelled.return_value = False
-                
-                mock_timeout_manager.apply_timeout_to_coro = self._mock_apply_timeout
-                mock_timeout.return_value = mock_timeout_manager
+            # Mock timeout manager
+            mock_timeout_manager = MagicMock()
+            mock_timeout_manager.is_cancelled.return_value = False
+            async def mock_apply(coro, scope):
+                return await coro
+            mock_timeout_manager.apply_timeout_to_coro = AsyncMock(side_effect=mock_apply)
+            mock_get_timeout.return_value = mock_timeout_manager
 
-                # Mock GitScriptAutomator to raise exception
-                with patch('src.modules.direct_browser_control.GitScriptAutomator') as mock_automator_class, \
-                     patch('src.browser.browser_config.BrowserConfig') as mock_browser_config_class:
-                    mock_automator = MagicMock()
-                    mock_automator_class.return_value = mock_automator
+            # Mock GitScriptAutomator to raise exception
+            with patch('src.modules.direct_browser_control.GitScriptAutomator') as mock_automator_class, \
+                 patch('src.browser.browser_config.BrowserConfig') as mock_browser_config_class:
+                mock_automator = MagicMock()
+                mock_automator_class.return_value = mock_automator
 
-                    # Mock browser context to raise exception
-                    mock_context = MagicMock()
-                    mock_context.__aenter__ = AsyncMock(return_value=mock_context)
-                    mock_context.__aexit__ = AsyncMock(return_value=None)
-                    mock_automator.browser_context.return_value = mock_context
+                # Mock browser context to raise exception
+                mock_context = MagicMock()
+                mock_context.__aenter__ = AsyncMock(return_value=mock_context)
+                mock_context.__aexit__ = AsyncMock(return_value=None)
+                mock_automator.browser_context.return_value = mock_context
 
-                    mock_context.new_page = AsyncMock(side_effect=Exception("Browser initialization failed"))
+                mock_context.new_page = AsyncMock(side_effect=Exception("Browser initialization failed"))
 
-                    mock_browser_config = MagicMock()
-                    mock_browser_config.get_current_browser.return_value = "chromium"
-                    mock_browser_config_class.return_value = mock_browser_config
+                mock_browser_config = MagicMock()
+                mock_browser_config.get_current_browser.return_value = "chromium"
+                mock_browser_config_class.return_value = mock_browser_config
 
-                    # Execute and expect failure
-                    result = await execute_direct_browser_control(action)
+                # Execute and expect failure
+                result = await execute_direct_browser_control(action)
 
-                    # Verify failure is handled gracefully
-                    assert result is False
+                # Verify failure is handled gracefully
+                assert result is False

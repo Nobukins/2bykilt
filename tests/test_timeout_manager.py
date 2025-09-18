@@ -1,6 +1,6 @@
 import asyncio
 import pytest
-from src.utils.timeout_manager import TimeoutManager, TimeoutScope, TimeoutError
+from src.utils.timeout_manager import TimeoutManager, TimeoutScope, TimeoutError, CancellationError
 
 
 @pytest.mark.asyncio
@@ -43,6 +43,6 @@ async def test_timeout_scope_cancellation():
     # Cancel the manager
     tm.cancel()
 
-    with pytest.raises(Exception):  # Should raise CancellationError
+    with pytest.raises((CancellationError, asyncio.CancelledError)):
         async with tm.timeout_scope(TimeoutScope.OPERATION, 5):
             await cancellable_operation()

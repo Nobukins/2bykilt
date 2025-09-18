@@ -8,7 +8,7 @@ from src.utils.debug_utils import DebugUtils
 from src.utils.git_script_automator import GitScriptAutomator
 from src.utils.profile_manager import ProfileManager
 from src.utils.browser_launcher import BrowserLauncher
-from src.utils.timeout_manager import get_timeout_manager, TimeoutScope, TimeoutError, CancellationError
+from src.utils.timeout_manager import get_timeout_manager, TimeoutScope, TimeoutError, CancellationError, TimeoutManager
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +60,7 @@ async def convert_flow_to_commands(flow: List[Dict[str, Any]], params: Dict[str,
         commands.append(cmd)
     return commands
 
-async def _execute_browser_operation_impl(action: Dict[str, Any], params: Dict[str, Any], timeout_manager) -> bool:
+async def _execute_browser_operation_impl(action: Dict[str, Any], params: Dict[str, Any], timeout_manager: TimeoutManager) -> bool:
     """Execute the browser operation implementation"""
     flow = action.get('flow', [])
     slowmo = action.get('slowmo', 1000)
