@@ -15,7 +15,7 @@ def _read_generated_script(path: Path) -> str:
 
 @pytest.mark.asyncio
 async def test_generate_browser_control_script_session_scope(tmp_path, monkeypatch):
-    """Regression test for Issue #220 / PR #235.
+    """Regression test for Issue #220.
 
     Ensures that the generated browser_control.py uses session-scoped fixtures
     (browser_context_args, browser_type_launch_args) to avoid pytest ScopeMismatch
