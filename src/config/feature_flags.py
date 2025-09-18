@@ -33,6 +33,10 @@ Public API (stable for initial version):
   FeatureFlags.set_override(name: str, value: Any, ttl_seconds: int | None = None) -> None
   FeatureFlags.clear_override(name: str) -> None
   FeatureFlags.clear_all_overrides() -> None
+  FeatureFlags.dump_snapshot() -> Path
+  FeatureFlags.set_lazy_artifact_enabled(enabled: bool) -> None
+  FeatureFlags.is_lazy_artifact_enabled() -> bool
+  FeatureFlags.get_override_source(name: str) -> str | None
   FeatureFlags.reload() -> None  (reload defaults file)
 
 Non-goals (future issues):
@@ -80,6 +84,10 @@ class FeatureFlags:
     Thread-safety: runtime override operations are guarded by a lock.
     """
 
+    # Boolean string value constants for consistency and maintainability
+    _TRUE_VALUES = ("true", "1", "yes", "on")
+    _FALSE_VALUES = ("false", "0", "no", "off")
+
     _lock = threading.RLock()
     _defaults: Dict[str, _FlagDef] = {}
     _overrides: Dict[str, Tuple[Any, Optional[datetime]]] = {}
@@ -87,6 +95,10 @@ class FeatureFlags:
     _resolved_cache: Dict[str, Any] = {}
     _flags_file: Path | None = None
     _flags_mtime: float | None = None  # track mtime to auto-reload if file updated during runtime
+
+    # Lazy artifact creation control
+    _lazy_artifact_enabled = True  # default: enabled for backward compatibility
+    _lazy_artifact_triggered = False  # track if lazy creation has been triggered to avoid repeated checks
 
     # ----------------------- Public API ---------------------------------- #
     @classmethod
@@ -96,6 +108,7 @@ class FeatureFlags:
             cls._defaults = {}
             cls._resolved_cache = {}
             cls._artifact_written = False
+            cls._lazy_artifact_triggered = False  # reset lazy creation trigger on reload
             cls._flags_file = cls._determine_flags_file()
             cls._flags_mtime = None
             if cls._flags_file and cls._flags_file.exists():
@@ -127,6 +140,10 @@ class FeatureFlags:
                     "Feature flags defaults file missing (proceeding with empty defaults)",
                     extra={"event": "flag.file.missing", "path": str(cls._flags_file) if cls._flags_file else None},
                 )
+
+            # Reset lazy artifact setting based on environment variable
+            env_lazy = os.getenv("BYKILT_FLAGS_LAZY_ARTIFACT_ENABLED", "true").lower()
+            cls._lazy_artifact_enabled = env_lazy in cls._TRUE_VALUES
 
     @classmethod
     def get(cls, name: str, expected_type: type | None = None, default: Any | None = None) -> Any:
@@ -169,20 +186,56 @@ class FeatureFlags:
                                 resolved = ""
                             else:
                                 resolved = False  # generic fallback
+
+                        # Always log warning for undefined flags
                         logger.warning(
                             "Undefined feature flag accessed",
                             extra={"event": "flag.undefined", "flag": name},
                         )
 
+                        # Trigger lazy artifact creation only for undefined flags
+                        if cls._should_trigger_lazy_artifact():
+                            cls._lazy_artifact_triggered = True  # mark as triggered to prevent repeated checks
+                            logger.info(
+                                "Lazy artifact creation triggered on undefined flag access",
+                                extra={"event": "flag.lazy_artifact", "flag": name},
+                            )
+                            cls._maybe_write_artifact(force_refresh=True)
+
+                        # (Artifact creation logic moved above for undefined flags only)
+
             coerced = cls._coerce(resolved, expected_type, name)
             cls._resolved_cache[name] = coerced
-            cls._maybe_write_artifact()
+
             return coerced
 
     @classmethod
     def is_enabled(cls, name: str) -> bool:
         """Boolean helper (expected_type=bool)."""
         return bool(cls.get(name, expected_type=bool))
+
+    @classmethod
+    def get_override_source(cls, name: str) -> str | None:
+        """Return the source of override for a flag, or None if no override.
+
+        Returns:
+            "runtime" if runtime override is active
+            "environment" if environment variable override is active
+            None if no override (using file default or fallback)
+        """
+        cls._ensure_loaded()
+        with cls._lock:
+            cls._prune_expired()
+
+            # Check runtime override first (highest precedence)
+            if name in cls._overrides:
+                return "runtime"
+
+            # Check environment override
+            if cls._get_env_override(name) is not None:
+                return "environment"
+
+            return None
 
     @classmethod
     def set_override(cls, name: str, value: Any, ttl_seconds: int | None = None) -> None:
@@ -269,25 +322,36 @@ class FeatureFlags:
         return out_dir
 
     @classmethod
-    def get_override_source(cls, name: str) -> str | None:
-        """Return the source of override for a flag, or None if not overridden.
+    def set_lazy_artifact_enabled(cls, enabled: bool) -> None:
+        """Enable or disable lazy artifact creation for undefined flag access.
+
+        When enabled (default), accessing an undefined flag will automatically
+        create a flags artifact if one doesn't already exist. When disabled,
+        undefined flag access will only log a warning without creating artifacts.
+
+        Args:
+            enabled: Whether to enable lazy artifact creation
+        """
+        with cls._lock:
+            cls._lazy_artifact_enabled = enabled
+            logger.info(
+                "Lazy artifact creation setting changed",
+                extra={"event": "flag.lazy_artifact.setting", "enabled": enabled},
+            )
+
+    @classmethod
+    def is_lazy_artifact_enabled(cls) -> bool:
+        """Return whether lazy artifact creation is enabled."""
+        return cls._lazy_artifact_enabled
+
+    @classmethod
+    def _should_trigger_lazy_artifact(cls) -> bool:
+        """Check if lazy artifact creation should be triggered.
 
         Returns:
-            'runtime' - if set via set_override()
-            'environment' - if set via environment variable
-            None - if using file default or undefined
+            True if lazy artifact creation should be triggered, False otherwise.
         """
-        cls._ensure_loaded()
-        with cls._lock:
-            cls._prune_expired()
-            # 1. Runtime override
-            if name in cls._overrides:
-                return "runtime"
-            # 2. Environment variable
-            if cls._get_env_override(name) is not None:
-                return "environment"
-            # 3. File default or undefined
-            return None
+        return not cls._lazy_artifact_triggered and cls._lazy_artifact_enabled and not cls._artifact_written
 
     # -------------------- Internal helpers -------------------------------- #
     @classmethod
@@ -332,8 +396,10 @@ class FeatureFlags:
             if var in os.environ:
                 raw = os.environ[var]
                 # Attempt primitive parsing
-                if raw.lower() in ("true", "false"):
-                    return raw.lower() == "true"
+                if raw.lower() in cls._TRUE_VALUES:
+                    return True
+                elif raw.lower() in cls._FALSE_VALUES:
+                    return False
                 # int parse
                 try:
                     if raw.isdigit() or (raw.startswith("-") and raw[1:].isdigit()):
@@ -352,7 +418,7 @@ class FeatureFlags:
                 if isinstance(value, bool):
                     return value
                 if isinstance(value, str):
-                    return value.lower() in ("1", "true", "yes", "on")
+                    return value.lower() in cls._TRUE_VALUES
                 return bool(value)
             if expected_type is int:
                 if isinstance(value, int):
