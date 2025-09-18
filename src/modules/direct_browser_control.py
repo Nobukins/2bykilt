@@ -282,4 +282,4 @@ async def execute_direct_browser_control(action: Dict[str, Any], **params) -> bo
         return False
     except Exception as e:
         logger.error(f"❌ Error executing direct browser control: {e}")
-        raise
+        return False

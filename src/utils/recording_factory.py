@@ -2,7 +2,16 @@
 Unified Recording Factory - Issue #221
 
 Provides centralized recording initialization for all run types (script, browser-control, git-script).
-Ensures consistent recording behavior across different execution paths.
+Ensures consistent recording behav            if entry:
+                # Update entry in manifest
+                entry["size"] = file_size
+                entry["meta"]["status"] = status
+                entry["meta"]["completed_at"] = completion_time
+                # Persist the updated manifest
+                artifact_manager.persist_manifest()
+                logger.debug(f"Updated manifest for recording {self.recording_file}: status={status}, size={file_size}, completed_at={completion_time}")
+            else:
+                logger.warning(f"No manifest entry found for recording {self.recording_file} to update completion status.")ss different execution paths.
 
 Features:
 - Unified recorder initialization
@@ -171,7 +180,14 @@ class RecorderContext:
             completion_time = datetime.now(timezone.utc).isoformat()
 
             artifact_manager = ArtifactManager()
-            entry = artifact_manager.get_entry(self.run_id)
+            # Find entry by path in manifest
+            manifest = artifact_manager.get_manifest()
+            entry = None
+            recording_path_str = str(self.recording_file)
+            for artifact_entry in manifest.get("artifacts", []):
+                if artifact_entry.get("path") == recording_path_str:
+                    entry = artifact_entry
+                    break
             if entry:
                 entry.status = status
                 entry.size = file_size
