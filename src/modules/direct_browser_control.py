@@ -98,12 +98,14 @@ async def _execute_browser_operation_impl(action: Dict[str, Any], params: Dict[s
             recording_context = RecordingFactory.init_recorder(run_context)
 
         # Use recording context if available
+        context_manager_kwargs = {"headless": False}
         if recording_context:
+            context_manager_kwargs["record_video_dir"] = str(recording_context.recording_path)
             async with recording_context:
-                async with automator.browser_context(temp_workspace, headless=False, record_video_dir=str(recording_context.recording_path)) as context:
+                async with automator.browser_context(temp_workspace, **context_manager_kwargs) as context:
                     return await _execute_with_context(context, commands, timeout_manager, slowmo, action)
         else:
-            async with automator.browser_context(temp_workspace, headless=False) as context:
+            async with automator.browser_context(temp_workspace, **context_manager_kwargs) as context:
                 return await _execute_with_context(context, commands, timeout_manager, slowmo, action)
 
 async def _execute_with_context(context, commands: List[Dict[str, Any]], timeout_manager: TimeoutManager, slowmo: int, action: Dict[str, Any]) -> bool:

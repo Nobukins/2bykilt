@@ -126,7 +126,6 @@ class RecorderContext:
 
     def _get_timestamp(self) -> str:
         """Get current timestamp for filename."""
-        from datetime import datetime
         return datetime.now().strftime("%Y%m%d_%H%M%S")
 
     async def _register_manifest(self):
