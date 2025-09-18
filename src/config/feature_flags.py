@@ -94,6 +94,7 @@ class FeatureFlags:
 
     # Lazy artifact creation control
     _lazy_artifact_enabled = True  # default: enabled for backward compatibility
+    _lazy_artifact_triggered = False  # track if lazy creation has been triggered to avoid repeated checks
 
     # ----------------------- Public API ---------------------------------- #
     @classmethod
@@ -103,6 +104,7 @@ class FeatureFlags:
             cls._defaults = {}
             cls._resolved_cache = {}
             cls._artifact_written = False
+            cls._lazy_artifact_triggered = False  # reset lazy creation trigger on reload
             cls._flags_file = cls._determine_flags_file()
             cls._flags_mtime = None
             if cls._flags_file and cls._flags_file.exists():
@@ -193,7 +195,9 @@ class FeatureFlags:
             cls._resolved_cache[name] = coerced
 
             # After resolving the flag (defined or undefined), check for lazy artifact creation
-            if cls._lazy_artifact_enabled and not cls._artifact_written:
+            # Only trigger once per session to avoid repeated checks and log messages
+            if cls._lazy_artifact_enabled and not cls._artifact_written and not cls._lazy_artifact_triggered:
+                cls._lazy_artifact_triggered = True  # mark as triggered to prevent repeated checks
                 logger.info(
                     "Lazy artifact creation triggered on flag access",
                     extra={"event": "flag.lazy_artifact", "flag": name},
