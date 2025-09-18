@@ -115,10 +115,10 @@ class TestLazyArtifactCreation:
             FeatureFlags.reload()
             assert FeatureFlags.is_lazy_artifact_enabled() is True
 
-        # Test with invalid value (should default to true)
+        # Test with invalid value (should default to false)
         monkeypatch.setenv("BYKILT_FLAGS_LAZY_ARTIFACT_ENABLED", "invalid")
         FeatureFlags.reload()
-        assert FeatureFlags.is_lazy_artifact_enabled() is False  # "invalid" is not in the allowed list
+        assert FeatureFlags.is_lazy_artifact_enabled() is False  # invalid values default to False
 
     def test_lazy_artifact_with_dump_snapshot_override(self, tmp_path, monkeypatch):
         """Test that dump_snapshot still works when lazy creation is disabled."""

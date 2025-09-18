@@ -160,8 +160,10 @@ def ensure_flags_artifact_for_run_context_tests(tmp_path: Path):
             flags_dir = run_context.artifact_dir("flags", ensure=False)
             if not flags_dir.exists():
                 FeatureFlags.dump_snapshot()
-        except Exception:
-            # Fallback: create artifact anyway
+        except (RuntimeError, FileNotFoundError):
+            # Catching specific exceptions here to ensure that, regardless of any error in obtaining the run context
+            # or artifact directory (e.g., RuntimeError from RunContext.get(), FileNotFoundError from artifact_dir operations),
+            # the flags artifact is created so that tests relying on its existence do not fail due to setup issues.
             FeatureFlags.dump_snapshot()
 
     finally:

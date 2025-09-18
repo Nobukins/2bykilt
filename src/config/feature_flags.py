@@ -193,20 +193,19 @@ class FeatureFlags:
                             extra={"event": "flag.undefined", "flag": name},
                         )
 
-                        # (Artifact creation logic moved below)
+                        # Trigger lazy artifact creation only for undefined flags
+                        if cls._should_trigger_lazy_artifact():
+                            cls._lazy_artifact_triggered = True  # mark as triggered to prevent repeated checks
+                            logger.info(
+                                "Lazy artifact creation triggered on undefined flag access",
+                                extra={"event": "flag.lazy_artifact", "flag": name},
+                            )
+                            cls._maybe_write_artifact(force_refresh=True)
+
+                        # (Artifact creation logic moved above for undefined flags only)
 
             coerced = cls._coerce(resolved, expected_type, name)
             cls._resolved_cache[name] = coerced
-
-            # After resolving the flag (defined or undefined), check for lazy artifact creation
-            # Only trigger once per session to avoid repeated checks and log messages
-            if cls._lazy_artifact_enabled and not cls._artifact_written and not cls._lazy_artifact_triggered:
-                cls._lazy_artifact_triggered = True  # mark as triggered to prevent repeated checks
-                logger.info(
-                    "Lazy artifact creation triggered on flag access",
-                    extra={"event": "flag.lazy_artifact", "flag": name},
-                )
-                cls._maybe_write_artifact(force_refresh=True)
 
             return coerced
 
@@ -344,6 +343,15 @@ class FeatureFlags:
     def is_lazy_artifact_enabled(cls) -> bool:
         """Return whether lazy artifact creation is enabled."""
         return cls._lazy_artifact_enabled
+
+    @classmethod
+    def _should_trigger_lazy_artifact(cls) -> bool:
+        """Check if lazy artifact creation should be triggered.
+
+        Returns:
+            True if lazy artifact creation should be triggered, False otherwise.
+        """
+        return not cls._lazy_artifact_triggered and cls._lazy_artifact_enabled and not cls._artifact_written
 
     # -------------------- Internal helpers -------------------------------- #
     @classmethod
