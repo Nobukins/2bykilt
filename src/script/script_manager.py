@@ -391,7 +391,9 @@ markers =
                 # Build pytest command with appropriate parameters
                 # Use current Python interpreter for better compatibility across platforms
                 import sys as _sys
-                command = [_sys.executable, '-m', 'pytest', script_path]
+                # Use relative path since we're running pytest from within the script_dir
+                relative_script_path = os.path.basename(script_path)
+                command = [_sys.executable, '-m', 'pytest', relative_script_path]
                 
                 # Add slowmo parameter if specified
                 slowmo = script_info.get('slowmo')

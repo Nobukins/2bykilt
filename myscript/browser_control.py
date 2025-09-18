@@ -51,12 +51,13 @@ def browser_type_launch_args(browser_type_launch_args):
 def test_browser_control(page: Page):
     try:
         page.goto("https://www.google.com")
-        expect(page.locator("#APjFqb")).to_be_visible(timeout=10000)
-        page.goto("https://www.google.com")
-        expect(page.locator("#APjFqb")).to_be_visible(timeout=10000)
         locator = page.locator("#APjFqb")
         expect(locator).to_be_visible(timeout=10000)
-        locator.fill("NEW_METHOD browser-control")
+        locator.click()
+        page.wait_for_load_state("networkidle")
+        locator = page.locator("#APjFqb")
+        expect(locator).to_be_visible(timeout=10000)
+        locator.fill("${params.query}")
         page.keyboard.press("Enter")
     except Exception as e:
         try:
