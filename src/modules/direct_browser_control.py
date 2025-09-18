@@ -60,6 +60,20 @@ async def convert_flow_to_commands(flow: List[Dict[str, Any]], params: Dict[str,
         commands.append(cmd)
     return commands
 
+def _merge_recording_params(action: Dict[str, Any], params: Dict[str, Any]) -> None:
+    """Merge recording-related parameters into params in-place (idempotent).
+
+    Priority order: explicit param overrides action values. Defaults enable recording unless explicitly disabled.
+    """
+    recording_params = {
+        'save_recording_path': params.get('save_recording_path') or action.get('save_recording_path'),
+        'enable_recording': params.get('enable_recording', action.get('enable_recording', True)),
+        'run_id': action.get('name', 'browser_control'),
+        'run_type': 'browser-control'
+    }
+    params.update(recording_params)
+
+
 async def _execute_browser_operation_impl(action: Dict[str, Any], params: Dict[str, Any], timeout_manager: TimeoutManager) -> bool:
     """Execute the browser operation implementation"""
     flow = action.get('flow', [])
@@ -85,12 +99,12 @@ async def _execute_browser_operation_impl(action: Dict[str, Any], params: Dict[s
         # Execute the commands using the browser context
         logger.info(f"🔍 Executing browser-control with NEW_METHOD, browser_type={browser_type}")
 
-        # Initialize recording if enabled
+        # Initialize recording if enabled (correct logical condition)
         recording_context = None
-        if params.get('save_recording_path') or params.get('enable_recording', True):
+        if params.get('enable_recording', True):
             from src.utils.recording_factory import RecordingFactory
             run_context = {
-                'run_id': action.get('name', 'browser_control'),
+                'run_id': params.get('run_id', action.get('name', 'browser_control')),
                 'run_type': 'browser-control',
                 'save_recording_path': params.get('save_recording_path'),
                 'enable_recording': params.get('enable_recording', True)
@@ -246,16 +260,8 @@ async def execute_direct_browser_control(action: Dict[str, Any], **params) -> bo
     """Execute direct browser control with recording support"""
     logger.info(f"🔍 Executing direct browser control for action: {action['name']}")
 
-    # Extract recording parameters from action or params
-    recording_params = {
-        'save_recording_path': action.get('save_recording_path') or params.get('save_recording_path'),
-        'enable_recording': action.get('enable_recording', params.get('enable_recording', True)),
-        'run_id': action.get('name', 'browser_control'),
-        'run_type': 'browser-control'
-    }
-
-    # Merge recording params into the main params dict
-    params.update(recording_params)
+    # Normalize / merge recording parameters once
+    _merge_recording_params(action, params)
 
     # Create timeout manager
     timeout_manager = get_timeout_manager()
