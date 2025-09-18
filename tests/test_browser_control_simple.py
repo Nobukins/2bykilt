@@ -6,10 +6,13 @@ import asyncio
 import sys
 import os
 
-# Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../src'))
-
-from src.modules.direct_browser_control import execute_direct_browser_control
+# Import using proper package structure instead of modifying sys.path
+try:
+    from src.modules.direct_browser_control import execute_direct_browser_control
+except ImportError:
+    # Fallback for direct execution
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../src'))
+    from src.modules.direct_browser_control import execute_direct_browser_control
 
 async def test_simple_browser_control():
     """Test simple browser-control execution"""
