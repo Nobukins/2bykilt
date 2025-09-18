@@ -111,7 +111,14 @@ from playwright.sync_api import expect, Page, Browser
 import json
 import os
 
-@pytest.fixture(scope="module")
+# NOTE:
+# pytest-playwright defines core fixtures like `browser` with session scope. If we
+# provide custom overriding fixtures (browser_context_args, browser_type_launch_args)
+# with a narrower (module/function) scope, pytest raises ScopeMismatch when the
+# session-scoped fixture chain attempts to access them. Therefore these MUST be
+# session-scoped. See Issue #220 / PR #235.
+
+@pytest.fixture(scope="session")
 def browser_context_args(browser_context_args):
     context_args = {
         **browser_context_args,
@@ -125,7 +132,7 @@ def browser_context_args(browser_context_args):
         
     return context_args
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def browser_type_launch_args(browser_type_launch_args):
     """Configure browser launch arguments based on environment variables"""
     launch_args = {**browser_type_launch_args}
