@@ -31,7 +31,7 @@ async def handle_git_script(action: Dict[str, Any], params: Dict[str, Any], use_
         browser_type = params.get('browser_type') or os.getenv('BYKILT_BROWSER_TYPE')
         execution_params = {
             'headless': headless,
-            'save_recording_path': params.get('save_recording_path'),
+            'save_recording_path': params.get('save_recording_path') or action.get('save_recording_path'),
             'browser_type': browser_type,
             **params  # Include all other parameters
         }

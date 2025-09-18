@@ -34,6 +34,12 @@ async def handle_browser_control(action: Dict[str, Any], params: Dict[str, Any],
             **params  # Include all other parameters
         }
 
+        # Add recording parameters from action if present
+        if 'save_recording_path' in action:
+            execution_params['save_recording_path'] = action['save_recording_path']
+        if 'enable_recording' in action:
+            execution_params['enable_recording'] = action['enable_recording']
+
         # Execute the browser control action
         success = await execute_direct_browser_control(action, **execution_params)
 
