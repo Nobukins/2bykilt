@@ -125,8 +125,8 @@ class RecorderContext:
             })
 
     def _get_timestamp(self) -> str:
-        """Get current timestamp for filename."""
-        return datetime.now().strftime("%Y%m%d_%H%M%S")
+        """Get current timestamp for filename (UTC)."""
+        return datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 
     async def _register_manifest(self):
         """Register recording in artifact manifest."""
@@ -161,19 +161,28 @@ class RecorderContext:
             logger.warning(f"Failed to register recording in manifest: {e}")
 
     async def _update_manifest_completion(self, has_error: bool = False):
-        """Update manifest with completion status."""
+        """Update manifest with completion status in the artifact manifest."""
         if not self._manifest_registered:
             return
 
         try:
-            # Log completion status (manifest update would require more complex implementation)
             status = 'completed' if not has_error else 'failed'
             file_size = self.recording_file.stat().st_size if self.recording_file and self.recording_file.exists() else 0
+            completion_time = datetime.now(timezone.utc).isoformat()
 
-            logger.debug(f"Recording completion: {self.run_id}, status={status}, size={file_size}")
+            artifact_manager = ArtifactManager()
+            entry = artifact_manager.get_entry(self.run_id)
+            if entry:
+                entry.status = status
+                entry.size = file_size
+                entry.completed_at = completion_time
+                artifact_manager.update_entry(entry)
+                logger.debug(f"Updated manifest for recording {self.run_id}: status={status}, size={file_size}, completed_at={completion_time}")
+            else:
+                logger.warning(f"No manifest entry found for recording {self.run_id} to update completion status.")
 
         except Exception as e:
-            logger.warning(f"Failed to update recording completion: {e}")
+            logger.warning(f"Failed to update recording completion in manifest: {e}")
 
 # Convenience function for backward compatibility
 def init_recorder(run_context: Dict[str, Any]) -> Optional[RecorderContext]:

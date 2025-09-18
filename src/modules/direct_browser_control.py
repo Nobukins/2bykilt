@@ -101,6 +101,9 @@ async def _execute_browser_operation_impl(action: Dict[str, Any], params: Dict[s
         context_manager_kwargs = {"headless": False}
         if recording_context:
             context_manager_kwargs["record_video_dir"] = str(recording_context.recording_path)
+
+        # Execute with or without recording context
+        if recording_context:
             async with recording_context:
                 async with automator.browser_context(temp_workspace, **context_manager_kwargs) as context:
                     return await _execute_with_context(context, commands, timeout_manager, slowmo, action)
@@ -122,9 +125,10 @@ async def _execute_with_context(context, commands: List[Dict[str, Any]], timeout
     Returns:
         bool: True if all commands were executed successfully, False otherwise.
     """
-    page = await context.new_page()
-
+    page = None
     try:
+        page = await context.new_page()
+
         # Execute each command with timeout protection
         for cmd in commands:
             # Check for cancellation between commands
@@ -220,20 +224,22 @@ async def _execute_with_context(context, commands: List[Dict[str, Any]], timeout
                 return False
 
         # Close the page
-        try:
-            await page.close()
-        except Exception as close_exc:
-            logger.error(f"Error closing page after successful execution: {close_exc}")
+        if page:
+            try:
+                await page.close()
+            except Exception as close_exc:
+                logger.error(f"Error closing page after successful execution: {close_exc}")
 
         logger.info(f"Successfully executed direct browser control for action: {action['name']}")
         return True
 
     except Exception as e:
         logger.error(f"Error in browser context execution: {e}")
-        try:
-            await page.close()
-        except Exception as close_exc:
-            logger.error(f"Error closing page after exception: {close_exc}")
+        if page:
+            try:
+                await page.close()
+            except Exception as close_exc:
+                logger.error(f"Error closing page after exception: {close_exc}")
         raise
 
 async def execute_direct_browser_control(action: Dict[str, Any], **params) -> bool:
@@ -255,8 +261,11 @@ async def execute_direct_browser_control(action: Dict[str, Any], **params) -> bo
     timeout_manager = get_timeout_manager()
 
     try:
-        # Execute the browser operation
-        result = await _execute_browser_operation_impl(action, params, timeout_manager)
+        # Execute with operation timeout
+        result = await timeout_manager.apply_timeout_to_coro(
+            _execute_browser_operation_impl(action, params, timeout_manager),
+            TimeoutScope.OPERATION
+        )
 
         if result:
             logger.info(f"✅ Successfully executed direct browser control for action: {action['name']}")
@@ -265,6 +274,12 @@ async def execute_direct_browser_control(action: Dict[str, Any], **params) -> bo
 
         return result
 
+    except TimeoutError as e:
+        logger.error(f"Browser control action timed out: {e}")
+        return False
+    except CancellationError as e:
+        logger.warning(f"Browser control action cancelled: {e}")
+        return False
     except Exception as e:
         logger.error(f"❌ Error executing direct browser control: {e}")
         raise
