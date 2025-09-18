@@ -42,9 +42,9 @@ class TestBrowserControlFailure:
                 from src.utils.timeout_manager import TimeoutError
                 raise TimeoutError(f"Mock timeout occurred after {timeout_value} seconds")
         
-        # For non-coroutine objects, ensure we return an awaitable
-        # Use asyncio.sleep(0, result=coro) to make it awaitable
-        return await asyncio.sleep(0, result=coro)
+        # For non-coroutine objects, return directly
+        # Since this is an async function, the caller will handle awaiting if needed
+        return coro
 
     @pytest.mark.asyncio
     async def test_browser_control_basic_execution(self):

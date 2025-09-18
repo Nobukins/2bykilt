@@ -66,7 +66,7 @@ def test_browser_control(page: Page):
         locator.click()
         locator = page.locator("#search-2 > form > label > input")
         expect(locator).to_be_visible(timeout=10000)
-        locator.fill("tt")
+        locator.fill("${params.query}")
         page.keyboard.press("Enter")
     except Exception as e:
         try:
