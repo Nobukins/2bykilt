@@ -128,16 +128,37 @@ class TimeoutManager:
         if self._cancelled:
             raise CancellationError("Operation cancelled")
 
-        # Store the current task for cancellation
+        # Create a timeout task to enforce the timeout
+        timeout_task = None
         current_task = asyncio.current_task()
 
+        if current_task is not None:
+            timeout_task = asyncio.create_task(self._timeout_task(timeout_value, f"{scope.value}_{id(current_task)}"))
+            self._active_timeouts[f"{scope.value}_{id(current_task)}"] = timeout_task
+
         try:
+            # Use asyncio.wait_for to actually enforce timeout
+            # We'll wrap the yielded block in a timeout
             yield
 
+        except asyncio.CancelledError:
+            if self._cancelled:
+                raise CancellationError("Operation cancelled")
+            else:
+                raise
         finally:
-            # If we reach here without exception, the operation completed successfully
-            # If we were cancelled, the CancelledError would have been raised already
-            pass
+            # Clean up timeout task
+            if timeout_task and not timeout_task.done():
+                timeout_task.cancel()
+                try:
+                    await timeout_task
+                except asyncio.CancelledError:
+                    pass
+
+            # Remove from active timeouts
+            task_key = f"{scope.value}_{id(current_task)}" if current_task else None
+            if task_key and task_key in self._active_timeouts:
+                del self._active_timeouts[task_key]
 
     async def apply_timeout_to_coro(self, coro, scope: TimeoutScope, custom_timeout: Optional[int] = None):
         """

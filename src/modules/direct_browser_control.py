@@ -72,8 +72,8 @@ async def execute_direct_browser_control(action: Dict[str, Any], **params) -> bo
         return False
     
     try:
-        # Use timeout scope for the entire browser operation
-        async with timeout_manager.timeout_scope(TimeoutScope.OPERATION):
+        # Use timeout for the entire browser operation
+        async def _execute_browser_operation():
             flow = action.get('flow', [])
             slowmo = action.get('slowmo', 1000)
             
@@ -113,54 +113,80 @@ async def execute_direct_browser_control(action: Dict[str, Any], **params) -> bo
                         
                         try:
                             # Use network timeout for page operations
-                            async with timeout_manager.timeout_scope(TimeoutScope.NETWORK):
-                                if cmd_action == "go_to_url" and args:
-                                    await page.goto(args[0], wait_until="domcontentloaded")
-                                    logger.info(f"Navigated to: {args[0]}")
-                                elif cmd_action == "wait_for_navigation":
+                            if cmd_action == "go_to_url" and args:
+                                await timeout_manager.apply_timeout_to_coro(
+                                    page.goto(args[0], wait_until="domcontentloaded"),
+                                    TimeoutScope.NETWORK
+                                )
+                                logger.info(f"Navigated to: {args[0]}")
+                            elif cmd_action == "wait_for_navigation":
+                                try:
+                                    await timeout_manager.apply_timeout_to_coro(
+                                        page.wait_for_load_state("networkidle", timeout=15000),
+                                        TimeoutScope.NETWORK
+                                    )
+                                    logger.info("Navigation completed")
+                                except Exception as e:
+                                    logger.warning(f"Navigation wait timed out, continuing: {e}")
+                            elif cmd_action == "input_text" and len(args) >= 2:
+                                selector, value = args[0], args[1]
+                                await timeout_manager.apply_timeout_to_coro(
+                                    page.wait_for_selector(selector, timeout=10000),
+                                    TimeoutScope.NETWORK
+                                )
+                                await timeout_manager.apply_timeout_to_coro(
+                                    page.fill(selector, value),
+                                    TimeoutScope.OPERATION
+                                )
+                                logger.info(f"Filled form field '{selector}' with '{value}'")
+                            elif cmd_action == "click_element" and args:
+                                selector = args[0]
+                                await timeout_manager.apply_timeout_to_coro(
+                                    page.wait_for_selector(selector, timeout=10000),
+                                    TimeoutScope.NETWORK
+                                )
+                                await timeout_manager.apply_timeout_to_coro(
+                                    page.click(selector),
+                                    TimeoutScope.OPERATION
+                                )
+                                logger.info(f"Clicked element '{selector}'")
+                            elif cmd_action == "keyboard_press" and args:
+                                key = args[0]
+                                await timeout_manager.apply_timeout_to_coro(
+                                    page.keyboard.press(key),
+                                    TimeoutScope.OPERATION
+                                )
+                                logger.info(f"Pressed key '{key}'")
+                            elif cmd_action == "extract_content":
+                                selectors = args if args else ["h1", "h2", "h3", "p"]
+                                content = {}
+                                for selector in selectors:
                                     try:
-                                        await page.wait_for_load_state("networkidle", timeout=15000)
-                                        logger.info("Navigation completed")
+                                        elements = await timeout_manager.apply_timeout_to_coro(
+                                            page.query_selector_all(selector),
+                                            TimeoutScope.NETWORK
+                                        )
+                                        texts = []
+                                        for element in elements:
+                                            text = await timeout_manager.apply_timeout_to_coro(
+                                                element.text_content(),
+                                                TimeoutScope.OPERATION
+                                            )
+                                            if text and text.strip():
+                                                texts.append(text.strip())
+                                        content[selector] = texts
                                     except Exception as e:
-                                        logger.warning(f"Navigation wait timed out, continuing: {e}")
-                                elif cmd_action == "input_text" and len(args) >= 2:
-                                    selector, value = args[0], args[1]
-                                    await page.wait_for_selector(selector, timeout=10000)
-                                    await page.fill(selector, value)
-                                    logger.info(f"Filled form field '{selector}' with '{value}'")
-                                elif cmd_action == "click_element" and args:
-                                    selector = args[0]
-                                    await page.wait_for_selector(selector, timeout=10000)
-                                    await page.click(selector)
-                                    logger.info(f"Clicked element '{selector}'")
-                                elif cmd_action == "keyboard_press" and args:
-                                    key = args[0]
-                                    await page.keyboard.press(key)
-                                    logger.info(f"Pressed key '{key}'")
-                                elif cmd_action == "extract_content":
-                                    selectors = args if args else ["h1", "h2", "h3", "p"]
-                                    content = {}
-                                    for selector in selectors:
-                                        try:
-                                            elements = await page.query_selector_all(selector)
-                                            texts = []
-                                            for element in elements:
-                                                text = await element.text_content()
-                                                if text and text.strip():
-                                                    texts.append(text.strip())
-                                            content[selector] = texts
-                                        except Exception as e:
-                                            logger.warning(f"Failed to extract content for selector '{selector}': {e}")
-                                            content[selector] = []
-                                    logger.info("Extracted content:")
-                                    logger.info(json.dumps(content, indent=2, ensure_ascii=False))
-                                
-                                # Add slowmo delay with cancellation check
-                                if timeout_manager.is_cancelled():
-                                    logger.warning("Operation cancelled during slowmo delay")
-                                    return False
-                                await asyncio.sleep(slowmo / 1000.0)
-                        
+                                        logger.warning(f"Failed to extract content for selector '{selector}': {e}")
+                                        content[selector] = []
+                                logger.info("Extracted content:")
+                                logger.info(json.dumps(content, indent=2, ensure_ascii=False))
+                            
+                            # Add slowmo delay with cancellation check
+                            if timeout_manager.is_cancelled():
+                                logger.warning("Operation cancelled during slowmo delay")
+                                return False
+                            await asyncio.sleep(slowmo / 1000.0)
+                    
                         except TimeoutError as e:
                             logger.error(f"Browser operation timed out: {cmd_action}")
                             return False
@@ -174,6 +200,14 @@ async def execute_direct_browser_control(action: Dict[str, Any], **params) -> bo
                 logger.info(f"Successfully executed direct browser control for action: {action['name']}")
                 return True
         
+        # Execute with operation timeout
+        result = await timeout_manager.apply_timeout_to_coro(
+            _execute_browser_operation(),
+            TimeoutScope.OPERATION
+        )
+        
+        return result
+    
     except TimeoutError as e:
         logger.error(f"Browser control action timed out: {e}")
         return False
