@@ -110,7 +110,7 @@ class RecorderContext:
                 'run_type': self.run_type,
                 'run_id': self.run_id
             })
-            return None
+            raise
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Exit the recording context."""
