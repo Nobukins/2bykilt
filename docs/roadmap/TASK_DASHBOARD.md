@@ -1,11 +1,11 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-09-18T03:16:19+00:00
+Generated at (UTC): 2025-09-18T22:38:41+00:00
 
 ## 1. メタサマリー
 
-- Total Issues: 76
-- High Risk (declared): 6 → 31, 46, 49, 54, 62, 176
+- Total Issues: 78
+- High Risk (declared): 8 → 31, 46, 49, 54, 62, 176, 237, 238
 - Cycle Detected: false (none)
 - Strict Orphans: 4
 - Curated Orphan List Count: 11
@@ -13,35 +13,35 @@ Generated at (UTC): 2025-09-18T03:16:19+00:00
 ## 2. 分布 (Distribution)
 
 ### Priority
-- P0: 20 (26.3%)
-- P1: 26 (34.2%)
-- P2: 28 (36.8%)
+- P0: 22 (28.2%)
+- P1: 26 (33.3%)
+- P2: 28 (35.9%)
 - P3: 2 (2.6%)
 
 ### Phase
-- 1: 19 (25.0%)
-- 1-late: 12 (15.8%)
-- 2: 45 (59.2%)
+- 1: 19 (24.4%)
+- 1-late: 12 (15.4%)
+- 2: 47 (60.3%)
 
 ### Area
-- artifacts: 15 (19.7%)
-- automation: 4 (5.3%)
-- batch: 7 (9.2%)
-- config: 4 (5.3%)
-- docs: 6 (7.9%)
-- logging: 5 (6.6%)
-- observability: 3 (3.9%)
+- artifacts: 16 (20.5%)
+- automation: 4 (5.1%)
+- batch: 7 (9.0%)
+- config: 4 (5.1%)
+- docs: 6 (7.7%)
+- logging: 5 (6.4%)
+- observability: 3 (3.8%)
 - plugins: 1 (1.3%)
-- runner: 21 (27.6%)
-- security: 4 (5.3%)
+- runner: 22 (28.2%)
+- security: 4 (5.1%)
 - test: 1 (1.3%)
-- uiux: 5 (6.6%)
+- uiux: 5 (6.4%)
 
 ### Risk
-- high: 6 (7.9%)
-- low: 12 (15.8%)
-- medium: 4 (5.3%)
-- none: 54 (71.1%)
+- high: 8 (10.3%)
+- low: 12 (15.4%)
+- medium: 4 (5.1%)
+- none: 54 (69.2%)
 
 ## 3. リスク詳細 (High / Medium / etc.)
 
@@ -52,6 +52,8 @@ High Risk Issues:
 - 54: cdp-use デュアルエンジン抽象レイヤ (area=runner, priority=P1)
 - 62: 実行サンドボックス機能制限 (area=security, priority=P0)
 - 176: 宣言的抽出スキーマ (CSV列→コマンド引数/抽出ポリシーマッピング) (area=batch, priority=P1)
+- 237: Bug: Recording file generation not working for any run type (area=artifacts, priority=P0)
+- 238: Bug: Browser-control fails when ENABLE_LLM=false (area=runner, priority=P0)
 
 ## 4. Orphans
 
@@ -97,6 +99,8 @@ Sorted By: critical_path_rank
 | 32 | Run/Job ID 基盤 | P0 | 1 | runner |  | 5 | 0 | 0 | 10 | #79 |
 | 65 | マルチ環境設定ローダ | P0 | 1 | config |  | 5 | 0 | 0 | 4 |  |
 | 220 | [runner][bug] browser-control タイプ実行失敗の調査と修正 | P1 | 2 | runner |  | 4 | 0 | 1 | 1 |  |
+| 237 | Bug: Recording file generation not working for any run type | P0 | 2 | artifacts | high | 4 | 0 | 1 | 0 |  |
+| 238 | Bug: Browser-control fails when ENABLE_LLM=false | P0 | 2 | runner | high | 4 | 0 | 1 | 0 |  |
 | 28 | 録画ファイル保存パス統一 | P0 | 1 | artifacts |  | 4 | 1 | 1 | 1 | #112 |
 | 64 | フィーチャーフラグフレームワーク | P0 | 1 | config |  | 4 | 1 | 1 | 3 |  |
 | 110 | browser-control gap fix | P0 | 2 | runner |  | 3 | 0 | 1 | 1 | #188 |
@@ -205,6 +209,24 @@ Sorted By: critical_path_rank
 - LongestDistance: 0
 - Depends (1): 219
 - Dependents (1): 221
+- Progress: {"state": "open"}
+
+### Issue 237: Bug: Recording file generation not working for any run type
+- Priority: P0, Phase: 2, Area: artifacts
+- Risk: high
+- CriticalPathRank: 4
+- LongestDistance: 0
+- Depends (1): 221
+- Dependents (0): (none)
+- Progress: {"state": "open"}
+
+### Issue 238: Bug: Browser-control fails when ENABLE_LLM=false
+- Priority: P0, Phase: 2, Area: runner
+- Risk: high
+- CriticalPathRank: 4
+- LongestDistance: 0
+- Depends (1): 220
+- Dependents (0): (none)
 - Progress: {"state": "open"}
 
 ### Issue 28: 録画ファイル保存パス統一

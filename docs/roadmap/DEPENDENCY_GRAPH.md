@@ -1,6 +1,6 @@
 ```mermaid
 %% Auto-generated dependency graph
-%% Generated at: 2025-09-18T03:16:19.528171+00:00
+%% Generated at: 2025-09-18T22:38:41.044739+00:00
 %% Edge方向: dependency --> dependent
 graph LR
 
@@ -13,6 +13,8 @@ subgraph R4[Rank 4]
   28["28 録画ファイル保存パス統一"]
   64["64 フィーチャーフラグフレームワーク"]
   220["220 [runner][bug] brows…"]
+  237["237 Bug: Recording file…"]
+  238["238 Bug: Browser-contro…"]
 end
 subgraph R3[Rank 3]
   25["25 git_script が llms.t…"]
@@ -199,14 +201,16 @@ end
 57 --> 222
 222 --> 223
 221 --> 224
+221 --> 237
+220 --> 238
 
 %% Styling definitions (Mermaid syntax uses colon)
 classDef highrisk fill:#ffe6e6,stroke:#d40000,stroke-width:2px,color:#000;
 classDef progress fill:#e6f4ff,stroke:#0366d6,stroke-width:2px,color:#000;
 
 %% Class assignments
-class 31,46,49,54,62,176 highrisk;
-class 25,28,30,31,32,34,35,36,37,38,39,40,41,42,44,45,50,56,57,58,59,87,88,89,91,102,110,111,154,175,176,177,196,198,199,200,201,202,203,208,209,210,211,212,219,220,221,222,223,224,226 progress;
+class 31,46,49,54,62,176,237,238 highrisk;
+class 25,28,30,31,32,34,35,36,37,38,39,40,41,42,44,45,50,56,57,58,59,87,88,89,91,102,110,111,154,175,176,177,196,198,199,200,201,202,203,208,209,210,211,212,219,220,221,222,223,224,226,237,238 progress;
 
 %% Legend (pseudo nodes)
 subgraph Legend[Legend]
