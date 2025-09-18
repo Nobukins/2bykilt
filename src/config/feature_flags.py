@@ -84,6 +84,10 @@ class FeatureFlags:
     Thread-safety: runtime override operations are guarded by a lock.
     """
 
+    # Boolean string value constants for consistency and maintainability
+    _TRUE_VALUES = ("true", "1", "yes", "on")
+    _FALSE_VALUES = ("false", "0", "no", "off")
+
     _lock = threading.RLock()
     _defaults: Dict[str, _FlagDef] = {}
     _overrides: Dict[str, Tuple[Any, Optional[datetime]]] = {}
@@ -139,7 +143,7 @@ class FeatureFlags:
 
             # Reset lazy artifact setting based on environment variable
             env_lazy = os.getenv("BYKILT_FLAGS_LAZY_ARTIFACT_ENABLED", "true").lower()
-            cls._lazy_artifact_enabled = env_lazy in ("true", "1", "yes", "on")
+            cls._lazy_artifact_enabled = env_lazy in cls._TRUE_VALUES
 
     @classmethod
     def get(cls, name: str, expected_type: type | None = None, default: Any | None = None) -> Any:
@@ -384,8 +388,10 @@ class FeatureFlags:
             if var in os.environ:
                 raw = os.environ[var]
                 # Attempt primitive parsing
-                if raw.lower() in ("true", "false"):
-                    return raw.lower() == "true"
+                if raw.lower() in cls._TRUE_VALUES:
+                    return True
+                elif raw.lower() in cls._FALSE_VALUES:
+                    return False
                 # int parse
                 try:
                     if raw.isdigit() or (raw.startswith("-") and raw[1:].isdigit()):
@@ -404,7 +410,7 @@ class FeatureFlags:
                 if isinstance(value, bool):
                     return value
                 if isinstance(value, str):
-                    return value.lower() in ("1", "true", "yes", "on")
+                    return value.lower() in cls._TRUE_VALUES
                 return bool(value)
             if expected_type is int:
                 if isinstance(value, int):
