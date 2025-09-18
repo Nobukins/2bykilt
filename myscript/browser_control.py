@@ -4,7 +4,14 @@ from playwright.sync_api import expect, Page, Browser
 import json
 import os
 
-@pytest.fixture(scope="module")
+# NOTE:
+# pytest-playwright defines core fixtures like `browser` with session scope. If we
+# provide custom overriding fixtures (browser_context_args, browser_type_launch_args)
+# with a narrower (module/function) scope, pytest raises ScopeMismatch when the
+# session-scoped fixture chain attempts to access them. Therefore these MUST be
+# session-scoped. See Issue #220 / PR #235.
+
+@pytest.fixture(scope="session")
 def browser_context_args(browser_context_args):
     context_args = {
         **browser_context_args,
@@ -18,7 +25,7 @@ def browser_context_args(browser_context_args):
         
     return context_args
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def browser_type_launch_args(browser_type_launch_args):
     """Configure browser launch arguments based on environment variables"""
     launch_args = {**browser_type_launch_args}
@@ -50,13 +57,16 @@ def browser_type_launch_args(browser_type_launch_args):
 @pytest.mark.browser_control
 def test_browser_control(page: Page):
     try:
-        page.goto("https://www.google.com")
-        expect(page.locator("#APjFqb")).to_be_visible(timeout=10000)
-        page.goto("https://www.google.com")
-        expect(page.locator("#APjFqb")).to_be_visible(timeout=10000)
-        locator = page.locator("#APjFqb")
+        page.goto("https://nogtips.wordpress.com/", wait_until="domcontentloaded", timeout=30000)
+        locator = page.locator("#eu-cookie-law > form > input")
         expect(locator).to_be_visible(timeout=10000)
-        locator.fill("NEW_METHOD browser-control")
+        locator.click()
+        locator = page.locator("#search-2 > form > label > input")
+        expect(locator).to_be_visible(timeout=10000)
+        locator.click()
+        locator = page.locator("#search-2 > form > label > input")
+        expect(locator).to_be_visible(timeout=10000)
+        locator.fill("${params.query}")
         page.keyboard.press("Enter")
     except Exception as e:
         try:
