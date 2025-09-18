@@ -344,9 +344,12 @@ issues:
   "223": {title: "[logging][bug] LOG_LEVEL 環境変数が反映されない (初期化順序バグ)", meta: {area: logging, type: bug, priority: P0, phase: "2", stability: core}, depends: ["222"], dependents: [], risk: null, progress: {state: done, primary_pr: 233}, critical_path_rank: 1}
   "224": {title: "[ui/ux][config] RECORDING_PATH UI と環境変数の競合解消", meta: {area: uiux, type: enhancement, priority: P1, phase: "2", stability: core}, depends: ["221"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
 
+  "237": {title: "Bug: Recording file generation not working for any run type", meta: {area: artifacts, type: bug, priority: P0, phase: "2", stability: core}, depends: ["221"], dependents: [], risk: high, progress: {state: open}, critical_path_rank: 4}
+  "238": {title: "Bug: Browser-control fails when ENABLE_LLM=false", meta: {area: runner, type: bug, priority: P0, phase: "2", stability: core}, depends: ["220"], dependents: [], risk: high, progress: {state: open}, critical_path_rank: 4}
+
 summary:
-  total_issues: 76
-  high_risk: ["31", "46", "49", "54", "62", "176"]
+  total_issues: 78
+  high_risk: ["31", "46", "49", "54", "62", "176", "237", "238"]
   longest_chain_example: ["65", "64", "63", "66", "67"]
   data_quality_checks:
     no_cycles_detected: true
