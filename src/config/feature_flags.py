@@ -181,6 +181,12 @@ class FeatureFlags:
                             else:
                                 resolved = False  # generic fallback
 
+                        # Always log warning for undefined flags
+                        logger.warning(
+                            "Undefined feature flag accessed",
+                            extra={"event": "flag.undefined", "flag": name},
+                        )
+
                         # Check if lazy artifact creation is enabled for undefined flags
                         if cls._lazy_artifact_enabled and not cls._artifact_written:
                             logger.info(
@@ -189,11 +195,6 @@ class FeatureFlags:
                             )
                             # Force artifact creation for undefined flag access
                             cls._maybe_write_artifact(force_refresh=True)
-                        else:
-                            logger.warning(
-                                "Undefined feature flag accessed",
-                                extra={"event": "flag.undefined", "flag": name},
-                            )
 
             coerced = cls._coerce(resolved, expected_type, name)
             cls._resolved_cache[name] = coerced
@@ -208,6 +209,29 @@ class FeatureFlags:
     def is_enabled(cls, name: str) -> bool:
         """Boolean helper (expected_type=bool)."""
         return bool(cls.get(name, expected_type=bool))
+
+    @classmethod
+    def get_override_source(cls, name: str) -> str | None:
+        """Return the source of override for a flag, or None if no override.
+
+        Returns:
+            "runtime" if runtime override is active
+            "environment" if environment variable override is active
+            None if no override (using file default or fallback)
+        """
+        cls._ensure_loaded()
+        with cls._lock:
+            cls._prune_expired()
+
+            # Check runtime override first (highest precedence)
+            if name in cls._overrides:
+                return "runtime"
+
+            # Check environment override
+            if cls._get_env_override(name) is not None:
+                return "environment"
+
+            return None
 
     @classmethod
     def set_override(cls, name: str, value: Any, ttl_seconds: int | None = None) -> None:

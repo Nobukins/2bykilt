@@ -142,29 +142,27 @@ def ensure_flags_artifact_with_overrides_helper(
             os.chdir(original_cwd)
 
 
-@pytest.fixture(autouse=True)
-def auto_ensure_flags_artifact_for_run_context_tests(tmp_path: Path, request):
-    """Auto-fixture that ensures flags artifacts for run_context related tests.
+@pytest.fixture
+def ensure_flags_artifact_for_run_context_tests(tmp_path: Path):
+    """Fixture that ensures flags artifacts for run_context related tests.
 
-    This fixture automatically runs for any test that mentions 'run_context' or 'artifact'
-    in its name, ensuring they have access to flags artifacts without explicit setup.
+    This fixture should be explicitly requested by tests that need to ensure
+    they have access to flags artifacts for 'run_context' or 'artifact' scenarios.
     """
-    test_name = request.node.name
-    if 'run_context' in test_name or 'artifact' in test_name:
-        original_cwd = Path.cwd()
+    original_cwd = Path.cwd()
+    try:
+        import os
+        os.chdir(tmp_path)
+
+        # Only create if no artifact exists
         try:
-            import os
-            os.chdir(tmp_path)
-
-            # Only create if no artifact exists
-            try:
-                run_context = RunContext.get()
-                flags_dir = run_context.artifact_dir("flags", ensure=False)
-                if not flags_dir.exists():
-                    FeatureFlags.dump_snapshot()
-            except:
-                # Fallback: create artifact anyway
+            run_context = RunContext.get()
+            flags_dir = run_context.artifact_dir("flags", ensure=False)
+            if not flags_dir.exists():
                 FeatureFlags.dump_snapshot()
+        except Exception:
+            # Fallback: create artifact anyway
+            FeatureFlags.dump_snapshot()
 
-        finally:
-            os.chdir(original_cwd)
+    finally:
+        os.chdir(original_cwd)
