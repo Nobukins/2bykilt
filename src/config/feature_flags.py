@@ -187,21 +187,18 @@ class FeatureFlags:
                             extra={"event": "flag.undefined", "flag": name},
                         )
 
-                        # Check if lazy artifact creation is enabled for undefined flags
-                        if cls._lazy_artifact_enabled and not cls._artifact_written:
-                            logger.info(
-                                "Undefined feature flag accessed, creating lazy artifact",
-                                extra={"event": "flag.undefined.lazy_artifact", "flag": name},
-                            )
-                            # Force artifact creation for undefined flag access
-                            cls._maybe_write_artifact(force_refresh=True)
+                        # (Artifact creation logic moved below)
 
             coerced = cls._coerce(resolved, expected_type, name)
             cls._resolved_cache[name] = coerced
 
-            # Only write artifact for defined flags or when lazy creation is enabled
-            if name in cls._defaults or cls._lazy_artifact_enabled:
-                cls._maybe_write_artifact()
+            # After resolving the flag (defined or undefined), check for lazy artifact creation
+            if cls._lazy_artifact_enabled and not cls._artifact_written:
+                logger.info(
+                    "Lazy artifact creation triggered on flag access",
+                    extra={"event": "flag.lazy_artifact", "flag": name},
+                )
+                cls._maybe_write_artifact(force_refresh=True)
 
             return coerced
 
