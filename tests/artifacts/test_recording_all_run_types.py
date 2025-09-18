@@ -107,7 +107,7 @@ class TestRecordingAllRunTypes:
                 'enable_recording': True
             }
 
-            result = await execute_direct_browser_control(mock_action_browser_control, params)
+            result = await execute_direct_browser_control(mock_action_browser_control, **params)
 
             # Verify recording factory was called (result depends on mock setup)
             assert result is not None

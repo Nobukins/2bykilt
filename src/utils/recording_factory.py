@@ -16,9 +16,10 @@ import os
 from pathlib import Path
 from typing import Optional, Dict, Any
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
 from src.utils.recording_dir_resolver import create_or_get_recording_dir
-from src.core.artifact_manager import ArtifactManager
+from src.core.artifact_manager import ArtifactManager, ArtifactEntry
 
 logger = logging.getLogger(__name__)
 
@@ -138,9 +139,6 @@ class RecorderContext:
             artifact_manager = ArtifactManager()
 
             # Create artifact entry
-            from datetime import datetime, timezone
-            from src.core.artifact_manager import ArtifactEntry
-
             entry = ArtifactEntry(
                 type="video",
                 path=str(self.recording_file),

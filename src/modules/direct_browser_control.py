@@ -107,7 +107,19 @@ async def _execute_browser_operation_impl(action: Dict[str, Any], params: Dict[s
                 return await _execute_with_context(context, commands, timeout_manager, slowmo, action)
 
 async def _execute_with_context(context, commands: List[Dict[str, Any]], timeout_manager: TimeoutManager, slowmo: int, action: Dict[str, Any]) -> bool:
-    """Execute commands within the browser context"""
+    """
+    Execute a sequence of browser commands within the provided browser context.
+
+    Args:
+        context: The browser context in which to execute the commands.
+        commands (List[Dict[str, Any]]): A list of command dictionaries to execute.
+        timeout_manager (TimeoutManager): The timeout manager to enforce timeouts and handle cancellations.
+        slowmo (int): Delay in milliseconds between commands for debugging or throttling.
+        action (Dict[str, Any]): The action dictionary containing metadata about the operation.
+
+    Returns:
+        bool: True if all commands were executed successfully, False otherwise.
+    """
     page = await context.new_page()
 
     try:
@@ -206,17 +218,23 @@ async def _execute_with_context(context, commands: List[Dict[str, Any]], timeout
                 return False
 
         # Close the page
-        await page.close()
+        try:
+            await page.close()
+        except Exception as close_exc:
+            logger.error(f"Error closing page after successful execution: {close_exc}")
 
         logger.info(f"Successfully executed direct browser control for action: {action['name']}")
         return True
 
     except Exception as e:
         logger.error(f"Error in browser context execution: {e}")
-        await page.close()
+        try:
+            await page.close()
+        except Exception as close_exc:
+            logger.error(f"Error closing page after exception: {close_exc}")
         raise
 
-async def execute_direct_browser_control(action: Dict[str, Any], params: Dict[str, Any]) -> bool:
+async def execute_direct_browser_control(action: Dict[str, Any], **params) -> bool:
     """Execute direct browser control with recording support"""
     logger.info(f"🔍 Executing direct browser control for action: {action['name']}")
 
@@ -232,7 +250,7 @@ async def execute_direct_browser_control(action: Dict[str, Any], params: Dict[st
     params.update(recording_params)
 
     # Create timeout manager
-    timeout_manager = TimeoutManager()
+    timeout_manager = get_timeout_manager()
 
     try:
         # Execute the browser operation
