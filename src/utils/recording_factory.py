@@ -189,9 +189,9 @@ class RecorderContext:
                     entry = artifact_entry
                     break
             if entry:
-                entry.status = status
-                entry.size = file_size
-                entry.completed_at = completion_time
+                entry["status"] = status
+                entry["size"] = file_size
+                entry["completed_at"] = completion_time
                 artifact_manager.update_entry(entry)
                 logger.debug(f"Updated manifest for recording {self.run_id}: status={status}, size={file_size}, completed_at={completion_time}")
             else:
