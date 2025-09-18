@@ -7,6 +7,7 @@ import os
 import tempfile
 from pathlib import Path
 from unittest.mock import patch, AsyncMock, MagicMock
+from playwright.async_api import Error
 
 from src.modules.direct_browser_control import execute_direct_browser_control
 
@@ -197,7 +198,7 @@ class TestBrowserControlFailure:
                 mock_context.__aexit__ = AsyncMock(return_value=None)
                 mock_automator.browser_context.return_value = mock_context
 
-                mock_context.new_page = AsyncMock(side_effect=Exception("Browser initialization failed"))
+                mock_context.new_page = AsyncMock(side_effect=Error("Browser initialization failed"))
 
                 mock_browser_config = MagicMock()
                 mock_browser_config.get_current_browser.return_value = "chromium"
