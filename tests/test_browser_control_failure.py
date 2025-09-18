@@ -15,9 +15,17 @@ class TestBrowserControlFailure:
     """Test cases to reproduce and fix browser-control execution failures"""
 
     async def _mock_apply_timeout(self, coro, scope):
-        """Helper method to mock apply_timeout_to_coro functionality"""
+        """Helper method to mock apply_timeout_to_coro functionality with proper timeout simulation"""
+        # Simulate timeout behavior by using asyncio.wait_for with a reasonable timeout
+        # This ensures timeout testing is not bypassed
+        timeout_value = 30  # 30 seconds default timeout for testing
+        
         if asyncio.iscoroutine(coro):
-            return await coro
+            try:
+                return await asyncio.wait_for(coro, timeout=timeout_value)
+            except asyncio.TimeoutError:
+                from src.utils.timeout_manager import TimeoutError
+                raise TimeoutError(f"Mock timeout occurred after {timeout_value} seconds")
         return coro
 
     @pytest.mark.asyncio

@@ -140,14 +140,6 @@ class TimeoutManager:
         if self._cancelled:
             raise CancellationError("Operation cancelled")
 
-        # Create a timeout task for tracking (optional, for additional monitoring)
-        timeout_task = None
-        current_task = asyncio.current_task()
-
-        if current_task is not None:
-            timeout_task = asyncio.create_task(self._timeout_task(timeout_value, f"{scope.value}_{id(current_task)}"))
-            self._active_timeouts[f"{scope.value}_{id(current_task)}"] = timeout_task
-
         try:
             # Use asyncio.timeout to actually enforce timeout on the yielded block
             async with asyncio.timeout(timeout_value):
@@ -160,19 +152,6 @@ class TimeoutManager:
                 raise CancellationError("Operation cancelled")
             else:
                 raise
-        finally:
-            # Clean up timeout task
-            if timeout_task and not timeout_task.done():
-                timeout_task.cancel()
-                try:
-                    await timeout_task
-                except asyncio.CancelledError:
-                    pass
-
-            # Remove from active timeouts
-            task_key = f"{scope.value}_{id(current_task)}" if current_task else None
-            if task_key and task_key in self._active_timeouts:
-                del self._active_timeouts[task_key]
 
     async def apply_timeout_to_coro(self, coro, scope: TimeoutScope, custom_timeout: Optional[int] = None):
         """
@@ -204,20 +183,6 @@ class TimeoutManager:
                 raise CancellationError("Operation cancelled")
             else:
                 raise
-
-    async def _timeout_task(self, timeout: int, task_id: str):
-        """Background task that handles timeout"""
-        try:
-            await asyncio.sleep(timeout)
-            if task_id in self._active_timeouts:
-                logger.warning(f"Timeout reached for {task_id} after {timeout} seconds")
-                # Cancel the timeout task itself to trigger the CancelledError in the context
-                timeout_task = self._active_timeouts[task_id]
-                if not timeout_task.done():
-                    timeout_task.cancel()
-        except asyncio.CancelledError:
-            # Normal cancellation, don't log as error
-            pass
 
     def _get_timeout_for_scope(self, scope: TimeoutScope) -> int:
         """Get timeout value for a specific scope"""
