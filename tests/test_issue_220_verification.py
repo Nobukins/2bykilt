@@ -7,7 +7,7 @@ import sys
 import os
 
 # Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../src'))
 
 from src.modules.direct_browser_control import execute_direct_browser_control
 
@@ -28,7 +28,7 @@ async def test_issue_220_scenario():
 
     try:
         print("Executing browser-control action with multiple steps...")
-        result = await execute_direct_browser_control(action, browser_type="chrome")
+        result = await execute_direct_browser_control(action, **{"browser_type": "chrome"})
 
         if result:
             print("✅ Issue #220 scenario test PASSED - browser-control executed successfully")
@@ -59,7 +59,7 @@ async def test_error_scenario():
     }
 
     try:
-        result = await execute_direct_browser_control(action, browser_type="chrome")
+        result = await execute_direct_browser_control(action, **{"browser_type": "chrome"})
 
         if not result:
             print("✅ Error handling test PASSED - properly handled error scenario")

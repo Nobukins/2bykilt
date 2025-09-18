@@ -14,6 +14,12 @@ from src.modules.direct_browser_control import execute_direct_browser_control
 class TestBrowserControlFailure:
     """Test cases to reproduce and fix browser-control execution failures"""
 
+    async def _mock_apply_timeout(self, coro, scope):
+        """Helper method to mock apply_timeout_to_coro functionality"""
+        if asyncio.iscoroutine(coro):
+            return await coro
+        return coro
+
     @pytest.mark.asyncio
     async def test_browser_control_basic_execution(self):
         """Test basic browser-control execution with minimal flow"""
@@ -48,13 +54,7 @@ class TestBrowserControlFailure:
             mock_timeout_manager = MagicMock()
             mock_timeout_manager.is_cancelled.return_value = False
             
-            # Mock apply_timeout_to_coro to await the coroutine and return its result
-            async def mock_apply_timeout(coro, scope):
-                if asyncio.iscoroutine(coro):
-                    return await coro
-                return coro
-            
-            mock_timeout_manager.apply_timeout_to_coro = mock_apply_timeout
+            mock_timeout_manager.apply_timeout_to_coro = self._mock_apply_timeout
             mock_get_timeout.return_value = mock_timeout_manager
 
             # Mock GitScriptAutomator and browser components
@@ -128,13 +128,7 @@ class TestBrowserControlFailure:
                         mock_timeout_manager = MagicMock()
                         mock_timeout_manager.is_cancelled.return_value = False
                         
-                        # Mock apply_timeout_to_coro to await the coroutine and return its result
-                        async def mock_apply_timeout(coro, scope):
-                            if asyncio.iscoroutine(coro):
-                                return await coro
-                            return coro
-                        
-                        mock_timeout_manager.apply_timeout_to_coro = mock_apply_timeout
+                        mock_timeout_manager.apply_timeout_to_coro = self._mock_apply_timeout
                         mock_timeout.return_value = mock_timeout_manager
 
                         # Mock GitScriptAutomator
@@ -191,13 +185,7 @@ class TestBrowserControlFailure:
                 mock_timeout_manager = MagicMock()
                 mock_timeout_manager.is_cancelled.return_value = False
                 
-                # Mock apply_timeout_to_coro to await the coroutine and return its result
-                async def mock_apply_timeout(coro, scope):
-                    if asyncio.iscoroutine(coro):
-                        return await coro
-                    return coro
-                
-                mock_timeout_manager.apply_timeout_to_coro = mock_apply_timeout
+                mock_timeout_manager.apply_timeout_to_coro = self._mock_apply_timeout
                 mock_timeout.return_value = mock_timeout_manager
 
                 # Mock GitScriptAutomator to raise exception

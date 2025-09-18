@@ -117,18 +117,30 @@ class TimeoutManager:
     @asynccontextmanager
     async def timeout_scope(self, scope: TimeoutScope, custom_timeout: Optional[int] = None):
         """
-        Context manager for timeout scopes
+        Context manager for timeout scopes with actual timeout enforcement
+
+        This method creates a timeout scope that will automatically cancel operations
+        that exceed the specified timeout duration. It uses asyncio.timeout for proper
+        timeout enforcement, ensuring that long-running operations are terminated.
 
         Args:
-            scope: The timeout scope to use
-            custom_timeout: Custom timeout value (overrides config)
+            scope: The timeout scope to use (JOB, OPERATION, STEP, NETWORK)
+            custom_timeout: Custom timeout value in seconds (overrides config)
+
+        Raises:
+            TimeoutError: If the operation exceeds the timeout duration
+            CancellationError: If the operation is cancelled externally
+
+        Example:
+            async with timeout_manager.timeout_scope(TimeoutScope.OPERATION):
+                await some_long_running_operation()
         """
         timeout_value = custom_timeout or self._get_timeout_for_scope(scope)
 
         if self._cancelled:
             raise CancellationError("Operation cancelled")
 
-        # Create a timeout task to enforce the timeout
+        # Create a timeout task for tracking (optional, for additional monitoring)
         timeout_task = None
         current_task = asyncio.current_task()
 
@@ -137,10 +149,12 @@ class TimeoutManager:
             self._active_timeouts[f"{scope.value}_{id(current_task)}"] = timeout_task
 
         try:
-            # Use asyncio.wait_for to actually enforce timeout
-            # We'll wrap the yielded block in a timeout
-            yield
+            # Use asyncio.timeout to actually enforce timeout on the yielded block
+            async with asyncio.timeout(timeout_value):
+                yield
 
+        except asyncio.TimeoutError:
+            raise TimeoutError(f"Operation in scope '{scope.value}' timed out after {timeout_value} seconds")
         except asyncio.CancelledError:
             if self._cancelled:
                 raise CancellationError("Operation cancelled")
