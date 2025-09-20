@@ -164,93 +164,95 @@ def browser_type_launch_args(browser_type_launch_args):
 @pytest.mark.browser_control
 def test_browser_control(page: Page):
     try:
-'''
-    
-    for step in flow:
-        action = step.get('action')
+        # Basic browser control test - verify page is accessible
+        assert page is not None
+        print("✅ Browser control test passed - page is accessible")
         
-        # Process dynamic values in parameters using the format ${params.key}
-        for key, value in step.items():
-            if isinstance(value, str) and '${params.' in value:
-                for param_name, param_value in params.items():
-                    placeholder = f"${{params.{param_name}}}"
-                    if placeholder in value:
-                        step[key] = value.replace(placeholder, str(param_value))
+        # Test basic page operations
+        title = page.title()
+        print(f"📄 Page title: {title}")
         
-        # Handle URL navigation (command with URL or navigate)
-        if action == 'command' and 'url' in step:
-            url = step['url']
-            
-            if 'wait_until' in step:
-                script_content += f'        page.goto("{url}", wait_until="{step["wait_until"]}", timeout=30000)\n'
-            else:
-                script_content += f'        page.goto("{url}")\n'
-        elif action == 'navigate':
-            url = step['url']
-            
-            if 'wait_until' in step:
-                script_content += f'        page.goto("{url}", wait_until="{step["wait_until"]}", timeout=30000)\n'
-            else:
-                script_content += f'        page.goto("{url}")\n'
-            
-            if 'wait_for' in step:
-                script_content += f'        expect(page.locator("{step["wait_for"]}")).to_be_visible(timeout=10000)\n'
-                script_content += f'        page.goto("{url}")\n'
-            
-            if 'wait_for' in step:
-                script_content += f'        expect(page.locator("{step["wait_for"]}")).to_be_visible(timeout=10000)\n'
-        
-        # Handle form filling
-        elif action in ['fill', 'fill_form']:
-            selector = step['selector']
-            value = step['value']
-            script_content += f'''        locator = page.locator("{selector}")
-        expect(locator).to_be_visible(timeout=10000)
-        locator.fill("{value}")\n'''
-        
-        # Handle element clicking
-        elif action == 'click':
-            selector = step['selector']
-            script_content += f'''        locator = page.locator("{selector}")
-        expect(locator).to_be_visible(timeout=10000)
-        locator.click()\n'''
-            
-            if step.get('wait_for_navigation', False):
-                script_content += '        page.wait_for_load_state("networkidle")\n'
-        
-        # Handle keyboard key press
-        elif action == 'keyboard_press':
-            key = step.get('selector', '') or step.get('key', 'Enter')
-            script_content += f'        page.keyboard.press("{key}")\n'
-            
-        # Handle waiting for navigation (page load)
-        elif action == 'wait_for_navigation':
-            script_content += '        page.wait_for_load_state("networkidle")\n'
-        
-        # Handle waiting for a selector to appear
-        elif action == 'wait_for_selector':
-            selector = step['selector']
-            timeout = step.get('timeout', 10000)
-            script_content += f'        expect(page.locator("{selector}")).to_be_visible(timeout={timeout})\n'
-            
-        # Handle content extraction
-        elif action == 'extract_content':
-            selectors = step.get('selectors', ["h1", "h2", "h3", "p"])
-            script_content += '''        content = {}
-'''
-            for selector in selectors:
-                script_content += f'''        elements = page.query_selector_all("{selector}")
-        texts = []
-        for element in elements:
-            text = element.text_content()
-            if text.strip():
-                texts.append(text.strip())
-        content["{selector}"] = texts
-'''
-            script_content += '''        print("Extracted content:", json.dumps(content, indent=2))
-'''
-    
-    script_content += '''    except Exception as e:
+        # Process automation flow if defined
+        flow = ''' + str(flow) + '''
+        if flow:
+            print(f"🔄 Processing {len(flow)} automation steps...")
+            for step in flow:
+                action = step.get('action')
+                print(f"🔄 Executing action: {action}")
+                
+                # Handle URL navigation
+                if action == 'navigate':
+                    url = step['url']
+                    print(f"🌐 Navigating to: {url}")
+                    if 'wait_until' in step:
+                        page.goto(url, wait_until=step["wait_until"], timeout=30000)
+                    else:
+                        page.goto(url)
+                    
+                    if step.get('wait_for'):
+                        escaped_selector = step['wait_for'].replace('"', '\\"').replace("'", "\\'")
+                        expect(page.locator(escaped_selector)).to_be_visible(timeout=10000)
+                
+                # Handle waiting for selector
+                elif action == 'wait_for_selector':
+                    selector = step['selector']
+                    escaped_selector = selector.replace('"', '\\"').replace("'", "\\'")
+                    timeout = step.get('timeout', 10000)
+                    print(f"⏳ Waiting for selector: {selector}")
+                    expect(page.locator(escaped_selector)).to_be_visible(timeout=timeout)
+                
+                # Handle element clicking
+                elif action == 'click':
+                    selector = step['selector']
+                    escaped_selector = selector.replace('"', '\\"').replace("'", "\\'")
+                    print(f"👆 Clicking selector: {selector}")
+                    locator = page.locator(escaped_selector)
+                    expect(locator).to_be_visible(timeout=10000)
+                    locator.click()
+                    
+                    if step.get('wait_for_navigation', False):
+                        page.wait_for_load_state("networkidle")
+                
+                # Handle waiting for navigation
+                elif action == 'wait_for_navigation':
+                    print("⏳ Waiting for navigation...")
+                    page.wait_for_load_state("networkidle")
+                
+                # Handle form filling
+                elif action in ['fill', 'fill_form']:
+                    selector = step['selector']
+                    value = step['value']
+                    escaped_selector = selector.replace('"', '\\"').replace("'", "\\'")
+                    escaped_value = value.replace('"', '\\"').replace("'", "\\'")
+                    print(f"� Filling form: {selector} = {value}")
+                    locator = page.locator(escaped_selector)
+                    expect(locator).to_be_visible(timeout=10000)
+                    locator.fill(escaped_value)
+                
+                # Handle keyboard press
+                elif action == 'keyboard_press':
+                    key = step.get('selector', '') or step.get('key', 'Enter')
+                    print(f"⌨️ Pressing key: {key}")
+                    page.keyboard.press(key)
+                
+                # Handle content extraction
+                elif action == 'extract_content':
+                    selectors = step.get('selectors', ["h1", "h2", "h3", "p"])
+                    print(f"📄 Extracting content from selectors: {selectors}")
+                    content = {}
+                    for selector in selectors:
+                        escaped_selector = selector.replace('"', '\\"').replace("'", "\\'")
+                        elements = page.query_selector_all(escaped_selector)
+                        texts = []
+                        for element in elements:
+                            text = element.text_content()
+                            if text and text.strip():
+                                texts.append(text.strip())
+                        content[selector] = texts
+                    print("Extracted content:", json.dumps(content, indent=2))
+        else:
+            print("ℹ️ No automation flow defined, basic test completed")
+    except Exception as e:
         try:
             from src.core.screenshot_manager import capture_page_screenshot
             _p,_b = capture_page_screenshot(page, prefix="error")
@@ -366,17 +368,17 @@ async def run_script(
             script_type = script_info['type']
             
             if script_type == 'browser-control':
-                # Ensure directories exist
-                script_dir = os.path.join('myscript')
+                # Ensure scripts directory exists in myscript (not artifacts)
+                script_dir = 'myscript'
                 os.makedirs(script_dir, exist_ok=True)
-                
+
                 # Log the parameters being used
                 logger.info(f"Generating browser control script with params: {params}")
-                
+
                 # Generate and save the script
                 script_content = generate_browser_script(script_info, params)
                 script_path = os.path.join(script_dir, 'browser_control.py')
-                
+
                 # Create pytest.ini if needed
                 pytest_ini_path = os.path.join(script_dir, 'pytest.ini')
                 if not os.path.exists(pytest_ini_path):
@@ -388,19 +390,22 @@ addopts = --verbose --capture=no
 markers =
     browser_control: mark tests as browser control automation
 ''')
-                
+
                 # Save the generated script
                 with open(script_path, 'w', encoding='utf-8') as f:
                     f.write(script_content)
-                    
-                logger.info(f"Generated browser control script at {script_path}")
+
+                logger.info(f"Generated browser control script at: {script_path}")
                 
                 # Build pytest command with appropriate parameters
-                # Use current Python interpreter for better compatibility across platforms
+                # Use pytest to ensure fixtures work properly for recording
                 import sys as _sys
                 # Use relative path since we're running pytest from within the script_dir
                 relative_script_path = os.path.basename(script_path)
-                command = [_sys.executable, '-m', 'pytest', relative_script_path]
+                # Use pytest to run the test function with fixtures
+                command = [_sys.executable, "-m", "pytest", relative_script_path + "::test_browser_control", "-v", "--tb=short"]
+                
+                logger.info(f"🔧 Final command: {' '.join(command)}")
                 
                 # Add slowmo parameter if specified
                 slowmo = script_info.get('slowmo')
@@ -412,11 +417,7 @@ markers =
                     except ValueError:
                         logger.warning(f"Invalid slowmo value: {slowmo}, ignoring")
                 
-                # Add headless mode parameter
-                if headless:
-                    command.append('--headless')
-                else:
-                    command.append('--headed')
+                # NOTE: Removed headless parameter handling - now controlled via PYTEST_HEADLESS environment variable
                 
                 # Set up environment variables including browser configuration
                 env = os.environ.copy()
@@ -479,9 +480,15 @@ markers =
                 
                 # Add recording configuration if enabled
                 if save_recording_path:
-                    os.makedirs(save_recording_path, exist_ok=True)
-                    env['RECORDING_PATH'] = save_recording_path
-                    logger.info(f"Recording enabled, saving to: {save_recording_path}")
+                    # Use unified recording directory resolver
+                    from src.utils.recording_dir_resolver import create_or_get_recording_dir
+                    unified_recording_path = str(create_or_get_recording_dir(save_recording_path))
+                    env['RECORDING_PATH'] = unified_recording_path
+                    logger.info(f"Recording enabled, saving to: {unified_recording_path}")
+                
+                # Set headless mode for pytest-playwright via environment variable
+                env['PYTEST_HEADLESS'] = 'true' if headless else 'false'
+                logger.info(f"🔍 Setting PYTEST_HEADLESS={env['PYTEST_HEADLESS']} for browser control")
                 
                 # Execute the pytest command
                 process = await asyncio.create_subprocess_exec(
@@ -725,9 +732,11 @@ markers =
                     logger.info("Using default Playwright browser settings")
                 
                 if save_recording_path:
-                    os.makedirs(save_recording_path, exist_ok=True)
-                    env['RECORDING_PATH'] = save_recording_path
-                    logger.info(f"Recording enabled, saving to: {save_recording_path}")
+                    # Use unified recording directory resolver
+                    from src.utils.recording_dir_resolver import create_or_get_recording_dir
+                    unified_recording_path = str(create_or_get_recording_dir(save_recording_path))
+                    env['RECORDING_PATH'] = unified_recording_path
+                    logger.info(f"Recording enabled, saving to: {unified_recording_path}")
                 
                 # Execute the command using process_execution
                 process, output_lines = await process_execution(
@@ -793,26 +802,25 @@ markers =
             elif script_type == 'script':
                 # Handle direct script execution type
                 logger.info(f"Executing direct script: {script_info.get('name', 'unknown')}")
-                
+
                 # Get script path and command
                 script_name = script_info.get('script')
                 if not script_name:
                     error_msg = "Script type requires 'script' field"
                     logger.error(error_msg)
                     return error_msg, None
-                
-                # Ensure script directory exists
-                script_dir = os.path.join('myscript')
-                os.makedirs(script_dir, exist_ok=True)
-                
-                # Construct script path
+
+                # Look for script in myscript directory (original location)
+                script_dir = 'myscript'
                 script_path = os.path.join(script_dir, script_name)
-                
-                # Check if script exists
+
+                # Check if script exists in myscript directory
                 if not os.path.exists(script_path):
                     error_msg = f"Script not found: {script_path}"
                     logger.error(error_msg)
                     return error_msg, None
+
+                logger.info(f"Found script at: {script_path}")
                 
                 # Get command template
                 command_template = script_info.get('command', f'python -m pytest {script_path}')
@@ -857,9 +865,11 @@ markers =
                 # Add recording configuration if enabled
                 env = os.environ.copy()
                 if save_recording_path:
-                    os.makedirs(save_recording_path, exist_ok=True)
-                    env['RECORDING_PATH'] = save_recording_path
-                    logger.info(f"Recording enabled, saving to: {save_recording_path}")
+                    # Use unified recording directory resolver
+                    from src.utils.recording_dir_resolver import create_or_get_recording_dir
+                    unified_recording_path = str(create_or_get_recording_dir(save_recording_path))
+                    env['RECORDING_PATH'] = unified_recording_path
+                    logger.info(f"Recording enabled, saving to: {unified_recording_path}")
                 
                 # Execute the command using process_execution
                 process, output_lines = await process_execution(
@@ -987,9 +997,11 @@ markers =
                     logger.info("Using default Playwright browser settings")
                 
                 if save_recording_path:
-                    os.makedirs(save_recording_path, exist_ok=True)
-                    env['RECORDING_PATH'] = save_recording_path
-                    logger.info(f"Recording enabled, saving to: {save_recording_path}")
+                    # Use unified recording directory resolver
+                    from src.utils.recording_dir_resolver import create_or_get_recording_dir
+                    unified_recording_path = str(create_or_get_recording_dir(save_recording_path))
+                    env['RECORDING_PATH'] = unified_recording_path
+                    logger.info(f"Recording enabled, saving to: {unified_recording_path}")
                 
                 # Execute the command using process_execution
                 process, output_lines = await process_execution(
@@ -1389,6 +1401,28 @@ async def execute_git_script_new_method(
         # Step 5: Execute workflow
         workspace_dir = os.path.dirname(full_script_path)
         
+        # Initialize recording if enabled
+        recording_context = None
+        if save_recording_path or True:  # Enable recording by default for git-script
+            from src.utils.recording_factory import RecordingFactory
+            
+            # Get the main workspace directory
+            main_workspace = Path(__file__).parent.parent.resolve()
+            
+            # Use explicit absolute path for recording
+            actual_save_recording_path = save_recording_path
+            if not actual_save_recording_path:
+                actual_save_recording_path = str(main_workspace / 'artifacts' / 'runs' / f"{Path(git_url).stem}-{version}-art" / 'videos')
+            
+            run_context = {
+                'run_id': f"{Path(git_url).stem}-{version}",
+                'run_type': 'git-script',
+                'save_recording_path': actual_save_recording_path,
+                'enable_recording': True
+            }
+            recording_context = RecordingFactory.init_recorder(run_context)
+            logger.info(f"🎥 Recording initialized for git-script: {actual_save_recording_path}")
+        
         # For NEW METHOD, we force headful mode for Edgebrowser stability
         # 2024+ finding: Edge headless mode is fundamentally unstable
         if current_browser.lower() == 'edge':
@@ -1406,7 +1440,51 @@ async def execute_git_script_new_method(
             params=params
         )
         
+        # Set recording path in environment for the executed script
+        if recording_context:
+            # For git-script, create a local recording directory within the cloned repository
+            # to ensure the script can write recordings regardless of working directory
+            try:
+                workspace_path = Path(workspace_dir)
+                local_recording_dir = workspace_path / 'tmp' / 'record_videos'
+                local_recording_dir.mkdir(parents=True, exist_ok=True)
+                
+                # Set the environment variable for the script execution
+                os.environ['RECORDING_PATH'] = str(local_recording_dir)
+                logger.info(f"🎥 Recording path set for git-script execution: {local_recording_dir} (local to workspace)")
+            except Exception as e:
+                # Fallback to original absolute path approach
+                os.environ['RECORDING_PATH'] = str(recording_context.recording_path)
+                logger.warning(f"⚠️ Failed to create local recording directory, using absolute path: {recording_context.recording_path} (error: {e})")
+        
         if result["success"]:
+            # After successful execution, copy recording files to the main artifacts directory
+            if recording_context:
+                try:
+                    workspace_path = Path(workspace_dir)
+                    local_recording_dir = workspace_path / 'tmp' / 'record_videos'
+                    target_recording_dir = Path(recording_context.recording_path)
+                    
+                    if local_recording_dir.exists() and target_recording_dir.exists():
+                        import shutil
+                        # Copy all recording files from local directory to target directory
+                        for recording_file in local_recording_dir.glob("*.webm"):
+                            target_file = target_recording_dir / recording_file.name
+                            shutil.copy2(recording_file, target_file)
+                            logger.info(f"📹 Copied recording file: {recording_file.name} -> {target_file}")
+                        
+                        # Also copy mp4 files if they exist
+                        for recording_file in local_recording_dir.glob("*.mp4"):
+                            target_file = target_recording_dir / recording_file.name
+                            shutil.copy2(recording_file, target_file)
+                            logger.info(f"📹 Copied recording file: {recording_file.name} -> {target_file}")
+                        
+                        logger.info(f"✅ Recording files copied from {local_recording_dir} to {target_recording_dir}")
+                    else:
+                        logger.warning(f"⚠️ Recording directories not found: local={local_recording_dir.exists()}, target={target_recording_dir.exists()}")
+                except Exception as e:
+                    logger.warning(f"⚠️ Failed to copy recording files: {e}")
+            
             success_msg = f"NEW METHOD git-script executed successfully with {current_browser}"
             logger.info(f"✅ {success_msg}")
             logger.info(f"📁 SeleniumProfile: {result.get('selenium_profile')}")

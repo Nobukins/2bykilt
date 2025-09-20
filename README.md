@@ -3,7 +3,7 @@
 <br/>
 
 [![GitHub stars](https://img.shields.io/github/stars/Nobukins/2bykilt?style=social)](https://github.com/Nobukins/2bykilt/stargazers)
-[![Documentation](https://img.shields.io/badge/Documentation-📕-blue)](https://docs.browser-use.com)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Nobukins/2bykilt)
 
 # 💫 2bykilt - 伝説の業務効率化の魔法
 

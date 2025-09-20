@@ -102,7 +102,7 @@ class BrowserLauncher:
                 "AppleWebKit/537.36 (KHTML, like Gecko) "
                 "Chrome/129.0.0.0 Safari/537.36")
     
-    def _get_launch_options(self, selenium_profile_dir: str) -> Dict[str, Any]:
+    def _get_launch_options(self, selenium_profile_dir: str, record_video_dir: Optional[str] = None) -> Dict[str, Any]:
         """launch_persistent_context用の起動オプションを生成"""
         args = self._get_browser_args()
         
@@ -118,6 +118,12 @@ class BrowserLauncher:
             'ignore_https_errors': True,  # HTTPS エラー無視
             'java_script_enabled': True,
         }
+        
+        # Add video recording if specified
+        if record_video_dir:
+            options['record_video_dir'] = record_video_dir
+            options['record_video_size'] = {"width": 1280, "height": 720}
+            logger.info(f"🎥 Video recording enabled: {record_video_dir}")
         
         # 実行ファイルが存在しない場合は除外
         if not self.executable_path or not Path(self.executable_path).exists():
@@ -152,12 +158,13 @@ class BrowserLauncher:
             logger.error(f"❌ SeleniumProfile validation error: {e}")
             return False
     
-    async def launch_with_profile(self, selenium_profile_dir: str) -> BrowserContext:
+    async def launch_with_profile(self, selenium_profile_dir: str, record_video_dir: Optional[str] = None) -> BrowserContext:
         """
         SeleniumProfileを使用してブラウザを起動（新作法）
         
         Args:
             selenium_profile_dir: SeleniumProfileディレクトリのパス
+            record_video_dir: ビデオ録画保存ディレクトリ（オプション）
             
         Returns:
             BrowserContext インスタンス
@@ -172,7 +179,7 @@ class BrowserLauncher:
             raise ValueError(f"Invalid SeleniumProfile path: {selenium_profile_dir}")
         
         # 起動オプションの生成
-        launch_options = self._get_launch_options(selenium_profile_dir)
+        launch_options = self._get_launch_options(selenium_profile_dir, record_video_dir)
         
         logger.debug(f"🔧 Launch options: {list(launch_options.keys())}")
         logger.debug(f"🔧 Browser args count: {len(launch_options['args'])}")
@@ -227,12 +234,13 @@ class BrowserLauncher:
             logger.error(f"🔍 Profile path: {selenium_profile_dir}")
             raise
     
-    async def launch_headless_with_profile(self, selenium_profile_dir: str) -> BrowserContext:
+    async def launch_headless_with_profile(self, selenium_profile_dir: str, record_video_dir: Optional[str] = None) -> BrowserContext:
         """
         ヘッドレスモードでSeleniumProfileを使用してブラウザを起動
         
         Args:
             selenium_profile_dir: SeleniumProfileディレクトリのパス
+            record_video_dir: ビデオ録画保存ディレクトリ（オプション）
             
         Returns:
             BrowserContext インスタンス
@@ -240,7 +248,7 @@ class BrowserLauncher:
         logger.info(f"🚀 Launching {self.browser_type} in headless mode with SeleniumProfile")
         
         # 基本オプションを取得してheadlessに変更
-        launch_options = self._get_launch_options(selenium_profile_dir)
+        launch_options = self._get_launch_options(selenium_profile_dir, record_video_dir)
         launch_options['headless'] = True
         
         # ヘッドレス用の追加引数（macOS対応）
@@ -261,11 +269,14 @@ class BrowserLauncher:
             logger.error(f"❌ Failed to launch {self.browser_type} in headless mode: {e}")
             raise
     
-    async def launch_chromium_without_profile(self) -> BrowserContext:
+    async def launch_chromium_without_profile(self, record_video_dir: Optional[str] = None) -> BrowserContext:
         """
         プロファイルなしでChromium（Playwright内蔵）を起動
         Google APIキー警告を回避するため、プロファイルを使用しない
         
+        Args:
+            record_video_dir: ビデオ録画保存ディレクトリ（オプション）
+            
         Returns:
             BrowserContext インスタンス
         """
@@ -310,13 +321,19 @@ class BrowserLauncher:
                         args=chromium_args,
                         ignore_default_args=["--enable-automation"],
                     )
-                    context = await browser.new_context(
-                        user_agent=self._get_user_agent(),
-                        accept_downloads=True,
-                        bypass_csp=True,
-                        ignore_https_errors=True,
-                        java_script_enabled=True,
-                    )
+                    context_options = {
+                        'user_agent': self._get_user_agent(),
+                        'accept_downloads': True,
+                        'bypass_csp': True,
+                        'ignore_https_errors': True,
+                        'java_script_enabled': True,
+                    }
+                    if record_video_dir:
+                        context_options['record_video_dir'] = record_video_dir
+                        context_options['record_video_size'] = {"width": 1280, "height": 720}
+                        logger.info(f"🎥 Video recording enabled: {record_video_dir}")
+                    
+                    context = await browser.new_context(**context_options)
                     logger.info(f"✅ Chromium launched successfully without profile (start())")
                     context._playwright_instance = p  # type: ignore[attr-defined]
                     context._browser_instance = browser  # type: ignore[attr-defined]
@@ -328,13 +345,19 @@ class BrowserLauncher:
                     args=chromium_args,
                     ignore_default_args=["--enable-automation"],
                 )
-                context = await browser.new_context(
-                    user_agent=self._get_user_agent(),
-                    accept_downloads=True,
-                    bypass_csp=True,
-                    ignore_https_errors=True,
-                    java_script_enabled=True,
-                )
+                context_options = {
+                    'user_agent': self._get_user_agent(),
+                    'accept_downloads': True,
+                    'bypass_csp': True,
+                    'ignore_https_errors': True,
+                    'java_script_enabled': True,
+                }
+                if record_video_dir:
+                    context_options['record_video_dir'] = record_video_dir
+                    context_options['record_video_size'] = {"width": 1280, "height": 720}
+                    logger.info(f"🎥 Video recording enabled: {record_video_dir}")
+                
+                context = await browser.new_context(**context_options)
                 logger.info(f"✅ Chromium launched successfully without profile")
                 return context
 

@@ -221,7 +221,8 @@ class ArtifactManager:
             p.mkdir(parents=True, exist_ok=True)
             return p
         # legacy
-        p = Path("./tmp/record_videos").resolve()
+        from ..utils.recording_dir_resolver import create_or_get_recording_dir
+        p = create_or_get_recording_dir()
         p.mkdir(parents=True, exist_ok=True)
         # Emit a one-time per-process warning only if explicitly overridden to false (Issue #106)
         override_source = FeatureFlags.get_override_source("artifacts.unified_recording_path")

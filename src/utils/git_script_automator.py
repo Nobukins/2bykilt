@@ -114,13 +114,14 @@ class GitScriptAutomator:
             logger.error(f"❌ Failed to prepare SeleniumProfile: {e}")
             raise
     
-    async def launch_browser_with_profile(self, workspace_dir: str, headless: bool = False) -> BrowserContext:
+    async def launch_browser_with_profile(self, workspace_dir: str, headless: bool = False, record_video_dir: Optional[str] = None) -> BrowserContext:
         """
         プロファイル付きでブラウザを起動
         
         Args:
             workspace_dir: 作業ディレクトリ
             headless: ヘッドレスモードで起動するか
+            record_video_dir: ビデオ録画保存ディレクトリ（オプション）
             
         Returns:
             BrowserContext インスタンス
@@ -130,7 +131,7 @@ class GitScriptAutomator:
         # Chromium（Playwright内蔵）を使用する場合はプロファイルなしで起動
         if self.browser_launcher.is_using_builtin_chromium():
             logger.warning("⚠️ Using Playwright built-in Chromium - launching without profile to avoid API key warnings")
-            return await self.browser_launcher.launch_chromium_without_profile()
+            return await self.browser_launcher.launch_chromium_without_profile(record_video_dir)
         
         # SeleniumProfile の準備（Google Chrome/Edge用）
         if not self.current_selenium_profile:
@@ -138,9 +139,9 @@ class GitScriptAutomator:
         
         try:
             if headless:
-                context = await self.browser_launcher.launch_headless_with_profile(self.current_selenium_profile)
+                context = await self.browser_launcher.launch_headless_with_profile(self.current_selenium_profile, record_video_dir)
             else:
-                context = await self.browser_launcher.launch_with_profile(self.current_selenium_profile)
+                context = await self.browser_launcher.launch_with_profile(self.current_selenium_profile, record_video_dir)
             
             logger.info("✅ Browser launched successfully")
             logger.info(f"📄 Initial pages: {len(context.pages)}")
@@ -152,13 +153,14 @@ class GitScriptAutomator:
             raise
     
     @asynccontextmanager
-    async def browser_context(self, workspace_dir: str, headless: bool = False):
+    async def browser_context(self, workspace_dir: str, headless: bool = False, record_video_dir: Optional[str] = None):
         """
         ブラウザコンテキストのコンテキストマネージャー（新作法対応）
         
         Args:
             workspace_dir: 作業ディレクトリ
             headless: ヘッドレスモードで起動するか
+            record_video_dir: ビデオ録画保存ディレクトリ（オプション）
             
         Yields:
             BrowserContext インスタンス
@@ -166,7 +168,7 @@ class GitScriptAutomator:
         context = None
         playwright_instance = None
         try:
-            context = await self.launch_browser_with_profile(workspace_dir, headless)
+            context = await self.launch_browser_with_profile(workspace_dir, headless, record_video_dir)
             playwright_instance = getattr(context, '_playwright_instance', None)
             yield context
         finally:

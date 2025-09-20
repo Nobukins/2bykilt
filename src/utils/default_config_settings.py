@@ -10,6 +10,15 @@ try:
 except ImportError:
     MULTI_ENV_AVAILABLE = False
 
+# Import unified recording directory resolver
+try:
+    from .recording_dir_resolver import create_or_get_recording_dir
+except ImportError:
+    # Fallback if resolver is not available
+    from pathlib import Path
+    def create_or_get_recording_dir():
+        return Path("./tmp/record_videos").resolve()
+
 
 def default_config():
     """Prepare the default configuration"""
@@ -42,7 +51,7 @@ def default_config():
         "enable_recording": True,
         "window_w": 1280,
         "window_h": 1100,
-        "save_recording_path": "./tmp/record_videos",
+        "save_recording_path": str(create_or_get_recording_dir()),
         "save_trace_path": "./tmp/traces",
         "save_agent_history_path": "./tmp/agent_history",
         "task": "script-nogtips query=Personal_AI_Assistant",
@@ -121,7 +130,7 @@ def update_ui_from_config(config_file):
                 gr.update(value=loaded_config.get("enable_recording", True)),
                 gr.update(value=loaded_config.get("window_w", 1280)),
                 gr.update(value=loaded_config.get("window_h", 1100)),
-                gr.update(value=loaded_config.get("save_recording_path", "./tmp/record_videos")),
+                gr.update(value=loaded_config.get("save_recording_path", str(create_or_get_recording_dir()))),
                 gr.update(value=loaded_config.get("save_trace_path", "./tmp/traces")),
                 gr.update(value=loaded_config.get("save_agent_history_path", "./tmp/agent_history")),
                 gr.update(value=loaded_config.get("task", "")),

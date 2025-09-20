@@ -1659,24 +1659,38 @@ URLを入力してPlaywright codegenを起動し、ブラウザ操作を記録�
                 
                 # Common recording functions
                 def list_recordings(save_recording_path):
-                    if not save_recording_path or not os.path.exists(save_recording_path):
-                        return []
+                    """Enhanced recording list function that searches multiple paths"""
+                    if not save_recording_path:
+                        # Use default unified recording path
+                        try:
+                            save_recording_path = str(create_or_get_recording_dir())
+                        except Exception:
+                            save_recording_path = './tmp/record_videos'
                     
-                    # Windows対応: pathlibを使用してファイル検索を改善
-                    recording_path = Path(save_recording_path)
                     recordings = []
                     
-                    # MP4とWEBMファイルを検索（大文字小文字を含む）
-                    for ext in ['mp4', 'MP4', 'webm', 'WEBM']:
-                        recordings.extend(recording_path.glob(f'*.{ext}'))
+                    # Search in the main recording path
+                    if os.path.exists(save_recording_path):
+                        for ext in ['mp4', 'MP4', 'webm', 'WEBM']:
+                            recordings.extend(Path(save_recording_path).glob(f'*.{ext}'))
                     
-                    # パスを文字列に変換してソート（最新順）
-                    recordings = [str(p) for p in recordings]
+                    # Also search in validation directory for all types
+                    validation_dir = Path("artifacts/runs/validation/recordings")
+                    if validation_dir.exists():
+                        for subdir in ["script", "browser_control", "git_script"]:
+                            type_dir = validation_dir / subdir / "videos"
+                            if type_dir.exists():
+                                for ext in ['mp4', 'MP4', 'webm', 'WEBM']:
+                                    recordings.extend(type_dir.glob(f'*.{ext}'))
+                    
+                    # Remove duplicates and sort by modification time (newest first)
+                    recordings = list(set(recordings))
                     recordings.sort(key=os.path.getmtime, reverse=True)
+                    
                     return recordings
 
                 def update_recordings_list(recordings_path):
-                    """Update the recordings dropdown and video player"""
+                    """Enhanced update function that categorizes recordings by type"""
                     try:
                         if recordings_path:
                             Path(recordings_path).mkdir(parents=True, exist_ok=True)
@@ -1685,20 +1699,32 @@ URLを入力してPlaywright codegenを起動し、ブラウザ操作を記録�
                         if not recordings:
                             return gr.update(choices=[], value=None), None, f"No recordings found in: {recordings_path}"
                         
-                        # Create display names with timestamps
+                        # Create display names with timestamps and type information
                         display_choices = []
                         for recording in recordings:
                             filename = os.path.basename(recording)
                             try:
                                 mtime = os.path.getmtime(recording)
                                 timestamp = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
-                                display_name = f"{filename} ({timestamp})"
+                                
+                                # Determine recording type based on path
+                                recording_type = "unknown"
+                                if "script" in str(recording):
+                                    recording_type = "script"
+                                elif "browser_control" in str(recording):
+                                    recording_type = "browser-control"
+                                elif "git_script" in str(recording):
+                                    recording_type = "git-script"
+                                elif "validation" in str(recording):
+                                    recording_type = "validation"
+                                
+                                display_name = f"[{recording_type}] {filename} ({timestamp})"
                             except:
                                 display_name = filename
-                            display_choices.append((display_name, recording))
+                            display_choices.append((display_name, str(recording)))
                         
-                        latest_recording = recordings[0] if recordings else None
-                        status_msg = f"Found {len(recordings)} recording(s)"
+                        latest_recording = str(recordings[0]) if recordings else None
+                        status_msg = f"Found {len(recordings)} recording(s) across all types"
                         
                         return gr.update(choices=display_choices, value=latest_recording), latest_recording, status_msg
                     except Exception as e:

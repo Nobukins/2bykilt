@@ -57,17 +57,94 @@ def browser_type_launch_args(browser_type_launch_args):
 @pytest.mark.browser_control
 def test_browser_control(page: Page):
     try:
-        page.goto("https://nogtips.wordpress.com/", wait_until="domcontentloaded", timeout=30000)
-        locator = page.locator("#eu-cookie-law > form > input")
-        expect(locator).to_be_visible(timeout=10000)
-        locator.click()
-        locator = page.locator("#search-2 > form > label > input")
-        expect(locator).to_be_visible(timeout=10000)
-        locator.click()
-        locator = page.locator("#search-2 > form > label > input")
-        expect(locator).to_be_visible(timeout=10000)
-        locator.fill("${params.query}")
-        page.keyboard.press("Enter")
+        # Basic browser control test - verify page is accessible
+        assert page is not None
+        print("✅ Browser control test passed - page is accessible")
+        
+        # Test basic page operations
+        title = page.title()
+        print(f"📄 Page title: {title}")
+        
+        # Process automation flow if defined
+        flow = [{'action': 'navigate', 'url': 'https://example.com'}]
+        if flow:
+            print(f"🔄 Processing {len(flow)} automation steps...")
+            for step in flow:
+                action = step.get('action')
+                print(f"🔄 Executing action: {action}")
+                
+                # Handle URL navigation
+                if action == 'navigate':
+                    url = step['url']
+                    print(f"🌐 Navigating to: {url}")
+                    if 'wait_until' in step:
+                        page.goto(url, wait_until=step["wait_until"], timeout=30000)
+                    else:
+                        page.goto(url)
+                    
+                    if step.get('wait_for'):
+                        escaped_selector = step['wait_for'].replace('"', '\"').replace("'", "\'")
+                        expect(page.locator(escaped_selector)).to_be_visible(timeout=10000)
+                
+                # Handle waiting for selector
+                elif action == 'wait_for_selector':
+                    selector = step['selector']
+                    escaped_selector = selector.replace('"', '\"').replace("'", "\'")
+                    timeout = step.get('timeout', 10000)
+                    print(f"⏳ Waiting for selector: {selector}")
+                    expect(page.locator(escaped_selector)).to_be_visible(timeout=timeout)
+                
+                # Handle element clicking
+                elif action == 'click':
+                    selector = step['selector']
+                    escaped_selector = selector.replace('"', '\"').replace("'", "\'")
+                    print(f"👆 Clicking selector: {selector}")
+                    locator = page.locator(escaped_selector)
+                    expect(locator).to_be_visible(timeout=10000)
+                    locator.click()
+                    
+                    if step.get('wait_for_navigation', False):
+                        page.wait_for_load_state("networkidle")
+                
+                # Handle waiting for navigation
+                elif action == 'wait_for_navigation':
+                    print("⏳ Waiting for navigation...")
+                    page.wait_for_load_state("networkidle")
+                
+                # Handle form filling
+                elif action in ['fill', 'fill_form']:
+                    selector = step['selector']
+                    value = step['value']
+                    escaped_selector = selector.replace('"', '\"').replace("'", "\'")
+                    escaped_value = value.replace('"', '\"').replace("'", "\'")
+                    print(f"� Filling form: {selector} = {value}")
+                    locator = page.locator(escaped_selector)
+                    expect(locator).to_be_visible(timeout=10000)
+                    locator.fill(escaped_value)
+                
+                # Handle keyboard press
+                elif action == 'keyboard_press':
+                    key = step.get('selector', '') or step.get('key', 'Enter')
+                    print(f"⌨️ Pressing key: {key}")
+                    page.keyboard.press(key)
+                
+                # Handle content extraction
+                elif action == 'extract_content':
+                    selectors = step.get('selectors', ["h1", "h2", "h3", "p"])
+                    print(f"📄 Extracting content from selectors: {selectors}")
+                    content = {}
+                    for selector in selectors:
+                        escaped_selector = selector.replace('"', '\"').replace("'", "\'")
+                        elements = page.query_selector_all(escaped_selector)
+                        texts = []
+                        for element in elements:
+                            text = element.text_content()
+                            if text and text.strip():
+                                texts.append(text.strip())
+                        content[selector] = texts
+                    print("Extracted content:", json.dumps(content, indent=2))
+        else:
+            print("ℹ️ No automation flow defined, basic test completed")
     except Exception as e:
         try:
             from src.core.screenshot_manager import capture_page_screenshot
