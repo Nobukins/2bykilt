@@ -1,47 +1,47 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-09-20T03:14:06+00:00
+Generated at (UTC): 2025-09-21T02:22:23+00:00
 
 ## 1. メタサマリー
 
-- Total Issues: 78
-- High Risk (declared): 8 → 31, 46, 49, 54, 62, 176, 237, 238
+- Total Issues: 81
+- High Risk (declared): 7 → 31, 46, 49, 54, 62, 176, 238
 - Cycle Detected: false (none)
-- Strict Orphans: 4
-- Curated Orphan List Count: 11
+- Strict Orphans: 6
+- Curated Orphan List Count: 14
 
 ## 2. 分布 (Distribution)
 
 ### Priority
-- P0: 22 (28.2%)
-- P1: 26 (33.3%)
-- P2: 28 (35.9%)
-- P3: 2 (2.6%)
+- P0: 24 (29.6%)
+- P1: 27 (33.3%)
+- P2: 28 (34.6%)
+- P3: 2 (2.5%)
 
 ### Phase
-- 1: 19 (24.4%)
-- 1-late: 12 (15.4%)
-- 2: 47 (60.3%)
+- 1: 19 (23.5%)
+- 1-late: 12 (14.8%)
+- 2: 50 (61.7%)
 
 ### Area
-- artifacts: 16 (20.5%)
-- automation: 4 (5.1%)
-- batch: 7 (9.0%)
-- config: 4 (5.1%)
-- docs: 6 (7.7%)
-- logging: 5 (6.4%)
-- observability: 3 (3.8%)
-- plugins: 1 (1.3%)
-- runner: 22 (28.2%)
-- security: 4 (5.1%)
-- test: 1 (1.3%)
-- uiux: 5 (6.4%)
+- artifacts: 16 (19.8%)
+- automation: 4 (4.9%)
+- batch: 7 (8.6%)
+- config: 5 (6.2%)
+- docs: 6 (7.4%)
+- logging: 5 (6.2%)
+- observability: 3 (3.7%)
+- plugins: 1 (1.2%)
+- runner: 23 (28.4%)
+- security: 4 (4.9%)
+- test: 1 (1.2%)
+- uiux: 6 (7.4%)
 
 ### Risk
-- high: 8 (10.3%)
-- low: 12 (15.4%)
-- medium: 4 (5.1%)
-- none: 54 (69.2%)
+- high: 8 (9.9%)
+- low: 12 (14.8%)
+- medium: 4 (4.9%)
+- none: 57 (70.4%)
 
 ## 3. リスク詳細 (High / Medium / etc.)
 
@@ -52,7 +52,6 @@ High Risk Issues:
 - 54: cdp-use デュアルエンジン抽象レイヤ (area=runner, priority=P1)
 - 62: 実行サンドボックス機能制限 (area=security, priority=P0)
 - 176: 宣言的抽出スキーマ (CSV列→コマンド引数/抽出ポリシーマッピング) (area=batch, priority=P1)
-- 237: Bug: Recording file generation not working for any run type (area=artifacts, priority=P0)
 - 238: Bug: Browser-control fails when ENABLE_LLM=false (area=runner, priority=P0)
 
 ## 4. Orphans
@@ -62,6 +61,8 @@ Strict Orphans (自動抽出 = 依存なし & 参照されず):
 - 81: Async/Browser テスト安定化計画
 - 90: Temp test issue for enrichment
 - 154: pip-audit stabilization in CI with normalizer + targeted suppressions
+- 240: P0: Fix user profile utilization in browser launch - Critical SSO/Cookie functionality missing
+- 241: P0: Fix Unlock-Future type browser automation - Operations hang without execution
 
 Curated Orphan List (summary.data_quality_checks.orphan_issues_without_dependents_or_depends):
 - 55: browser_control pytest パス修正
@@ -75,9 +76,12 @@ Curated Orphan List (summary.data_quality_checks.orphan_issues_without_dependent
 - 211: [docs] LLM 統合ドキュメント整備
 - 212: [feat] Playwright Codegen 統合機能
 - 226: [runner][bug] search-linkedin 実行時エラー修正
+- 240: P0: Fix user profile utilization in browser launch - Critical SSO/Cookie functionality missing
+- 241: P0: Fix Unlock-Future type browser automation - Operations hang without execution
+- 242: P1: Optimize Feature Flag usage for UI menu control - Hide LLM tabs when disabled
 
 Missing Strict Orphans in curated list: (none)
-Extra non-strict entries in curated list (WARNING only): 199, 208, 209, 210, 211, 212, 226
+Extra non-strict entries in curated list (WARNING only): 199, 208, 209, 210, 211, 212, 226, 242
 
 ## 5. クリティカルパス推定
 
@@ -99,7 +103,7 @@ Sorted By: critical_path_rank
 | 32 | Run/Job ID 基盤 | P0 | 1 | runner |  | 5 | 0 | 0 | 10 | #79 |
 | 65 | マルチ環境設定ローダ | P0 | 1 | config |  | 5 | 0 | 0 | 4 |  |
 | 220 | [runner][bug] browser-control タイプ実行失敗の調査と修正 | P1 | 2 | runner |  | 4 | 0 | 1 | 1 |  |
-| 237 | Bug: Recording file generation not working for any run type | P0 | 2 | artifacts | high | 4 | 0 | 1 | 0 |  |
+| 237 | Bug: Recording file generation not working for any run type | P0 | 2 | artifacts | high | 4 | 0 | 1 | 0 | #239 |
 | 238 | Bug: Browser-control fails when ENABLE_LLM=false | P0 | 2 | runner | high | 4 | 0 | 1 | 0 |  |
 | 28 | 録画ファイル保存パス統一 | P0 | 1 | artifacts |  | 4 | 1 | 1 | 1 | #112 |
 | 64 | フィーチャーフラグフレームワーク | P0 | 1 | config |  | 4 | 1 | 1 | 3 |  |
@@ -149,6 +153,9 @@ Sorted By: critical_path_rank
 | 223 | [logging][bug] LOG_LEVEL 環境変数が反映されない (初期化順序バグ) | P0 | 2 | logging |  | 1 | 0 | 1 | 0 | #233 |
 | 224 | [ui/ux][config] RECORDING_PATH UI と環境変数の競合解消 | P1 | 2 | uiux |  | 1 | 0 | 1 | 0 |  |
 | 226 | [runner][bug] search-linkedin 実行時エラー修正 | P0 | 2 | runner |  | 1 | 4 | 2 | 0 | #232 |
+| 240 | P0: Fix user profile utilization in browser launch - Critical SSO/Cookie functionality missing | P0 | 2 | config |  | 1 | 0 | 0 | 0 |  |
+| 241 | P0: Fix Unlock-Future type browser automation - Operations hang without execution | P0 | 2 | runner |  | 1 | 0 | 0 | 0 |  |
+| 242 | P1: Optimize Feature Flag usage for UI menu control - Hide LLM tabs when disabled | P1 | 2 | uiux |  | 1 | 2 | 1 | 0 |  |
 | 34 | 要素値キャプチャ & エクスポート | P1 | 1 | artifacts |  | 1 | 2 | 2 | 0 | #93 |
 | 38 | 録画統一後回帰テストスイート | P2 | 1-late | artifacts |  | 1 | 4 | 5 | 0 | #103 |
 | 40 | CSV D&D UI 連携 | P2 | 2 | batch |  | 1 | 2 | 1 | 0 | #172 |
@@ -218,7 +225,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 0
 - Depends (1): 221
 - Dependents (0): (none)
-- Progress: {"state": "open"}
+- Progress: {"state": "done", "primary_pr": 239}
 
 ### Issue 238: Bug: Browser-control fails when ENABLE_LLM=false
 - Priority: P0, Phase: 2, Area: runner
@@ -647,6 +654,33 @@ Sorted By: critical_path_rank
 - Depends (2): 200, 201
 - Dependents (0): (none)
 - Progress: {"state": "done", "primary_pr": 232}
+
+### Issue 240: P0: Fix user profile utilization in browser launch - Critical SSO/Cookie functionality missing
+- Priority: P0, Phase: 2, Area: config
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+- Progress: {"state": "open"}
+
+### Issue 241: P0: Fix Unlock-Future type browser automation - Operations hang without execution
+- Priority: P0, Phase: 2, Area: runner
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+- Progress: {"state": "open"}
+
+### Issue 242: P1: Optimize Feature Flag usage for UI menu control - Hide LLM tabs when disabled
+- Priority: P1, Phase: 2, Area: uiux
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 2
+- Depends (1): 64
+- Dependents (0): (none)
+- Progress: {"state": "open"}
 
 ### Issue 34: 要素値キャプチャ & エクスポート
 - Priority: P1, Phase: 1, Area: artifacts
