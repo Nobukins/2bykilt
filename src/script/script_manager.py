@@ -1023,9 +1023,9 @@ markers =
                 logger.info(f"Executing action runner template: {script_info.get('name', 'unknown')}")
                 
                 # Get action script name
-                action_script = script_info.get('action_script')
+                action_script = script_info.get('action_script') or script_info.get('template')
                 if not action_script:
-                    error_msg = "Action runner template requires 'action_script' field"
+                    error_msg = "Action runner template requires 'action_script' or 'template' field"
                     logger.error(error_msg)
                     return error_msg, None
                 
@@ -1038,6 +1038,7 @@ markers =
                 
                 # Replace action_script placeholder
                 command_template = command_template.replace('${action_script}', action_script)
+                command_template = command_template.replace('${template}', action_script)
                 
                 # Replace parameter placeholders (${params.name|default} or ${params.name} format)
                 import re

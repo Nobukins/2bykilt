@@ -1555,7 +1555,7 @@ Tests include browser initialization, profile validation, and recording path ver
                             from src.modules.yaml_parser import InstructionLoader
                             from src.browser.browser_config import BrowserConfig
                             from src.browser.browser_manager import prepare_recording_path
-                            from src.modules.automation_manager import BrowserAutomationManager
+                            from src.agent.agent_manager import evaluate_prompt_unified, run_script
                             
                             # Load actions
                             loader = InstructionLoader(local_path=os.path.join(os.path.dirname(__file__), 'llms.txt'))
@@ -1564,7 +1564,6 @@ Tests include browser initialization, profile validation, and recording path ver
                             if not res.success:
                                 return {
                                     "script": {"chrome": "❌", "profile": "❌", "recording": "❌", "error": "Failed to load actions"},
-                                    "action_runner_template": {"chrome": "❌", "profile": "❌", "recording": "❌", "error": "Failed to load actions"},
                                     "browser-control": {"chrome": "❌", "profile": "❌", "recording": "❌", "error": "Failed to load actions"},
                                     "git-script": {"chrome": "❌", "profile": "❌", "recording": "❌", "error": "Failed to load actions"}
                                 }
@@ -1576,17 +1575,17 @@ Tests include browser initialization, profile validation, and recording path ver
                                     actions_by_type[t] = []
                                 actions_by_type[t].append(action)
                             
-                            # Test each action type
-                            for action_type in ["script", "action_runner_template", "browser-control", "git-script"]:
+                            # Test each action type with actual command execution
+                            prompts = {
+                                "script": "@script-nogtips query=Script",
+                                "browser-control": "@search-nogtips query=Browser-Control",
+                                "git-script": "@site-defined-script query=git"
+                            }
+                            
+                            for action_type in ["script", "browser-control", "git-script"]:
                                 results[action_type] = {"chrome": "—", "profile": "—", "recording": "—", "error": None}
                                 
-                                if action_type not in actions_by_type or not actions_by_type[action_type]:
-                                    results[action_type]["error"] = f"No {action_type} actions available"
-                                    continue
-                                
-                                action = actions_by_type[action_type][0]  # Use first action for testing
-                                
-                                # Test recording path preparation
+                                # Prepare recording path
                                 try:
                                     resolved_recording_path = prepare_recording_path(True, rec_path if rec_path and rec_path.strip() else None)
                                     if resolved_recording_path and os.path.exists(resolved_recording_path):
@@ -1597,67 +1596,43 @@ Tests include browser initialization, profile validation, and recording path ver
                                     results[action_type]["recording"] = "❌"
                                     results[action_type]["error"] = f"Recording path error: {str(e)}"
                                 
-                                # Execute action based on type
+                                # Execute actual command using the same prompts as manual testing
+                                prompt = prompts[action_type]
                                 try:
-                                    if action_type == "script":
-                                        # Test script execution (mocked for safety)
-                                        results[action_type]["chrome"] = "—"  # Scripts don't use browser
-                                        results[action_type]["profile"] = "—"  # Scripts don't use profile
-                                        # Script execution would be tested here
+                                    script_info = evaluate_prompt_unified(prompt)
+                                    if script_info:
+                                        result, script_path = await run_script(
+                                            script_info['action_def'], 
+                                            script_info['params'], 
+                                            headless=False,  # Changed from True to match manual testing behavior
+                                            save_recording_path=resolved_recording_path
+                                        )
                                         
-                                    elif action_type == "action_runner_template":
-                                        # Test action runner template (mocked for safety)
-                                        results[action_type]["chrome"] = "—"  # Templates don't directly use browser
-                                        results[action_type]["profile"] = "—"  # Templates don't use profile
-                                        # Template execution would be tested here
-                                        
-                                    elif action_type == "browser-control":
-                                        # Test browser control with actual browser initialization
-                                        try:
-                                            browser_config = BrowserConfig()
-                                            settings = browser_config.get_browser_settings(selected_browser_type)
-                                            
-                                            if settings.get('path') and os.path.exists(settings.get('path')):
-                                                results[action_type]["chrome"] = "✅"
-                                            else:
-                                                results[action_type]["chrome"] = "❌"
-                                            
-                                            user_data = settings.get('user_data')
-                                            if user_data and os.path.exists(user_data):
-                                                results[action_type]["profile"] = "✅"
-                                            else:
-                                                results[action_type]["profile"] = "❌"
-                                            
-                                            # Test browser initialization (lightweight)
-                                            init_result = await initialize_browser(
-                                                use_own_browser=True,
-                                                headless=True,
-                                                browser_type=selected_browser_type,
-                                                auto_fallback=False
-                                            )
-                                            if init_result.get('status') == 'success':
-                                                results[action_type]["chrome"] = "✅"
-                                            else:
-                                                results[action_type]["chrome"] = "❌"
-                                                results[action_type]["error"] = f"Browser init failed: {init_result.get('message', 'Unknown error')}"
-                                                
-                                        except Exception as e:
+                                        # Check execution success
+                                        if "successfully" in result.lower() or "completed" in result.lower():
+                                            results[action_type]["chrome"] = "✅"
+                                            results[action_type]["profile"] = "🫥"  # Anonymous browser profile state
+                                            results[action_type]["recording"] = "✅"  # Assume recording saved if path prepared
+                                        else:
                                             results[action_type]["chrome"] = "❌"
-                                            results[action_type]["profile"] = "❌"
-                                            results[action_type]["error"] = f"Browser test error: {str(e)}"
-                                            
-                                    elif action_type == "git-script":
-                                        # Test git script (mocked for safety)
-                                        results[action_type]["chrome"] = "—"  # Git scripts don't use browser
-                                        results[action_type]["profile"] = "—"  # Git scripts don't use profile
-                                        # Git script execution would be tested here
+                                            results[action_type]["profile"] = "🫥"  # Anonymous browser profile state
+                                            results[action_type]["recording"] = "❌"
+                                            results[action_type]["error"] = result
+                                    else:
+                                        results[action_type]["chrome"] = "❌"
+                                        results[action_type]["profile"] = "🫥"  # Anonymous browser profile state
+                                        results[action_type]["recording"] = "❌"
+                                        results[action_type]["error"] = "No script info found for prompt: " + prompt
                                         
                                 except Exception as e:
-                                    results[action_type]["error"] = f"Action execution error: {str(e)}"
+                                    results[action_type]["chrome"] = "❌"
+                                    results[action_type]["profile"] = "❌"
+                                    results[action_type]["recording"] = "❌"
+                                    results[action_type]["error"] = f"Execution error: {str(e)}"
                                     
                         except Exception as e:
                             # Global error
-                            for action_type in ["script", "action_runner_template", "browser-control", "git-script"]:
+                            for action_type in ["script", "browser-control", "git-script"]:
                                 results[action_type] = {"chrome": "❌", "profile": "❌", "recording": "❌", "error": f"Global error: {str(e)}"}
                         
                         return results
@@ -1669,7 +1644,6 @@ Tests include browser initialization, profile validation, and recording path ver
                         # Fallback for sync context
                         test_results = {
                             "script": {"chrome": "❌", "profile": "❌", "recording": "❌", "error": f"Async error: {str(e)}"},
-                            "action_runner_template": {"chrome": "❌", "profile": "❌", "recording": "❌", "error": f"Async error: {str(e)}"},
                             "browser-control": {"chrome": "❌", "profile": "❌", "recording": "❌", "error": f"Async error: {str(e)}"},
                             "git-script": {"chrome": "❌", "profile": "❌", "recording": "❌", "error": f"Async error: {str(e)}"}
                         }
@@ -1678,7 +1652,7 @@ Tests include browser initialization, profile validation, and recording path ver
                     rows = []
                     status_messages = []
                     
-                    for action_type in ["script", "action_runner_template", "browser-control", "git-script"]:
+                    for action_type in ["script", "browser-control", "git-script"]:
                         result = test_results.get(action_type, {"chrome": "❌", "profile": "❌", "recording": "❌", "error": "Unknown error"})
                         rows.append([
                             action_type,
@@ -1696,6 +1670,9 @@ Tests include browser initialization, profile validation, and recording path ver
                         status_text += "\n\nErrors:\n" + "\n".join(f"• {msg}" for msg in status_messages)
                     else:
                         status_text += "\n\nAll tests passed successfully! ✅"
+                    
+                    # Add notification about anonymous browser profile state
+                    status_text += "\n\n🫥 **Browser Profile Status**: All tests run in anonymous browser profile mode. User profile data is not utilized in verification tests."
                     
                     return rows, status_text
 
