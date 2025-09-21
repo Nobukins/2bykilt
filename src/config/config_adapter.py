@@ -11,6 +11,14 @@ from pathlib import Path
 
 from .multi_env_loader import ConfigLoader, ConfigValidationError
 
+# Import unified recording directory resolver
+try:
+    from ..utils.recording_dir_resolver import create_or_get_recording_dir
+except ImportError:
+    # Fallback if resolver is not available
+    def create_or_get_recording_dir():
+        return Path("./tmp/record_videos").resolve()
+
 
 class ConfigAdapter:
     """Adapter to bridge new and legacy configuration systems"""
@@ -87,7 +95,7 @@ class ConfigAdapter:
             "window_h": browser.get('window_height', 1100),
             
             # Storage paths
-            "save_recording_path": storage.get('save_recording_path', './tmp/record_videos'),
+            "save_recording_path": storage.get('save_recording_path', str(create_or_get_recording_dir())),
             "save_trace_path": storage.get('save_trace_path', './tmp/traces'),
             "save_agent_history_path": storage.get('save_agent_history_path', './tmp/agent_history'),
             

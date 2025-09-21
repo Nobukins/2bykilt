@@ -1,5 +1,0 @@
-timestamp,value,batch_id,error_type,job_id,run_id
-2025-09-13T11:18:30.339624,1,3328bd54-d8a7-4e0f-8a11-f8f2b238241a,execution_error,test_run_123_0001,test_run_123
-2025-09-13T11:18:30.378415,1,b5dfd19b-a51c-491b-8ffb-7386a8075aec,execution_error,test_run_123_0001,test_run_123
-2025-09-13T11:18:30.398390,1,5be86905-2c50-49da-8833-b04ebbac31c4,execution_error,test_run_123_0001,test_run_123
-2025-09-13T11:19:03.079031,1,8c2cfe75-d28c-4915-a0dc-b0e2cffaf755,execution_error,MFLAGON3_0003,MFLAGON3

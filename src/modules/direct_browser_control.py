@@ -103,10 +103,17 @@ async def _execute_browser_operation_impl(action: Dict[str, Any], params: Dict[s
         recording_context = None
         if params.get('enable_recording', True):
             from src.utils.recording_factory import RecordingFactory
+            from pathlib import Path
+            import os
+            
+            # Get the main workspace directory (not temp directory)
+            main_workspace = Path(__file__).parent.parent.parent.parent.resolve()
+            
+            # Use explicit absolute path for recording to avoid temp directory issues
             run_context = {
                 'run_id': params.get('run_id', action.get('name', 'browser_control')),
                 'run_type': 'browser-control',
-                'save_recording_path': params.get('save_recording_path'),
+                'save_recording_path': str(main_workspace / 'artifacts' / 'runs' / f"{params.get('run_id', action.get('name', 'browser_control'))}-art" / 'videos'),
                 'enable_recording': params.get('enable_recording', True)
             }
             recording_context = RecordingFactory.init_recorder(run_context)

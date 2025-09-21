@@ -802,13 +802,22 @@ async def test_nogtips_simple(request) -> None:
     if not query:
         pytest.skip("No query provided. Use --query to specify a search term.")
 
+    # 録画ディレクトリの設定
+    recording_dir = get_recording_path("./tmp/record_videos")
+    print(f"🎥 test_nogtips_simple - Recording directory: {recording_dir}")
+    print(f"🎥 test_nogtips_simple - Recording directory exists: {os.path.exists(recording_dir)}")
+    print(f"🎥 test_nogtips_simple - RECORDING_PATH env: {os.environ.get('RECORDING_PATH', 'NOT SET')}")
+    
     async with async_playwright() as p:
         browser = await p.chromium.launch(
             headless=False, 
             slow_mo=slowmo, 
             args=['--no-sandbox', '--disable-setuid-sandbox']
         )
-        context = await browser.new_context()
+        context = await browser.new_context(
+            record_video_dir=recording_dir,
+            record_video_size={"width": 1280, "height": 720}
+        )
         page = await context.new_page()
         
         try:
@@ -830,6 +839,9 @@ async def test_nogtips_simple(request) -> None:
             raise
         
         finally:
+            # ブラウザを閉じる前にカウントダウン表示
+            await show_countdown_overlay(page, 3)
+            
             await context.close()
             await browser.close()
 
