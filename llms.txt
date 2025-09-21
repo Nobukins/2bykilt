@@ -18,11 +18,11 @@ actions:
         required: true
         type: string
         description: "Search query to execute"
-    slowmo: 1000
     flow:
       - action: command
         url: "https://nogtips.wordpress.com/"
         wait_until: "domcontentloaded"
+      - action: scroll_to_bottom  # ページ下部へスクロールしてCookie同意ボタンを表示
       - action: click
         selector: "#eu-cookie-law > form > input"
       - action: click

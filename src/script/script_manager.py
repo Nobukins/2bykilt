@@ -105,6 +105,30 @@ def generate_browser_script(script_info: Dict[str, Any], params: Dict[str, str])
         str: The generated script content
     """
     flow = script_info.get('flow', [])
+    
+    # Process flow to replace parameter placeholders
+    processed_flow = []
+    for step in flow:
+        processed_step = {}
+        for key, value in step.items():
+            if isinstance(value, str):
+                # Replace ${params.param_name} placeholders with actual values
+                import re
+                param_pattern = r'\$\{params\.([^}]+)\}'
+                def replace_param(match):
+                    param_name = match.group(1)
+                    if param_name in params:
+                        return params[param_name]
+                    else:
+                        # Keep placeholder if parameter not found
+                        return match.group(0)
+                processed_value = re.sub(param_pattern, replace_param, value)
+                processed_step[key] = processed_value
+            else:
+                processed_step[key] = value
+        processed_flow.append(processed_step)
+    
+    flow = processed_flow
     script_content = '''
 import pytest
 from playwright.sync_api import expect, Page, Browser
@@ -181,13 +205,23 @@ def test_browser_control(page: Page):
                 print(f"🔄 Executing action: {action}")
                 
                 # Handle URL navigation
-                if action == 'navigate':
+                if action in ['navigate', 'command']:
                     url = step['url']
                     print(f"🌐 Navigating to: {url}")
                     if 'wait_until' in step:
                         page.goto(url, wait_until=step["wait_until"], timeout=30000)
                     else:
-                        page.goto(url)
+                        page.goto(url, timeout=30000)
+                    
+                    # Wait for page to be fully loaded (with fallback for dynamic content)
+                    try:
+                        page.wait_for_load_state("networkidle", timeout=15000)
+                        print(f"✅ Page loaded: {page.url}")
+                    except Exception as e:
+                        print(f"⚠️ Network idle timeout, continuing with page load: {e}")
+                        # Fallback: wait for DOM to be ready
+                        page.wait_for_load_state("domcontentloaded", timeout=5000)
+                        print(f"✅ Page DOM loaded: {page.url}")
                     
                     if step.get('wait_for'):
                         escaped_selector = step['wait_for'].replace('"', '\\"').replace("'", "\\'")
@@ -201,17 +235,65 @@ def test_browser_control(page: Page):
                     print(f"⏳ Waiting for selector: {selector}")
                     expect(page.locator(escaped_selector)).to_be_visible(timeout=timeout)
                 
+                # Handle scrolling to bottom
+                elif action == 'scroll_to_bottom':
+                    print(f"⬇️ Scrolling to bottom of page")
+                    page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                    print(f"✅ Scrolled to bottom of page")
+                
                 # Handle element clicking
                 elif action == 'click':
                     selector = step['selector']
                     escaped_selector = selector.replace('"', '\\"').replace("'", "\\'")
                     print(f"👆 Clicking selector: {selector}")
                     locator = page.locator(escaped_selector)
-                    expect(locator).to_be_visible(timeout=10000)
-                    locator.click()
+                    
+                    # Wait for element to be visible with retry logic
+                    try:
+                        expect(locator).to_be_visible(timeout=5000)
+                        locator.click()
+                        print(f"✅ Clicked selector: {selector}")
+                    except Exception as e:
+                        print(f"⚠️ Selector '{selector}' not found or not clickable: {e}")
+                        
+                        # Try force click if pointer events are intercepted
+                        if "intercepts pointer events" in str(e):
+                            try:
+                                print(f"🔧 Trying force click for selector: {selector}")
+                                locator.click(force=True, timeout=5000)
+                                print(f"✅ Force clicked selector: {selector}")
+                                continue  # Skip alternative selectors if force click succeeds
+                            except Exception as force_e:
+                                print(f"⚠️ Force click also failed: {force_e}")
+                                # Try clicking with JavaScript as last resort
+                                try:
+                                    print(f"🔧 Trying JavaScript click for selector: {selector}")
+                                    page.evaluate(f"document.querySelector('{escaped_selector}').click()")
+                                    print(f"✅ JavaScript clicked selector: {selector}")
+                                    continue  # Skip alternative selectors if JS click succeeds
+                                except Exception as js_e:
+                                    print(f"⚠️ JavaScript click also failed: {js_e}")
+                                    # Continue to alternative selectors
+                        
+                        # Try alternative selectors if available
+                        alt_selectors = step.get('alt_selectors', [])
+                        for alt_selector in alt_selectors:
+                            try:
+                                alt_escaped = alt_selector.replace('"', '\\"').replace("'", "\\'")
+                                alt_locator = page.locator(alt_escaped)
+                                expect(alt_locator).to_be_visible(timeout=3000)
+                                alt_locator.click()
+                                print(f"✅ Clicked alternative selector: {alt_selector}")
+                                break
+                            except Exception as alt_e:
+                                print(f"⚠️ Alternative selector '{alt_selector}' also failed: {alt_e}")
+                                continue
+                        else:
+                            # If no alternative worked, raise the original error
+                            raise e
                     
                     if step.get('wait_for_navigation', False):
-                        page.wait_for_load_state("networkidle")
+                        page.wait_for_load_state("networkidle", timeout=30000)
                 
                 # Handle waiting for navigation
                 elif action == 'wait_for_navigation':
@@ -417,7 +499,7 @@ markers =
                     except ValueError:
                         logger.warning(f"Invalid slowmo value: {slowmo}, ignoring")
                 
-                # NOTE: Removed headless parameter handling - now controlled via PYTEST_HEADLESS environment variable
+                # NOTE: Removed headless parameter handling - now controlled via command line options
                 
                 # Set up environment variables including browser configuration
                 env = os.environ.copy()
@@ -486,9 +568,13 @@ markers =
                     env['RECORDING_PATH'] = unified_recording_path
                     logger.info(f"Recording enabled, saving to: {unified_recording_path}")
                 
-                # Set headless mode for pytest-playwright via environment variable
-                env['PYTEST_HEADLESS'] = 'true' if headless else 'false'
-                logger.info(f"🔍 Setting PYTEST_HEADLESS={env['PYTEST_HEADLESS']} for browser control")
+                # Add headless mode control via pytest-playwright command line options
+                if headless:
+                    command.extend(['--headless'])
+                    logger.info(f"🔍 Setting browser to headless mode")
+                else:
+                    command.extend(['--headed'])
+                    logger.info(f"🔍 Setting browser to headed mode")
                 
                 # Execute the pytest command
                 process = await asyncio.create_subprocess_exec(
@@ -522,6 +608,14 @@ markers =
                 else:
                     success_msg = "Script executed successfully"
                     logger.info(success_msg)
+                    
+                    # Move generated files from myscript to artifacts directory
+                    try:
+                        await move_script_files_to_artifacts(script_info, script_path, 'browser-control')
+                        logger.info("✅ Browser control files moved to artifacts directory")
+                    except Exception as e:
+                        logger.warning(f"⚠️ Failed to move browser control files to artifacts: {e}")
+                    
                     return success_msg, script_path
             elif script_type == 'git-script':
                 # Handle git-script type with NEW 2024+ METHOD
@@ -768,6 +862,14 @@ markers =
                 else:
                     success_msg = "Script executed successfully"
                     logger.info(success_msg)
+                    
+                    # Move generated files from myscript to artifacts directory
+                    try:
+                        await move_script_files_to_artifacts(script_info, full_script_path, 'git-script')
+                        logger.info("✅ Git-script files moved to artifacts directory")
+                    except Exception as e:
+                        logger.warning(f"⚠️ Failed to move git-script files to artifacts: {e}")
+                    
                     return success_msg, full_script_path
             elif script_type == 'unlock-future':
                 # Handle unlock-future type
@@ -797,6 +899,13 @@ markers =
                 from src.utils.debug_utils import DebugUtils
                 debug_utils = DebugUtils()
                 result = await debug_utils.test_llm_response(json_path, use_own_browser=True, headless=headless)
+                
+                # Move generated files from myscript to artifacts directory
+                try:
+                    await move_script_files_to_artifacts(script_info, json_path, 'unlock-future')
+                    logger.info("✅ Unlock-future files moved to artifacts directory")
+                except Exception as e:
+                    logger.warning(f"⚠️ Failed to move unlock-future files to artifacts: {e}")
                 
                 return f"Unlock-future script executed successfully: {result}", json_path
             elif script_type == 'script':
@@ -900,6 +1009,14 @@ markers =
                 else:
                     success_msg = "Script executed successfully"
                     logger.info(success_msg)
+                    
+                    # Move generated files from myscript to artifacts directory
+                    try:
+                        await move_script_files_to_artifacts(script_info, script_path, 'script')
+                        logger.info("✅ Script files moved to artifacts directory")
+                    except Exception as e:
+                        logger.warning(f"⚠️ Failed to move script files to artifacts: {e}")
+                    
                     return success_msg, script_path
             elif script_type == 'action_runner_template':
                 # Handle action runner template type
@@ -922,7 +1039,7 @@ markers =
                 # Replace action_script placeholder
                 command_template = command_template.replace('${action_script}', action_script)
                 
-                # Replace parameter placeholders (${params.name} and ${params.name|default} format)
+                # Replace parameter placeholders (${params.name|default} or ${params.name} format)
                 import re
                 
                 # Pattern to match ${params.name|default} or ${params.name}
@@ -1032,6 +1149,14 @@ markers =
                 else:
                     success_msg = "Action runner executed successfully"
                     logger.info(success_msg)
+                    
+                    # Move generated files from myscript to artifacts directory
+                    try:
+                        await move_script_files_to_artifacts(script_info, None, 'action_runner_template')
+                        logger.info("✅ Action runner template files moved to artifacts directory")
+                    except Exception as e:
+                        logger.warning(f"⚠️ Failed to move action runner template files to artifacts: {e}")
+                    
                     return success_msg, None
             else:
                 logger.error(f"Unsupported script type: {script_type}")
@@ -1329,6 +1454,94 @@ async def patch_search_script_for_chrome(script_path: str) -> None:
             
     except Exception as e:
         logger.error(f"Failed to patch {script_path}: {e}")
+
+async def move_script_files_to_artifacts(script_info: Dict[str, Any], script_path: str, script_type: str) -> None:
+    """
+    Move generated script files from myscript directory to artifacts directory after successful execution.
+    
+    Args:
+        script_info: Dictionary containing script information
+        script_path: Path to the executed script
+        script_type: Type of script (browser-control, git-script, etc.)
+    """
+    try:
+        # Only move files for browser-control type to preserve static scripts
+        if script_type != 'browser-control':
+            logger.info(f"ℹ️ Skipping file movement for {script_type} type (preserving static scripts)")
+            return
+            
+        # Create artifacts/runs directory structure
+        artifacts_dir = Path('artifacts')
+        runs_dir = artifacts_dir / 'runs'
+        runs_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Generate run ID based on script type and timestamp
+        import datetime
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        script_name = script_info.get('name', 'unknown').replace(' ', '_').replace('/', '_')
+        run_id = f"{script_type}_{script_name}_{timestamp}"
+        
+        # Create run-specific directory
+        run_dir = runs_dir / run_id
+        run_dir.mkdir(parents=True, exist_ok=True)
+        
+        logger.info(f"📁 Moving files to artifacts directory: {run_dir}")
+        
+        # Move files based on script type
+        if script_type == 'browser-control':
+            # Move browser_control.py and related files from myscript
+            myscript_dir = Path('myscript')
+            if myscript_dir.exists():
+                # Move the generated script
+                script_file = myscript_dir / 'browser_control.py'
+                if script_file.exists():
+                    shutil.move(str(script_file), str(run_dir / 'browser_control.py'))
+                    logger.info(f"📄 Moved browser_control.py to {run_dir}")
+                
+                # Move pytest.ini if it exists
+                pytest_ini = myscript_dir / 'pytest.ini'
+                if pytest_ini.exists():
+                    shutil.move(str(pytest_ini), str(run_dir / 'pytest.ini'))
+                    logger.info(f"📄 Moved pytest.ini to {run_dir}")
+                
+                # Move any generated __pycache__ files
+                pycache_dir = myscript_dir / '__pycache__'
+                if pycache_dir.exists():
+                    try:
+                        shutil.move(str(pycache_dir), str(run_dir / '__pycache__'))
+                        logger.info(f"📄 Moved __pycache__ to {run_dir}")
+                    except Exception as e:
+                        logger.warning(f"⚠️ Could not move __pycache__: {e}")
+                
+                # Move any .pytest_cache files
+                pytest_cache_dir = myscript_dir / '.pytest_cache'
+                if pytest_cache_dir.exists():
+                    try:
+                        shutil.move(str(pytest_cache_dir), str(run_dir / '.pytest_cache'))
+                        logger.info(f"📄 Moved .pytest_cache to {run_dir}")
+                    except Exception as e:
+                        logger.warning(f"⚠️ Could not move .pytest_cache: {e}")
+        
+        # Create a metadata file with execution information
+        metadata = {
+            'script_type': script_type,
+            'script_name': script_info.get('name', 'unknown'),
+            'execution_time': timestamp,
+            'run_id': run_id,
+            'original_path': script_path
+        }
+        
+        metadata_file = run_dir / 'execution_metadata.json'
+        with open(metadata_file, 'w', encoding='utf-8') as f:
+            import json
+            json.dump(metadata, f, indent=2, ensure_ascii=False)
+        
+        logger.info(f"📋 Created execution metadata: {metadata_file}")
+        logger.info(f"✅ Successfully moved {script_type} files to artifacts directory")
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to move script files to artifacts: {e}")
+        # Don't raise exception to avoid breaking the main execution flow
 
 async def execute_git_script_new_method(
     script_info: Dict[str, Any], 
