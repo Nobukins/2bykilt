@@ -118,4 +118,13 @@ actions:
       - action: fill_form
         selector: "#search-2 > form > label > input"
         value: "${params.query}"
-        
+
+  - name: action-runner-template-example
+    type: action_runner_template
+    template: templates/example_template.py
+    params:
+      - name: action
+        required: true
+        type: string
+        description: "Action to execute"
+    command: 'python ${template}'

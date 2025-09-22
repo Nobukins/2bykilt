@@ -479,4 +479,4 @@ sys.path.insert(0, str(project_root))
 
 - [GitHub Issues](../../issues) でバグ報告
 - [Discussions](../../discussions) で質問
-- [CONTRIBUTING.md](../../CONTRIBUTING.md) で詳細なガイドラインを確認
+- [CONTRIBUTING.md](../engineering/CONTRIBUTING-to-2bykilt.md) で詳細なガイドラインを確認
