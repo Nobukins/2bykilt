@@ -22,18 +22,22 @@
 
 ## A. カテゴリ定義 (Domain Buckets)
 
-| Category | Issue Examples (初期) | 概要 |
-|----------|-----------------------|------|
-| Config | #64, #65, #63 | Feature Flags / Multi-env / Schema Versioning |
-| Logging / Observability | #31, #56, #57, #58, #59 | 統一ログ + Metrics Export |
-| Artifacts | #28, #30, #33, #34, #35, #36, #37, #38 | 動画・スクショ・要素値・Manifest |
-| Runner Core / Reliability | #25, #44, #45, #50, #32 | git_script / Run/Job ID |
-| Security (Base) | #60, #61 | Secret Mask / Scan Ops |
+| Category | Issue Examples (初期 + Open) | 概要 |
+|----------|-------------------------------|------|
+| Config | #64, #65, #63, #240, #228, #224 | Feature Flags / Multi-env / Schema Versioning / User Profile / LLM Settings / RECORDING_PATH UI |
+| Logging / Observability | #31, #56, #57, #58, #59, #197, #222, #223 | 統一ログ + Metrics Export / UI Graphs / Log Standardization |
+| Artifacts | #28, #30, #33, #34, #35, #36, #37, #38, #194, #175, #174, #221, #237 | 動画・スクショ・要素値・Manifest / Tab Index Manifest / Batch Artifacts / Recording Issues |
+| Runner Core / Reliability | #25, #44, #45, #50, #32, #241, #219, #220, #226, #238, #212 | git_script / Run/Job ID / Browser Automation / Search-LinkedIn / Browser-Control / Codegen |
+| Security (Base) | #60, #61, #192 | Secret Mask / Scan Ops / Pip-Audit Monitoring |
 | Security (Hardening) | #52, #62 | Sandbox / Path Control |
-| Batch Processing | #39, #41, #42, #40 | CSV 駆動実行 |
+| Batch Processing | #39, #41, #42, #40, #198, #173, #127 | CSV 駆動実行 / NamedString Fix / Preview & Mapping / Docs |
 | Plugins / Extensibility | #49, #53 | User Script Plugin Architecture |
-| LLM Control | #43 | Flag による有効/無効 |
-| Docs | #66, #67 | 契約 / 最終仕様文書化 |
+| LLM Control | #43, #242, #211, #210, #227 | Flag による有効/無効 / UI Menu Control / Docs / Error Messages |
+| UI/UX | #199, #209, #229, #227, #224, #212 | Internationalization / Results Menu / Design System / Error Messages / RECORDING_PATH / Codegen Menu |
+| Testing | #231, #218, #115, #108, #107, #109 | Test Suite Improvement / Coverage / Regression Suite / Flakes / Warnings / Sonar |
+| Automation | #76, #178, #192, #114 | Dependency Pipeline / Pip-Audit Schedule / Pytest Guard |
+| Quality | #109, #107 | Coverage / Warnings Cleanup |
+| Docs | #66, #67, #244, #211, #127, #230, #113, #174 | Documentation Updates / Action Runner Template / LLM / Batch / Cleanup References / Artifact Flow |
 
 ---
 
@@ -77,6 +81,15 @@ Progress Summary (Phase2): Phase2-04 Done / Phase2-05 Done / Phase2-06 Done / Ph
 | Phase2-13 | Runner 構成標準化 & CI/Docs 追随 | #50 ✅ → #200 ✅ → #201 ✅ → #202 ✅ → #196 ✅ → #203 ✅ → #219 ✅ → #220 → #221 → #237 ✅ → #238 | In Progress | 配置規約→代表スクリプト→CI→Docs完了 / search-linkedin失敗 / browser-control失敗 / 録画未生成 / 録画ファイル生成バグ / LLM無効時browser-control失敗 |
 | Phase2-14 | UI/UX Internationalization | #199 → #224 | Planned | JA ベース → EN 追加。辞書/ヘルパ/トグル/フォールバック / RECORDING_PATH 競合解消 |
 | Phase2-15 | Batch 安定化フォロー | #198 | Planned | CSV 入力正規化（NamedString 対応）+ 最小テスト |
+| Phase2-16 | Critical Bug Fixes | #240 → #241 | OPEN | User profile SSO/Cookie → Unlock-Future browser automation |
+| Phase2-17 | Feature Flag UI Integration | #242 | OPEN | Hide LLM tabs when disabled |
+| Phase2-18 | Testing & Quality Improvements | #231 → #218 → #115 → #108 → #107 | OPEN | Test suite / Coverage / Regression / Flakes / Warnings |
+| Phase2-19 | Documentation Enhancements | #244 → #211 → #127 → #230 → #113 → #174 | OPEN | Action runner template / LLM docs / Batch docs / General docs / Cleanup / Artifact flow |
+| Phase2-20 | UI/UX Polish | #209 → #229 → #227 → #212 | OPEN | Results menu / Design system / Error messages / Codegen menu |
+| Phase2-21 | Configuration & LLM Settings | #228 | OPEN | LLM設定改善 |
+| Phase2-22 | Artifacts & Multi-tab Support | #194 | OPEN | Tab index manifest |
+| Phase2-23 | Automation & Security Monitoring | #192 → #114 | OPEN | Pip-audit schedule / Pytest guard |
+| Phase2-24 | Observability UI | #197 | OPEN | UI graphs and presets |
 
 **Phase2-12 MVP Matrix 詳細:**
 
@@ -161,19 +174,20 @@ Phase2 再編後の短期優先セットを以下に再定義。A フェーズ�
 - **基盤機能完了**: Group A (A1-A4) の全Waveが完了したため、新機能開発を優先
 - **ユーザーインパクト重視**: #39 ✅ (CSV駆動バッチエンジン) はユーザー体験向上効果が高いため優先
 - **セキュリティ重視**: #60 ✅ (シークレットマスキング拡張) はセキュリティ強化のため優先
+- **Open Issue 評価**: 全Open Issueをカテゴリ分類し、P0/P1を優先、依存関係を考慮した順序付け
 
 ### 短期 (Phase2 Kick Re-aligned)
 
-1. **P0 優先着手**: #237 ✅ (録画ファイル生成バグ) → #238 (LLM無効時browser-control失敗) → #219 (search-linkedin失敗) → #223 (LOG_LEVEL未反映) | 高速クローズ目標
-2. Phase2-07 前倒し: #59 ✅ Run Metrics API → #102 ✅ Flags artifacts helper → #222 (ログ標準化) → #223 (LOG_LEVEL修正)
-3. Phase2-13 並行: #219 (search-linkedin失敗) → #220 (browser-control失敗) → #221 (録画未生成) | 基盤部分完了、残り3件のバグ修正着手
+1. **P0 Critical Bugs**: #240 (User profile SSO/Cookie) → #241 (Unlock-Future browser automation) → #237 ✅ (Recording file generation) → #238 (Browser-control LLM disable) | 高速クローズ目標
+2. Phase2-07 前倒し: #59 ✅ Run Metrics API → #102 ✅ Flags artifacts helper → #222 (ログ標準化) → #223 ✅ (LOG_LEVEL修正)
+3. Phase2-13 並行: #219 ✅ (search-linkedin失敗) → #220 (browser-control失敗) → #221 (録画未生成) | 基盤部分完了、残り3件のバグ修正着手
 4. Phase2-14 設定競合: #224 (RECORDING_PATH UI/環境変数競合) | #221 安定化後着手
 5. Docs ギャップ定義: #177 ✅ MVP Matrix Draft → ギャップ派生 Issue 起票
 6. Workflow 整合性: #178 ✅ dependency-pipeline workflow 実装完了 (自動生成・コミット機能統合)
 
 ### 中期 (Phase2 Expansion)
 
-1. Runner 構成標準化 & CI 整備: #200 → #201 → #196 → #202（並行: #203 Docs 追随）
+1. Runner 構成標準化 & CI 整備: #200 ✅ → #201 ✅ → #196 ✅ → #202 ✅（並行: #203 Docs 追随）
 2. Sandbox Enforcement Path: #62 PoC → enforce gate → #52 allow/deny materialization
 3. Runner Concurrency & Diagnostics: #47 ✅ queue infra → #48 env validation diagnostics
 4. Plugin Increment (part1): #49 loader + registration minimal
@@ -202,6 +216,12 @@ Phase2 再編後の短期優先セットを以下に再定義。A フェーズ�
 - **セキュリティ優先**: #60 ✅ を A5 と並行して早期完了
 - **後方互換**: Flag ベースの段階的導入を徹底
 
+### 最優先課題
+
+- **今すぐ着手すべき**: #240 (P0: User profile utilization in browser launch) - Critical SSO/Cookie functionality missing
+- **次に着手すべき**: #241 (P0: Fix Unlock-Future type browser automation) - Operations hang without execution
+- **並行着手可能**: #242 (P1: Optimize Feature Flag usage for UI menu control) - Hide LLM tabs when disabled
+
 ### 開発フロー (Mermaid - Phase2 色付け試案)
 
 ```mermaid
@@ -217,6 +237,15 @@ graph LR
       P213["Phase2-13 Runner Standardization (#50✅→#200✅→#201✅→#202✅→#196✅→#203✅→#219→#220→#221)"]:::inprogress
       P214["Phase2-14 i18n (#199)"]:::planned
       P215["Phase2-15 Batch Fix (#198)"]:::planned
+      P216["Phase2-16 Critical Bugs (#240→#241)"]:::open
+      P217["Phase2-17 Flag UI (#242)"]:::open
+      P218["Phase2-18 Testing (#231→#218→#115→#108→#107)"]:::open
+      P219["Phase2-19 Docs (#244→#211→#127→#230→#113→#174)"]:::open
+      P220["Phase2-20 UI/UX (#209→#229→#227→#212)"]:::open
+      P221["Phase2-21 Config (#228)"]:::open
+      P222["Phase2-22 Artifacts (#194)"]:::open
+      P223["Phase2-23 Automation (#192→#114)"]:::open
+      P224["Phase2-24 Observability UI (#197)"]:::open
       P208["Phase2-08 Coverage (#109)"]:::planned
       P202["Phase2-02 Sandbox PoC (#62)"]:::planned --> P202b["Sandbox Enforce (#52)"]:::future
       P210["Phase2-10 Plugins Part1 (#49)"]:::future
