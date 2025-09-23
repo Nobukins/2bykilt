@@ -325,7 +325,6 @@ issues:
 
   "196": {title: "CI: local selector smoke を統合", meta: {area: automation, type: chore, priority: P2, phase: "2", stability: core}, depends: ["201"], dependents: ["202"], risk: low, progress: {state: done, primary_pr: 213}, critical_path_rank: 1}
   "198": {title: "[batch] CSV NamedString 入力の正規化", meta: {area: batch, type: bug, priority: P1, phase: "2", stability: experimental}, depends: ["39"], dependents: [], risk: medium, progress: {state: planned}, critical_path_rank: 1}
-  "199": {title: "[ui/ux] Internationalization (i18n): JA base → EN 追加", meta: {area: uiux, type: feat, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: low, progress: {state: planned}, critical_path_rank: 1}
   "200": {title: "[policy] myscript 配置規約の策定", meta: {area: docs, type: docs, priority: P2, phase: "2", stability: core}, depends: ["50"], dependents: ["201", "203"], risk: low, progress: {state: in-progress}, critical_path_rank: 1}
   "201": {title: "[runner] myscript スクリプト修正（パス統一・生成物出力）", meta: {area: runner, type: chore, priority: P2, phase: "2", stability: core}, depends: ["200"], dependents: ["196", "202", "203"], risk: low, progress: {state: done, primary_pr: 213}, critical_path_rank: 1}
   "202": {title: "[ci] アーティファクト収集/キャッシュ更新（myscript 構成対応）", meta: {area: automation, type: chore, priority: P2, phase: "2", stability: core}, depends: ["201", "196"], dependents: ["203"], risk: low, progress: {state: done, primary_pr: 214}, critical_path_rank: 1}
