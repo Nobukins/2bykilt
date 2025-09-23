@@ -325,11 +325,11 @@ issues:
 
   "196": {title: "CI: local selector smoke を統合", meta: {area: automation, type: chore, priority: P2, phase: "2", stability: core}, depends: ["201"], dependents: ["202"], risk: low, progress: {state: done, primary_pr: 213}, critical_path_rank: 1}
   "198": {title: "[batch] CSV NamedString 入力の正規化", meta: {area: batch, type: bug, priority: P1, phase: "2", stability: experimental}, depends: ["39"], dependents: [], risk: medium, progress: {state: planned}, critical_path_rank: 1}
-  "199": {title: "[ui/ux] Internationalization (i18n): JA base → EN 追加", meta: {area: uiux, type: feat, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: low, progress: {state: planned}, critical_path_rank: 1}
   "200": {title: "[policy] myscript 配置規約の策定", meta: {area: docs, type: docs, priority: P2, phase: "2", stability: core}, depends: ["50"], dependents: ["201", "203"], risk: low, progress: {state: in-progress}, critical_path_rank: 1}
   "201": {title: "[runner] myscript スクリプト修正（パス統一・生成物出力）", meta: {area: runner, type: chore, priority: P2, phase: "2", stability: core}, depends: ["200"], dependents: ["196", "202", "203"], risk: low, progress: {state: done, primary_pr: 213}, critical_path_rank: 1}
   "202": {title: "[ci] アーティファクト収集/キャッシュ更新（myscript 構成対応）", meta: {area: automation, type: chore, priority: P2, phase: "2", stability: core}, depends: ["201", "196"], dependents: ["203"], risk: low, progress: {state: done, primary_pr: 214}, critical_path_rank: 1}
   "203": {title: "[docs] README/チュートリアル/ガイド更新（myscript 構成・出力ポリシー）", meta: {area: docs, type: docs, priority: P2, phase: "2", stability: core}, depends: ["200", "201", "202"], dependents: [], risk: low, progress: {state: planned}, critical_path_rank: 1}
+  "199": {title: "[ui/ux] Internationalization (i18n): JA base → EN 追加", meta: {area: uiux, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: ["208", "209", "210"], risk: low, progress: {state: open}, critical_path_rank: 1}
   "208": {title: "[ui/ux] Option Availability - 利用可能なオプションの可視化改善", meta: {area: uiux, type: enhancement, priority: P2, phase: "2", stability: core}, depends: ["199"], dependents: [], risk: low, progress: {state: open}, critical_path_rank: 1}
   "209": {title: "[ui/ux] Results menu - 実行結果表示メニューの改善", meta: {area: uiux, type: enhancement, priority: P2, phase: "2", stability: core}, depends: ["199"], dependents: [], risk: low, progress: {state: open}, critical_path_rank: 1}
   "210": {title: "[ui/ux] Recordings menu - 録画ファイル管理メニューの改善", meta: {area: uiux, type: enhancement, priority: P2, phase: "2", stability: core}, depends: ["199"], dependents: [], risk: low, progress: {state: open}, critical_path_rank: 1}
@@ -345,15 +345,28 @@ issues:
   "224": {title: "[ui/ux][config] RECORDING_PATH UI と環境変数の競合解消", meta: {area: uiux, type: enhancement, priority: P1, phase: "2", stability: core}, depends: ["221"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
 
   "237": {title: "Bug: Recording file generation not working for any run type", meta: {area: artifacts, type: bug, priority: P0, phase: "2", stability: core}, depends: ["221"], dependents: [], risk: high, progress: {state: done, primary_pr: 239}, critical_path_rank: 4}
-  "238": {title: "Bug: Browser-control fails when ENABLE_LLM=false", meta: {area: runner, type: bug, priority: P0, phase: "2", stability: core}, depends: ["220"], dependents: [], risk: high, progress: {state: open}, critical_path_rank: 4}
+  "218": {title: "テストカバレッジ率の向上", meta: {area: testing, type: enhancement, priority: P2, phase: "2", stability: experimental}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "197": {title: "[dashboard] UI graphs and preset expansion", meta: {area: observability, type: feat, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "194": {title: "[artifacts] Tab index manifest for multi-tab recordings", meta: {area: artifacts, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: ["246", "247"], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "192": {title: "[security][follow-up] Issue #154 pip-audit stabilization - monthly security monitoring schedule", meta: {area: security, type: chore, priority: P1, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "127": {title: "[docs][batch] CSVバッチエンジン統合ドキュメントの包括的改善", meta: {area: batch, type: docs, priority: P1, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "115": {title: "[A3][regression][hardening] Post-#38 回帰スイート強化 (破損動画 / 強制移行 / retention トグル / flags 再生成 / パス可搬性 / flags 再生成)", meta: {area: testing, type: feat, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "114": {title: "ci: evaluate relaxing pytest.ini guard scope for docs/archive references (follow-up to PR #112)", meta: {area: automation, type: chore, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "113": {title: "docs: cleanup archived references to tests/pytest.ini (post PR #112)", meta: {area: docs, type: chore, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "109": {title: "[quality][coverage] Sonar 新規行カバレッジ向上とQuality Gate再挑戦 (#105 追随)", meta: {area: quality, type: enhancement, priority: P2, phase: "2", stability: experimental}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "108": {title: "Stabilize Edge headless navigation flake (TargetClosedError)", meta: {area: artifacts, type: enhancement, priority: P2, phase: "1-late", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "107": {title: "Cleanup: PytestReturnNotNone warnings across component tests", meta: {area: testing, type: chore, priority: P2, phase: "1-late", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
 
   "240": {title: "P0: Fix user profile utilization in browser launch - Critical SSO/Cookie functionality missing", meta: {area: config, type: bug, priority: P0, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
   "241": {title: "P0: Fix Unlock-Future type browser automation - Operations hang without execution", meta: {area: runner, type: bug, priority: P0, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
   "242": {title: "P1: Optimize Feature Flag usage for UI menu control - Hide LLM tabs when disabled", meta: {area: uiux, type: enhancement, priority: P1, phase: "2", stability: core}, depends: ["64"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "244": {title: "[docs][feat] action_runner_template 利用方法ドキュメント整備 & 実装サンプル追加", meta: {area: docs, type: feat, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "246": {title: "[artifacts][feat] スクリーンショットの取得・保存機能強化", meta: {area: artifacts, type: feat, priority: P1, phase: "2", stability: core}, depends: ["194"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "247": {title: "[artifacts][feat] ブラウザ要素の取得・保存機能強化", meta: {area: artifacts, type: feat, priority: P1, phase: "2", stability: core}, depends: ["194"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
 
 summary:
-  total_issues: 81
-  high_risk: ["31", "46", "49", "54", "62", "176", "238"]
+  total_issues: 94
+  high_risk: ["31", "46", "49", "54", "62", "176", "237"]
   longest_chain_example: ["65", "64", "63", "66", "67"]
   data_quality_checks:
     no_cycles_detected: true
@@ -361,18 +374,21 @@ summary:
       - "55"
       - "81"
       - "90"
+      - "107"
+      - "108"
+      - "109"
+      - "113"
+      - "114"
+      - "115"
+      - "127"
       - "154"
-      - "199"
-      - "208"
-      - "209"
-      - "210"
-      - "211"
-      - "212"
-      - "226"
+      - "192"
+      - "197"
+      - "218"
       - "240"
       - "241"
-      - "242"
-  generated_at_utc: "2025-09-21T13:00:00Z"
+      - "244"
+  generated_at_utc: "2025-09-23T12:00:00Z"
 
 validation_rules:
   - "All blocking dependencies must be completed before starting an issue"

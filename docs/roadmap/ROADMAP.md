@@ -1,6 +1,6 @@
 # 2bykilt 開発ロードマップ (Baseline v1)
 
-最終更新: 2025-09-17
+最終更新: 2025-09-23
 対象リポジトリ: <https://github.com/Nobukins/2bykilt>
 
 
@@ -22,18 +22,22 @@
 
 ## A. カテゴリ定義 (Domain Buckets)
 
-| Category | Issue Examples (初期) | 概要 |
-|----------|-----------------------|------|
-| Config | #64, #65, #63 | Feature Flags / Multi-env / Schema Versioning |
-| Logging / Observability | #31, #56, #57, #58, #59 | 統一ログ + Metrics Export |
-| Artifacts | #28, #30, #33, #34, #35, #36, #37, #38 | 動画・スクショ・要素値・Manifest |
-| Runner Core / Reliability | #25, #44, #45, #50, #32 | git_script / Run/Job ID |
-| Security (Base) | #60, #61 | Secret Mask / Scan Ops |
+| Category | Issue Examples (初期 + Open) | 概要 |
+|----------|-------------------------------|------|
+| Config | #64, #65, #63, #240, #228, #224 | Feature Flags / Multi-env / Schema Versioning / User Profile / LLM Settings / RECORDING_PATH UI |
+| Logging / Observability | #31, #56, #57, #58, #59, #197, #222, #223 | 統一ログ + Metrics Export / UI Graphs / Log Standardization |
+| Artifacts | #28, #30, #33, #34, #35, #36, #37, #38, #194, #175, #174, #221, #237, #246, #247 | 動画・スクショ・要素値・Manifest / Tab Index Manifest / Batch Artifacts / Recording Issues / Screenshot Enhancement / Element Extraction Enhancement |
+| Runner Core / Reliability | #25, #44, #45, #50, #32, #241, #219, #220, #226, #238, #212 | git_script / Run/Job ID / Browser Automation / Search-LinkedIn / Browser-Control / Codegen |
+| Security (Base) | #60, #61, #192 | Secret Mask / Scan Ops / Pip-Audit Monitoring |
 | Security (Hardening) | #52, #62 | Sandbox / Path Control |
-| Batch Processing | #39, #41, #42, #40 | CSV 駆動実行 |
+| Batch Processing | #39, #41, #42, #40, #198, #173, #127 | CSV 駆動実行 / NamedString Fix / Preview & Mapping / Docs |
 | Plugins / Extensibility | #49, #53 | User Script Plugin Architecture |
-| LLM Control | #43 | Flag による有効/無効 |
-| Docs | #66, #67 | 契約 / 最終仕様文書化 |
+| LLM Control | #43, #242, #211, #210, #227 | Flag による有効/無効 / UI Menu Control / Docs / Error Messages |
+| UI/UX | #199, #209, #229, #227, #224, #212 | Internationalization / Results Menu / Design System / Error Messages / RECORDING_PATH / Codegen Menu |
+| Testing | #231, #218, #115, #108, #107, #109 | Test Suite Improvement / Coverage / Regression Suite / Flakes / Warnings / Sonar |
+| Automation | #76, #178, #192, #114 | Dependency Pipeline / Pip-Audit Schedule / Pytest Guard |
+| Quality | #109, #107 | Coverage / Warnings Cleanup |
+| Docs | #66, #67, #244, #211, #127, #230, #113, #174 | Documentation Updates / Action Runner Template / LLM / Batch / Cleanup References / Artifact Flow |
 
 ---
 
@@ -77,6 +81,15 @@ Progress Summary (Phase2): Phase2-04 Done / Phase2-05 Done / Phase2-06 Done / Ph
 | Phase2-13 | Runner 構成標準化 & CI/Docs 追随 | #50 ✅ → #200 ✅ → #201 ✅ → #202 ✅ → #196 ✅ → #203 ✅ → #219 ✅ → #220 → #221 → #237 ✅ → #238 | In Progress | 配置規約→代表スクリプト→CI→Docs完了 / search-linkedin失敗 / browser-control失敗 / 録画未生成 / 録画ファイル生成バグ / LLM無効時browser-control失敗 |
 | Phase2-14 | UI/UX Internationalization | #199 → #224 | Planned | JA ベース → EN 追加。辞書/ヘルパ/トグル/フォールバック / RECORDING_PATH 競合解消 |
 | Phase2-15 | Batch 安定化フォロー | #198 | Planned | CSV 入力正規化（NamedString 対応）+ 最小テスト |
+| Phase2-16 | Critical Bug Fixes | #240 → #241 | Planned | User profile SSO/Cookie → Unlock-Future browser automation (エンタープライズ拡張、後回し) |
+| Phase2-17 | Feature Flag UI Integration | #242 | OPEN | Hide LLM tabs when disabled |
+| Phase2-18 | Testing & Quality Improvements | #231 → #218 → #115 → #108 → #107 | OPEN | Test suite / Coverage / Regression / Flakes / Warnings |
+| Phase2-19 | Documentation Enhancements | #244 → #211 → #127 → #230 → #113 → #174 | OPEN | Action runner template / LLM docs / Batch docs / General docs / Cleanup / Artifact flow |
+| Phase2-20 | UI/UX Polish | #209 → #229 → #227 → #212 | OPEN | Results menu / Design system / Error messages / Codegen menu |
+| Phase2-21 | Configuration & LLM Settings | #228 | OPEN | LLM設定改善 |
+| Phase2-22 | Artifacts & Multi-tab Support | #194 → #246 → #247 | OPEN | Tab index manifest / Screenshot enhancement / Element extraction enhancement |
+| Phase2-23 | Automation & Security Monitoring | #192 → #114 | OPEN | Pip-audit schedule / Pytest guard |
+| Phase2-24 | Observability UI | #197 | OPEN | UI graphs and presets |
 
 **Phase2-12 MVP Matrix 詳細:**
 
@@ -137,6 +150,136 @@ A1 Config → A2 Logging/ID → A3 Artifacts → A4 Runner Reliability → A5 Se
 
 テンプレは AGENT_PROMPT_GUIDE.md。
 
+### Agent-Human Collaboration Framework (究極の開発効率化)
+
+#### 1. 役割分担 (最高効率の鍵)
+
+**Agent (GitHub Copilot) の強み:**
+
+- 高速コード生成 (S/Mサイズタスクを数分で実装)
+- 自動化スクリプト作成 (検証/生成/テスト)
+- ドキュメント生成 (README/ガイド/コメント)
+- バグ検出と修正提案
+- 依存関係分析とタスクキュー生成
+
+**人間 (開発者) の強み:**
+
+- 戦略的判断と優先順位付け
+- ドメイン知識とビジネス要件理解
+- 品質レビューとセキュリティ評価
+- ユーザー体験設計
+- チームコミュニケーション
+
+#### 2. 連携ワークフロー (生産性の最大化)
+
+```mermaid
+flowchart TD
+    A[人間: タスク分析 & 優先順位付け] --> B[人間: Issue作成 & 依存定義]
+    B --> C[人間: Agentに実装依頼]
+    C --> D[Agent: コード生成 & 自動テスト]
+    D --> E[Agent: 自動検証実行]
+    E --> F{検証PASS?}
+    F -->|NO| G[Agent: 修正 & 再テスト]
+    F -->|YES| H[人間: コードレビュー]
+    H --> I{レビューPASS?}
+    I -->|NO| J[人間: フィードバック & 修正依頼]
+    I -->|YES| K[人間: 統合 & コミット]
+    K --> L[自動: CI/CD実行]
+    L --> M[人間: リリース判断]
+```
+
+#### 3. 効率化プロトコル
+
+**タスク分割原則:**
+
+- 1 Issue = 1 論理的機能 (S/Mサイズに分割)
+- 依存関係を事前解決 (Agentは未解決依存で停止)
+- 自動検証を必須 (テスト/リンター/フォーマッター)
+
+**コミュニケーション標準:**
+
+- Agentへの指示: 明確/具体的/文脈豊富
+- 人間への報告: 変更概要/テスト結果/リスク評価
+- レビュー基準: 機能性/保守性/セキュリティ/パフォーマンス
+
+**自動化活用:**
+
+- ISSUE_DEPENDENCIES.yml 更新 → 自動生成 (TASK_QUEUE.yml, DEPENDENCY_GRAPH.md)
+- コード変更 → 自動テスト実行
+- PR作成 → 自動検証 & ドキュメント更新
+
+#### 4. 品質保証フレームワーク
+
+**自動検証層:**
+
+- ユニットテスト (pytest) - 機能正確性
+- 統合テスト (CI) - エンドツーエンド動作
+- リンター (flake8/black) - コード品質
+- セキュリティスキャン (bandit) - 脆弱性検出
+
+**人間レビュー層:**
+
+- コードロジック確認
+- アーキテクチャ適合性
+- ドキュメント完全性
+- ユーザー影響評価
+
+**継続的改善:**
+
+- テストカバレッジ向上 (目標: 80%+)
+- 自動化範囲拡大
+- レビュー効率化 (テンプレート活用)
+
+#### 5. KPI & メトリクス (生産性測定)
+
+**Agent貢献度:**
+
+- コード生成行数 / 時間
+- 自動テスト通過率
+- 初回レビュー合格率
+
+**コラボレーション効率:**
+
+- タスク完了サイクルタイム
+- レビュー待ち時間
+- ブロック解除時間
+
+**品質メトリクス:**
+
+- バグ検出率 (自動 vs 人間)
+- リリース安定性
+- ドキュメント同期率
+
+#### 6. リスク管理 & フォールバック
+
+**Agent限界の認識:**
+
+- 創造的問題解決 (人間判断優先)
+- 長期影響評価 (アーキテクチャレビュー必須)
+- セキュリティ判断 (人間承認必須)
+
+**フォールバック戦略:**
+
+- Agent生成コードの人間オーバーライド
+- ペアプログラミング (複雑タスク)
+- 段階的導入 (実験的機能)
+
+#### 7. トレーニング & 改善
+
+**継続的学習:**
+
+- Agentプロンプト改善 (AGENT_PROMPT_GUIDE.md 更新)
+- 人間スキル向上 (コードレビュー研修)
+- プロセス最適化 (定期レビュー)
+
+**フィードバックループ:**
+
+- 毎週振り返り (何がうまくいったか/改善点)
+- メトリクス分析
+- プロセス更新
+
+このフレームワークにより、Agentの高速生成能力と人間の戦略的判断力を最大限に活用し、究極の開発効率を実現する。
+
 ---
 
 
@@ -161,23 +304,27 @@ Phase2 再編後の短期優先セットを以下に再定義。A フェーズ�
 - **基盤機能完了**: Group A (A1-A4) の全Waveが完了したため、新機能開発を優先
 - **ユーザーインパクト重視**: #39 ✅ (CSV駆動バッチエンジン) はユーザー体験向上効果が高いため優先
 - **セキュリティ重視**: #60 ✅ (シークレットマスキング拡張) はセキュリティ強化のため優先
+- **Open Issue 評価**: 全Open Issueをカテゴリ分類し、P0/P1を優先、依存関係を考慮した順序付け
+- **初期リリース価値優先**: エンタープライズ企業ではSSOが一般的だが、最初に対応したいアプリにはSSO認証がないため、ブラウザ上でユーザー名・パスワード入力が必要。CSVファイル連携でのテンプレート複数バッチ処理連続実行の方がユーザー価値が高く、優先度を調整
 
 ### 短期 (Phase2 Kick Re-aligned)
 
-1. **P0 優先着手**: #237 ✅ (録画ファイル生成バグ) → #238 (LLM無効時browser-control失敗) → #219 (search-linkedin失敗) → #223 (LOG_LEVEL未反映) | 高速クローズ目標
-2. Phase2-07 前倒し: #59 ✅ Run Metrics API → #102 ✅ Flags artifacts helper → #222 (ログ標準化) → #223 (LOG_LEVEL修正)
-3. Phase2-13 並行: #219 (search-linkedin失敗) → #220 (browser-control失敗) → #221 (録画未生成) | 基盤部分完了、残り3件のバグ修正着手
+1. **CSVバッチ処理強化優先**: #198 (CSV入力正規化) → #173 (CSV Preview & Command Argument Mapping) → #175 ✅ (バッチ行単位成果物キャプチャ) | ユーザー価値高いバッチ処理を優先
+2. Phase2-07 前倒し: #59 ✅ Run Metrics API → #102 ✅ Flags artifacts helper → #222 (ログ標準化) → #223 ✅ (LOG_LEVEL修正)
+3. Phase2-13 並行: #219 ✅ (search-linkedin失敗) → #220 (browser-control失敗) → #221 (録画未生成) | 基盤部分完了、残り3件のバグ修正着手
 4. Phase2-14 設定競合: #224 (RECORDING_PATH UI/環境変数競合) | #221 安定化後着手
 5. Docs ギャップ定義: #177 ✅ MVP Matrix Draft → ギャップ派生 Issue 起票
 6. Workflow 整合性: #178 ✅ dependency-pipeline workflow 実装完了 (自動生成・コミット機能統合)
 
 ### 中期 (Phase2 Expansion)
 
-1. Runner 構成標準化 & CI 整備: #200 → #201 → #196 → #202（並行: #203 Docs 追随）
+1. Runner 構成標準化 & CI 整備: #200 ✅ → #201 ✅ → #196 ✅ → #202 ✅（並行: #203 Docs 追随）
 2. Sandbox Enforcement Path: #62 PoC → enforce gate → #52 allow/deny materialization
 3. Runner Concurrency & Diagnostics: #47 ✅ queue infra → #48 env validation diagnostics
 4. Plugin Increment (part1): #49 loader + registration minimal
 5. Artifact/Manifest フォロー: #106 flag enforcement warn → #104 仕上げ（必要に応じ）
+6. Artifacts 強化: #246 (Screenshot enhancement) → #247 (Element extraction enhancement)
+7. SSO/プロファイル機能: #240 (User profile SSO/Cookie) → #241 (Unlock-Future browser automation) | エンタープライズ向け拡張として後回し
 
 ### 長期 (Phase2 Later)
 
@@ -202,6 +349,12 @@ Phase2 再編後の短期優先セットを以下に再定義。A フェーズ�
 - **セキュリティ優先**: #60 ✅ を A5 と並行して早期完了
 - **後方互換**: Flag ベースの段階的導入を徹底
 
+### 最優先課題
+
+- **今すぐ着手すべき**: #198 (CSV Batch Processing: 'NamedString' has no attribute 'read') - バッチ処理安定化でユーザー価値向上
+- **次に着手すべき**: #173 (CSV Preview & Command Argument Mapping) - UI改善でバッチ利用性向上
+- **並行着手可能**: #242 (P1: Optimize Feature Flag usage for UI menu control) - Hide LLM tabs when disabled
+
 ### 開発フロー (Mermaid - Phase2 色付け試案)
 
 ```mermaid
@@ -217,6 +370,15 @@ graph LR
       P213["Phase2-13 Runner Standardization (#50✅→#200✅→#201✅→#202✅→#196✅→#203✅→#219→#220→#221)"]:::inprogress
       P214["Phase2-14 i18n (#199)"]:::planned
       P215["Phase2-15 Batch Fix (#198)"]:::planned
+      P216["Phase2-16 Critical Bugs (#240→#241)"]:::future
+      P217["Phase2-17 Flag UI (#242)"]:::open
+      P218["Phase2-18 Testing (#231→#218→#115→#108→#107)"]:::open
+      P219["Phase2-19 Docs (#244→#211→#127→#230→#113→#174)"]:::open
+      P220["Phase2-20 UI/UX (#209→#229→#227→#212)"]:::open
+      P221["Phase2-21 Config (#228)"]:::open
+      P222["Phase2-22 Artifacts (#194→#246→#247)"]:::open
+      P223["Phase2-23 Automation (#192→#114)"]:::open
+      P224["Phase2-24 Observability UI (#197)"]:::open
       P208["Phase2-08 Coverage (#109)"]:::planned
       P202["Phase2-02 Sandbox PoC (#62)"]:::planned --> P202b["Sandbox Enforce (#52)"]:::future
       P210["Phase2-10 Plugins Part1 (#49)"]:::future
@@ -321,6 +483,9 @@ gitGraph
 | 1.0.29 | 2025-09-17 | Phase2-07 #223 ✅反映 / Phase2-13 #219 ✅反映 / Progress Summary更新 / ISSUE_DEPENDENCIES.yml同期 | Copilot Agent |
 | 1.0.30 | 2025-09-18 | Phase2-13に新critical bugs #237/#238追加 / ISSUE_DEPENDENCIES.yml更新 / Next Actions優先順位付け更新 / Progress Summary更新 | Copilot Agent |
 | 1.0.31 | 2025-09-21 | Phase2-13 #237 ✅反映 (PR #239 マージ前提) / Progress Summary更新 (8/11 issues completed) / Next Actions更新 | Copilot Agent |
+| 1.0.32 | 2025-09-23 | ROADMAP.md と ISSUE_DEPENDENCIES.yml の再策定: 全Open Issueのカテゴリ分類とPhase2統合 / PR #245 作成 | Copilot Agent |
+| 1.0.34 | 2025-09-23 | 優先順位付け方針に初期リリース価値優先を追加 / 次アクションでCSVバッチ処理を優先 / Phase2-16を後回しに / 最優先課題をバッチ処理に変更 | Copilot Agent |
+| 1.0.35 | 2025-09-23 | F. Copilot Coding Agent運用を大幅拡張: Agent-Human Collaboration Framework追加 / 役割分担/ワークフロー/効率化プロトコル/品質保証/KPI/リスク管理/トレーニングを詳細定義 | Copilot Agent |
 
 ---
 

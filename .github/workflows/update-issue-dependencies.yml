@@ -9,6 +9,9 @@ on:
   label:
     types: [created, deleted]
 
+env:
+  GITHUB_TOKEN: ${{ secrets.ACTIONS_BOT_TOKEN }}
+
 permissions:
   contents: write
   pull-requests: write
