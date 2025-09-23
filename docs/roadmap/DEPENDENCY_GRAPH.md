@@ -1,6 +1,6 @@
 ```mermaid
 %% Auto-generated dependency graph
-%% Generated at: 2025-09-23T03:16:45.854337+00:00
+%% Generated at: STABLE
 %% Edge方向: dependency --> dependent
 graph LR
 
@@ -70,13 +70,25 @@ subgraph R1[Rank 1]
   89["89 Screenshot ログイベント整備…"]
   90["90 Temp test issue for…"]
   91["91 統一録画パス Rollout (fla…"]
+  92["92 [enhance][roadmap] …"]
+  101["101 chore(test): async …"]
   102["102 Flags artifacts hel…"]
+  107["107 Cleanup: PytestRetu…"]
+  108["108 Stabilize Edge head…"]
+  109["109 [quality][coverage]…"]
+  113["113 docs: cleanup archi…"]
+  114["114 ci: evaluate relaxi…"]
+  115["115 [A3][regression][ha…"]
+  127["127 [docs][batch] CSVバッ…"]
   154["154 pip-audit stabiliza…"]
   173["173 [UI][batch][#40 fol…"]
   174["174 [artifacts][batch] …"]
   177["177 MVP エンタープライズ Readin…"]
   178["178 CI: dependency-pipe…"]
+  192["192 [security][follow-u…"]
+  194["194 [artifacts] Tab ind…"]
   196["196 CI: local selector …"]
+  197["197 [dashboard] UI grap…"]
   198["198 [batch] CSV NamedSt…"]
   199["199 [ui/ux] Internation…"]
   200["200 [policy] myscript 配…"]
@@ -88,12 +100,19 @@ subgraph R1[Rank 1]
   210["210 [ui/ux] Recordings …"]
   211["211 [docs] LLM 統合ドキュメント…"]
   212["212 [feat] Playwright C…"]
+  218["218 テストカバレッジ率の向上"]
   223["223 [logging][bug] LOG_…"]
   224["224 [ui/ux][config] REC…"]
   226["226 [runner][bug] searc…"]
+  227["227 [ui/ux][enhancement…"]
+  228["228 [configuration][enh…"]
+  229["229 [ui/ux][enhancement…"]
+  230["230 [documentation][enh…"]
+  231["231 [testing][enhanceme…"]
   240["240 P0: Fix user profil…"]
   241["241 P0: Fix Unlock-Futu…"]
   242["242 P1: Optimize Featur…"]
+  244["244 [docs][feat] action…"]
 end
 
 %% Edges (depends --> dependent)
@@ -213,7 +232,7 @@ classDef highrisk fill:#ffe6e6,stroke:#d40000,stroke-width:2px,color:#000;
 classDef progress fill:#e6f4ff,stroke:#0366d6,stroke-width:2px,color:#000;
 
 %% Class assignments
-class 31,46,49,54,62,176,238 highrisk;
+class 31,46,49,54,62,176,237,238 highrisk;
 class 25,28,30,31,32,34,35,36,37,38,39,40,41,42,44,45,50,56,57,58,59,87,88,89,91,102,110,111,154,175,176,177,196,198,199,200,201,202,203,208,209,210,211,212,219,220,221,222,223,224,226,237,238,240,241,242 progress;
 
 %% Legend (pseudo nodes)
