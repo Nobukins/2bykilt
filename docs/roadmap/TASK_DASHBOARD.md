@@ -1,47 +1,50 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-09-23T03:16:45+00:00
+Generated at (UTC): 2025-09-23T08:22:52+00:00
 
 ## 1. メタサマリー
 
-- Total Issues: 81
-- High Risk (declared): 7 → 31, 46, 49, 54, 62, 176, 238
+- Total Issues: 102
+- High Risk (declared): 8 → 31, 46, 49, 54, 62, 176, 237, 238
 - Cycle Detected: false (none)
-- Strict Orphans: 6
-- Curated Orphan List Count: 14
+- Strict Orphans: 27
+- Curated Orphan List Count: 35
 
 ## 2. 分布 (Distribution)
 
 ### Priority
-- P0: 24 (29.6%)
-- P1: 27 (33.3%)
-- P2: 28 (34.6%)
-- P3: 2 (2.5%)
+- (none): 4 (3.9%)
+- P0: 24 (23.5%)
+- P1: 31 (30.4%)
+- P2: 41 (40.2%)
+- P3: 2 (2.0%)
 
 ### Phase
-- 1: 19 (23.5%)
-- 1-late: 12 (14.8%)
-- 2: 50 (61.7%)
+- (none): 12 (11.8%)
+- 1: 20 (19.6%)
+- 1-late: 14 (13.7%)
+- 2: 56 (54.9%)
 
 ### Area
-- artifacts: 16 (19.8%)
-- automation: 4 (4.9%)
-- batch: 7 (8.6%)
-- config: 5 (6.2%)
-- docs: 6 (7.4%)
-- logging: 5 (6.2%)
-- observability: 3 (3.7%)
-- plugins: 1 (1.2%)
-- runner: 23 (28.4%)
-- security: 4 (4.9%)
-- test: 1 (1.2%)
-- uiux: 6 (7.4%)
+- (none): 21 (20.6%)
+- artifacts: 16 (15.7%)
+- automation: 4 (3.9%)
+- batch: 7 (6.9%)
+- config: 5 (4.9%)
+- docs: 6 (5.9%)
+- logging: 5 (4.9%)
+- observability: 3 (2.9%)
+- plugins: 1 (1.0%)
+- runner: 23 (22.5%)
+- security: 4 (3.9%)
+- test: 1 (1.0%)
+- uiux: 6 (5.9%)
 
 ### Risk
-- high: 8 (9.9%)
-- low: 12 (14.8%)
-- medium: 4 (4.9%)
-- none: 57 (70.4%)
+- high: 8 (7.8%)
+- low: 12 (11.8%)
+- medium: 4 (3.9%)
+- none: 78 (76.5%)
 
 ## 3. リスク詳細 (High / Medium / etc.)
 
@@ -52,6 +55,7 @@ High Risk Issues:
 - 54: cdp-use デュアルエンジン抽象レイヤ (area=runner, priority=P1)
 - 62: 実行サンドボックス機能制限 (area=security, priority=P0)
 - 176: 宣言的抽出スキーマ (CSV列→コマンド引数/抽出ポリシーマッピング) (area=batch, priority=P1)
+- 237: Bug: Recording file generation not working for any run type (area=artifacts, priority=P0)
 - 238: Bug: Browser-control fails when ENABLE_LLM=false (area=runner, priority=P0)
 
 ## 4. Orphans
@@ -60,25 +64,67 @@ Strict Orphans (自動抽出 = 依存なし & 参照されず):
 - 55: browser_control pytest パス修正
 - 81: Async/Browser テスト安定化計画
 - 90: Temp test issue for enrichment
+- 92: [enhance][roadmap] Enrichment Phase 3: reverse dependents validation & high-risk strict sync
+- 101: chore(test): async ブラウザ起動・event loop 衝突安定化
+- 107: Cleanup: PytestReturnNotNone warnings across component tests
+- 108: Stabilize Edge headless navigation flake (TargetClosedError)
+- 109: [quality][coverage] Sonar 新規行カバレッジ向上とQuality Gate再挑戦 (#105 追随)
+- 113: docs: cleanup archived references to tests/pytest.ini (post PR #112)
+- 114: ci: evaluate relaxing pytest.ini guard scope for docs/archive references (follow-up to PR #112)
+- 115: [A3][regression][hardening] Post-#38 回帰スイート強化 (破損動画 / 強制移行 / retention トグル / パス可搬性 / flags 再生成)
+- 127: [docs][batch] CSVバッチエンジン統合ドキュメントの包括的改善
 - 154: pip-audit stabilization in CI with normalizer + targeted suppressions
+- 192: [security][follow-up] Issue #154 pip-audit stabilization - monthly security monitoring schedule
+- 194: [artifacts] Tab index manifest for multi-tab recordings
+- 197: [dashboard] UI graphs and preset expansion
+- 218: テストカバレッジ率の向上
+- 227: [ui/ux][enhancement] LLM有効時のエラーメッセージ改善とUI統一性確保
+- 228: [configuration][enhancement] LLM設定の改善と設定ガイドの明確化
+- 229: [ui/ux][enhancement] UI/UXの統一性確保とデザインシステムの確立
+- 230: [documentation][enhancement] ドキュメントの改善とユーザガイドの充実
+- 231: [testing][enhancement] テストスイートの改善とカバレッジ向上
 - 240: P0: Fix user profile utilization in browser launch - Critical SSO/Cookie functionality missing
 - 241: P0: Fix Unlock-Future type browser automation - Operations hang without execution
+- 244: [docs][feat] action_runner_template 利用方法ドキュメント整備 & 実装サンプル追加
+- 246: [artifacts][feat] スクリーンショットの取得・保存機能強化
+- 247: [artifacts][feat] ブラウザ要素の取得・保存機能強化
 
 Curated Orphan List (summary.data_quality_checks.orphan_issues_without_dependents_or_depends):
 - 55: browser_control pytest パス修正
 - 81: Async/Browser テスト安定化計画
 - 90: Temp test issue for enrichment
+- 92: [enhance][roadmap] Enrichment Phase 3: reverse dependents validation & high-risk strict sync
+- 101: chore(test): async ブラウザ起動・event loop 衝突安定化
+- 107: Cleanup: PytestReturnNotNone warnings across component tests
+- 108: Stabilize Edge headless navigation flake (TargetClosedError)
+- 109: [quality][coverage] Sonar 新規行カバレッジ向上とQuality Gate再挑戦 (#105 追随)
+- 113: docs: cleanup archived references to tests/pytest.ini (post PR #112)
+- 114: ci: evaluate relaxing pytest.ini guard scope for docs/archive references (follow-up to PR #112)
+- 115: [A3][regression][hardening] Post-#38 回帰スイート強化 (破損動画 / 強制移行 / retention トグル / パス可搬性 / flags 再生成)
+- 127: [docs][batch] CSVバッチエンジン統合ドキュメントの包括的改善
 - 154: pip-audit stabilization in CI with normalizer + targeted suppressions
+- 192: [security][follow-up] Issue #154 pip-audit stabilization - monthly security monitoring schedule
+- 194: [artifacts] Tab index manifest for multi-tab recordings
+- 197: [dashboard] UI graphs and preset expansion
 - 199: [ui/ux] Internationalization (i18n): JA base → EN 追加
 - 208: [ui/ux] Option Availability - 利用可能なオプションの可視化改善
 - 209: [ui/ux] Results menu - 実行結果表示メニューの改善
 - 210: [ui/ux] Recordings menu - 録画ファイル管理メニューの改善
 - 211: [docs] LLM 統合ドキュメント整備
 - 212: [feat] Playwright Codegen 統合機能
+- 218: テストカバレッジ率の向上
 - 226: [runner][bug] search-linkedin 実行時エラー修正
+- 227: [ui/ux][enhancement] LLM有効時のエラーメッセージ改善とUI統一性確保
+- 228: [configuration][enhancement] LLM設定の改善と設定ガイドの明確化
+- 229: [ui/ux][enhancement] UI/UXの統一性確保とデザインシステムの確立
+- 230: [documentation][enhancement] ドキュメントの改善とユーザガイドの充実
+- 231: [testing][enhancement] テストスイートの改善とカバレッジ向上
 - 240: P0: Fix user profile utilization in browser launch - Critical SSO/Cookie functionality missing
 - 241: P0: Fix Unlock-Future type browser automation - Operations hang without execution
 - 242: P1: Optimize Feature Flag usage for UI menu control - Hide LLM tabs when disabled
+- 244: [docs][feat] action_runner_template 利用方法ドキュメント整備 & 実装サンプル追加
+- 246: [artifacts][feat] スクリーンショットの取得・保存機能強化
+- 247: [artifacts][feat] ブラウザ要素の取得・保存機能強化
 
 Missing Strict Orphans in curated list: (none)
 Extra non-strict entries in curated list (WARNING only): 199, 208, 209, 210, 211, 212, 226, 242
@@ -179,7 +225,28 @@ Sorted By: critical_path_rank
 | 88 | スクリーンショット例外分類と特定例外キャッチ | P2 | 1-late | artifacts |  | 1 | 2 | 2 | 0 | #97 |
 | 89 | Screenshot ログイベント整備 (metrics 連携準備) | P2 | 1-late | observability |  | 1 | 2 | 2 | 0 | #98 |
 | 91 | 統一録画パス Rollout (flag default 有効化 & legacy 廃止) | P0 | 1-late | artifacts |  | 1 | 2 | 1 | 0 | #105 |
+| 101 | chore(test): async ブラウザ起動・event loop 衝突安定化 | P2 | 1 |  |  |  | 0 | 0 | 0 |  |
+| 107 | Cleanup: PytestReturnNotNone warnings across component tests | P2 | 1-late |  |  |  | 0 | 0 | 0 |  |
+| 108 | Stabilize Edge headless navigation flake (TargetClosedError) | P2 | 1-late |  |  |  | 0 | 0 | 0 |  |
+| 109 | [quality][coverage] Sonar 新規行カバレッジ向上とQuality Gate再挑戦 (#105 追随) | P2 | 2 |  |  |  | 0 | 0 | 0 |  |
+| 113 | docs: cleanup archived references to tests/pytest.ini (post PR #112) | P2 |  |  |  |  | 0 | 0 | 0 |  |
+| 114 | ci: evaluate relaxing pytest.ini guard scope for docs/archive references (follow-up to PR #112) | P2 |  |  |  |  | 0 | 0 | 0 |  |
+| 115 | [A3][regression][hardening] Post-#38 回帰スイート強化 (破損動画 / 強制移行 / retention トグル / パス可搬性 / flags 再生成) |  |  |  |  |  | 0 | 0 | 0 |  |
+| 127 | [docs][batch] CSVバッチエンジン統合ドキュメントの包括的改善 | P1 | 2 |  |  |  | 0 | 0 | 0 |  |
+| 192 | [security][follow-up] Issue #154 pip-audit stabilization - monthly security monitoring schedule | P1 | 2 |  |  |  | 0 | 0 | 0 |  |
+| 194 | [artifacts] Tab index manifest for multi-tab recordings |  |  |  |  |  | 0 | 0 | 0 |  |
+| 197 | [dashboard] UI graphs and preset expansion |  |  |  |  |  | 0 | 0 | 0 |  |
+| 218 | テストカバレッジ率の向上 |  |  |  |  |  | 0 | 0 | 0 |  |
+| 227 | [ui/ux][enhancement] LLM有効時のエラーメッセージ改善とUI統一性確保 | P2 |  |  |  |  | 0 | 0 | 0 |  |
+| 228 | [configuration][enhancement] LLM設定の改善と設定ガイドの明確化 | P2 |  |  |  |  | 0 | 0 | 0 |  |
+| 229 | [ui/ux][enhancement] UI/UXの統一性確保とデザインシステムの確立 | P2 |  |  |  |  | 0 | 0 | 0 |  |
+| 230 | [documentation][enhancement] ドキュメントの改善とユーザガイドの充実 | P2 |  |  |  |  | 0 | 0 | 0 |  |
+| 231 | [testing][enhancement] テストスイートの改善とカバレッジ向上 | P2 |  |  |  |  | 0 | 0 | 0 |  |
+| 244 | [docs][feat] action_runner_template 利用方法ドキュメント整備 & 実装サンプル追加 | P2 | 2 |  |  |  | 0 | 0 | 0 |  |
+| 246 | [artifacts][feat] スクリーンショットの取得・保存機能強化 | P1 | 2 |  |  |  | 0 | 0 | 0 |  |
+| 247 | [artifacts][feat] ブラウザ要素の取得・保存機能強化 | P1 | 2 |  |  |  | 0 | 0 | 0 |  |
 | 90 | Temp test issue for enrichment | P2 | 2 | test |  |  | 0 | 0 | 0 |  |
+| 92 | [enhance][roadmap] Enrichment Phase 3: reverse dependents validation & high-risk strict sync | P2 |  |  |  |  | 0 | 0 | 0 |  |
 
 ## 7. 依存詳細 (Fan-in / Fan-out)
 
@@ -879,8 +946,176 @@ Sorted By: critical_path_rank
 - Dependents (0): (none)
 - Progress: {"state": "done", "primary_pr": 105}
 
+### Issue 101: chore(test): async ブラウザ起動・event loop 衝突安定化
+- Priority: P2, Phase: 1, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 107: Cleanup: PytestReturnNotNone warnings across component tests
+- Priority: P2, Phase: 1-late, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 108: Stabilize Edge headless navigation flake (TargetClosedError)
+- Priority: P2, Phase: 1-late, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 109: [quality][coverage] Sonar 新規行カバレッジ向上とQuality Gate再挑戦 (#105 追随)
+- Priority: P2, Phase: 2, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 113: docs: cleanup archived references to tests/pytest.ini (post PR #112)
+- Priority: P2, Phase: None, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 114: ci: evaluate relaxing pytest.ini guard scope for docs/archive references (follow-up to PR #112)
+- Priority: P2, Phase: None, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 115: [A3][regression][hardening] Post-#38 回帰スイート強化 (破損動画 / 強制移行 / retention トグル / パス可搬性 / flags 再生成)
+- Priority: None, Phase: None, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 127: [docs][batch] CSVバッチエンジン統合ドキュメントの包括的改善
+- Priority: P1, Phase: 2, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 192: [security][follow-up] Issue #154 pip-audit stabilization - monthly security monitoring schedule
+- Priority: P1, Phase: 2, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 194: [artifacts] Tab index manifest for multi-tab recordings
+- Priority: None, Phase: None, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 197: [dashboard] UI graphs and preset expansion
+- Priority: None, Phase: None, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 218: テストカバレッジ率の向上
+- Priority: None, Phase: None, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 227: [ui/ux][enhancement] LLM有効時のエラーメッセージ改善とUI統一性確保
+- Priority: P2, Phase: None, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 228: [configuration][enhancement] LLM設定の改善と設定ガイドの明確化
+- Priority: P2, Phase: None, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 229: [ui/ux][enhancement] UI/UXの統一性確保とデザインシステムの確立
+- Priority: P2, Phase: None, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 230: [documentation][enhancement] ドキュメントの改善とユーザガイドの充実
+- Priority: P2, Phase: None, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 231: [testing][enhancement] テストスイートの改善とカバレッジ向上
+- Priority: P2, Phase: None, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 244: [docs][feat] action_runner_template 利用方法ドキュメント整備 & 実装サンプル追加
+- Priority: P2, Phase: 2, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 246: [artifacts][feat] スクリーンショットの取得・保存機能強化
+- Priority: P1, Phase: 2, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 247: [artifacts][feat] ブラウザ要素の取得・保存機能強化
+- Priority: P1, Phase: 2, Area: None
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
 ### Issue 90: Temp test issue for enrichment
 - Priority: P2, Phase: 2, Area: test
+- Risk: (none)
+- CriticalPathRank: None
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+
+### Issue 92: [enhance][roadmap] Enrichment Phase 3: reverse dependents validation & high-risk strict sync
+- Priority: P2, Phase: None, Area: None
 - Risk: (none)
 - CriticalPathRank: None
 - LongestDistance: 0
