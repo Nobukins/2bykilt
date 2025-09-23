@@ -120,22 +120,33 @@ def classify_issue_status(issue_id: str,
                           issues: Dict[str, Any],
                           dependency_api_data: Dict[str, Dict[str, Any]]) -> str:
     """Classify issue status based on:
+    - Manual progress.state (highest priority)
     - Own issue API state
     - Primary PR (if any)
     - Closure state of all dependency issues
 
     Rules:
+      * progress.state = 'done' -> done
+      * progress.state = 'in_progress' -> in_progress
       * closed -> done
       * active PR (open) -> in_progress
       * has dependencies and ANY dependency not closed -> blocked
       * otherwise -> ready
     """
+    # Check manual progress.state first (highest priority)
+    progress = issue_data.get('progress', {})
+    state = progress.get('state')
+    if state == 'done':
+        return 'done'
+    elif state == 'in_progress':
+        return 'in_progress'
+    
     # Closed
     if api_data.get('issue_state') == 'closed':
         return 'done'
 
     # PR present (simplified; treat draft/open similarly as in_progress for now)
-    primary_pr = issue_data.get('progress', {}).get('primary_pr')
+    primary_pr = progress.get('primary_pr')
     if primary_pr and api_data.get('primary_pr_state') == 'open':
         return 'in_progress'
 
