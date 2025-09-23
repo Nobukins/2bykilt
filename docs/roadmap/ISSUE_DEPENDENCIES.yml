@@ -248,7 +248,7 @@ issues:
     dependents: [], risk: high, critical_path_rank: 1}
   "55": {title: "browser_control pytest パス修正", meta: {area: runner, type: bug, 
         priority: P0, phase: "1", stability: core}, depends: [], dependents: [], 
-      risk: null, critical_path_rank: 1}
+      progress: {state: done, primary_pr: 187}, risk: null, critical_path_rank: 1}
   "56": {title: "統一 JSON Lines ロギング実装", meta: {area: logging, type: feat, 
         priority: P0, phase: "1", stability: core}, depends: ["31", "32"], 
       dependents: ["57", "60", "41"], progress: {state: done, primary_pr: 83}, 
