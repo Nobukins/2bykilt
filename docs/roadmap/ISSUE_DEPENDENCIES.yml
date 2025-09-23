@@ -364,7 +364,7 @@ issues:
   "247": {title: "[artifacts][feat] ブラウザ要素の取得・保存機能強化", meta: {area: artifacts, type: feat, priority: P1, phase: "2", stability: core}, depends: ["194"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
 
 summary:
-  total_issues: 99
+  total_issues: 93
   high_risk: ["31", "46", "49", "54", "62", "176", "237"]
   longest_chain_example: ["65", "64", "63", "66", "67"]
   data_quality_checks:
@@ -383,15 +383,7 @@ summary:
       - "154"
       - "192"
       - "197"
-      - "209"
-      - "210"
       - "218"
-      - "224"
-      - "227"
-      - "228"
-      - "229"
-      - "230"
-      - "231"
       - "240"
       - "241"
       - "244"
