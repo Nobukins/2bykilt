@@ -384,8 +384,8 @@ issues:
   "247": {title: "[artifacts][feat] ブラウザ要素の取得・保存機能強化", meta: {area: artifacts, type: feat, priority: P1, phase: "2", stability: core}, depends: ["194"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
 
 summary:
-  total_issues: 83
-  high_risk: ["31", "46", "49", "54", "62", "176", "238"]
+  total_issues: 99
+  high_risk: ["31", "46", "49", "54", "62", "176", "237"]
   longest_chain_example: ["65", "64", "63", "66", "67"]
   data_quality_checks:
     no_cycles_detected: true
@@ -393,21 +393,29 @@ summary:
       - "55"
       - "81"
       - "90"
+      - "107"
+      - "108"
+      - "109"
+      - "113"
+      - "114"
+      - "115"
+      - "127"
       - "154"
-      - "199"
-      - "208"
+      - "192"
+      - "197"
       - "209"
       - "210"
-      - "211"
-      - "212"
-      - "226"
+      - "218"
+      - "224"
+      - "227"
+      - "228"
+      - "229"
+      - "230"
+      - "231"
       - "240"
       - "241"
-      - "242"
       - "244"
-      - "246"
-      - "247"
-  generated_at_utc: "2025-09-23T00:00:00Z"
+  generated_at_utc: "2025-09-23T12:00:00Z"
 
 validation_rules:
   - "All blocking dependencies must be completed before starting an issue"
