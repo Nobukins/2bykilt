@@ -26,7 +26,7 @@
 |----------|-------------------------------|------|
 | Config | #64, #65, #63, #240, #228, #224 | Feature Flags / Multi-env / Schema Versioning / User Profile / LLM Settings / RECORDING_PATH UI |
 | Logging / Observability | #31, #56, #57, #58, #59, #197, #222, #223 | 統一ログ + Metrics Export / UI Graphs / Log Standardization |
-| Artifacts | #28, #30, #33, #34, #35, #36, #37, #38, #194, #175, #174, #221, #237 | 動画・スクショ・要素値・Manifest / Tab Index Manifest / Batch Artifacts / Recording Issues |
+| Artifacts | #28, #30, #33, #34, #35, #36, #37, #38, #194, #175, #174, #221, #237, #246, #247 | 動画・スクショ・要素値・Manifest / Tab Index Manifest / Batch Artifacts / Recording Issues / Screenshot Enhancement / Element Extraction Enhancement |
 | Runner Core / Reliability | #25, #44, #45, #50, #32, #241, #219, #220, #226, #238, #212 | git_script / Run/Job ID / Browser Automation / Search-LinkedIn / Browser-Control / Codegen |
 | Security (Base) | #60, #61, #192 | Secret Mask / Scan Ops / Pip-Audit Monitoring |
 | Security (Hardening) | #52, #62 | Sandbox / Path Control |
@@ -81,13 +81,13 @@ Progress Summary (Phase2): Phase2-04 Done / Phase2-05 Done / Phase2-06 Done / Ph
 | Phase2-13 | Runner 構成標準化 & CI/Docs 追随 | #50 ✅ → #200 ✅ → #201 ✅ → #202 ✅ → #196 ✅ → #203 ✅ → #219 ✅ → #220 → #221 → #237 ✅ → #238 | In Progress | 配置規約→代表スクリプト→CI→Docs完了 / search-linkedin失敗 / browser-control失敗 / 録画未生成 / 録画ファイル生成バグ / LLM無効時browser-control失敗 |
 | Phase2-14 | UI/UX Internationalization | #199 → #224 | Planned | JA ベース → EN 追加。辞書/ヘルパ/トグル/フォールバック / RECORDING_PATH 競合解消 |
 | Phase2-15 | Batch 安定化フォロー | #198 | Planned | CSV 入力正規化（NamedString 対応）+ 最小テスト |
-| Phase2-16 | Critical Bug Fixes | #240 → #241 | OPEN | User profile SSO/Cookie → Unlock-Future browser automation |
+| Phase2-16 | Critical Bug Fixes | #240 → #241 | Planned | User profile SSO/Cookie → Unlock-Future browser automation (エンタープライズ拡張、後回し) |
 | Phase2-17 | Feature Flag UI Integration | #242 | OPEN | Hide LLM tabs when disabled |
 | Phase2-18 | Testing & Quality Improvements | #231 → #218 → #115 → #108 → #107 | OPEN | Test suite / Coverage / Regression / Flakes / Warnings |
 | Phase2-19 | Documentation Enhancements | #244 → #211 → #127 → #230 → #113 → #174 | OPEN | Action runner template / LLM docs / Batch docs / General docs / Cleanup / Artifact flow |
 | Phase2-20 | UI/UX Polish | #209 → #229 → #227 → #212 | OPEN | Results menu / Design system / Error messages / Codegen menu |
 | Phase2-21 | Configuration & LLM Settings | #228 | OPEN | LLM設定改善 |
-| Phase2-22 | Artifacts & Multi-tab Support | #194 | OPEN | Tab index manifest |
+| Phase2-22 | Artifacts & Multi-tab Support | #194 → #246 → #247 | OPEN | Tab index manifest / Screenshot enhancement / Element extraction enhancement |
 | Phase2-23 | Automation & Security Monitoring | #192 → #114 | OPEN | Pip-audit schedule / Pytest guard |
 | Phase2-24 | Observability UI | #197 | OPEN | UI graphs and presets |
 
@@ -175,10 +175,11 @@ Phase2 再編後の短期優先セットを以下に再定義。A フェーズ�
 - **ユーザーインパクト重視**: #39 ✅ (CSV駆動バッチエンジン) はユーザー体験向上効果が高いため優先
 - **セキュリティ重視**: #60 ✅ (シークレットマスキング拡張) はセキュリティ強化のため優先
 - **Open Issue 評価**: 全Open Issueをカテゴリ分類し、P0/P1を優先、依存関係を考慮した順序付け
+- **初期リリース価値優先**: エンタープライズ企業ではSSOが一般的だが、最初に対応したいアプリにはSSO認証がないため、ブラウザ上でユーザー名・パスワード入力が必要。CSVファイル連携でのテンプレート複数バッチ処理連続実行の方がユーザー価値が高く、優先度を調整
 
 ### 短期 (Phase2 Kick Re-aligned)
 
-1. **P0 Critical Bugs**: #240 (User profile SSO/Cookie) → #241 (Unlock-Future browser automation) → #237 ✅ (Recording file generation) → #238 (Browser-control LLM disable) | 高速クローズ目標
+1. **CSVバッチ処理強化優先**: #198 (CSV入力正規化) → #173 (CSV Preview & Command Argument Mapping) → #175 ✅ (バッチ行単位成果物キャプチャ) | ユーザー価値高いバッチ処理を優先
 2. Phase2-07 前倒し: #59 ✅ Run Metrics API → #102 ✅ Flags artifacts helper → #222 (ログ標準化) → #223 ✅ (LOG_LEVEL修正)
 3. Phase2-13 並行: #219 ✅ (search-linkedin失敗) → #220 (browser-control失敗) → #221 (録画未生成) | 基盤部分完了、残り3件のバグ修正着手
 4. Phase2-14 設定競合: #224 (RECORDING_PATH UI/環境変数競合) | #221 安定化後着手
@@ -192,6 +193,8 @@ Phase2 再編後の短期優先セットを以下に再定義。A フェーズ�
 3. Runner Concurrency & Diagnostics: #47 ✅ queue infra → #48 env validation diagnostics
 4. Plugin Increment (part1): #49 loader + registration minimal
 5. Artifact/Manifest フォロー: #106 flag enforcement warn → #104 仕上げ（必要に応じ）
+6. Artifacts 強化: #246 (Screenshot enhancement) → #247 (Element extraction enhancement)
+7. SSO/プロファイル機能: #240 (User profile SSO/Cookie) → #241 (Unlock-Future browser automation) | エンタープライズ向け拡張として後回し
 
 ### 長期 (Phase2 Later)
 
@@ -218,8 +221,8 @@ Phase2 再編後の短期優先セットを以下に再定義。A フェーズ�
 
 ### 最優先課題
 
-- **今すぐ着手すべき**: #240 (P0: User profile utilization in browser launch) - Critical SSO/Cookie functionality missing
-- **次に着手すべき**: #241 (P0: Fix Unlock-Future type browser automation) - Operations hang without execution
+- **今すぐ着手すべき**: #198 (CSV Batch Processing: 'NamedString' has no attribute 'read') - バッチ処理安定化でユーザー価値向上
+- **次に着手すべき**: #173 (CSV Preview & Command Argument Mapping) - UI改善でバッチ利用性向上
 - **並行着手可能**: #242 (P1: Optimize Feature Flag usage for UI menu control) - Hide LLM tabs when disabled
 
 ### 開発フロー (Mermaid - Phase2 色付け試案)
@@ -237,13 +240,13 @@ graph LR
       P213["Phase2-13 Runner Standardization (#50✅→#200✅→#201✅→#202✅→#196✅→#203✅→#219→#220→#221)"]:::inprogress
       P214["Phase2-14 i18n (#199)"]:::planned
       P215["Phase2-15 Batch Fix (#198)"]:::planned
-      P216["Phase2-16 Critical Bugs (#240→#241)"]:::open
+      P216["Phase2-16 Critical Bugs (#240→#241)"]:::future
       P217["Phase2-17 Flag UI (#242)"]:::open
       P218["Phase2-18 Testing (#231→#218→#115→#108→#107)"]:::open
       P219["Phase2-19 Docs (#244→#211→#127→#230→#113→#174)"]:::open
       P220["Phase2-20 UI/UX (#209→#229→#227→#212)"]:::open
       P221["Phase2-21 Config (#228)"]:::open
-      P222["Phase2-22 Artifacts (#194)"]:::open
+      P222["Phase2-22 Artifacts (#194→#246→#247)"]:::open
       P223["Phase2-23 Automation (#192→#114)"]:::open
       P224["Phase2-24 Observability UI (#197)"]:::open
       P208["Phase2-08 Coverage (#109)"]:::planned
@@ -351,6 +354,7 @@ gitGraph
 | 1.0.30 | 2025-09-18 | Phase2-13に新critical bugs #237/#238追加 / ISSUE_DEPENDENCIES.yml更新 / Next Actions優先順位付け更新 / Progress Summary更新 | Copilot Agent |
 | 1.0.31 | 2025-09-21 | Phase2-13 #237 ✅反映 (PR #239 マージ前提) / Progress Summary更新 (8/11 issues completed) / Next Actions更新 | Copilot Agent |
 | 1.0.32 | 2025-09-23 | ROADMAP.md と ISSUE_DEPENDENCIES.yml の再策定: 全Open Issueのカテゴリ分類とPhase2統合 / PR #245 作成 | Copilot Agent |
+| 1.0.34 | 2025-09-23 | 優先順位付け方針に初期リリース価値優先を追加 / 次アクションでCSVバッチ処理を優先 / Phase2-16を後回しに / 最優先課題をバッチ処理に変更 | Copilot Agent |
 
 ---
 

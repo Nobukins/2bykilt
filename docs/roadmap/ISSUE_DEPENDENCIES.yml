@@ -363,7 +363,7 @@ issues:
   "199": {title: "[ui/ux] Internationalization (i18n): JA base, add EN", meta: {area: uiux, type: feat, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: low, progress: {state: open}, critical_path_rank: 1}
   "198": {title: "[batch] CSV Batch Processing: 'NamedString' has no attribute 'read'", meta: {area: batch, type: bug, priority: P1, phase: "2", stability: experimental}, depends: ["39"], dependents: [], risk: medium, progress: {state: open}, critical_path_rank: 1}
   "197": {title: "[dashboard] UI graphs and preset expansion", meta: {area: observability, type: feat, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
-  "194": {title: "[artifacts] Tab index manifest for multi-tab recordings", meta: {area: artifacts, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "194": {title: "[artifacts] Tab index manifest for multi-tab recordings", meta: {area: artifacts, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: ["246", "247"], risk: null, progress: {state: open}, critical_path_rank: 1}
   "192": {title: "[security][follow-up] Issue #154 pip-audit stabilization - monthly security monitoring schedule", meta: {area: security, type: chore, priority: P1, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
   "175": {title: "バッチ行単位成果物キャプチャ基盤 (スクリーンショット/要素値/ログ関連紐付け)", meta: {area: artifacts, type: feat, priority: P1, phase: "2", stability: experimental}, depends: ["39", "40", "41", "42", "33", "35"], dependents: ["176"], risk: medium, progress: {state: done, primary_pr: 181}, critical_path_rank: 2}
   "174": {title: "[artifacts][batch] Clarify Artifact Output & Access Flow (Screenshots, Data)", meta: {area: artifacts, type: docs, priority: P3, phase: "2", stability: core}, depends: ["28", "30", "33", "35", "39"], dependents: [], risk: low, critical_path_rank: 1}
@@ -379,9 +379,12 @@ issues:
   "240": {title: "P0: Fix user profile utilization in browser launch - Critical SSO/Cookie functionality missing", meta: {area: config, type: bug, priority: P0, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
   "241": {title: "P0: Fix Unlock-Future type browser automation - Operations hang without execution", meta: {area: runner, type: bug, priority: P0, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
   "242": {title: "P1: Optimize Feature Flag usage for UI menu control - Hide LLM tabs when disabled", meta: {area: uiux, type: enhancement, priority: P1, phase: "2", stability: core}, depends: ["64"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "244": {title: "[docs][feat] action_runner_template 利用方法ドキュメント整備 & 実装サンプル追加", meta: {area: docs, type: feat, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "246": {title: "[artifacts][feat] スクリーンショットの取得・保存機能強化", meta: {area: artifacts, type: feat, priority: P1, phase: "2", stability: core}, depends: ["194"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "247": {title: "[artifacts][feat] ブラウザ要素の取得・保存機能強化", meta: {area: artifacts, type: feat, priority: P1, phase: "2", stability: core}, depends: ["194"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
 
 summary:
-  total_issues: 81
+  total_issues: 83
   high_risk: ["31", "46", "49", "54", "62", "176", "238"]
   longest_chain_example: ["65", "64", "63", "66", "67"]
   data_quality_checks:
@@ -401,7 +404,10 @@ summary:
       - "240"
       - "241"
       - "242"
-  generated_at_utc: "2025-09-21T13:00:00Z"
+      - "244"
+      - "246"
+      - "247"
+  generated_at_utc: "2025-09-23T00:00:00Z"
 
 validation_rules:
   - "All blocking dependencies must be completed before starting an issue"
