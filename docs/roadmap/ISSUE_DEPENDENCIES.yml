@@ -346,7 +346,6 @@ issues:
 
   "237": {title: "Bug: Recording file generation not working for any run type", meta: {area: artifacts, type: bug, priority: P0, phase: "2", stability: core}, depends: ["221"], dependents: [], risk: high, progress: {state: done, primary_pr: 239}, critical_path_rank: 4}
   "218": {title: "テストカバレッジ率の向上", meta: {area: testing, type: enhancement, priority: P2, phase: "2", stability: experimental}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
-  "211": {title: "[docs] LLM 統合ドキュメント整備", meta: {area: docs, type: docs, priority: P1, phase: "2", stability: core}, depends: ["43"], dependents: [], risk: low, progress: {state: open}, critical_path_rank: 1}
   "210": {title: "[ui/ux] RecordingsメニューのLLM無効化時表示改善", meta: {area: uiux, type: enhancement, priority: P1, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
   "209": {title: "[ui/ux] Resultsメニュー最適化利用とダッシュボード化", meta: {area: uiux, type: enhancement, priority: P1, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
   "199": {title: "[ui/ux] Internationalization (i18n): JA base, add EN", meta: {area: uiux, type: feat, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: low, progress: {state: open}, critical_path_rank: 1}
