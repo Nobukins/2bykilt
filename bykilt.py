@@ -132,7 +132,7 @@ def handle_batch_command(args):
             engine = BatchEngine(run_context)
 
             # Get batch status
-            manifest = engine.get_batch_status(args.batch_id)
+            manifest = engine.get_batch_summary(args.batch_id)
 
             if manifest is None:
                 print(f"❌ Batch {args.batch_id} not found")
@@ -149,10 +149,10 @@ def handle_batch_command(args):
 
             print("\n📋 Job details:")
             for job in manifest.jobs:
-                status_icon = "✅" if job.status == "completed" else "❌" if job.status == "failed" else "⏳"
-                print(f"   {status_icon} {job.job_id}: {job.status}")
-                if job.error_message:
-                    print(f"      Error: {job.error_message}")
+                status_icon = "✅" if job['status'] == "completed" else "❌" if job['status'] == "failed" else "⏳"
+                print(f"   {status_icon} {job['job_id']}: {job['status']}")
+                if job.get('error_message'):
+                    print(f"      Error: {job['error_message']}")
 
             return 0
 
@@ -2811,8 +2811,8 @@ def handle_batch_command(args):
             run_context = RunContext.get()
             engine = BatchEngine(run_context)
 
-            # Get batch status
-            manifest = engine.get_batch_status(args.batch_id)
+            # Get batch summary
+            manifest = engine.get_batch_summary(args.batch_id)
 
             if manifest is None:
                 print(f"❌ Batch {args.batch_id} not found")
@@ -2972,7 +2972,7 @@ def handle_batch_command(args):
             engine = BatchEngine(run_context)
 
             # Get batch status
-            manifest = engine.get_batch_status(args.batch_id)
+            manifest = engine.get_batch_summary(args.batch_id)
 
             if manifest is None:
                 print(f"❌ Batch {args.batch_id} not found")

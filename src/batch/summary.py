@@ -40,6 +40,7 @@ class BatchSummary:
     """
     batch_id: str
     run_id: str
+    csv_path: str
     total_jobs: int
     completed_jobs: int
     failed_jobs: int
@@ -119,6 +120,7 @@ class BatchSummaryGenerator:
         summary = BatchSummary(
             batch_id=manifest.batch_id,
             run_id=manifest.run_id,
+            csv_path=manifest.csv_path,
             total_jobs=manifest.total_jobs,
             completed_jobs=completed_jobs,
             failed_jobs=failed_jobs,
