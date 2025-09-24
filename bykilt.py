@@ -2015,11 +2015,29 @@ Tests include browser initialization, profile validation, and recording path ver
                         import shutil
                         import os
                         import logging
+                        import io
+                        from pathlib import Path
+                        
+                        def normalize_csv_input(csv_input):
+                            """Normalize CSV input to bytes for file writing."""
+                            if hasattr(csv_input, 'read'):
+                                # File-like object
+                                return csv_input.read()
+                            elif isinstance(csv_input, str):
+                                # Path string
+                                with open(csv_input, 'rb') as f:
+                                    return f.read()
+                            elif hasattr(csv_input, 'value'):
+                                # NamedString (Gradio file upload)
+                                return csv_input.value.encode('utf-8')
+                            else:
+                                raise ValueError(f"Unsupported CSV input type: {type(csv_input)}")
                         
                         temp_csv_path = None
                         try:
                             with tempfile.NamedTemporaryFile(mode='wb', suffix='.csv', delete=False) as temp_file:
-                                shutil.copyfileobj(csv_file, temp_file)
+                                csv_bytes = normalize_csv_input(csv_file)
+                                temp_file.write(csv_bytes)
                                 temp_csv_path = temp_file.name
 
                             # Start batch processing
