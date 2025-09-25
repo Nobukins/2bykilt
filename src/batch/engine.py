@@ -16,7 +16,7 @@ import random
 import re
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Union, Iterator
+from typing import Dict, List, Optional, Any, Union, Iterator, Callable
 from typing import TYPE_CHECKING
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
@@ -1399,7 +1399,7 @@ class BatchEngine:
 
     async def execute_batch_jobs(self, batch_id: str, max_retries: int = DEFAULT_MAX_RETRIES,
                            retry_delay: float = DEFAULT_RETRY_DELAY, backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
-                           max_retry_delay: Optional[float] = None) -> Dict[str, Any]:
+                           max_retry_delay: Optional[float] = None, progress_callback: Optional[Callable[[int, int], None]] = None) -> Dict[str, Any]:
         """
         Execute all pending jobs in a batch.
 
@@ -1413,6 +1413,9 @@ class BatchEngine:
             retry_delay: Initial delay between retries in seconds (default: DEFAULT_RETRY_DELAY)
             backoff_factor: Exponential backoff multiplier (default: DEFAULT_BACKOFF_FACTOR)
             max_retry_delay: Maximum retry delay in seconds (optional, defaults to MAX_RETRY_DELAY)
+            progress_callback: Optional callback function called after each job completion.
+                              Receives (completed_jobs: int, total_jobs: int) as arguments.
+                              Useful for UI progress updates.
 
         Returns:
             Dictionary with execution results and statistics
@@ -1503,7 +1506,25 @@ class BatchEngine:
                     self.logger.error(f"Job {job.job_id} failed: {e}")
 
                 # Save manifest after each job
-                self._save_manifest(self._find_manifest_file_for_batch(batch_id), manifest)
+                manifest_file_for_save = self._find_manifest_file_for_batch(batch_id)
+                self._save_manifest(manifest_file_for_save, manifest)
+
+                # Call progress callback if provided
+                if progress_callback:
+                    try:
+                        progress_callback(manifest.completed_jobs, manifest.total_jobs)
+                    except Exception as e:
+                        # Best-effort; never fail job execution because of callback
+                        self.logger.debug(f"Progress callback failed: {e}")
+
+                # Emit a concise progress message after each job so CLI/UI can reflect
+                # incremental progress (e.g., "Jobs: 1/4 completed"). This addresses
+                # the issue where status stayed at 0/4 until the end of execution.
+                try:
+                    self.logger.info(f"Jobs: {manifest.completed_jobs}/{manifest.total_jobs} completed")
+                except Exception:
+                    # Best-effort; never fail job execution because of logging
+                    self.logger.debug("Failed to emit progress message")
 
             # Generate batch summary if complete
             if self._is_batch_complete(manifest):
@@ -2031,5 +2052,14 @@ def start_batch(csv_path: str, run_context: Optional[RunContext] = None, config:
             logger.error(f"Failed to execute batch {manifest.batch_id} immediately: {e}")
             # Don't fail the batch creation if execution fails
             # The jobs can still be executed later manually
+
+        # After execution, reload manifest from artifacts so the returned
+        # manifest reflects any status updates performed during execution.
+        try:
+            updated = engine._load_manifest_by_batch_id(manifest.batch_id)
+            if updated is not None:
+                manifest = updated
+        except Exception as e:
+            logger.debug(f"Could not reload updated manifest for {manifest.batch_id}: {e}")
 
     return manifest

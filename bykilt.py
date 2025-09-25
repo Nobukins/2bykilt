@@ -131,7 +131,19 @@ def handle_batch_command(args):
             print("✅ Batch created successfully!")
             print(f"   Batch ID: {manifest.batch_id}")
             print(f"   Run ID: {manifest.run_id}")
-            print(f"   Total jobs: {manifest.total_jobs}")
+            # If jobs were executed immediately, try to reload the manifest/summary
+            # so we can display updated completed/failed counts.
+            try:
+                engine = BatchEngine(run_context)
+                summary = engine.get_batch_summary(manifest.batch_id)
+                if summary:
+                    print(f"   Total jobs: {summary.total_jobs}")
+                    print(f"   Completed: {summary.completed_jobs}")
+                    print(f"   Failed: {summary.failed_jobs}")
+                else:
+                    print(f"   Total jobs: {manifest.total_jobs}")
+            except Exception:
+                print(f"   Total jobs: {manifest.total_jobs}")
             print(f"   Jobs directory: {run_context.artifact_dir('jobs')}")
             print(f"   Manifest: {os.path.join(run_context.artifact_dir('batch'), 'batch_manifest.json')}")
 
