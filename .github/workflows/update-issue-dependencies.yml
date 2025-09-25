@@ -78,6 +78,7 @@ jobs:
           branch: bot/roadmap-sync/${{ github.run_id }}
           title: "chore(roadmap): auto enrich ISSUE_DEPENDENCIES ${{ steps.date.outputs.date }}"
           commit-message: "chore(roadmap): auto enrich ISSUE_DEPENDENCIES (Issue #76)"
+          delete-branch: true
           body: |
             Automated enrichment (Issue #76 Phase 2).
 
