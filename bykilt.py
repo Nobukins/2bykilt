@@ -127,6 +127,9 @@ def handle_batch_command(args):
 
             # Start batch
             manifest = start_batch(args.csv_path, run_context, execute_immediately=execute_immediately)
+            # If start_batch returned a coroutine (async implementation), run it to completion.
+            if asyncio.iscoroutine(manifest):
+                manifest = asyncio.run(manifest)
 
             print("✅ Batch created successfully!")
             print(f"   Batch ID: {manifest.batch_id}")
@@ -2327,60 +2330,19 @@ Manifest: {run_context.artifact_dir('batch')}/batch_manifest.json
                             return h
                     return None
 
-                def preview_csv_fn(csv_file, n_rows, template_job_name, unique_override=None):
-                    """Return DataFrame rows (list-of-lists) and a status message.
+                from src.batch.preview import build_preview_from_bytes
 
-                    Also returns preview table that includes a right-most _job_template column
-                    and places a detected unique-id column at the left for visibility.
-                    """
+                def preview_csv_fn(csv_file, n_rows, template_job_name, unique_override=None):
+                    """Wrapper that adapts build_preview_from_bytes to Gradio update tuples."""
                     file_bytes = _read_uploaded_bytes(csv_file)
                     if file_bytes is None:
-                        # Also clear dropdown choices when no file
                         return gr.update(value=[], headers=[]), "❌ No CSV file selected or failed to read", gr.update(choices=[], value=None)
 
                     try:
-                        headers, rows_dicts = parse_csv_preview(file_bytes, max_rows=n_rows)
+                        display_rows, display_headers, status_msg, header_choices, selected_value = build_preview_from_bytes(file_bytes, n_rows, template_job_name, unique_override)
                     except Exception as e:
                         return gr.update(value=[], headers=[]), f"❌ Failed to parse CSV: {e}", gr.update(choices=[], value=None)
 
-                    # Convert dict rows to list-of-lists preserving header order
-                    display_rows = []
-                    for r in rows_dicts:
-                        display_rows.append([r.get(h, "") or "" for h in headers])
-
-                    # Determine unique-id column (override takes precedence)
-                    detected_unique = _detect_unique_candidate(headers, rows_dicts)
-                    chosen_unique = (unique_override if unique_override not in (None, "") else None) or detected_unique
-                    display_headers = headers.copy()
-                    if chosen_unique and chosen_unique in display_headers:
-                        # Move chosen_unique to the front
-                        display_headers.remove(chosen_unique)
-                        display_headers.insert(0, chosen_unique)
-                        # Reorder each row accordingly
-                        reordered_rows = []
-                        for r in rows_dicts:
-                            reordered_rows.append([r.get(chosen_unique, "") or ""] + [r.get(h, "") or "" for h in display_headers[1:]])
-                        display_rows = reordered_rows
-
-                    # Append template job column to display rows and headers
-                    display_headers = display_headers + ["_job_template"]
-                    display_rows = [row + [template_job_name or "<none>"] for row in display_rows]
-
-                    status_msg = f"✅ Previewing top {len(display_rows)} rows. Template: {template_job_name or '<none>'}"
-
-                    # Additionally compute a quick total row count (fast scan of bytes) if reasonable size
-                    try:
-                        # count newlines as approximate number of rows
-                        total_rows = file_bytes.count(b"\n")
-                        if total_rows > n_rows:
-                            status_msg += f" — approx total rows: {total_rows}"
-                    except Exception:
-                        pass
-                    # Provide dropdown choices (original headers) and select current unique
-                    header_choices = headers.copy()
-                    selected_value = chosen_unique if chosen_unique in header_choices else None
-
-                    # Return explicit headers with the DataFrame update so Gradio shows the column names
                     return gr.update(value=display_rows, headers=display_headers), status_msg, gr.update(choices=header_choices, value=selected_value)
 
                 # Only wire preview handler when feature enabled

@@ -31,7 +31,7 @@ class TestBatchCLIIntegration:
         """
         # Execute batch start command with --no-execute to avoid actual job execution
         result = subprocess.run([
-            'python', 'bykilt.py', 'batch', 'start', 'tests/batch/test.csv', '--no-execute'
+            sys.executable, 'bykilt.py', 'batch', 'start', 'tests/batch/test.csv', '--no-execute'
         ], capture_output=True, text=True, cwd=Path(__file__).parent.parent.parent)
 
         # Verify command succeeded
@@ -55,7 +55,7 @@ class TestBatchCLIIntegration:
         """
         # First create a batch to get a valid batch ID
         result = subprocess.run([
-            'python', 'bykilt.py', 'batch', 'start', 'tests/batch/test.csv', '--no-execute'
+            sys.executable, 'bykilt.py', 'batch', 'start', 'tests/batch/test.csv', '--no-execute'
         ], capture_output=True, text=True, cwd=Path(__file__).parent.parent.parent)
 
         assert result.returncode == 0
@@ -67,7 +67,7 @@ class TestBatchCLIIntegration:
 
         # Now test batch status command
         status_result = subprocess.run([
-            'python', 'bykilt.py', 'batch', 'status', batch_id
+            sys.executable, 'bykilt.py', 'batch', 'status', batch_id
         ], capture_output=True, text=True, cwd=Path(__file__).parent.parent.parent)
 
         # Verify command succeeded
@@ -98,14 +98,14 @@ class TestBatchCLIIntegration:
         """
         # First create a batch
         result = subprocess.run([
-            'python', 'bykilt.py', 'batch', 'start', 'tests/batch/test.csv', '--no-execute'
+            sys.executable, 'bykilt.py', 'batch', 'start', 'tests/batch/test.csv', '--no-execute'
         ], capture_output=True, text=True, cwd=Path(__file__).parent.parent.parent)
 
         assert result.returncode == 0
 
         # Extract batch ID and get job details
         status_result = subprocess.run([
-            'python', 'bykilt.py', 'batch', 'status',
+            sys.executable, 'bykilt.py', 'batch', 'status',
             result.stdout.split("Batch ID: ")[1].split()[0]
         ], capture_output=True, text=True, cwd=Path(__file__).parent.parent.parent)
 
@@ -118,7 +118,7 @@ class TestBatchCLIIntegration:
 
         # Update job status to completed
         update_result = subprocess.run([
-            'python', 'bykilt.py', 'batch', 'update-job', job_id, 'completed'
+            sys.executable, 'bykilt.py', 'batch', 'update-job', job_id, 'completed'
         ], capture_output=True, text=True, cwd=Path(__file__).parent.parent.parent)
 
         # Verify command succeeded
@@ -131,7 +131,7 @@ class TestBatchCLIIntegration:
 
         # Verify status was actually updated by checking batch status again
         final_status_result = subprocess.run([
-            'python', 'bykilt.py', 'batch', 'status',
+            sys.executable, 'bykilt.py', 'batch', 'status',
             result.stdout.split("Batch ID: ")[1].split()[0]
         ], capture_output=True, text=True, cwd=Path(__file__).parent.parent.parent)
 
@@ -147,7 +147,7 @@ class TestBatchCLIIntegration:
         Evaluates: Error handling for invalid batch IDs
         """
         result = subprocess.run([
-            'python', 'bykilt.py', 'batch', 'status', 'invalid-batch-id-12345'
+            sys.executable, 'bykilt.py', 'batch', 'status', 'invalid-batch-id-12345'
         ], capture_output=True, text=True, cwd=Path(__file__).parent.parent.parent)
 
         # Should return error code 1
@@ -232,7 +232,7 @@ class TestBatchWorkflowEndToEnd:
         """
         # Step 1: Create batch
         start_result = subprocess.run([
-            'python', 'bykilt.py', 'batch', 'start', 'tests/batch/test.csv', '--no-execute'
+            sys.executable, 'bykilt.py', 'batch', 'start', 'tests/batch/test.csv', '--no-execute'
         ], capture_output=True, text=True, cwd=Path(__file__).parent.parent.parent)
 
         assert start_result.returncode == 0
@@ -240,7 +240,7 @@ class TestBatchWorkflowEndToEnd:
 
         # Step 2: Check initial status
         status_result = subprocess.run([
-            'python', 'bykilt.py', 'batch', 'status', batch_id
+            sys.executable, 'bykilt.py', 'batch', 'status', batch_id
         ], capture_output=True, text=True, cwd=Path(__file__).parent.parent.parent)
 
         assert status_result.returncode == 0
@@ -252,14 +252,14 @@ class TestBatchWorkflowEndToEnd:
             job_id = f"{status_result.stdout.split('Run ID: ')[1].split()[0]}_{i:04d}"
 
             update_result = subprocess.run([
-                'python', 'bykilt.py', 'batch', 'update-job', job_id, 'completed'
+                sys.executable, 'bykilt.py', 'batch', 'update-job', job_id, 'completed'
             ], capture_output=True, text=True, cwd=Path(__file__).parent.parent.parent)
 
             assert update_result.returncode == 0
 
         # Step 4: Verify all jobs completed
         final_status_result = subprocess.run([
-            'python', 'bykilt.py', 'batch', 'status', batch_id
+            sys.executable, 'bykilt.py', 'batch', 'status', batch_id
         ], capture_output=True, text=True, cwd=Path(__file__).parent.parent.parent)
 
         assert final_status_result.returncode == 0
