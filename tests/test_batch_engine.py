@@ -2109,3 +2109,140 @@ class TestBatchRetry:
         # Should not raise exception, just use default
         engine._configure_logging()
         assert engine.logger.level == logging.INFO  # Default level
+
+
+class TestExecuteBatchJobs:
+    """Test execute_batch_jobs functionality."""
+
+    @pytest.fixture
+    def temp_dir(self):
+        """Create temporary directory for tests."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yield Path(tmpdir)
+
+    @pytest.fixture
+    def run_context(self, temp_dir):
+        """Create mock run context."""
+        context = Mock(spec=RunContext)
+        context.run_id_base = "test_run_123"
+        def artifact_dir_mock(component):
+            path = temp_dir / f"{context.run_id_base}-{component}"
+            path.mkdir(parents=True, exist_ok=True)
+            return path
+        context.artifact_dir = artifact_dir_mock
+        return context
+
+    @pytest.fixture
+    def engine(self, run_context):
+        """Create BatchEngine instance."""
+        return BatchEngine(run_context)
+
+    @pytest.mark.asyncio
+    async def test_execute_batch_jobs_with_progress_callback(self, engine, temp_dir, run_context):
+        """Test execute_batch_jobs with progress callback."""
+        # Create CSV with test data
+        csv_content = "name,value\ntest1,data1\ntest2,data2\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        # Create batch
+        manifest = engine.create_batch_jobs(str(csv_file))
+
+        # Mock job execution to succeed
+        with patch.object(engine, '_execute_single_job', return_value='completed'):
+            # Track progress callback calls
+            progress_calls = []
+            def progress_callback(completed, total):
+                progress_calls.append((completed, total))
+
+            # Execute batch with progress callback
+            result = await engine.execute_batch_jobs(manifest.batch_id, progress_callback=progress_callback)
+
+            # Verify execution completed
+            assert result['completed'] == 2
+            assert result['failed'] == 0
+            assert result['total_jobs'] == 2
+
+            # Verify progress callback was called after each job
+            # Should be called twice: after first job (1/2), after second job (2/2)
+            assert len(progress_calls) == 2
+            assert progress_calls[0] == (1, 2)  # After first job
+            assert progress_calls[1] == (2, 2)  # After second job
+
+    @pytest.mark.asyncio
+    async def test_execute_batch_jobs_without_progress_callback(self, engine, temp_dir, run_context):
+        """Test execute_batch_jobs without progress callback."""
+        # Create CSV with test data
+        csv_content = "name,value\ntest1,data1\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        # Create batch
+        manifest = engine.create_batch_jobs(str(csv_file))
+
+        # Mock job execution to succeed
+        with patch.object(engine, '_execute_single_job', return_value='completed'):
+            # Execute batch without progress callback
+            result = await engine.execute_batch_jobs(manifest.batch_id)
+
+            # Verify execution completed
+            assert result['completed'] == 1
+            assert result['failed'] == 0
+
+    @pytest.mark.asyncio
+    async def test_execute_batch_jobs_progress_callback_exception_handling(self, engine, temp_dir, run_context):
+        """Test that progress callback exceptions don't fail job execution."""
+        # Create CSV with test data
+        csv_content = "name,value\ntest1,data1\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        # Create batch
+        manifest = engine.create_batch_jobs(str(csv_file))
+
+        # Mock job execution to succeed
+        with patch.object(engine, '_execute_single_job', return_value='completed'):
+            # Progress callback that raises exception
+            def failing_callback(completed, total):
+                raise Exception("Callback failed")
+
+            # Execute batch with failing progress callback
+            result = await engine.execute_batch_jobs(manifest.batch_id, progress_callback=failing_callback)
+
+            # Verify execution still completed despite callback failure
+            assert result['completed'] == 1
+            assert result['failed'] == 0
+
+    @pytest.mark.asyncio
+    async def test_execute_batch_jobs_incremental_manifest_updates(self, engine, temp_dir, run_context):
+        """Test that manifest is updated incrementally during batch execution."""
+        # Create CSV with multiple jobs
+        csv_content = "name,value\ntest1,data1\ntest2,data2\ntest3,data3\n"
+        csv_file = temp_dir / "test.csv"
+        csv_file.write_text(csv_content)
+
+        # Create batch
+        manifest = engine.create_batch_jobs(str(csv_file))
+        batch_id = manifest.batch_id
+
+        # Track manifest state after each job
+        manifest_states = []
+        def progress_callback(completed, total):
+            # Load current manifest state
+            current_manifest = engine._load_manifest_by_batch_id(batch_id)
+            manifest_states.append((current_manifest.completed_jobs, current_manifest.total_jobs))
+
+        # Mock job execution to succeed
+        with patch.object(engine, '_execute_single_job', return_value='completed'):
+            # Execute batch with progress callback
+            result = await engine.execute_batch_jobs(batch_id, progress_callback=progress_callback)
+
+            # Verify final result
+            assert result['completed'] == 3
+            assert result['failed'] == 0
+
+            # Verify incremental updates: should see (1,3), (2,3), (3,3)
+            assert len(manifest_states) == 3
+            assert manifest_states[0] == (1, 3)
+            assert manifest_states[1] == (2, 3)
+            assert manifest_states[2] == (3, 3)
