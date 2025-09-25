@@ -1,4 +1,5 @@
-template_type,template_name,param
-script,script-nogtips,query=script
-browser-control,search-nogtips,query=BC
-git-script,site-defined-script,query=github
+task,template_type,template_name,params.query
+script-nogtips,script,script-nogtips,script2
+script-nogtips,script,script-nogtips,script3
+search-nogtips,browser-control,search-nogtips,BC
+site-defined-script,git-script,site-defined-script,git

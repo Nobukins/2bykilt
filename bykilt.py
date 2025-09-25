@@ -45,6 +45,7 @@ Examples:
     start_parser = subparsers.add_parser('start', help='Start batch execution from CSV')
     start_parser.add_argument('csv_path', help='Path to CSV file')
     start_parser.add_argument('--template', help='Template ID for job configuration')
+    start_parser.add_argument('--no-execute', action='store_true', help='Create batch jobs without executing them')
 
     # batch status
     status_parser = subparsers.add_parser('status', help='Get batch execution status')
@@ -55,6 +56,10 @@ Examples:
     update_parser.add_argument('job_id', help='Job ID to update')
     update_parser.add_argument('status', choices=['completed', 'failed'], help='New status')
     update_parser.add_argument('--error', help='Error message for failed jobs')
+
+    # batch execute
+    execute_parser = subparsers.add_parser('execute', help='Execute all jobs in a batch')
+    execute_parser.add_argument('batch_id', help='Batch ID to execute')
 
     return parser
 
@@ -86,6 +91,7 @@ Examples:
     start_parser = subparsers.add_parser('start', help='Start batch execution from CSV')
     start_parser.add_argument('csv_path', help='Path to CSV file')
     start_parser.add_argument('--template', help='Template ID for job configuration')
+    start_parser.add_argument('--no-execute', action='store_true', help='Create batch jobs without executing them')
 
     # batch status
     status_parser = subparsers.add_parser('status', help='Get batch execution status')
@@ -96,6 +102,10 @@ Examples:
     update_parser.add_argument('job_id', help='Job ID to update')
     update_parser.add_argument('status', choices=['completed', 'failed'], help='New status')
     update_parser.add_argument('--error', help='Error message for failed jobs')
+
+    # batch execute
+    execute_parser = subparsers.add_parser('execute', help='Execute all jobs in a batch')
+    execute_parser.add_argument('batch_id', help='Batch ID to execute')
 
     return parser
 
@@ -109,11 +119,14 @@ def handle_batch_command(args):
         if hasattr(args, 'batch_command') and args.batch_command == 'start':
             print(f"🚀 Starting batch execution from {args.csv_path}")
 
+            # Determine execution mode
+            execute_immediately = not getattr(args, 'no_execute', False)
+
             # Create run context
             run_context = RunContext.get()
 
             # Start batch
-            manifest = start_batch(args.csv_path, run_context)
+            manifest = start_batch(args.csv_path, run_context, execute_immediately=execute_immediately)
 
             print("✅ Batch created successfully!")
             print(f"   Batch ID: {manifest.batch_id}")
@@ -167,6 +180,22 @@ def handle_batch_command(args):
             engine.update_job_status(args.job_id, args.status, args.error)
 
             print("✅ Job status updated successfully!")
+            return 0
+
+        elif hasattr(args, 'batch_command') and args.batch_command == 'execute':
+            print(f"🚀 Executing all jobs in batch {args.batch_id}")
+
+            # Create run context and engine
+            run_context = RunContext.get()
+            engine = BatchEngine(run_context)
+
+            # Execute batch jobs
+            result = engine.execute_batch_jobs(args.batch_id)
+
+            print("✅ Batch execution completed!")
+            print(f"   Jobs executed: {result.get('executed_jobs', 0)}")
+            print(f"   Successful: {result.get('successful_jobs', 0)}")
+            print(f"   Failed: {result.get('failed_jobs', 0)}")
             return 0
 
     except Exception as e:
@@ -2766,6 +2795,7 @@ Examples:
     start_parser = subparsers.add_parser('start', help='Start batch execution from CSV')
     start_parser.add_argument('csv_path', help='Path to CSV file')
     start_parser.add_argument('--template', help='Template ID for job configuration')
+    start_parser.add_argument('--no-execute', action='store_true', help='Create batch jobs without executing them')
 
     # batch status
     status_parser = subparsers.add_parser('status', help='Get batch execution status')
@@ -2776,6 +2806,10 @@ Examples:
     update_parser.add_argument('job_id', help='Job ID to update')
     update_parser.add_argument('status', choices=['completed', 'failed'], help='New status')
     update_parser.add_argument('--error', help='Error message for failed jobs')
+
+    # batch execute
+    execute_parser = subparsers.add_parser('execute', help='Execute pending jobs in batch')
+    execute_parser.add_argument('batch_id', help='Batch ID to execute')
 
     return parser
 
@@ -2891,6 +2925,7 @@ Examples:
     start_parser = subparsers.add_parser('start', help='Start batch execution from CSV')
     start_parser.add_argument('csv_path', help='Path to CSV file')
     start_parser.add_argument('--template', help='Template ID for job configuration')
+    start_parser.add_argument('--no-execute', action='store_true', help='Create batch jobs without executing them')
 
     # batch status
     status_parser = subparsers.add_parser('status', help='Get batch execution status')
@@ -2901,6 +2936,10 @@ Examples:
     update_parser.add_argument('job_id', help='Job ID to update')
     update_parser.add_argument('status', choices=['completed', 'failed'], help='New status')
     update_parser.add_argument('--error', help='Error message for failed jobs')
+
+    # batch execute
+    execute_parser = subparsers.add_parser('execute', help='Execute pending jobs in batch')
+    execute_parser.add_argument('batch_id', help='Batch ID to execute')
 
     return parser
 
@@ -2952,10 +2991,14 @@ def handle_batch_command(args):
             # Create run context
             run_context = RunContext.get()
 
-            # Start batch
-            manifest = start_batch(args.csv_path, run_context)
+            # Start batch - execute immediately by default, unless --no-execute is specified
+            execute_immediately = not getattr(args, 'no_execute', False)
+            manifest = start_batch(args.csv_path, run_context, execute_immediately=execute_immediately)
 
-            print("✅ Batch created successfully!")
+            if execute_immediately:
+                print("✅ Batch created and jobs executed successfully!")
+            else:
+                print("✅ Batch created successfully (jobs not executed)!")
             print(f"   Batch ID: {manifest.batch_id}")
             print(f"   Run ID: {manifest.run_id}")
             print(f"   Total jobs: {manifest.total_jobs}")
@@ -3007,6 +3050,22 @@ def handle_batch_command(args):
             engine.update_job_status(args.job_id, args.status, args.error)
 
             print("✅ Job status updated successfully!")
+            return 0
+
+        elif hasattr(args, 'batch_command') and args.batch_command == 'execute':
+            print(f"🚀 Executing all jobs in batch {args.batch_id}")
+
+            # Create run context and engine
+            run_context = RunContext.get()
+            engine = BatchEngine(run_context)
+
+            # Execute batch jobs
+            result = engine.execute_batch_jobs(args.batch_id)
+
+            print("✅ Batch execution completed!")
+            print(f"   Jobs executed: {result.get('executed', 0)}")
+            print(f"   Successful: {result.get('completed', 0)}")
+            print(f"   Failed: {result.get('failed', 0)}")
             return 0
 
     except Exception as e:

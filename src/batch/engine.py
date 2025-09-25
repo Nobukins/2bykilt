@@ -678,6 +678,7 @@ class BatchEngine:
         if not artifacts_root.exists():
             return None
 
+        candidates = []
         # Look for batch manifest files in all run directories
         for batch_dir in artifacts_root.glob("*-batch"):
             manifest_file = batch_dir / BATCH_MANIFEST_FILENAME
@@ -690,10 +691,15 @@ class BatchEngine:
                     manifest = BatchManifest.from_dict(data)
 
                     if manifest.batch_id == batch_id:
-                        return manifest
+                        candidates.append((manifest_file, manifest))
 
             except Exception as e:
                 self.logger.error(f"Failed to load batch manifest {manifest_file}: {e}")
+
+        if candidates:
+            # Return the manifest with the most recent mtime
+            candidates.sort(key=lambda x: x[0].stat().st_mtime, reverse=True)
+            return candidates[0][1]
 
         return None
 
@@ -1391,7 +1397,7 @@ class BatchEngine:
         except Exception as e:
             self.logger.debug(f"Failed to record batch execution metrics: {e}")
 
-    def execute_batch_jobs(self, batch_id: str, max_retries: int = DEFAULT_MAX_RETRIES,
+    async def execute_batch_jobs(self, batch_id: str, max_retries: int = DEFAULT_MAX_RETRIES,
                            retry_delay: float = DEFAULT_RETRY_DELAY, backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
                            max_retry_delay: Optional[float] = None) -> Dict[str, Any]:
         """
@@ -1457,7 +1463,7 @@ class BatchEngine:
                     self._save_manifest(self._find_manifest_file_for_batch(batch_id), manifest)
 
                     # Execute job with retry
-                    status = self.execute_job_with_retry(
+                    status = await self.execute_job_with_retry(
                         job, max_retries, retry_delay, backoff_factor, max_retry_delay
                     )
 
@@ -1527,6 +1533,11 @@ class BatchEngine:
             error_msg = f"Failed to execute batch jobs for batch '{batch_id}': {e}"
             self.logger.error(error_msg)
             raise ValueError(error_msg) from e
+
+    async def execute_job_with_retry(self, job: BatchJob, max_retries: int = DEFAULT_MAX_RETRIES,
+                              retry_delay: float = DEFAULT_RETRY_DELAY,
+                              backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
+                              max_retry_delay: Optional[float] = None) -> str:
         """
         Execute a job with automatic retry on failure.
 
@@ -1561,7 +1572,7 @@ class BatchEngine:
                 self.logger.info(f"Executing job {job.job_id} (attempt {attempt + 1}/{max_retries + 1})")
 
                 # Execute the job using the actual implementation
-                status = self._execute_single_job(job)
+                status = await self._execute_single_job(job)
 
                 if status == 'completed':
                     self.logger.info(f"Job {job.job_id} completed successfully on attempt {attempt + 1}")
@@ -1596,7 +1607,7 @@ class BatchEngine:
         else:
             raise RuntimeError(f"Job {job.job_id}: {error_summary}")
 
-    def _execute_single_job(self, job: BatchJob) -> str:
+    async def _execute_single_job(self, job: BatchJob) -> str:
         """
         Execute a single job.
 
@@ -1637,7 +1648,7 @@ class BatchEngine:
 
             # Simulate job execution based on data content
             # In real implementation, replace with actual browser automation or processing logic
-            status = self._simulate_job_execution(job)
+            status = await self._simulate_job_execution(job)
 
             # Execute field extraction if schema is available and job succeeded
             if status == 'completed':
@@ -1650,7 +1661,7 @@ class BatchEngine:
             self.logger.error(error_msg)
             raise RuntimeError(f"Job {job.job_id}: {type(e).__name__}") from e
 
-    def _simulate_job_execution(self, job: BatchJob, success_rate: Optional[float] = None,
+    async def _simulate_job_execution(self, job: BatchJob, success_rate: Optional[float] = None,
                                max_random_delay: Optional[float] = None) -> str:
         """
         Execute actual browser automation for a job.
@@ -1698,6 +1709,20 @@ class BatchEngine:
             if not action_def:
                 raise ValueError(f"Pre-registered command '{action_name}' not found")
 
+            # Map CSV row data to action parameters based on param names
+            for param_def in action_def.get('params', []):
+                param_name = param_def.get('name')
+                if param_name:
+                    # Check for params.param_name first (new naming convention)
+                    csv_param_key = f"params.{param_name}"
+                    if csv_param_key in job.row_data:
+                        action_params[param_name] = job.row_data[csv_param_key]
+                    # Fallback to direct param_name for backward compatibility
+                    elif param_name in job.row_data:
+                        action_params[param_name] = job.row_data[param_name]
+
+            print(f"🔍 Final extracted params: {action_params}")
+
             # Execute based on action type
             if action_type == 'browser-control':
                 from src.modules.direct_browser_control import execute_direct_browser_control
@@ -1708,7 +1733,7 @@ class BatchEngine:
                     **action_params
                 }
 
-                result = execute_direct_browser_control(action_def, **execution_params)
+                result = await execute_direct_browser_control(action_def, **execution_params)
 
                 if result:
                     self.logger.info(f"Browser control command '{action_name}' executed successfully for job {job.job_id}")
@@ -1768,7 +1793,7 @@ class BatchEngine:
                 # Use the script_manager for these types
                 from src.script.script_manager import run_script
 
-                script_output, script_path = run_script(action_def, action_params, headless=True)
+                script_output, script_path = await run_script(action_def, action_params, headless=True)
 
                 if script_output and "successfully" in script_output.lower():
                     self.logger.info(f"{action_type} command '{action_name}' executed successfully for job {job.job_id}")
@@ -1942,12 +1967,13 @@ class BatchEngine:
             self.logger.debug(f"Failed to record extraction metrics: {e}")
 
 
-def start_batch(csv_path: str, run_context: Optional[RunContext] = None, config: Optional[ConfigType] = None) -> BatchManifest:
+def start_batch(csv_path: str, run_context: Optional[RunContext] = None, config: Optional[ConfigType] = None, execute_immediately: bool = True) -> BatchManifest:
     """
     Start a new batch execution from CSV file.
 
     This is the main entry point for batch processing. It creates a BatchEngine instance
     with the provided configuration and processes the CSV file to generate jobs.
+    By default, it also executes the jobs immediately after creation.
 
     Args:
         csv_path: Path to CSV file to process
@@ -1961,6 +1987,7 @@ def start_batch(csv_path: str, run_context: Optional[RunContext] = None, config:
             - validate_headers (bool): Validate CSV headers (default: True)
             - skip_empty_rows (bool): Skip empty rows during processing (default: True)
             - log_level (str): Logging level ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')
+        execute_immediately: Whether to execute jobs immediately after creation (default: True)
 
     Returns:
         BatchManifest for the created batch
@@ -1973,8 +2000,11 @@ def start_batch(csv_path: str, run_context: Optional[RunContext] = None, config:
 
     Example:
         ```python
-        # Simple usage
+        # Simple usage (creates and executes jobs)
         manifest = start_batch('data.csv')
+
+        # Create jobs only (no execution)
+        manifest = start_batch('data.csv', execute_immediately=False)
 
         # With custom configuration
         config = {
@@ -1989,4 +2019,17 @@ def start_batch(csv_path: str, run_context: Optional[RunContext] = None, config:
         run_context = RunContext.get()
 
     engine = BatchEngine(run_context, config)
-    return engine.create_batch_jobs(csv_path)
+    manifest = engine.create_batch_jobs(csv_path)
+
+    # Execute jobs immediately if requested
+    if execute_immediately:
+        try:
+            import asyncio
+            execution_result = asyncio.run(engine.execute_batch_jobs(manifest.batch_id))
+            logger.info(f"Batch {manifest.batch_id} execution completed: {execution_result.get('completed', 0)} completed, {execution_result.get('failed', 0)} failed")
+        except Exception as e:
+            logger.error(f"Failed to execute batch {manifest.batch_id} immediately: {e}")
+            # Don't fail the batch creation if execution fails
+            # The jobs can still be executed later manually
+
+    return manifest
