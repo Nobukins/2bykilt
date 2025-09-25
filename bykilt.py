@@ -127,6 +127,9 @@ def handle_batch_command(args):
 
             # Start batch
             manifest = start_batch(args.csv_path, run_context, execute_immediately=execute_immediately)
+            # If start_batch returned a coroutine (async implementation), run it to completion.
+            if asyncio.iscoroutine(manifest):
+                manifest = asyncio.run(manifest)
 
             print("✅ Batch created successfully!")
             print(f"   Batch ID: {manifest.batch_id}")
@@ -2030,11 +2033,36 @@ Tests include browser initialization, profile validation, and recording path ver
                         file_count="single",
                         elem_id="csv-upload"
                     )
-                
+
+                # Template selection + preview controls
+                # Populate template choices from CommandHelper at startup
+                try:
+                    helper = CommandHelper()
+                    _cmds = helper.get_all_commands()
+                    _template_choices = [c.get('name') for c in _cmds if isinstance(c, dict) and c.get('name')]
+                except Exception:
+                    _template_choices = []
+
+                with gr.Row():
+                    template_job_dropdown = gr.Dropdown(choices=_template_choices, label="Template Job", value=(_template_choices[0] if _template_choices else None), info="Select the job template that will be applied to all CSV rows")
+                    # Feature flag controlled: show CSV preview UI only when enabled
+                    # For development/testing: enable CSV preview by default
+                    csv_preview_enabled = FeatureFlags.get("feature.csv_preview", expected_type=bool, default=True)
+                    preview_rows = gr.Slider(minimum=1, maximum=50, value=10, label="Preview rows", info="How many top rows to show in the preview", visible=csv_preview_enabled)
+                    preview_button = gr.Button("🔎 Preview CSV", variant="secondary", visible=csv_preview_enabled)
+
+                # Allow user to override detected unique/id column
+                unique_col_dropdown = gr.Dropdown(choices=[], label="Unique ID Column (override)", value=None, info="Override the detected unique-id column (optional)", visible=csv_preview_enabled)
+
+                preview_table = gr.DataFrame(label="CSV Preview", value=[], interactive=False, visible=csv_preview_enabled)
+                preview_status = gr.Markdown("", visible=csv_preview_enabled)
+                confirm_preview = gr.Button("✅ Confirm Preview & Enable Start", variant="primary", visible=csv_preview_enabled)
+                preview_confirmed = gr.State(False)
+
                 with gr.Row():
                     start_batch_button = gr.Button("🚀 Start Batch Processing", variant="primary", scale=2)
                     stop_batch_button = gr.Button("⏹️ Stop Batch", variant="stop", scale=1)
-                
+
                 batch_status_output = gr.Textbox(label="Batch Status", lines=5, interactive=False)
                 batch_progress_output = gr.Textbox(label="Progress", lines=3, interactive=False)
                 # Optional feedback element for JS (errors / warnings)
@@ -2042,7 +2070,7 @@ Tests include browser initialization, profile validation, and recording path ver
                 
                 # Batch processing functions
                 current_batch_ref = {"batch_id": None}  # closure-based mutable reference
-                async def start_batch_processing(csv_file):
+                async def start_batch_processing(csv_file, template_job, preview_ok):
                     """Start batch processing from uploaded CSV file and stream incremental progress lines.
 
                     This function creates the batch, yields an initial status, then runs
@@ -2053,6 +2081,17 @@ Tests include browser initialization, profile validation, and recording path ver
                     if csv_file is None:
                         yield "❌ No CSV file selected", "", ""
                         return
+
+                    # Require preview confirmation before starting the batch
+                    # Enforce preview confirmation only when the feature flag is enabled
+                    try:
+                        if FeatureFlags.get("feature.csv_preview", expected_type=bool, default=False):
+                            if not preview_ok:
+                                yield "❌ Please preview the CSV and confirm before starting the batch (use the Preview and Confirm buttons).", "", ""
+                                return
+                    except Exception:
+                        # If feature flag retrieval fails, fall back to legacy behavior (do not block)
+                        pass
 
                     try:
                         from src.batch.engine import BatchEngine
@@ -2219,17 +2258,123 @@ Manifest: {run_context.artifact_dir('batch')}/batch_manifest.json
                     except Exception as e:
                         return f"❌ Error stopping batch: {str(e)}", "", current_batch_ref.get("batch_id") or ""
                 
-                start_batch_button.click(
-                    fn=start_batch_processing,
-                    inputs=[csv_file_input],
-                    outputs=[batch_status_output, batch_progress_output, gr.State()]  # third value: batch_id (ephemeral)
-                )
+                # Wire start button: if feature flag disabled, pass False for preview_confirmed
+                if FeatureFlags.get("feature.csv_preview", expected_type=bool, default=True):
+                    start_batch_button.click(
+                        fn=start_batch_processing,
+                        inputs=[csv_file_input, template_job_dropdown, preview_confirmed],
+                        outputs=[batch_status_output, batch_progress_output, gr.State()]  # third value: batch_id (ephemeral)
+                    )
+                else:
+                    # Legacy: no preview gating
+                    def _false_state():
+                        return False
+
+                    start_batch_button.click(
+                        fn=start_batch_processing,
+                        inputs=[csv_file_input, template_job_dropdown, gr.State(False)],
+                        outputs=[batch_status_output, batch_progress_output, gr.State()]
+                    )
                 
                 stop_batch_button.click(
                     fn=stop_batch_processing,
                     inputs=[],
                     outputs=[batch_status_output, batch_progress_output, gr.State()]
                 )
+
+                # CSV preview handler
+                # Use centralized CSV parsing utility for robust encoding handling
+                from src.batch.csv_utils import parse_csv_preview
+
+                def _read_uploaded_bytes(csv_file) -> bytes | None:
+                    # Normalize various Gradio upload types to raw bytes
+                    try:
+                        if csv_file is None:
+                            return None
+                        if hasattr(csv_file, 'read'):
+                            try:
+                                return csv_file.read()
+                            except Exception:
+                                # Some Gradio versions give a tempfile-like object with .name
+                                try:
+                                    with open(csv_file.name, 'rb') as f:
+                                        return f.read()
+                                except Exception:
+                                    return None
+                        if isinstance(csv_file, str) and os.path.exists(csv_file):
+                            with open(csv_file, 'rb') as f:
+                                return f.read()
+                        if hasattr(csv_file, 'value'):
+                            return csv_file.value.encode('utf-8')
+                    except Exception:
+                        return None
+                    return None
+
+                def _detect_unique_candidate(headers, rows):
+                    """Heuristic: find a header whose values are unique among the sampled rows and looks like an id."""
+                    if not headers or not rows:
+                        return None
+                    # Candidate names commonly used for unique ids
+                    common_candidates = ["id", "ID", "Id", "email", "email_address", "emailAddress", "uuid", "user_id", "username", "user"]
+                    # Prefer common names that exist
+                    for cand in common_candidates:
+                        if cand in headers:
+                            return cand
+
+                    # Otherwise, check which column has unique values across the sample
+                    for h in headers:
+                        vals = [r.get(h) for r in rows if r.get(h) not in (None, "")]
+                        if not vals:
+                            continue
+                        if len(set(vals)) == len(vals):
+                            return h
+                    return None
+
+                from src.batch.preview import build_preview_from_bytes
+
+                def preview_csv_fn(csv_file, n_rows, template_job_name, unique_override=None):
+                    """Wrapper that adapts build_preview_from_bytes to Gradio update tuples."""
+                    file_bytes = _read_uploaded_bytes(csv_file)
+                    if file_bytes is None:
+                        return gr.update(value=[], headers=[]), "❌ No CSV file selected or failed to read", gr.update(choices=[], value=None)
+
+                    try:
+                        display_rows, display_headers, status_msg, header_choices, selected_value = build_preview_from_bytes(file_bytes, n_rows, template_job_name, unique_override)
+                    except Exception as e:
+                        return gr.update(value=[], headers=[]), f"❌ Failed to parse CSV: {e}", gr.update(choices=[], value=None)
+
+                    return gr.update(value=display_rows, headers=display_headers), status_msg, gr.update(choices=header_choices, value=selected_value)
+
+                # Only wire preview handler when feature enabled
+                if FeatureFlags.get("feature.csv_preview", expected_type=bool, default=True):
+                    # Central wrapper that also resets preview confirmation when inputs change
+                    def _preview_and_reset(csv_file, n_rows, template_job_name, unique_override):
+                        # Reset confirmation when the CSV or template or preview size changes
+                        try:
+                            rows, status, dropdown_upd = preview_csv_fn(csv_file, n_rows, template_job_name, unique_override)
+                            return rows, status, dropdown_upd, False
+                        except Exception as e:  # noqa: BLE001
+                            return [], f"❌ Preview error: {e}", gr.update(choices=[], value=None), False
+
+                    # Manual preview button
+                    preview_button.click(
+                        fn=preview_csv_fn,
+                        inputs=[csv_file_input, preview_rows, template_job_dropdown, unique_col_dropdown],
+                        outputs=[preview_table, preview_status, unique_col_dropdown]
+                    )
+
+                    # Auto-preview: when file, template, preview-size, or override changes, run preview and reset confirmation
+                    csv_file_input.change(fn=_preview_and_reset, inputs=[csv_file_input, preview_rows, template_job_dropdown, unique_col_dropdown], outputs=[preview_table, preview_status, unique_col_dropdown, preview_confirmed])
+                    template_job_dropdown.change(fn=_preview_and_reset, inputs=[csv_file_input, preview_rows, template_job_dropdown, unique_col_dropdown], outputs=[preview_table, preview_status, unique_col_dropdown, preview_confirmed])
+                    preview_rows.change(fn=_preview_and_reset, inputs=[csv_file_input, preview_rows, template_job_dropdown, unique_col_dropdown], outputs=[preview_table, preview_status, unique_col_dropdown, preview_confirmed])
+                    unique_col_dropdown.change(fn=_preview_and_reset, inputs=[csv_file_input, preview_rows, template_job_dropdown, unique_col_dropdown], outputs=[preview_table, preview_status, unique_col_dropdown, preview_confirmed])
+
+                # Only wire confirm action when feature enabled
+                if FeatureFlags.get("feature.csv_preview", expected_type=bool, default=False):
+                    def confirm_preview_fn(_):
+                        return True, "✅ Preview confirmed. You may now start the batch."
+
+                    confirm_preview.click(fn=confirm_preview_fn, inputs=[preview_table], outputs=[preview_confirmed, preview_status])
 
         llm_provider.change(lambda provider, api_key, base_url: update_model_dropdown(provider, api_key, base_url), inputs=[llm_provider, llm_api_key, llm_base_url], outputs=llm_model_name)
         enable_recording.change(lambda enabled: gr.update(interactive=enabled), inputs=enable_recording, outputs=save_recording_path)
