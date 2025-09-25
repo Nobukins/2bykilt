@@ -1,4 +1,4 @@
-Title: pytest-asyncio event-loop teardown failure during CI runs
+# pytest-asyncio event-loop teardown failure during CI runs
 
 Summary
 
