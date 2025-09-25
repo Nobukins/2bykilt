@@ -31,6 +31,20 @@ def parse_csv_preview(data: bytes, max_rows: int = 5) -> Tuple[List[str], List[D
                 # Normalize None values
                 norm_row = {k: (v if v != "" else None) for k, v in row.items()} if row else {}
                 rows.append(norm_row)
+
+            # If parsing produced neither headers nor rows, or produced only a header
+            # but the decoded text looks like a single garbage line (no newline),
+            # treat as a failed parse and try the next encoding.
+            if not headers and not rows:
+                last_exc = RuntimeError("Parsed CSV produced no headers or rows")
+                continue
+
+            if not rows and headers:
+                # if decoded text has no newline, it's likely not a valid CSV (e.g. random bytes)
+                if "\n" not in text:
+                    last_exc = RuntimeError("Parsed CSV produced header only with no newline")
+                    continue
+
             return headers, rows
         except Exception as e:
             last_exc = e
