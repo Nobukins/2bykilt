@@ -108,16 +108,6 @@ ready:
   depends_on: []
   critical_path_rank: 2
   risk: null
-- issue: 55
-  title: browser_control pytest パス修正
-  priority: P0
-  size: M
-  area: runner
-  phase: '1'
-  status: ready
-  depends_on: []
-  critical_path_rank: 1
-  risk: null
 - issue: 240
   title: 'P0: Fix user profile utilization in browser launch - Critical SSO/Cookie
     functionality missing'
@@ -185,6 +175,17 @@ ready:
   - '32'
   critical_path_rank: 1
   risk: medium
+- issue: 198
+  title: '[batch] CSV NamedString 入力の正規化'
+  priority: P1
+  size: M
+  area: batch
+  phase: '2'
+  status: ready
+  depends_on:
+  - '39'
+  critical_path_rank: 1
+  risk: medium
 - issue: 192
   title: '[security][follow-up] Issue #154 pip-audit stabilization - monthly security
     monitoring schedule'
@@ -238,6 +239,20 @@ ready:
   phase: '2'
   status: ready
   depends_on: []
+  critical_path_rank: 1
+  risk: null
+- issue: 173
+  title: '[UI][batch][#40 follow-up] CSV Preview & Command Argument Mapping'
+  priority: P2
+  size: M
+  area: batch
+  phase: '2'
+  status: ready
+  depends_on:
+  - '39'
+  - '40'
+  - '41'
+  - '42'
   critical_path_rank: 1
   risk: null
 - issue: 218
@@ -965,6 +980,16 @@ done:
   - '40'
   critical_path_rank: 2
   risk: high
+- issue: 55
+  title: browser_control pytest パス修正
+  priority: P0
+  size: M
+  area: runner
+  phase: '1'
+  status: done
+  depends_on: []
+  critical_path_rank: 1
+  risk: null
 - issue: 91
   title: 統一録画パス Rollout (flag default 有効化 & legacy 廃止)
   priority: P0

@@ -221,7 +221,7 @@ Sorted By: critical_path_rank
 | 51 | Windows プロファイル永続化 | P2 | 2 | runner |  | 1 | 3 | 1 | 0 |  |
 | 52 | サンドボックス allow/deny パス | P2 | 2 | runner |  | 1 | 2 | 1 | 0 |  |
 | 54 | cdp-use デュアルエンジン抽象レイヤ | P1 | 2 | runner | high | 1 | 1 | 2 | 0 |  |
-| 55 | browser_control pytest パス修正 | P0 | 1 | runner |  | 1 | 0 | 0 | 0 |  |
+| 55 | browser_control pytest パス修正 | P0 | 1 | runner |  | 1 | 0 | 0 | 0 | #187 |
 | 57 | ログ保持期間 & ローテーション | P1 | 1-late | logging |  | 1 | 3 | 1 | 0 | #83 |
 | 59 | Run メトリクス API | P2 | 2 | observability |  | 1 | 2 | 1 | 0 | #185 |
 | 60 | シークレットマスキング拡張 | P1 | 1-late | security |  | 1 | 3 | 1 | 0 |  |
@@ -1068,6 +1068,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 0
 - Depends (0): (none)
 - Dependents (0): (none)
+- Progress: {"state": "done", "primary_pr": 187}
 
 ### Issue 57: ログ保持期間 & ローテーション
 - Priority: P1, Phase: 1-late, Area: logging

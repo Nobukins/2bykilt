@@ -114,6 +114,21 @@ def get_github_api_data(repo: str, issue_id: str, token: Optional[str]) -> Dict[
         return {}
 
 
+def is_dependency_closed(dep_id: str, issues: Dict[str, Any], dependency_api_data: Dict[str, Dict[str, Any]]) -> bool:
+    """Check if a dependency is closed (either via progress.state or API)"""
+    dep_str = str(dep_id)
+    if dep_str not in issues:
+        return False
+    
+    dep_data = issues[dep_str]
+    progress = dep_data.get('progress', {})
+    if progress.get('state') == 'done':
+        return True
+    
+    dep_api = dependency_api_data.get(dep_str, {})
+    return dep_api.get('issue_state') == 'closed'
+
+
 def classify_issue_status(issue_id: str,
                           issue_data: Dict[str, Any],
                           api_data: Dict[str, Any],
