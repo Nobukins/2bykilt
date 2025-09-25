@@ -29,9 +29,9 @@ class TestBatchCLIIntegration:
         Command: python bykilt.py batch start tests/batch/test.csv
         Evaluates: CSV file parsing, batch creation, job generation
         """
-        # Execute batch start command
+        # Execute batch start command with --no-execute to avoid actual job execution
         result = subprocess.run([
-            'python', 'bykilt.py', 'batch', 'start', 'tests/batch/test.csv'
+            'python', 'bykilt.py', 'batch', 'start', 'tests/batch/test.csv', '--no-execute'
         ], capture_output=True, text=True, cwd=Path(__file__).parent.parent.parent)
 
         # Verify command succeeded
@@ -43,7 +43,7 @@ class TestBatchCLIIntegration:
         assert "✅ Batch created successfully!" in output
         assert "Batch ID:" in output
         assert "Run ID:" in output
-        assert "Total jobs: 3" in output
+        assert "Total jobs: 4" in output
         assert "Jobs directory:" in output
         assert "Manifest:" in output
 
@@ -55,7 +55,7 @@ class TestBatchCLIIntegration:
         """
         # First create a batch to get a valid batch ID
         result = subprocess.run([
-            'python', 'bykilt.py', 'batch', 'start', 'tests/batch/test.csv'
+            'python', 'bykilt.py', 'batch', 'start', 'tests/batch/test.csv', '--no-execute'
         ], capture_output=True, text=True, cwd=Path(__file__).parent.parent.parent)
 
         assert result.returncode == 0
@@ -80,7 +80,7 @@ class TestBatchCLIIntegration:
         assert f"Batch ID: {batch_id}" in status_output
         assert "Run ID:" in status_output
         assert "CSV Path: tests/batch/test.csv" in status_output
-        assert "Total jobs: 3" in status_output
+        assert "Total jobs: 4" in status_output
         assert "Completed: 0" in status_output
         assert "Failed: 0" in status_output
         assert "Created:" in status_output
@@ -98,7 +98,7 @@ class TestBatchCLIIntegration:
         """
         # First create a batch
         result = subprocess.run([
-            'python', 'bykilt.py', 'batch', 'start', 'tests/batch/test.csv'
+            'python', 'bykilt.py', 'batch', 'start', 'tests/batch/test.csv', '--no-execute'
         ], capture_output=True, text=True, cwd=Path(__file__).parent.parent.parent)
 
         assert result.returncode == 0
@@ -232,7 +232,7 @@ class TestBatchWorkflowEndToEnd:
         """
         # Step 1: Create batch
         start_result = subprocess.run([
-            'python', 'bykilt.py', 'batch', 'start', 'tests/batch/test.csv'
+            'python', 'bykilt.py', 'batch', 'start', 'tests/batch/test.csv', '--no-execute'
         ], capture_output=True, text=True, cwd=Path(__file__).parent.parent.parent)
 
         assert start_result.returncode == 0
@@ -244,11 +244,11 @@ class TestBatchWorkflowEndToEnd:
         ], capture_output=True, text=True, cwd=Path(__file__).parent.parent.parent)
 
         assert status_result.returncode == 0
-        assert "Total jobs: 3" in status_result.stdout
+        assert "Total jobs: 4" in status_result.stdout
         assert "Completed: 0" in status_result.stdout
 
         # Step 3: Update all jobs to completed
-        for i in range(1, 4):  # Jobs are 0001, 0002, 0003
+        for i in range(1, 5):  # Jobs are 0001, 0002, 0003, 0004
             job_id = f"{status_result.stdout.split('Run ID: ')[1].split()[0]}_{i:04d}"
 
             update_result = subprocess.run([
@@ -264,13 +264,13 @@ class TestBatchWorkflowEndToEnd:
 
         assert final_status_result.returncode == 0
         final_output = final_status_result.stdout
-        assert "Completed: 3" in final_output
+        assert "Completed: 4" in final_output
         assert "Failed: 0" in final_output
 
         # Verify all jobs show as completed
         lines = final_output.split('\n')
         job_lines = [line for line in lines if '✅' in line and ': completed' in line]
-        assert len(job_lines) == 3
+        assert len(job_lines) == 4
 
 
 if __name__ == "__main__":

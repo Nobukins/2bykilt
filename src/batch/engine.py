@@ -14,6 +14,7 @@ import mimetypes
 import time
 import random
 import re
+import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Union, Iterator
 from typing import TYPE_CHECKING
@@ -677,6 +678,7 @@ class BatchEngine:
         if not artifacts_root.exists():
             return None
 
+        candidates = []
         # Look for batch manifest files in all run directories
         for batch_dir in artifacts_root.glob("*-batch"):
             manifest_file = batch_dir / BATCH_MANIFEST_FILENAME
@@ -689,10 +691,15 @@ class BatchEngine:
                     manifest = BatchManifest.from_dict(data)
 
                     if manifest.batch_id == batch_id:
-                        return manifest
+                        candidates.append((manifest_file, manifest))
 
             except Exception as e:
                 self.logger.error(f"Failed to load batch manifest {manifest_file}: {e}")
+
+        if candidates:
+            # Return the manifest with the most recent mtime
+            candidates.sort(key=lambda x: x[0].stat().st_mtime, reverse=True)
+            return candidates[0][1]
 
         return None
 
@@ -1347,8 +1354,8 @@ class BatchEngine:
         )
         return result
 
-    def _record_batch_stop_metrics(self, batch_id: str, stopped: int) -> None:
-        """Record metrics when a batch is stopped."""
+    def _record_batch_execution_metrics(self, batch_id: str, executed: int, completed: int, failed: int) -> None:
+        """Record metrics for batch execution."""
         try:
             from ..metrics import get_metrics_collector, MetricType
 
@@ -1356,20 +1363,180 @@ class BatchEngine:
             if collector is None:
                 return
 
+            # Record batch execution metrics
             collector.record_metric(
-                name="batch_stopped",
-                value=stopped,
+                name="batch_jobs_executed",
+                value=executed,
                 metric_type=MetricType.COUNTER,
                 tags={
                     "batch_id": batch_id,
-                    "run_id": self.run_context.run_id_base,
-                },
+                    "run_id": self.run_context.run_id_base
+                }
             )
-        except Exception as e:
-            self.logger.debug(f"Failed to record batch stop metrics: {e}")
 
-    def execute_job_with_retry(self, job: BatchJob, max_retries: int = DEFAULT_MAX_RETRIES,
-                              retry_delay: float = DEFAULT_RETRY_DELAY, backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
+            collector.record_metric(
+                name="batch_jobs_completed",
+                value=completed,
+                metric_type=MetricType.COUNTER,
+                tags={
+                    "batch_id": batch_id,
+                    "run_id": self.run_context.run_id_base
+                }
+            )
+
+            collector.record_metric(
+                name="batch_jobs_failed",
+                value=failed,
+                metric_type=MetricType.COUNTER,
+                tags={
+                    "batch_id": batch_id,
+                    "run_id": self.run_context.run_id_base
+                }
+            )
+
+        except Exception as e:
+            self.logger.debug(f"Failed to record batch execution metrics: {e}")
+
+    async def execute_batch_jobs(self, batch_id: str, max_retries: int = DEFAULT_MAX_RETRIES,
+                           retry_delay: float = DEFAULT_RETRY_DELAY, backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
+                           max_retry_delay: Optional[float] = None) -> Dict[str, Any]:
+        """
+        Execute all pending jobs in a batch.
+
+        This method finds all pending jobs in the specified batch and executes them
+        using the browser automation system. Jobs are executed sequentially to avoid
+        resource conflicts.
+
+        Args:
+            batch_id: Batch identifier to execute
+            max_retries: Maximum number of retry attempts per job (default: DEFAULT_MAX_RETRIES)
+            retry_delay: Initial delay between retries in seconds (default: DEFAULT_RETRY_DELAY)
+            backoff_factor: Exponential backoff multiplier (default: DEFAULT_BACKOFF_FACTOR)
+            max_retry_delay: Maximum retry delay in seconds (optional, defaults to MAX_RETRY_DELAY)
+
+        Returns:
+            Dictionary with execution results and statistics
+
+        Raises:
+            ValueError: If batch is not found or invalid parameters
+        """
+        # Input validation
+        if not batch_id or not isinstance(batch_id, str):
+            raise ValueError("batch_id must be a non-empty string")
+
+        # Validate retry parameters
+        max_retry_delay = self._validate_retry_parameters(
+            max_retries, retry_delay, backoff_factor, max_retry_delay
+        )
+
+        try:
+            # Load batch manifest
+            manifest = self._load_manifest_by_batch_id(batch_id)
+            if manifest is None:
+                raise ValueError(f"Batch not found: {batch_id}")
+
+            # Find pending jobs
+            pending_jobs = [job for job in manifest.jobs if job.status == 'pending']
+            if not pending_jobs:
+                self.logger.info(f"No pending jobs found in batch {batch_id}")
+                return {
+                    'batch_id': batch_id,
+                    'executed': 0,
+                    'completed': 0,
+                    'failed': 0,
+                    'skipped': len(manifest.jobs),
+                    'reason': 'No pending jobs found'
+                }
+
+            self.logger.info(f"Starting execution of {len(pending_jobs)} pending jobs in batch {batch_id}")
+
+            # Execute jobs sequentially
+            executed = 0
+            completed = 0
+            failed = 0
+            job_results = []
+
+            for job in pending_jobs:
+                try:
+                    # Update job status to running
+                    job.status = 'running'
+                    self._save_manifest(self._find_manifest_file_for_batch(batch_id), manifest)
+
+                    # Execute job with retry
+                    status = await self.execute_job_with_retry(
+                        job, max_retries, retry_delay, backoff_factor, max_retry_delay
+                    )
+
+                    # Update job status
+                    job.status = status
+                    if status == 'completed':
+                        completed += 1
+                        manifest.completed_jobs += 1
+                    elif status == 'failed':
+                        failed += 1
+                        manifest.failed_jobs += 1
+
+                    executed += 1
+
+                    job_results.append({
+                        'job_id': job.job_id,
+                        'status': status,
+                        'error_message': job.error_message
+                    })
+
+                    self.logger.info(f"Job {job.job_id} finished with status: {status}")
+
+                except Exception as e:
+                    # Mark job as failed
+                    job.status = 'failed'
+                    job.error_message = str(e)
+                    failed += 1
+                    manifest.failed_jobs += 1
+                    executed += 1
+
+                    job_results.append({
+                        'job_id': job.job_id,
+                        'status': 'failed',
+                        'error_message': str(e)
+                    })
+
+                    self.logger.error(f"Job {job.job_id} failed: {e}")
+
+                # Save manifest after each job
+                self._save_manifest(self._find_manifest_file_for_batch(batch_id), manifest)
+
+            # Generate batch summary if complete
+            if self._is_batch_complete(manifest):
+                self._generate_batch_summary(manifest)
+
+            # Record batch execution metrics
+            self._record_batch_execution_metrics(batch_id, executed, completed, failed)
+
+            result = {
+                'batch_id': batch_id,
+                'executed': executed,
+                'completed': completed,
+                'failed': failed,
+                'skipped': len(manifest.jobs) - executed,
+                'total_jobs': len(manifest.jobs),
+                'job_results': job_results,
+                'max_retries': max_retries,
+                'retry_delay': retry_delay,
+                'backoff_factor': backoff_factor,
+                'max_retry_delay': max_retry_delay
+            }
+
+            self.logger.info(f"Batch {batch_id} execution completed: {completed} completed, {failed} failed")
+            return result
+
+        except Exception as e:
+            error_msg = f"Failed to execute batch jobs for batch '{batch_id}': {e}"
+            self.logger.error(error_msg)
+            raise ValueError(error_msg) from e
+
+    async def execute_job_with_retry(self, job: BatchJob, max_retries: int = DEFAULT_MAX_RETRIES,
+                              retry_delay: float = DEFAULT_RETRY_DELAY,
+                              backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
                               max_retry_delay: Optional[float] = None) -> str:
         """
         Execute a job with automatic retry on failure.
@@ -1405,7 +1572,7 @@ class BatchEngine:
                 self.logger.info(f"Executing job {job.job_id} (attempt {attempt + 1}/{max_retries + 1})")
 
                 # Execute the job using the actual implementation
-                status = self._execute_single_job(job)
+                status = await self._execute_single_job(job)
 
                 if status == 'completed':
                     self.logger.info(f"Job {job.job_id} completed successfully on attempt {attempt + 1}")
@@ -1440,7 +1607,7 @@ class BatchEngine:
         else:
             raise RuntimeError(f"Job {job.job_id}: {error_summary}")
 
-    def _execute_single_job(self, job: BatchJob) -> str:
+    async def _execute_single_job(self, job: BatchJob) -> str:
         """
         Execute a single job.
 
@@ -1481,7 +1648,7 @@ class BatchEngine:
 
             # Simulate job execution based on data content
             # In real implementation, replace with actual browser automation or processing logic
-            status = self._simulate_job_execution(job)
+            status = await self._simulate_job_execution(job)
 
             # Execute field extraction if schema is available and job succeeded
             if status == 'completed':
@@ -1494,21 +1661,18 @@ class BatchEngine:
             self.logger.error(error_msg)
             raise RuntimeError(f"Job {job.job_id}: {type(e).__name__}") from e
 
-    def _simulate_job_execution(self, job: BatchJob, success_rate: Optional[float] = None,
+    async def _simulate_job_execution(self, job: BatchJob, success_rate: Optional[float] = None,
                                max_random_delay: Optional[float] = None) -> str:
         """
-        Simulate job execution for testing purposes.
+        Execute actual browser automation for a job.
 
-        This is a temporary implementation that simulates job execution
-        based on the job data. In production, this should be replaced
-        with actual job execution logic.
-
-        TODO: Replace this simulation with actual job execution logic
+        This method replaces the simulation with real browser automation
+        by executing commands from the job's row data.
 
         Args:
             job: Job to execute (must be valid BatchJob instance)
-            success_rate: Success rate for simulation (0.0 to 1.0, defaults to DEFAULT_SUCCESS_RATE)
-            max_random_delay: Maximum random delay in seconds (defaults to MAX_RANDOM_DELAY)
+            success_rate: Ignored (kept for backward compatibility)
+            max_random_delay: Ignored (kept for backward compatibility)
 
         Returns:
             Job status ('completed' or 'failed')
@@ -1520,43 +1684,128 @@ class BatchEngine:
         if not job.row_data:
             raise ValueError(f"Job {job.job_id} has no row data")
 
-        # Use defaults if not specified
-        if success_rate is None:
-            success_rate = DEFAULT_SUCCESS_RATE
-        if max_random_delay is None:
-            max_random_delay = MAX_RANDOM_DELAY
-
-        # Validate parameters
-        if not (0.0 <= success_rate <= 1.0):
-            raise ValueError("success_rate must be between 0.0 and 1.0")
-        if max_random_delay < 0:
-            raise ValueError("max_random_delay must be >= 0")
-
         try:
-            # Add small random delay to simulate processing time
-            if max_random_delay > 0:
-                time.sleep(random.uniform(0, max_random_delay))
+            # Get task from row data
+            task = job.row_data.get('task') or job.row_data.get('command')
+            if not task:
+                raise ValueError(f"Job {job.job_id} has no 'task' or 'command' field in row data")
 
-            # Simulate different failure scenarios based on data content
-            data: Dict[str, Any] = job.row_data
+            self.logger.info(f"Executing browser automation for job {job.job_id} with task: {task}")
 
-            # Check for intentional failure triggers in test data
-            if data.get('name') == 'fail':
-                raise Exception("Intentional failure for testing")
+            # Import required modules
+            from src.config.standalone_prompt_evaluator import pre_evaluate_prompt_standalone
 
-            if data.get('value') == 'error':
-                raise ValueError("Invalid value for processing")
+            # Evaluate the task as a command
+            evaluation_result = pre_evaluate_prompt_standalone(task)
+            if not evaluation_result or not evaluation_result.get('is_command'):
+                raise ValueError(f"Task '{task}' is not a valid pre-registered command")
 
-            # Random success/failure for normal cases
-            if random.random() > success_rate:
-                raise Exception("Simulated random failure")
+            # Get command details
+            action_name = evaluation_result.get('command_name', '').lstrip('@')
+            action_def = evaluation_result.get('action_def', {})
+            action_params = evaluation_result.get('params', {})
+            action_type = action_def.get('type', '')
 
-            # Success case
-            self.logger.debug(f"Job {job.job_id} simulation completed successfully")
-            return 'completed'
+            if not action_def:
+                raise ValueError(f"Pre-registered command '{action_name}' not found")
+
+            # Map CSV row data to action parameters based on param names
+            for param_def in action_def.get('params', []):
+                param_name = param_def.get('name')
+                if param_name:
+                    # Check for params.param_name first (new naming convention)
+                    csv_param_key = f"params.{param_name}"
+                    if csv_param_key in job.row_data:
+                        action_params[param_name] = job.row_data[csv_param_key]
+                    # Fallback to direct param_name for backward compatibility
+                    elif param_name in job.row_data:
+                        action_params[param_name] = job.row_data[param_name]
+
+            print(f"🔍 Final extracted params: {action_params}")
+
+            # Execute based on action type
+            if action_type == 'browser-control':
+                from src.modules.direct_browser_control import execute_direct_browser_control
+
+                execution_params = {
+                    'use_own_browser': False,  # Use shared browser for batch jobs
+                    'headless': True,  # Run headless for batch processing
+                    **action_params
+                }
+
+                result = await execute_direct_browser_control(action_def, **execution_params)
+
+                if result:
+                    self.logger.info(f"Browser control command '{action_name}' executed successfully for job {job.job_id}")
+                    return 'completed'
+                else:
+                    raise Exception(f"Browser control command '{action_name}' execution failed")
+
+            elif action_type == 'script':
+                # Handle script execution
+                command_template = action_def.get('command', '')
+                if not command_template:
+                    raise ValueError(f"Script command '{action_name}' has no command template")
+
+                # Replace parameters in command template
+                command = command_template
+                for param_name, param_value in action_params.items():
+                    placeholder = f"${{params.{param_name}}}"
+                    command = command.replace(placeholder, str(param_value))
+
+                # Execute the script command
+                import subprocess
+                import os
+
+                # Change to the project directory
+                project_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+                # Set environment
+                env = os.environ.copy()
+                env['PYTHONPATH'] = project_dir
+
+                # Execute the command
+                if command.startswith('python '):
+                    command = command.replace('python ', f'"{sys.executable}" ', 1)
+
+                shell_value = True
+
+                process = subprocess.run(
+                    command,
+                    cwd=project_dir,
+                    env=env,
+                    shell=shell_value,
+                    capture_output=True,
+                    text=True,
+                    timeout=300  # 5 minute timeout
+                )
+
+                if process.returncode == 0:
+                    self.logger.info(f"Script command '{action_name}' executed successfully for job {job.job_id}")
+                    return 'completed'
+                else:
+                    error_msg = f"Script command failed with exit code {process.returncode}"
+                    if process.stderr:
+                        error_msg += f": {process.stderr}"
+                    raise Exception(error_msg)
+
+            elif action_type in ['action_runner_template', 'git-script']:
+                # Use the script_manager for these types
+                from src.script.script_manager import run_script
+
+                script_output, script_path = await run_script(action_def, action_params, headless=True)
+
+                if script_output and "successfully" in script_output.lower():
+                    self.logger.info(f"{action_type} command '{action_name}' executed successfully for job {job.job_id}")
+                    return 'completed'
+                else:
+                    raise Exception(f"{action_type} command execution failed: {script_output}")
+
+            else:
+                raise ValueError(f"Action type '{action_type}' is not supported for batch execution")
 
         except Exception as e:
-            self.logger.debug(f"Job {job.job_id} simulation failed: {type(e).__name__}")
+            self.logger.error(f"Job {job.job_id} execution failed: {type(e).__name__}: {e}")
             raise
 
     def _execute_field_extraction(self, job: BatchJob):
@@ -1718,12 +1967,13 @@ class BatchEngine:
             self.logger.debug(f"Failed to record extraction metrics: {e}")
 
 
-def start_batch(csv_path: str, run_context: Optional[RunContext] = None, config: Optional[ConfigType] = None) -> BatchManifest:
+def start_batch(csv_path: str, run_context: Optional[RunContext] = None, config: Optional[ConfigType] = None, execute_immediately: bool = True) -> BatchManifest:
     """
     Start a new batch execution from CSV file.
 
     This is the main entry point for batch processing. It creates a BatchEngine instance
     with the provided configuration and processes the CSV file to generate jobs.
+    By default, it also executes the jobs immediately after creation.
 
     Args:
         csv_path: Path to CSV file to process
@@ -1737,6 +1987,7 @@ def start_batch(csv_path: str, run_context: Optional[RunContext] = None, config:
             - validate_headers (bool): Validate CSV headers (default: True)
             - skip_empty_rows (bool): Skip empty rows during processing (default: True)
             - log_level (str): Logging level ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')
+        execute_immediately: Whether to execute jobs immediately after creation (default: True)
 
     Returns:
         BatchManifest for the created batch
@@ -1749,8 +2000,11 @@ def start_batch(csv_path: str, run_context: Optional[RunContext] = None, config:
 
     Example:
         ```python
-        # Simple usage
+        # Simple usage (creates and executes jobs)
         manifest = start_batch('data.csv')
+
+        # Create jobs only (no execution)
+        manifest = start_batch('data.csv', execute_immediately=False)
 
         # With custom configuration
         config = {
@@ -1765,4 +2019,17 @@ def start_batch(csv_path: str, run_context: Optional[RunContext] = None, config:
         run_context = RunContext.get()
 
     engine = BatchEngine(run_context, config)
-    return engine.create_batch_jobs(csv_path)
+    manifest = engine.create_batch_jobs(csv_path)
+
+    # Execute jobs immediately if requested
+    if execute_immediately:
+        try:
+            import asyncio
+            execution_result = asyncio.run(engine.execute_batch_jobs(manifest.batch_id))
+            logger.info(f"Batch {manifest.batch_id} execution completed: {execution_result.get('completed', 0)} completed, {execution_result.get('failed', 0)} failed")
+        except Exception as e:
+            logger.error(f"Failed to execute batch {manifest.batch_id} immediately: {e}")
+            # Don't fail the batch creation if execution fails
+            # The jobs can still be executed later manually
+
+    return manifest

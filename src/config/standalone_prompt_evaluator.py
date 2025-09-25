@@ -142,7 +142,6 @@ def extract_params_standalone(prompt: str, param_names: Union[str, List[Dict[str
                     print(f"✅ Extracted {param}={params[param]} (space-separated)")
                     break
 
-    print(f"🔍 Final extracted params: {params}")
     return params
 
 def resolve_sensitive_env_variables_standalone(text: str) -> str:

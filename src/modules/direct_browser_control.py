@@ -51,12 +51,9 @@ async def convert_flow_to_commands(flow: List[Dict[str, Any]], params: Dict[str,
         elif action_type == "extract_content":
             cmd["action"] = "extract_content"
             cmd["args"] = []
-        elif action_type == "screenshot":
-            cmd["action"] = "screenshot"
-            cmd["args"] = [processed_step.get("path", "screenshot.png")]
-        else:
-            logger.warning(f"Unsupported action type: {action_type}")
-            continue
+        elif action_type == "scroll_to_bottom":
+            cmd["action"] = "scroll_to_bottom"
+            cmd["args"] = []
         commands.append(cmd)
     return commands
 
@@ -207,29 +204,12 @@ async def _execute_with_context(context, commands: List[Dict[str, Any]], timeout
                         TimeoutScope.OPERATION
                     )
                     logger.info(f"Pressed key '{key}'")
-                elif cmd_action == "extract_content":
-                    selectors = args if args else ["h1", "h2", "h3", "p"]
-                    content = {}
-                    for selector in selectors:
-                        try:
-                            elements = await timeout_manager.apply_timeout_to_coro(
-                                page.query_selector_all(selector),
-                                TimeoutScope.NETWORK
-                            )
-                            texts = []
-                            for element in elements:
-                                text = await timeout_manager.apply_timeout_to_coro(
-                                    element.text_content(),
-                                    TimeoutScope.OPERATION
-                                )
-                                if text and text.strip():
-                                    texts.append(text.strip())
-                            content[selector] = texts
-                        except Exception as e:
-                            logger.warning(f"Failed to extract content for selector '{selector}': {e}")
-                            content[selector] = []
-                    logger.info("Extracted content:")
-                    logger.info(json.dumps(content, indent=2, ensure_ascii=False))
+                elif cmd_action == "scroll_to_bottom":
+                    await timeout_manager.apply_timeout_to_coro(
+                        page.evaluate("window.scrollTo(0, document.body.scrollHeight);"),
+                        TimeoutScope.OPERATION
+                    )
+                    logger.info("Scrolled to bottom of page")
 
                 # Add slowmo delay with cancellation check
                 if timeout_manager.is_cancelled():
