@@ -2042,15 +2042,22 @@ Tests include browser initialization, profile validation, and recording path ver
                 
                 # Batch processing functions
                 current_batch_ref = {"batch_id": None}  # closure-based mutable reference
-                def start_batch_processing(csv_file):
-                    """Start batch processing from uploaded CSV file."""
+                async def start_batch_processing(csv_file):
+                    """Start batch processing from uploaded CSV file and stream incremental progress lines.
+
+                    This function creates the batch, yields an initial status, then runs
+                    `engine.execute_batch_jobs` in the background while streaming progress
+                    updates (appended lines) to the UI via an asyncio.Queue. When the
+                    execution completes it yields the final manifest summary.
+                    """
                     if csv_file is None:
-                        return "❌ No CSV file selected", "", ""
-                    
+                        yield "❌ No CSV file selected", "", ""
+                        return
+
                     try:
-                        from src.batch.engine import start_batch
+                        from src.batch.engine import BatchEngine
                         from src.runtime.run_context import RunContext
-                        
+
                         # Save uploaded file temporarily
                         import tempfile
                         import shutil
@@ -2058,7 +2065,8 @@ Tests include browser initialization, profile validation, and recording path ver
                         import logging
                         import io
                         from pathlib import Path
-                        
+                        import asyncio
+
                         def normalize_csv_input(csv_input):
                             """Normalize CSV input to bytes for file writing."""
                             if hasattr(csv_input, 'read'):
@@ -2073,7 +2081,7 @@ Tests include browser initialization, profile validation, and recording path ver
                                 return csv_input.value.encode('utf-8')
                             else:
                                 raise ValueError(f"Unsupported CSV input type: {type(csv_input)}")
-                        
+
                         temp_csv_path = None
                         try:
                             with tempfile.NamedTemporaryFile(mode='wb', suffix='.csv', delete=False) as temp_file:
@@ -2081,13 +2089,17 @@ Tests include browser initialization, profile validation, and recording path ver
                                 temp_file.write(csv_bytes)
                                 temp_csv_path = temp_file.name
 
-                            # Start batch processing
+                            # Create run context and engine
                             run_context = RunContext.get()
-                            manifest = start_batch(temp_csv_path, run_context)
+                            engine = BatchEngine(run_context)
+
+                            # Create batch jobs
+                            manifest = engine.create_batch_jobs(temp_csv_path)
                             current_batch_ref["batch_id"] = manifest.batch_id
-                        
-                            status = f"""✅ Batch started successfully!
-                        
+
+                            # Yield initial status
+                            status_msg = f"""✅ Batch created successfully!
+
 Batch ID: {manifest.batch_id}
 Run ID: {manifest.run_id}
 Total Jobs: {manifest.total_jobs}
@@ -2095,19 +2107,97 @@ CSV Path: {manifest.csv_path}
 Jobs Directory: {run_context.artifact_dir('jobs')}
 Manifest: {run_context.artifact_dir('batch')}/batch_manifest.json
 """
-                            progress = f"Jobs: 0/{manifest.total_jobs} completed"
-                            return status, progress, manifest.batch_id
+                            initial_progress = f"Jobs: 0/{manifest.total_jobs} completed"
+                            yield status_msg, initial_progress, manifest.batch_id
+
+                            # Prepare queue to stream progress lines and background task
+                            queue: "asyncio.Queue[str]" = asyncio.Queue()
+                            progress_lines = []  # appended lines
+
+                            loop = asyncio.get_running_loop()
+
+                            def progress_callback(completed_jobs, total_jobs):
+                                """Called by BatchEngine after each job completion.
+
+                                We push the progress line into an asyncio.Queue using
+                                call_soon_threadsafe to be safe from other threads.
+                                """
+                                line = f"Jobs: {completed_jobs}/{total_jobs} completed"
+                                try:
+                                    loop.call_soon_threadsafe(queue.put_nowait, line)
+                                except Exception as _:
+                                    logging.getLogger(__name__).debug("Failed to enqueue progress line")
+
+                            # Launch execution in background so we can stream progress
+                            exec_task = asyncio.create_task(
+                                engine.execute_batch_jobs(manifest.batch_id, progress_callback=progress_callback)
+                            )
+
+                            # Stream progress lines as they arrive
+                            try:
+                                while True:
+                                    # Drain available items promptly, but also exit when task done
+                                    try:
+                                        line = await asyncio.wait_for(queue.get(), timeout=0.5)
+                                    except asyncio.TimeoutError:
+                                        # If execution finished and queue is empty, break
+                                        if exec_task.done() and queue.empty():
+                                            break
+                                        continue
+
+                                    progress_lines.append(line)
+                                    # Append all lines joined by newline so UI shows history
+                                    progress_text = "\n".join(progress_lines)
+                                    # Provide short status message while running
+                                    running_status = f"⏳ Processing batch {manifest.batch_id}..."
+                                    yield running_status, progress_text, manifest.batch_id
+
+                                # Wait for execution to finish (propagate errors)
+                                exec_result = await exec_task
+
+                            except Exception as e:
+                                # If exec_task raised, propagate an error to UI
+                                logging.getLogger(__name__).exception("Batch execution error")
+                                error_msg = f"❌ Batch execution error: {e}"
+                                yield error_msg, "", manifest.batch_id
+                                return
+
+                            # Reload manifest to get final status
+                            updated_manifest = engine._load_manifest_by_batch_id(manifest.batch_id)
+                            if updated_manifest:
+                                manifest = updated_manifest
+
+                            # Ensure final progress line present
+                            final_line = f"Jobs: {manifest.completed_jobs}/{manifest.total_jobs} completed"
+                            if not progress_lines or progress_lines[-1] != final_line:
+                                progress_lines.append(final_line)
+
+                            final_progress_text = "\n".join(progress_lines)
+
+                            final_status = f"""✅ Batch execution completed!
+
+Batch ID: {manifest.batch_id}
+Run ID: {manifest.run_id}
+Total Jobs: {manifest.total_jobs}
+Completed: {manifest.completed_jobs}
+Failed: {manifest.failed_jobs}
+CSV Path: {manifest.csv_path}
+Jobs Directory: {run_context.artifact_dir('jobs')}
+Manifest: {run_context.artifact_dir('batch')}/batch_manifest.json
+"""
+                            yield final_status, final_progress_text, manifest.batch_id
+
                         finally:
                             if temp_csv_path and os.path.exists(temp_csv_path):
                                 try:
                                     os.remove(temp_csv_path)
                                 except Exception as cleanup_exc:  # noqa: BLE001
-                                    logging.warning(f"Failed to clean up temp file {temp_csv_path}: {cleanup_exc}")
-                    
+                                    logging.getLogger(__name__).warning(f"Failed to clean up temp file {temp_csv_path}: {cleanup_exc}")
+
                     except Exception as e:
                         import traceback
                         error_msg = f"❌ Error starting batch: {str(e)}\n{traceback.format_exc()}"
-                        return error_msg, "", ""
+                        yield error_msg, "", ""
                 
                 def stop_batch_processing():
                     """Stop current batch processing."""

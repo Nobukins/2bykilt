@@ -16,7 +16,7 @@ import random
 import re
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Union, Iterator, Callable
+from typing import Dict, List, Optional, Any, Union, Iterator, Callable, Awaitable
 from typing import TYPE_CHECKING
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
@@ -1988,7 +1988,7 @@ class BatchEngine:
             self.logger.debug(f"Failed to record extraction metrics: {e}")
 
 
-def start_batch(csv_path: str, run_context: Optional[RunContext] = None, config: Optional[ConfigType] = None, execute_immediately: bool = True) -> BatchManifest:
+async def start_batch(csv_path: str, run_context: Optional[RunContext] = None, config: Optional[ConfigType] = None, execute_immediately: bool = True, progress_callback: Optional[Callable[[int, int], Awaitable[None]]] = None) -> BatchManifest:
     """
     Start a new batch execution from CSV file.
 
@@ -2009,6 +2009,7 @@ def start_batch(csv_path: str, run_context: Optional[RunContext] = None, config:
             - skip_empty_rows (bool): Skip empty rows during processing (default: True)
             - log_level (str): Logging level ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')
         execute_immediately: Whether to execute jobs immediately after creation (default: True)
+        progress_callback: Optional callback function called after each job completion with (completed_jobs, total_jobs)
 
     Returns:
         BatchManifest for the created batch
@@ -2045,8 +2046,7 @@ def start_batch(csv_path: str, run_context: Optional[RunContext] = None, config:
     # Execute jobs immediately if requested
     if execute_immediately:
         try:
-            import asyncio
-            execution_result = asyncio.run(engine.execute_batch_jobs(manifest.batch_id))
+            execution_result = await engine.execute_batch_jobs(manifest.batch_id, progress_callback=progress_callback)
             logger.info(f"Batch {manifest.batch_id} execution completed: {execution_result.get('completed', 0)} completed, {execution_result.get('failed', 0)} failed")
         except Exception as e:
             logger.error(f"Failed to execute batch {manifest.batch_id} immediately: {e}")
