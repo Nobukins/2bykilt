@@ -314,6 +314,15 @@ issues:
     dependents: []
   "91": {title: "統一録画パス Rollout (flag default 有効化 & legacy 廃止)", meta: {area: artifacts, type: chore, priority: P0, phase: "1-late", stability: core}, depends: ["28"], dependents: [], progress: {state: done, primary_pr: 105}, risk: null, critical_path_rank: 1}
   "173": {title: "[UI][batch][#40 follow-up] CSV Preview & Command Argument Mapping", meta: {area: batch, type: feat, priority: P2, phase: "2", stability: experimental}, depends: ["39", "40", "41", "42"], dependents: [], risk: null, critical_path_rank: 1}
+  "264": {title: "リファクタ提案: 大きすぎる Python ファイルの分割とモジュール化", meta: {area: docs, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "265": {title: "改善提案: 複数フォルダ配下の録画ファイルを再帰的に発見・一覧表示", meta: {area: artifacts, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: ["266","267","268"], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "266": {title: "Discovery: 録画ファイル検出ユーティリティ（Discovery）", meta: {area: artifacts, type: enhancement, priority: P2, phase: "2", stability: core}, depends: ["265"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "267": {title: "API: 録画ファイル検索 API 設計", meta: {area: artifacts, type: enhancement, priority: P2, phase: "2", stability: core}, depends: ["265","266"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "268": {title: "UI: 録画ファイル集約ビューと実装", meta: {area: artifacts, type: enhancement, priority: P2, phase: "2", stability: core}, depends: ["265","266","267"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "269": {title: "提案: Feature Flag の全面活用とプロファイルベースの機能有効化", meta: {area: config, type: enhancement, priority: P1, phase: "1", stability: core}, depends: [], dependents: ["270","271","272"], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "270": {title: "設計: Feature Flag 運用設計とメタデータ仕様", meta: {area: config, type: enhancement, priority: P1, phase: "1", stability: core}, depends: ["269"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "271": {title: "実装: Feature Flags コアライブラリと Profile ベースセットアップ", meta: {area: config, type: enhancement, priority: P1, phase: "1", stability: core}, depends: ["269","270"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "272": {title: "UI: Admin UI による Feature Flag 管理画面の実装", meta: {area: flags, type: enhancement, priority: P1, phase: "1", stability: core}, depends: ["269","271"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
   "174": {title: "[artifacts][batch] Clarify Artifact Output & Access Flow", meta: {area: artifacts, type: docs, priority: P3, phase: "2", stability: core}, depends: ["28", "30", "33", "35", "39"], dependents: [], risk: low, critical_path_rank: 1}
   "154": {title: "pip-audit stabilization in CI with normalizer + targeted suppressions", meta: {area: security, type: fix, priority: P1, phase: "1", stability: core}, depends: [], dependents: [], risk: null, progress: {state: done, primary_pr: 160}, critical_path_rank: 1}
   "175": {title: "バッチ行単位成果物キャプチャ基盤 (スクリーンショット/要素値/ログ関連紐付け)", meta: {area: artifacts, type: feat, priority: P1, phase: "2", stability: experimental}, depends: ["39", "40", "41", "42", "33", "35"], dependents: ["176"], risk: medium, progress: {state: done, primary_pr: 181}, critical_path_rank: 2}
@@ -381,7 +390,7 @@ issues:
   "227": {title: "[ui/ux][enhancement] LLM有効時のエラーメッセージ改善とUI統一性確保", meta: {area: uiux, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
 
 summary:
-  total_issues: 105
+  total_issues: 114
   high_risk: ["31", "46", "49", "54", "62", "176", "237"]
   longest_chain_example: ["65", "64", "63", "66", "67"]
   data_quality_checks:
@@ -410,6 +419,7 @@ summary:
       - "241"
       - "244"
       - "255"
+      - "264"
   generated_at_utc: "2025-09-26T12:00:00Z"
 
 last_synced:

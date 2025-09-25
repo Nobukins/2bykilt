@@ -1,6 +1,6 @@
 # 2bykilt 開発ロードマップ (Baseline v1)
 
-最終更新: 2025-09-23
+ 最終更新: 2025-09-26
 対象リポジトリ: <https://github.com/Nobukins/2bykilt>
 
 
@@ -315,6 +315,8 @@ Phase2 再編後の短期優先セットを以下に再定義。A フェーズ�
 4. Phase2-14 設定競合: #224 (RECORDING_PATH UI/環境変数競合) | #221 安定化後着手
 5. Docs ギャップ定義: #177 ✅ MVP Matrix Draft → ギャップ派生 Issue 起票
 6. Workflow 整合性: #178 ✅ dependency-pipeline workflow 実装完了 (自動生成・コミット機能統合)
+
+- **Roadmap sync**: Add new issues #264–#272 to ISSUE_DEPENDENCIES.yml and ROADMAP (branch: docs/update-roadmap-2025-09-26). Run validation scripts and open PR if green.
 
 ### 中期 (Phase2 Expansion)
 
