@@ -1,6 +1,6 @@
 ```mermaid
 %% Auto-generated dependency graph
-%% Generated at: 2025-09-23T13:20:00.655163+00:00
+%% Generated at: 2025-09-25T03:28:49.441238+00:00
 %% Edge方向: dependency --> dependent
 graph LR
 
@@ -96,17 +96,28 @@ subgraph R1[Rank 1]
   209["209 [ui/ux] Results men…"]
   210["210 [ui/ux] Recordings …"]
   211["211 [docs] LLM 統合ドキュメント…"]
-  212["212 [feat] Playwright C…"]
+  212["212 [ui/ux] Playwright …"]
   218["218 テストカバレッジ率の向上"]
   223["223 [logging][bug] LOG_…"]
   224["224 [ui/ux][config] REC…"]
   226["226 [runner][bug] searc…"]
+  227["227 [ui/ux][enhancement…"]
+  228["228 [configuration][enh…"]
+  229["229 [ui/ux][enhancement…"]
+  230["230 [documentation][enh…"]
+  231["231 [testing][enhanceme…"]
   240["240 P0: Fix user profil…"]
   241["241 P0: Fix Unlock-Futu…"]
   242["242 P1: Optimize Featur…"]
   244["244 [docs][feat] action…"]
   246["246 [artifacts][feat] ス…"]
   247["247 [artifacts][feat] ブ…"]
+  248["248 CSV Batch Processin…"]
+  249["249 Phase2-07 Metrics A…"]
+  250["250 Phase2-13 Runner Fi…"]
+  251["251 Phase2-14 Config Co…"]
+  255["255 git-scriptのURL評価制限緩和"]
+  257["257 [batch] CSV Batch J…"]
 end
 
 %% Edges (depends --> dependent)
@@ -205,7 +216,7 @@ end
 199 --> 209
 199 --> 210
 43 --> 211
-64 --> 212
+53 --> 212
 200 --> 219
 201 --> 219
 200 --> 226
@@ -221,6 +232,14 @@ end
 64 --> 242
 194 --> 246
 194 --> 247
+224 --> 251
+220 --> 250
+221 --> 250
+222 --> 249
+198 --> 248
+173 --> 248
+39 --> 257
+198 --> 257
 
 %% Styling definitions (Mermaid syntax uses colon)
 classDef highrisk fill:#ffe6e6,stroke:#d40000,stroke-width:2px,color:#000;
@@ -228,7 +247,7 @@ classDef progress fill:#e6f4ff,stroke:#0366d6,stroke-width:2px,color:#000;
 
 %% Class assignments
 class 31,46,49,54,62,176,237 highrisk;
-class 25,28,30,31,32,34,35,36,37,38,39,40,41,42,44,45,50,56,57,58,59,87,88,89,91,102,107,108,109,110,111,113,114,115,127,154,175,176,177,192,194,196,197,198,199,200,201,202,203,208,209,210,211,212,218,219,220,221,222,223,224,226,237,240,241,242,244,246,247 progress;
+class 25,28,30,31,32,34,35,36,37,38,39,40,41,42,44,45,50,56,57,58,59,87,88,89,91,102,107,108,109,110,111,113,114,115,127,154,175,176,177,192,194,196,197,198,199,200,201,202,203,208,209,210,211,212,218,219,220,221,222,223,224,226,227,228,229,230,231,237,240,241,242,244,246,247,248,249,250,251,255,257 progress;
 
 %% Legend (pseudo nodes)
 subgraph Legend[Legend]

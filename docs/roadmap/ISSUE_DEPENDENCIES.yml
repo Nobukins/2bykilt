@@ -276,7 +276,7 @@ issues:
         priority: P0, phase: "1-late", stability: core}, depends: ["64", "65"], 
       dependents: ["66"], risk: null, critical_path_rank: 3}
   "64": {title: "フィーチャーフラグフレームワーク", meta: {area: config, type: feat, priority: 
-        P0, phase: "1", stability: core}, depends: ["64"], dependents: ["63", "43",
+        P0, phase: "1", stability: core}, depends: ["65"], dependents: ["63", "43",
       "49"], risk: null, critical_path_rank: 4}
   "65": {title: "マルチ環境設定ローダ", meta: {area: config, type: feat, priority: P0, 
         phase: "1", stability: core}, depends: [], dependents: ["64", "63", "43",
@@ -382,7 +382,7 @@ issues:
   "257": {title: "[batch] CSV Batch Job Execution Not Triggered - Browser Automation Missing", meta: {area: batch, type: bug, priority: P0, phase: "2", stability: experimental}, depends: ["39", "198"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
 
 summary:
-  total_issues: 94
+  total_issues: 105
   high_risk: ["31", "46", "49", "54", "62", "176", "237"]
   longest_chain_example: ["65", "64", "63", "66", "67"]
   data_quality_checks:
@@ -402,9 +402,15 @@ summary:
       - "192"
       - "197"
       - "218"
+      - "227"
+      - "228"
+      - "229"
+      - "230"
+      - "231"
       - "240"
       - "241"
       - "244"
+      - "255"
   generated_at_utc: "2025-09-25T12:00:00Z"
 
 validation_rules:
