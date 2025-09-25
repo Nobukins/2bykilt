@@ -1,6 +1,6 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-09-25T03:52:39+00:00
+Generated at (UTC): 2025-09-25T12:55:06+00:00
 
 ## 1. メタサマリー
 
@@ -13,8 +13,8 @@ Generated at (UTC): 2025-09-25T03:52:39+00:00
 ## 2. 分布 (Distribution)
 
 ### Priority
-- P0: 28 (26.7%)
-- P1: 31 (29.5%)
+- P0: 27 (25.7%)
+- P1: 32 (30.5%)
 - P2: 44 (41.9%)
 - P3: 2 (1.9%)
 
@@ -202,7 +202,7 @@ Sorted By: critical_path_rank
 | 244 | [docs][feat] action_runner_template 利用方法ドキュメント整備 & 実装サンプル追加 | P2 | 2 | docs |  | 1 | 0 | 0 | 0 |  |
 | 246 | [artifacts][feat] スクリーンショットの取得・保存機能強化 | P1 | 2 | artifacts |  | 1 | 1 | 1 | 0 |  |
 | 247 | [artifacts][feat] ブラウザ要素の取得・保存機能強化 | P1 | 2 | artifacts |  | 1 | 1 | 1 | 0 |  |
-| 248 | CSV Batch Processing Enhancement Priority | P0 | 2 | batch |  | 1 | 3 | 2 | 0 |  |
+| 248 | CSV Batch Processing Enhancement Priority | P1 | 2 | batch |  | 1 | 3 | 2 | 0 |  |
 | 249 | Phase2-07 Metrics Advancement | P0 | 2 | observability |  | 1 | 0 | 1 | 0 |  |
 | 250 | Phase2-13 Runner Fixes Parallel | P0 | 2 | runner |  | 1 | 0 | 2 | 0 |  |
 | 251 | Phase2-14 Config Conflicts | P0 | 2 | config |  | 1 | 0 | 1 | 0 |  |
@@ -582,7 +582,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 0
 - Depends (0): (none)
 - Dependents (0): (none)
-- Progress: {"state": "open"}
+- Progress: {"state": "in-progress"}
 
 ### Issue 154: pip-audit stabilization in CI with normalizer + targeted suppressions
 - Priority: P1, Phase: 1, Area: security
@@ -897,13 +897,13 @@ Sorted By: critical_path_rank
 - Progress: {"state": "open"}
 
 ### Issue 248: CSV Batch Processing Enhancement Priority
-- Priority: P0, Phase: 2, Area: batch
+- Priority: P1, Phase: 2, Area: batch
 - Risk: (none)
 - CriticalPathRank: 1
 - LongestDistance: 3
 - Depends (2): 198, 173
 - Dependents (0): (none)
-- Progress: {"state": "open"}
+- Progress: {"state": "in-progress"}
 
 ### Issue 249: Phase2-07 Metrics Advancement
 - Priority: P0, Phase: 2, Area: observability
@@ -948,7 +948,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 3
 - Depends (2): 39, 198
 - Dependents (0): (none)
-- Progress: {"state": "open"}
+- Progress: {"state": "done"}
 
 ### Issue 34: 要素値キャプチャ & エクスポート
 - Priority: P1, Phase: 1, Area: artifacts
