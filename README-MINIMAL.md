@@ -143,3 +143,7 @@ MIT License
 ---
 
 **2Bykilt軽量版** - シンプル、高速、実用的なブラウザ自動化ツール
+
+## CSV Preview Documentation
+
+For information about the CSV Preview feature (UI preview, unique-id detection, and confirm-before-start behavior), see `docs/csv_preview.md`.
