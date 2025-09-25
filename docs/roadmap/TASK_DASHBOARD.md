@@ -1,49 +1,49 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-09-25T03:19:37+00:00
+Generated at (UTC): 2025-09-25T03:28:56+00:00
 
 ## 1. メタサマリー
 
-- Total Issues: 94
+- Total Issues: 105
 - High Risk (declared): 7 → 31, 46, 49, 54, 62, 176, 237
 - Cycle Detected: false (none)
-- Strict Orphans: 17
-- Curated Orphan List Count: 17
+- Strict Orphans: 23
+- Curated Orphan List Count: 23
 
 ## 2. 分布 (Distribution)
 
 ### Priority
-- P0: 23 (24.5%)
-- P1: 31 (33.0%)
-- P2: 38 (40.4%)
-- P3: 2 (2.1%)
+- P0: 28 (26.7%)
+- P1: 31 (29.5%)
+- P2: 44 (41.9%)
+- P3: 2 (1.9%)
 
 ### Phase
-- 1: 19 (20.2%)
-- 1-late: 14 (14.9%)
-- 2: 61 (64.9%)
+- 1: 19 (18.1%)
+- 1-late: 14 (13.3%)
+- 2: 72 (68.6%)
 
 ### Area
-- artifacts: 20 (21.3%)
-- automation: 5 (5.3%)
-- batch: 8 (8.5%)
-- config: 5 (5.3%)
-- docs: 8 (8.5%)
-- logging: 5 (5.3%)
-- observability: 4 (4.3%)
-- plugins: 1 (1.1%)
-- quality: 1 (1.1%)
-- runner: 22 (23.4%)
-- security: 5 (5.3%)
-- test: 1 (1.1%)
-- testing: 3 (3.2%)
-- uiux: 6 (6.4%)
+- artifacts: 20 (19.0%)
+- automation: 5 (4.8%)
+- batch: 10 (9.5%)
+- config: 7 (6.7%)
+- docs: 9 (8.6%)
+- logging: 5 (4.8%)
+- observability: 5 (4.8%)
+- plugins: 1 (1.0%)
+- quality: 1 (1.0%)
+- runner: 23 (21.9%)
+- security: 5 (4.8%)
+- test: 1 (1.0%)
+- testing: 4 (3.8%)
+- uiux: 9 (8.6%)
 
 ### Risk
-- high: 7 (7.4%)
-- low: 12 (12.8%)
-- medium: 4 (4.3%)
-- none: 71 (75.5%)
+- high: 7 (6.7%)
+- low: 12 (11.4%)
+- medium: 3 (2.9%)
+- none: 83 (79.0%)
 
 ## 3. リスク詳細 (High / Medium / etc.)
 
@@ -73,9 +73,15 @@ Strict Orphans (自動抽出 = 依存なし & 参照されず):
 - 192: [security][follow-up] Issue #154 pip-audit stabilization - monthly security monitoring schedule
 - 197: [dashboard] UI graphs and preset expansion
 - 218: テストカバレッジ率の向上
+- 227: [ui/ux][enhancement] LLM有効時のエラーメッセージ改善とUI統一性確保
+- 228: [configuration][enhancement] LLM設定の改善と設定ガイドの明確化
+- 229: [ui/ux][enhancement] UI/UXの統一性確保とデザインシステムの確立
+- 230: [documentation][enhancement] ドキュメントの改善とユーザガイドの充実
+- 231: [testing][enhancement] テストスイートの改善とカバレッジ向上
 - 240: P0: Fix user profile utilization in browser launch - Critical SSO/Cookie functionality missing
 - 241: P0: Fix Unlock-Future type browser automation - Operations hang without execution
 - 244: [docs][feat] action_runner_template 利用方法ドキュメント整備 & 実装サンプル追加
+- 255: git-scriptのURL評価制限緩和
 
 Curated Orphan List (summary.data_quality_checks.orphan_issues_without_dependents_or_depends):
 - 55: browser_control pytest パス修正
@@ -92,9 +98,15 @@ Curated Orphan List (summary.data_quality_checks.orphan_issues_without_dependent
 - 192: [security][follow-up] Issue #154 pip-audit stabilization - monthly security monitoring schedule
 - 197: [dashboard] UI graphs and preset expansion
 - 218: テストカバレッジ率の向上
+- 227: [ui/ux][enhancement] LLM有効時のエラーメッセージ改善とUI統一性確保
+- 228: [configuration][enhancement] LLM設定の改善と設定ガイドの明確化
+- 229: [ui/ux][enhancement] UI/UXの統一性確保とデザインシステムの確立
+- 230: [documentation][enhancement] ドキュメントの改善とユーザガイドの充実
+- 231: [testing][enhancement] テストスイートの改善とカバレッジ向上
 - 240: P0: Fix user profile utilization in browser launch - Critical SSO/Cookie functionality missing
 - 241: P0: Fix Unlock-Future type browser automation - Operations hang without execution
 - 244: [docs][feat] action_runner_template 利用方法ドキュメント整備 & 実装サンプル追加
+- 255: git-scriptのURL評価制限緩和
 
 Missing Strict Orphans in curated list: (none)
 Extra non-strict entries in curated list: (none)
@@ -164,7 +176,7 @@ Sorted By: critical_path_rank
 | 194 | [artifacts] Tab index manifest for multi-tab recordings | P2 | 2 | artifacts |  | 1 | 0 | 0 | 2 |  |
 | 196 | CI: local selector smoke を統合 | P2 | 2 | automation | low | 1 | 4 | 1 | 1 | #213 |
 | 197 | [dashboard] UI graphs and preset expansion | P2 | 2 | observability |  | 1 | 0 | 0 | 0 |  |
-| 198 | [batch] CSV NamedString 入力の正規化 | P1 | 2 | batch | medium | 1 | 2 | 1 | 0 |  |
+| 198 | [batch] CSV NamedString 入力の正規化 | P1 | 2 | batch | medium | 1 | 2 | 1 | 0 | #256 |
 | 199 | [ui/ux] Internationalization (i18n): JA base → EN 追加 | P2 | 2 | uiux | low | 1 | 0 | 0 | 3 |  |
 | 200 | [policy] myscript 配置規約の策定 | P2 | 2 | docs | low | 1 | 2 | 1 | 2 |  |
 | 201 | [runner] myscript スクリプト修正（パス統一・生成物出力） | P2 | 2 | runner | low | 1 | 3 | 1 | 3 | #213 |
@@ -174,17 +186,28 @@ Sorted By: critical_path_rank
 | 209 | [ui/ux] Results menu - 実行結果表示メニューの改善 | P2 | 2 | uiux | low | 1 | 1 | 1 | 0 |  |
 | 210 | [ui/ux] Recordings menu - 録画ファイル管理メニューの改善 | P2 | 2 | uiux | low | 1 | 1 | 1 | 0 |  |
 | 211 | [docs] LLM 統合ドキュメント整備 | P1 | 2 | docs | low | 1 | 3 | 1 | 0 |  |
-| 212 | [feat] Playwright Codegen 統合機能 | P1 | 2 | runner | medium | 1 | 2 | 1 | 0 |  |
+| 212 | [ui/ux] Playwright Codegenメニューの保存ボタン統合改善 | P1 | 2 | uiux |  | 1 | 1 | 1 | 0 |  |
 | 218 | テストカバレッジ率の向上 | P2 | 2 | testing |  | 1 | 0 | 0 | 0 |  |
 | 223 | [logging][bug] LOG_LEVEL 環境変数が反映されない (初期化順序バグ) | P0 | 2 | logging |  | 1 | 0 | 1 | 0 | #233 |
 | 224 | [ui/ux][config] RECORDING_PATH UI と環境変数の競合解消 | P1 | 2 | uiux |  | 1 | 0 | 1 | 0 |  |
 | 226 | [runner][bug] search-linkedin 実行時エラー修正 | P0 | 2 | runner |  | 1 | 4 | 2 | 0 | #232 |
+| 227 | [ui/ux][enhancement] LLM有効時のエラーメッセージ改善とUI統一性確保 | P2 | 2 | uiux |  | 1 | 0 | 0 | 0 |  |
+| 228 | [configuration][enhancement] LLM設定の改善と設定ガイドの明確化 | P2 | 2 | config |  | 1 | 0 | 0 | 0 |  |
+| 229 | [ui/ux][enhancement] UI/UXの統一性確保とデザインシステムの確立 | P2 | 2 | uiux |  | 1 | 0 | 0 | 0 |  |
+| 230 | [documentation][enhancement] ドキュメントの改善とユーザガイドの充実 | P2 | 2 | docs |  | 1 | 0 | 0 | 0 |  |
+| 231 | [testing][enhancement] テストスイートの改善とカバレッジ向上 | P2 | 2 | testing |  | 1 | 0 | 0 | 0 |  |
 | 240 | P0: Fix user profile utilization in browser launch - Critical SSO/Cookie functionality missing | P0 | 2 | config |  | 1 | 0 | 0 | 0 |  |
 | 241 | P0: Fix Unlock-Future type browser automation - Operations hang without execution | P0 | 2 | runner |  | 1 | 0 | 0 | 0 |  |
 | 242 | P1: Optimize Feature Flag usage for UI menu control - Hide LLM tabs when disabled | P1 | 2 | uiux |  | 1 | 2 | 1 | 0 |  |
 | 244 | [docs][feat] action_runner_template 利用方法ドキュメント整備 & 実装サンプル追加 | P2 | 2 | docs |  | 1 | 0 | 0 | 0 |  |
 | 246 | [artifacts][feat] スクリーンショットの取得・保存機能強化 | P1 | 2 | artifacts |  | 1 | 1 | 1 | 0 |  |
 | 247 | [artifacts][feat] ブラウザ要素の取得・保存機能強化 | P1 | 2 | artifacts |  | 1 | 1 | 1 | 0 |  |
+| 248 | CSV Batch Processing Enhancement Priority | P0 | 2 | batch |  | 1 | 3 | 2 | 0 |  |
+| 249 | Phase2-07 Metrics Advancement | P0 | 2 | observability |  | 1 | 0 | 1 | 0 |  |
+| 250 | Phase2-13 Runner Fixes Parallel | P0 | 2 | runner |  | 1 | 0 | 2 | 0 |  |
+| 251 | Phase2-14 Config Conflicts | P0 | 2 | config |  | 1 | 0 | 1 | 0 |  |
+| 255 | git-scriptのURL評価制限緩和 | P2 | 2 | runner |  | 1 | 0 | 0 | 0 |  |
+| 257 | [batch] CSV Batch Job Execution Not Triggered - Browser Automation Missing | P0 | 2 | batch |  | 1 | 3 | 2 | 0 |  |
 | 34 | 要素値キャプチャ & エクスポート | P1 | 1 | artifacts |  | 1 | 2 | 2 | 0 | #93 |
 | 38 | 録画統一後回帰テストスイート | P2 | 1-late | artifacts |  | 1 | 4 | 5 | 0 | #103 |
 | 40 | CSV D&D UI 連携 | P2 | 2 | batch |  | 1 | 2 | 1 | 0 | #172 |
@@ -646,7 +669,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 2
 - Depends (1): 39
 - Dependents (0): (none)
-- Progress: {"state": "planned"}
+- Progress: {"state": "done", "primary_pr": 256}
 
 ### Issue 199: [ui/ux] Internationalization (i18n): JA base → EN 追加
 - Priority: P2, Phase: 2, Area: uiux
@@ -729,12 +752,12 @@ Sorted By: critical_path_rank
 - Dependents (0): (none)
 - Progress: {"state": "open"}
 
-### Issue 212: [feat] Playwright Codegen 統合機能
-- Priority: P1, Phase: 2, Area: runner
-- Risk: medium
+### Issue 212: [ui/ux] Playwright Codegenメニューの保存ボタン統合改善
+- Priority: P1, Phase: 2, Area: uiux
+- Risk: (none)
 - CriticalPathRank: 1
-- LongestDistance: 2
-- Depends (1): 64
+- LongestDistance: 1
+- Depends (1): 53
 - Dependents (0): (none)
 - Progress: {"state": "open"}
 
@@ -773,6 +796,51 @@ Sorted By: critical_path_rank
 - Depends (2): 200, 201
 - Dependents (0): (none)
 - Progress: {"state": "done", "primary_pr": 232}
+
+### Issue 227: [ui/ux][enhancement] LLM有効時のエラーメッセージ改善とUI統一性確保
+- Priority: P2, Phase: 2, Area: uiux
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+- Progress: {"state": "open"}
+
+### Issue 228: [configuration][enhancement] LLM設定の改善と設定ガイドの明確化
+- Priority: P2, Phase: 2, Area: config
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+- Progress: {"state": "open"}
+
+### Issue 229: [ui/ux][enhancement] UI/UXの統一性確保とデザインシステムの確立
+- Priority: P2, Phase: 2, Area: uiux
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+- Progress: {"state": "open"}
+
+### Issue 230: [documentation][enhancement] ドキュメントの改善とユーザガイドの充実
+- Priority: P2, Phase: 2, Area: docs
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+- Progress: {"state": "open"}
+
+### Issue 231: [testing][enhancement] テストスイートの改善とカバレッジ向上
+- Priority: P2, Phase: 2, Area: testing
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+- Progress: {"state": "open"}
 
 ### Issue 240: P0: Fix user profile utilization in browser launch - Critical SSO/Cookie functionality missing
 - Priority: P0, Phase: 2, Area: config
@@ -825,6 +893,60 @@ Sorted By: critical_path_rank
 - CriticalPathRank: 1
 - LongestDistance: 1
 - Depends (1): 194
+- Dependents (0): (none)
+- Progress: {"state": "open"}
+
+### Issue 248: CSV Batch Processing Enhancement Priority
+- Priority: P0, Phase: 2, Area: batch
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 3
+- Depends (2): 198, 173
+- Dependents (0): (none)
+- Progress: {"state": "open"}
+
+### Issue 249: Phase2-07 Metrics Advancement
+- Priority: P0, Phase: 2, Area: observability
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 0
+- Depends (1): 222
+- Dependents (0): (none)
+- Progress: {"state": "open"}
+
+### Issue 250: Phase2-13 Runner Fixes Parallel
+- Priority: P0, Phase: 2, Area: runner
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 0
+- Depends (2): 220, 221
+- Dependents (0): (none)
+- Progress: {"state": "open"}
+
+### Issue 251: Phase2-14 Config Conflicts
+- Priority: P0, Phase: 2, Area: config
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 0
+- Depends (1): 224
+- Dependents (0): (none)
+- Progress: {"state": "open"}
+
+### Issue 255: git-scriptのURL評価制限緩和
+- Priority: P2, Phase: 2, Area: runner
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+- Progress: {"state": "open"}
+
+### Issue 257: [batch] CSV Batch Job Execution Not Triggered - Browser Automation Missing
+- Priority: P0, Phase: 2, Area: batch
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 3
+- Depends (2): 39, 198
 - Dependents (0): (none)
 - Progress: {"state": "open"}
 

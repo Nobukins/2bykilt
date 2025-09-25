@@ -169,8 +169,15 @@ def classify_issue_status(issue_id: str,
     depends = issue_data.get('depends', [])
     if depends:
         for dep_id in depends:
-            if not is_dependency_closed(dep_id, issues, dependency_api_data):
-                return 'blocked'
+            dep_str = str(dep_id)
+            if dep_str in issues:
+                dep_issue_data = issues[dep_str]
+                dep_api = dependency_api_data.get(dep_str, {})
+                # Check if dependency is closed (via API or progress.state)
+                dep_closed = (dep_api.get('issue_state') == 'closed' or 
+                            dep_issue_data.get('progress', {}).get('state') == 'done')
+                if not dep_closed:
+                    return 'blocked'
     # All dependencies closed (or none) => ready
     return 'ready'
 

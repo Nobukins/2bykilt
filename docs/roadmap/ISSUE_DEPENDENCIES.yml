@@ -234,9 +234,9 @@ issues:
   "50": {title: "ディレクトリ名変更 & 移行", meta: {area: runner, type: chore, priority: P1,
         phase: "1", stability: core}, depends: ["25"], dependents: ["200"], risk: null, 
     progress: {state: in-progress}, critical_path_rank: 1}
-  "51": {title: "Windows プロファイル永続化", meta: {area: runner, type: feat, priority: 
-        P2, phase: "2", stability: core}, depends: ["47"], dependents: [], risk: 
-      null, critical_path_rank: 1}
+  "51": {title: "Windows プロファイル永続化", meta: {area: runner, type: feat, 
+        priority: P2, phase: "2", stability: core}, depends: ["47"], dependents: [], 
+      risk: null, critical_path_rank: 1}
   "52": {title: "サンドボックス allow/deny パス", meta: {area: runner, type: feat, 
         priority: P2, phase: "2", stability: experimental}, depends: ["62"], 
       dependents: [], risk: null, critical_path_rank: 1}
@@ -299,8 +299,8 @@ issues:
       dependents: ["83"], progress: {state: done, primary_pr: 96}, risk: null, critical_path_rank: 1}
   "88": {title: "スクリーンショット例外分類と特定例外キャッチ", meta: {area: artifacts, type: feat, 
         priority: P2, phase: "1-late", stability: core}, depends: ["33", "35"], 
-      dependents: [], risk: null, progress: {state: done, primary_pr: 97}, critical_path_rank: 1} # Adjusted depends: removed invalid 82 -> aligns with screenshot/manifest prerequisites
-  "89": {title: "Screenshot ログイベント整備 (metrics 連携準備)", meta: {area: observability, type: chore, priority: P2, phase: "1-late", stability: core}, depends: ["33", "58"], dependents: [], risk: null, progress: {state: done, primary_pr: 98}, critical_path_rank: 1}
+      dependents: [], progress: {state: done, primary_pr: 97}, risk: null, critical_path_rank: 1} # Adjusted depends: removed invalid 82 -> aligns with screenshot/manifest prerequisites
+  "89": {title: "Screenshot ログイベント整備 (metrics 連携準備)", meta: {area: observability, type: chore, priority: P2, phase: "1-late", stability: core}, depends: ["33", "58"], dependents: [], risk: null, progress: {state: done, primary_pr: 98}, risk: null, critical_path_rank: 1}
   "90": 
     title: "Temp test issue for enrichment"
     meta: 
@@ -324,7 +324,7 @@ issues:
   "110": {title: "browser-control gap fix", meta: {area: runner, type: bug, priority: P0, phase: "2", stability: core}, depends: ["111"], dependents: ["106"], progress: {state: done, primary_pr: 188}, risk: null, critical_path_rank: 3}
 
   "196": {title: "CI: local selector smoke を統合", meta: {area: automation, type: chore, priority: P2, phase: "2", stability: core}, depends: ["201"], dependents: ["202"], risk: low, progress: {state: done, primary_pr: 213}, critical_path_rank: 1}
-  "198": {title: "[batch] CSV NamedString 入力の正規化", meta: {area: batch, type: bug, priority: P1, phase: "2", stability: experimental}, depends: ["39"], dependents: [], risk: medium, progress: {state: planned}, critical_path_rank: 1}
+  "198": {title: "[batch] CSV NamedString 入力の正規化", meta: {area: batch, type: bug, priority: P1, phase: "2", stability: experimental}, depends: ["39"], dependents: [], risk: medium, progress: {state: done, primary_pr: 256}, critical_path_rank: 1}
   "200": {title: "[policy] myscript 配置規約の策定", meta: {area: docs, type: docs, priority: P2, phase: "2", stability: core}, depends: ["50"], dependents: ["201", "203"], risk: low, progress: {state: in-progress}, critical_path_rank: 1}
   "201": {title: "[runner] myscript スクリプト修正（パス統一・生成物出力）", meta: {area: runner, type: chore, priority: P2, phase: "2", stability: core}, depends: ["200"], dependents: ["196", "202", "203"], risk: low, progress: {state: done, primary_pr: 213}, critical_path_rank: 1}
   "202": {title: "[ci] アーティファクト収集/キャッシュ更新（myscript 構成対応）", meta: {area: automation, type: chore, priority: P2, phase: "2", stability: core}, depends: ["201", "196"], dependents: ["203"], risk: low, progress: {state: done, primary_pr: 214}, critical_path_rank: 1}
@@ -334,7 +334,7 @@ issues:
   "209": {title: "[ui/ux] Results menu - 実行結果表示メニューの改善", meta: {area: uiux, type: enhancement, priority: P2, phase: "2", stability: core}, depends: ["199"], dependents: [], risk: low, progress: {state: open}, critical_path_rank: 1}
   "210": {title: "[ui/ux] Recordings menu - 録画ファイル管理メニューの改善", meta: {area: uiux, type: enhancement, priority: P2, phase: "2", stability: core}, depends: ["199"], dependents: [], risk: low, progress: {state: open}, critical_path_rank: 1}
   "211": {title: "[docs] LLM 統合ドキュメント整備", meta: {area: docs, type: docs, priority: P1, phase: "2", stability: core}, depends: ["43"], dependents: [], risk: low, progress: {state: open}, critical_path_rank: 1}
-  "212": {title: "[feat] Playwright Codegen 統合機能", meta: {area: runner, type: feat, priority: P1, phase: "2", stability: experimental}, depends: ["64"], dependents: [], risk: medium, progress: {state: open}, critical_path_rank: 1}
+  "212": {title: "[ui/ux] Playwright Codegenメニューの保存ボタン統合改善", meta: {area: uiux, type: enhancement, priority: P1, phase: "2", stability: core}, depends: ["53"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
 
   "219": {title: "[runner][bug] search-linkedin 初期コマンド失敗 (pytest経由引数未解釈)", meta: {area: runner, type: bug, priority: P0, phase: "2", stability: core}, depends: ["200", "201"], dependents: ["220", "221"], risk: null, progress: {state: done, primary_pr: 232}, critical_path_rank: 5}
   "226": {title: "[runner][bug] search-linkedin 実行時エラー修正", meta: {area: runner, type: bug, priority: P0, phase: "2", stability: core}, depends: ["200", "201"], dependents: [], risk: null, progress: {state: done, primary_pr: 232}, critical_path_rank: 1}
@@ -364,8 +364,25 @@ issues:
   "246": {title: "[artifacts][feat] スクリーンショットの取得・保存機能強化", meta: {area: artifacts, type: feat, priority: P1, phase: "2", stability: core}, depends: ["194"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
   "247": {title: "[artifacts][feat] ブラウザ要素の取得・保存機能強化", meta: {area: artifacts, type: feat, priority: P1, phase: "2", stability: core}, depends: ["194"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
 
+  "255": {title: "git-scriptのURL評価制限緩和", meta: {area: runner, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "251": {title: "Phase2-14 Config Conflicts", meta: {area: config, type: bug, priority: P0, phase: "2", stability: core}, depends: ["224"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "250": {title: "Phase2-13 Runner Fixes Parallel", meta: {area: runner, type: bug, priority: P0, phase: "2", stability: core}, depends: ["220", "221"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "249": {title: "Phase2-07 Metrics Advancement", meta: {area: observability, type: enhancement, priority: P0, phase: "2", stability: core}, depends: ["222"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "248": {title: "CSV Batch Processing Enhancement Priority", meta: {area: batch, type: enhancement, priority: P0, phase: "2", stability: experimental}, depends: ["198", "173"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "231": {title: "[testing][enhancement] テストスイートの改善とカバレッジ向上", meta: {area: testing, type: enhancement, priority: P2, phase: "2", stability: experimental}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "230": {title: "[documentation][enhancement] ドキュメントの改善とユーザガイドの充実", meta: {area: docs, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "229": {title: "[ui/ux][enhancement] UI/UXの統一性確保とデザインシステムの確立", meta: {area: uiux, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "228": {title: "[configuration][enhancement] LLM設定の改善と設定ガイドの明確化", meta: {area: config, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "227": {title: "[ui/ux][enhancement] LLM有効時のエラーメッセージ改善とUI統一性確保", meta: {area: uiux, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "257": {title: "[batch] CSV Batch Job Execution Not Triggered - Browser Automation Missing", meta: {area: batch, type: bug, priority: P0, phase: "2", stability: experimental}, depends: ["39", "198"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+
+  "229": {title: "[ui/ux][enhancement] UI/UXの統一性確保とデザインシステムの確立", meta: {area: uiux, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "228": {title: "[configuration][enhancement] LLM設定の改善と設定ガイドの明確化", meta: {area: config, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "227": {title: "[ui/ux][enhancement] LLM有効時のエラーメッセージ改善とUI統一性確保", meta: {area: uiux, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "257": {title: "[batch] CSV Batch Job Execution Not Triggered - Browser Automation Missing", meta: {area: batch, type: bug, priority: P0, phase: "2", stability: experimental}, depends: ["39", "198"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+
 summary:
-  total_issues: 94
+  total_issues: 105
   high_risk: ["31", "46", "49", "54", "62", "176", "237"]
   longest_chain_example: ["65", "64", "63", "66", "67"]
   data_quality_checks:
@@ -385,10 +402,16 @@ summary:
       - "192"
       - "197"
       - "218"
+      - "227"
+      - "228"
+      - "229"
+      - "230"
+      - "231"
       - "240"
       - "241"
       - "244"
-  generated_at_utc: "2025-09-23T12:00:00Z"
+      - "255"
+  generated_at_utc: "2025-09-25T12:00:00Z"
 
 validation_rules:
   - "All blocking dependencies must be completed before starting an issue"

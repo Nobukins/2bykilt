@@ -132,7 +132,7 @@ def handle_batch_command(args):
             engine = BatchEngine(run_context)
 
             # Get batch status
-            manifest = engine.get_batch_status(args.batch_id)
+            manifest = engine.get_batch_summary(args.batch_id)
 
             if manifest is None:
                 print(f"❌ Batch {args.batch_id} not found")
@@ -149,10 +149,10 @@ def handle_batch_command(args):
 
             print("\n📋 Job details:")
             for job in manifest.jobs:
-                status_icon = "✅" if job.status == "completed" else "❌" if job.status == "failed" else "⏳"
-                print(f"   {status_icon} {job.job_id}: {job.status}")
-                if job.error_message:
-                    print(f"      Error: {job.error_message}")
+                status_icon = "✅" if job['status'] == "completed" else "❌" if job['status'] == "failed" else "⏳"
+                print(f"   {status_icon} {job['job_id']}: {job['status']}")
+                if job.get('error_message'):
+                    print(f"      Error: {job['error_message']}")
 
             return 0
 
@@ -2015,11 +2015,29 @@ Tests include browser initialization, profile validation, and recording path ver
                         import shutil
                         import os
                         import logging
+                        import io
+                        from pathlib import Path
+                        
+                        def normalize_csv_input(csv_input):
+                            """Normalize CSV input to bytes for file writing."""
+                            if hasattr(csv_input, 'read'):
+                                # File-like object
+                                return csv_input.read()
+                            elif isinstance(csv_input, str):
+                                # Path string
+                                with open(csv_input, 'rb') as f:
+                                    return f.read()
+                            elif hasattr(csv_input, 'value'):
+                                # NamedString (Gradio file upload)
+                                return csv_input.value.encode('utf-8')
+                            else:
+                                raise ValueError(f"Unsupported CSV input type: {type(csv_input)}")
                         
                         temp_csv_path = None
                         try:
                             with tempfile.NamedTemporaryFile(mode='wb', suffix='.csv', delete=False) as temp_file:
-                                shutil.copyfileobj(csv_file, temp_file)
+                                csv_bytes = normalize_csv_input(csv_file)
+                                temp_file.write(csv_bytes)
                                 temp_csv_path = temp_file.name
 
                             # Start batch processing
@@ -2793,8 +2811,8 @@ def handle_batch_command(args):
             run_context = RunContext.get()
             engine = BatchEngine(run_context)
 
-            # Get batch status
-            manifest = engine.get_batch_status(args.batch_id)
+            # Get batch summary
+            manifest = engine.get_batch_summary(args.batch_id)
 
             if manifest is None:
                 print(f"❌ Batch {args.batch_id} not found")
@@ -2954,7 +2972,7 @@ def handle_batch_command(args):
             engine = BatchEngine(run_context)
 
             # Get batch status
-            manifest = engine.get_batch_status(args.batch_id)
+            manifest = engine.get_batch_summary(args.batch_id)
 
             if manifest is None:
                 print(f"❌ Batch {args.batch_id} not found")

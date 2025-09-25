@@ -1,0 +1,4 @@
+template_type,template_name,param
+script,script-nogtips,query=script
+browser-control,search-nogtips,query=BC
+git-script,site-defined-script,query=github

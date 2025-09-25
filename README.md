@@ -601,3 +601,67 @@ CHROME_USER_DATA="/Users/YourUsername/Library/Application Support/Google/Chrome"
 - Ollama (ローカルモデル)
 
 </details>
+
+## 🧪 テスト実行
+
+### CSVバッチ処理機能のテスト
+
+CSVバッチ処理機能の包括的なテストを実行するには、以下のコマンドを使用してください：
+
+```bash
+# 全バッチ処理統合テストを実行
+python -m pytest tests/batch/test_batch_cli_integration.py -v
+
+# 特定のテストを実行
+python -m pytest tests/batch/test_batch_cli_integration.py::TestBatchCLIIntegration::test_batch_start_command_creates_batch_from_csv -v
+
+# CSV入力正規化テストを実行
+python -m pytest tests/batch/test_csv_normalization.py -v
+```
+
+#### テスト対象機能
+
+**CLIコマンドテスト:**
+
+- `python bykilt.py batch start <csv_file>` - CSVファイルからバッチを作成
+- `python bykilt.py batch status <batch_id>` - バッチステータスを表示
+- `python bykilt.py batch update-job <job_id> <status>` - ジョブステータスを更新
+
+**CSV入力正規化テスト:**
+
+- NamedStringオブジェクト（Gradioファイルアップロード）のサポート
+- ファイルライクオブジェクトの処理
+- パス文字列の処理
+- エラーハンドリング
+
+#### テスト実行例
+
+```bash
+# バッチ作成テスト
+python -m pytest tests/batch/test_batch_cli_integration.py::TestBatchCLIIntegration::test_batch_start_command_creates_batch_from_csv -v
+# → CSVファイルからのバッチ作成機能を評価
+
+# バッチステータス表示テスト
+python -m pytest tests/batch/test_batch_cli_integration.py::TestBatchCLIIntegration::test_batch_status_command_shows_batch_details -v
+# → バッチとジョブ情報の表示機能を評価
+
+# ジョブ更新テスト
+python -m pytest tests/batch/test_batch_cli_integration.py::TestBatchCLIIntegration::test_batch_update_job_command_updates_status -v
+# → ジョブステータス更新機能を評価
+
+# NamedStringサポートテスト
+python -m pytest tests/batch/test_batch_cli_integration.py::TestCSVInputNormalizationIntegration::test_csv_normalization_with_named_string_mock -v
+# → Gradio NamedStringオブジェクトの正規化機能を評価
+```
+
+### 全テスト実行
+
+プロジェクト全体のテストを実行するには：
+
+```bash
+# 全テスト実行
+python -m pytest
+
+# 特定のテストスイート実行
+python -m pytest tests/batch/ -v
+```
