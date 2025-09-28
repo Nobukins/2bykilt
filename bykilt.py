@@ -1516,7 +1516,14 @@ URLを入力してPlaywright codegenを起動し、ブラウザ操作を記録�
 
             with gr.TabItem("📁 Configuration", id=10):
                 with gr.Group():
-                    config_file_path = gr.Textbox(label="Config File Path", placeholder="Enter path to .pkl config file")
+                    # Feature Flagの状態に応じてplaceholderを動的に設定
+                    allow_pickle = FeatureFlags.get("security.allow_pickle_config", expected_type=bool, default=False)
+                    if allow_pickle:
+                        config_placeholder = "Enter path to .pkl or .json config file"
+                    else:
+                        config_placeholder = "Enter path to .json config file"
+
+                    config_file_path = gr.Textbox(label="Config File Path", placeholder=config_placeholder)
                     git_token = gr.Textbox(label="Git Token (for non-git users)", type="password", info="Personal token for downloading scripts without Git")
                     load_config_button = gr.Button("Load Existing Config From File", variant="primary")
                     save_config_button = gr.Button("Save Current Config", variant="primary")
