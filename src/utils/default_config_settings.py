@@ -1,6 +1,8 @@
 import os
 import pickle
 import uuid
+import json
+import jsonschema
 import gradio as gr
 
 # Try to import multi-environment configuration support
@@ -59,12 +61,57 @@ def default_config():
     }
 
 
+# JSON Schema for configuration validation
+CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "agent_type": {"type": "string"},
+        "max_steps": {"type": "integer", "minimum": 1},
+        "max_actions_per_step": {"type": "integer", "minimum": 1},
+        "use_vision": {"type": "boolean"},
+        "tool_calling_method": {"type": "string"},
+        "llm_provider": {"type": "string"},
+        "llm_model_name": {"type": "string"},
+        "llm_num_ctx": {"type": "integer", "minimum": 1},
+        "llm_temperature": {"type": "number", "minimum": 0, "maximum": 2},
+        "llm_base_url": {"type": "string"},
+        "llm_api_key": {"type": "string"},
+        "use_own_browser": {"type": "boolean"},
+        "keep_browser_open": {"type": "boolean"},
+        "headless": {"type": "boolean"},
+        "disable_security": {"type": "boolean"},
+        "enable_recording": {"type": "boolean"},
+        "window_w": {"type": "integer", "minimum": 1},
+        "window_h": {"type": "integer", "minimum": 1},
+        "save_recording_path": {"type": "string"},
+        "save_trace_path": {"type": "string"},
+        "save_agent_history_path": {"type": "string"},
+        "task": {"type": "string"},
+        "dev_mode": {"type": "boolean"},
+    },
+    "required": ["agent_type", "max_steps", "max_actions_per_step", "use_vision", "tool_calling_method", "llm_provider", "llm_model_name", "llm_num_ctx", "llm_temperature", "llm_base_url", "llm_api_key", "use_own_browser", "keep_browser_open", "headless", "disable_security", "enable_recording", "window_w", "window_h", "save_recording_path", "save_trace_path", "save_agent_history_path", "task", "dev_mode"]
+}
+
+
 def load_config_from_file(config_file):
     """Load settings from a UUID.pkl file."""
     try:
         with open(config_file, 'rb') as f:
             settings = pickle.load(f)
         return settings
+    except Exception as e:
+        return f"Error loading configuration: {str(e)}"
+
+
+def load_config_from_json(config_file):
+    """Load settings from a JSON file with schema validation."""
+    try:
+        with open(config_file, 'r', encoding='utf-8') as f:
+            settings = json.load(f)
+        jsonschema.validate(instance=settings, schema=CONFIG_SCHEMA)
+        return settings
+    except jsonschema.ValidationError as e:
+        return f"Error validating configuration: {str(e)}"
     except Exception as e:
         return f"Error loading configuration: {str(e)}"
 
@@ -76,6 +123,21 @@ def save_config_to_file(settings, save_dir="./tmp/webui_settings"):
     with open(config_file, 'wb') as f:
         pickle.dump(settings, f)
     return f"Configuration saved to {config_file}"
+
+
+def save_config_to_json(settings, save_dir="./tmp/webui_settings"):
+    """Save the current settings to a config.json file."""
+    os.makedirs(save_dir, exist_ok=True)
+    config_file = os.path.join(save_dir, "config.json")
+    try:
+        jsonschema.validate(instance=settings, schema=CONFIG_SCHEMA)
+        with open(config_file, 'w', encoding='utf-8') as f:
+            json.dump(settings, f, indent=2, ensure_ascii=False)
+        return f"Configuration saved to {config_file}"
+    except jsonschema.ValidationError as e:
+        return f"Error validating configuration: {str(e)}"
+    except Exception as e:
+        return f"Error saving configuration: {str(e)}"
 
 
 def save_current_config(*args):
@@ -109,7 +171,28 @@ def save_current_config(*args):
 
 def update_ui_from_config(config_file):
     if config_file is not None:
-        loaded_config = load_config_from_file(config_file.name)
+        # Security check: Reject .pkl files to prevent deserialization of untrusted data
+        if config_file.name.endswith('.pkl'):
+            allow_pickle = os.getenv('ALLOW_PICKLE_CONFIG', 'false').lower() == 'true'
+            if not allow_pickle:
+                return (
+                    gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+                    gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+                    gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+                    gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+                    gr.update(), gr.update(), "Error: .pkl files are not allowed for security reasons. Please use JSON format."
+                )
+            loaded_config = load_config_from_file(config_file.name)
+        elif config_file.name.endswith('.json'):
+            loaded_config = load_config_from_json(config_file.name)
+        else:
+            return (
+                gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+                gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+                gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+                gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+                gr.update(), gr.update(), "Error: Only .json files are supported. .pkl files are disabled for security."
+            )
         if isinstance(loaded_config, dict):
             return (
                 gr.update(value=loaded_config.get("agent_type", "custom")),
