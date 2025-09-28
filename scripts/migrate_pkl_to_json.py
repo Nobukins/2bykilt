@@ -25,9 +25,21 @@ sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
 from utils.default_config_settings import load_config_from_file, save_config_to_json, CONFIG_SCHEMA
 
+# Import Feature Flags for security control
+try:
+    from src.config.feature_flags import FeatureFlags
+    FEATURE_FLAGS_AVAILABLE = True
+except ImportError:
+    FEATURE_FLAGS_AVAILABLE = False
+
 def migrate_pkl_to_json(input_dir="./tmp/webui_settings", output_dir="./tmp/webui_settings"):
     """Migrate .pkl files to JSON format."""
-    allow_pickle = os.getenv('ALLOW_PICKLE_CONFIG', 'false').lower() == 'true'
+    # Use Feature Flag for security control (fallback to env var if flags unavailable)
+    if FEATURE_FLAGS_AVAILABLE:
+        allow_pickle = FeatureFlags.is_enabled("security.allow_pickle_config")
+    else:
+        allow_pickle = os.getenv('ALLOW_PICKLE_CONFIG', 'false').lower() == 'true'
+    
     if not allow_pickle:
         print("Error: ALLOW_PICKLE_CONFIG must be set to 'true' to process .pkl files.")
         print("This is a security measure to prevent deserialization of untrusted data.")

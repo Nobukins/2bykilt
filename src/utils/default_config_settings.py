@@ -21,6 +21,13 @@ except ImportError:
     def create_or_get_recording_dir():
         return Path("./tmp/record_videos").resolve()
 
+# Import Feature Flags for security controls
+try:
+    from ..config.feature_flags import FeatureFlags
+    FEATURE_FLAGS_AVAILABLE = True
+except ImportError:
+    FEATURE_FLAGS_AVAILABLE = False
+
 
 def default_config():
     """Prepare the default configuration"""
@@ -173,7 +180,12 @@ def update_ui_from_config(config_file):
     if config_file is not None:
         # Security check: Reject .pkl files to prevent deserialization of untrusted data
         if config_file.name.endswith('.pkl'):
-            allow_pickle = os.getenv('ALLOW_PICKLE_CONFIG', 'false').lower() == 'true'
+            # Use Feature Flag for security control (fallback to env var if flags unavailable)
+            if FEATURE_FLAGS_AVAILABLE:
+                allow_pickle = FeatureFlags.is_enabled("security.allow_pickle_config")
+            else:
+                allow_pickle = os.getenv('ALLOW_PICKLE_CONFIG', 'false').lower() == 'true'
+            
             if not allow_pickle:
                 return (
                     gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
