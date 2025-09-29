@@ -385,8 +385,13 @@ issues:
   "227": {title: "[ui/ux][enhancement] LLM有効時のエラーメッセージ改善とUI統一性確保", meta: {area: uiux, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
   "257": {title: "[batch] CSV Batch Job Execution Not Triggered - Browser Automation Missing", meta: {area: batch, type: bug, priority: P0, phase: "2", stability: experimental}, depends: ["39", "198"], dependents: [], risk: null, progress: {state: done}, critical_path_rank: 1}
 
+  "276": {title: "Batch: Recording file not copied to artifacts runs folder when using CSV batch", meta: {area: artifacts, type: bug, priority: P1, phase: "2", stability: core}, depends: [], dependents: [], progress: {state: open}, risk: null, critical_path_rank: 1}
+  "277": {title: "Artifacts UI: Provide UI listing for screenshots, text & element extracts", meta: {area: artifacts, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], progress: {state: open}, risk: null, critical_path_rank: 1}
+  "278": {title: "UI: Control tab visibility with Feature Flags (per-tab toggles & presets)", meta: {area: uiux, type: enhancement, priority: P1, phase: "2", stability: core}, depends: ["64"], dependents: [], progress: {state: open}, risk: null, critical_path_rank: 1}
+  "279": {title: "Config: Consolidate configuration menus, env files, and defaults", meta: {area: config, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], progress: {state: open}, risk: null, critical_path_rank: 1}
+  "280": {title: "Browser Settings: Improve Browser Settings menu clarity & enforce behavior across run types", meta: {area: uiux, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], progress: {state: open}, risk: null, critical_path_rank: 1}
 summary:
-  total_issues: 114
+  total_issues: 119
   high_risk: ["31", "46", "49", "54", "62", "176", "237"]
   longest_chain_example: ["65", "64", "63", "66", "67"]
   data_quality_checks:
@@ -416,10 +421,13 @@ summary:
       - "244"
       - "255"
       - "264"
-  generated_at_utc: "2025-09-28T11:47:15Z"
+      - "276"
+      - "277"
+      - "279"
+      - "280"
 
 last_synced:
-  utc: "2025-09-28T10:00:00Z"
+  utc: "2025-09-29T01:03:38Z"
   issues:
     "255": "OPEN"
     "251": "OPEN"
@@ -471,6 +479,11 @@ last_synced:
     "49": "OPEN"
     "48": "OPEN"
     "43": "OPEN"
+    "276": "OPEN"
+    "277": "OPEN"
+    "278": "OPEN"
+    "279": "OPEN"
+    "280": "OPEN"
 
 validation_rules:
   - "All blocking dependencies must be completed before starting an issue"
