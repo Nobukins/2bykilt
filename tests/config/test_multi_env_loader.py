@@ -53,7 +53,8 @@ def test_secret_mask_artifact(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     loader = MultiEnvConfigLoader()
     loader.load("prod")
-    art_dir = Path("artifacts/runs")
+    from src.utils.fs_paths import get_artifacts_base_dir
+    art_dir = get_artifacts_base_dir() / "runs"
     assert art_dir.exists()
     newest = sorted(art_dir.iterdir())[-1]
     data = json.loads((newest / "effective_config.json").read_text(encoding="utf-8"))

@@ -210,10 +210,10 @@ class LLMParityTester:
 
     def save_regression_data(self):
         """Save regression test data."""
-        # Create artifacts directory
-        artifacts_dir = Path("artifacts/runs") / self.regression_data["test_run_id"]
-        artifacts_dir.mkdir(parents=True, exist_ok=True)
+        # Create artifacts directory using centralized helper so tests follow repo-level config
+        from src.utils.fs_paths import get_artifacts_run_dir
 
+        artifacts_dir = get_artifacts_run_dir(self.regression_data["test_run_id"])
         regression_file = artifacts_dir / "llm_parity_regression.json"
 
         with open(regression_file, 'w', encoding='utf-8') as f:
@@ -226,7 +226,8 @@ class LLMParityTester:
 
     def update_manifest_parity_metrics(self):
         """Update artifacts/manifest.json with parity metrics."""
-        manifest_path = Path("artifacts/manifest.json")
+        from src.utils.fs_paths import get_artifacts_base_dir
+        manifest_path = get_artifacts_base_dir() / "manifest.json"
 
         # Create manifest if it doesn't exist
         if not manifest_path.exists():
@@ -337,11 +338,12 @@ class TestLLMParity:
         results = tester.run_comprehensive_tests()
 
         # Verify regression file was created
-        regression_file = Path("artifacts/runs") / results["test_run_id"] / "llm_parity_regression.json"
+        from src.utils.fs_paths import get_artifacts_run_dir, get_artifacts_base_dir
+        regression_file = get_artifacts_run_dir(results["test_run_id"]) / "llm_parity_regression.json"
         assert regression_file.exists()
 
         # Verify manifest was updated
-        manifest_file = Path("artifacts/manifest.json")
+        manifest_file = get_artifacts_base_dir() / "manifest.json"
         assert manifest_file.exists()
 
         with open(manifest_file, 'r', encoding='utf-8') as f:

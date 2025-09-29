@@ -1823,7 +1823,8 @@ Tests include browser initialization, profile validation, and recording path ver
                             recordings.extend(Path(save_recording_path).glob(f'*.{ext}'))
                     
                     # Also search in validation directory for all types
-                    validation_dir = Path("artifacts/runs/validation/recordings")
+                    from src.utils.fs_paths import get_artifacts_base_dir
+                    validation_dir = get_artifacts_base_dir() / "runs" / "validation" / "recordings"
                     if validation_dir.exists():
                         for subdir in ["script", "browser_control", "git_script"]:
                             type_dir = validation_dir / subdir / "videos"

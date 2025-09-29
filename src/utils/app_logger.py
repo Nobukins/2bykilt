@@ -5,6 +5,10 @@ import threading
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 from pathlib import Path
+from logging.handlers import TimedRotatingFileHandler
+
+# new helper
+from src.utils.fs_paths import get_logs_dir
 
 LOG_LEVELS = {
     "DEBUG": logging.DEBUG,
@@ -25,14 +29,21 @@ EMOJI_MAP = {
 
 class AppLogger:
     _instance = None
-    _lock = threading.Lock()
+    # Use a re-entrant lock to allow bootstrap_app_logger to call into
+    # AppLogger.__new__ while holding the lock without deadlocking.
+    _lock = threading.RLock()
     _gradio_logs = []
     _max_buffer_size = 1000  # Limit for Gradio logs
     
-    def __new__(cls):
+    def __new__(cls, *args, log_dir: Optional[str] = None, **kwargs):
+        # Accept optional init kwargs so callers can create the singleton
+        # with configuration (used by bootstrap_app_logger). Store the
+        # provided log_dir on the instance before running initialization.
         with cls._lock:
             if cls._instance is None:
                 cls._instance = super(AppLogger, cls).__new__(cls)
+                # Stash any provided log_dir for _initialize_logger to pick up
+                setattr(cls._instance, '_provided_log_dir', log_dir)
                 cls._instance._initialize_logger()
             return cls._instance
     
@@ -74,17 +85,22 @@ class AppLogger:
                     break
             return str(candidate) if candidate is not None else None
 
-        repo_root = _find_repo_root()
-        if repo_root:
-            log_dir = os.path.join(repo_root, 'logs')
+        # Allow tests or callers to inject an explicit log dir via
+        # self._provided_log_dir (set by __new__ when bootstrap_app_logger
+        # creates the instance). If provided, honoring it here overrides
+        # repo-root detection.
+        if hasattr(self, '_provided_log_dir') and self._provided_log_dir:
+            log_dir = Path(self._provided_log_dir).expanduser().resolve()
+            log_dir.mkdir(parents=True, exist_ok=True)
         else:
-            log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'logs')
+            # prefer centralized logs under repo-root or env override
+            log_dir = get_logs_dir()
         os.makedirs(log_dir, exist_ok=True)
         # Expose chosen log dir for tests and debugging
         self._log_dir = log_dir
-
-        log_file = os.path.join(self._log_dir, f'app_{datetime.now().strftime("%Y%m%d")}.log')
-        file_handler = logging.FileHandler(log_file, encoding='utf-8')
+        log_file = Path(self._log_dir) / f'app_{datetime.now().strftime("%Y%m%d")}.log'
+        # Use timed rotating handler to avoid unbounded growth
+        file_handler = TimedRotatingFileHandler(str(log_file), when='midnight', backupCount=14, encoding='utf-8')
         file_handler.setLevel(logging.DEBUG)
         
         console_handler = logging.StreamHandler(sys.stdout)
@@ -168,10 +184,12 @@ def bootstrap_app_logger(log_dir: Optional[str] = None, level: str = "DEBUG", fo
     - level: logging level name
     - force: if True, re-create instance even if one exists (useful for tests)
     """
-    with AppLogger._lock:
-        if AppLogger._instance is None or force:
-            AppLogger._instance = AppLogger(log_dir=log_dir)
-        return AppLogger._instance
+    # Avoid taking the same re-entrant lock here to prevent lock-ordering
+    # issues during initialization. The creation race is acceptable during
+    # single-threaded startup; tests can use `force=True` to reinitialize.
+    if AppLogger._instance is None or force:
+        AppLogger._instance = AppLogger(log_dir=log_dir)
+    return AppLogger._instance
 
 
 def get_app_logger() -> AppLogger:
