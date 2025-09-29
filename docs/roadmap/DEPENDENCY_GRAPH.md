@@ -1,6 +1,6 @@
 ```mermaid
 %% Auto-generated dependency graph
-%% Generated at: 2025-09-29T00:22:40.648902+00:00
+%% Generated at: 2025-09-29T03:13:25.121837+00:00
 %% Edge方向: dependency --> dependent
 graph LR
 
@@ -127,6 +127,11 @@ subgraph R1[Rank 1]
   270["270 設計: Feature Flag 運用…"]
   271["271 実装: Feature Flags コ…"]
   272["272 UI: Admin UI による Fe…"]
+  276["276 Batch: Recording fi…"]
+  277["277 Artifacts UI: Provi…"]
+  278["278 UI: Control tab vis…"]
+  279["279 Config: Consolidate…"]
+  280["280 Browser Settings: I…"]
 end
 
 %% Edges (depends --> dependent)
@@ -260,6 +265,7 @@ end
 173 --> 248
 39 --> 257
 198 --> 257
+64 --> 278
 
 %% Styling definitions (Mermaid syntax uses colon)
 classDef highrisk fill:#ffe6e6,stroke:#d40000,stroke-width:2px,color:#000;
@@ -267,7 +273,7 @@ classDef progress fill:#e6f4ff,stroke:#0366d6,stroke-width:2px,color:#000;
 
 %% Class assignments
 class 31,46,49,54,62,176,237 highrisk;
-class 25,28,30,31,32,34,35,36,37,38,39,40,41,42,44,45,50,55,56,57,58,59,87,88,89,91,102,107,108,109,110,111,113,114,115,127,154,175,176,177,192,194,196,197,198,199,200,201,202,203,208,209,210,211,212,218,219,220,221,222,223,224,226,227,228,229,230,231,237,240,241,242,244,246,247,248,249,250,251,255,257,264,265,266,267,268,269,270,271,272 progress;
+class 25,28,30,31,32,34,35,36,37,38,39,40,41,42,44,45,50,55,56,57,58,59,87,88,89,91,102,107,108,109,110,111,113,114,115,127,154,175,176,177,192,194,196,197,198,199,200,201,202,203,208,209,210,211,212,218,219,220,221,222,223,224,226,227,228,229,230,231,237,240,241,242,244,246,247,248,249,250,251,255,257,264,265,266,267,268,269,270,271,272,276,277,278,279,280 progress;
 
 %% Legend (pseudo nodes)
 subgraph Legend[Legend]

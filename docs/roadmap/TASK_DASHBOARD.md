@@ -1,50 +1,50 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-09-29T00:22:40+00:00
+Generated at (UTC): 2025-09-29T03:13:25+00:00
 
 ## 1. メタサマリー
 
-- Total Issues: 114
+- Total Issues: 119
 - High Risk (declared): 7 → 31, 46, 49, 54, 62, 176, 237
 - Cycle Detected: false (none)
-- Strict Orphans: 24
-- Curated Orphan List Count: 24
+- Strict Orphans: 28
+- Curated Orphan List Count: 28
 
 ## 2. 分布 (Distribution)
 
 ### Priority
-- P0: 27 (23.7%)
-- P1: 36 (31.6%)
-- P2: 49 (43.0%)
-- P3: 2 (1.8%)
+- P0: 27 (22.7%)
+- P1: 38 (31.9%)
+- P2: 52 (43.7%)
+- P3: 2 (1.7%)
 
 ### Phase
-- 1: 23 (20.2%)
-- 1-late: 14 (12.3%)
-- 2: 77 (67.5%)
+- 1: 23 (19.3%)
+- 1-late: 14 (11.8%)
+- 2: 82 (68.9%)
 
 ### Area
-- artifacts: 24 (21.1%)
-- automation: 5 (4.4%)
-- batch: 10 (8.8%)
-- config: 10 (8.8%)
-- docs: 10 (8.8%)
-- flags: 1 (0.9%)
-- logging: 5 (4.4%)
-- observability: 5 (4.4%)
-- plugins: 1 (0.9%)
-- quality: 1 (0.9%)
-- runner: 23 (20.2%)
-- security: 5 (4.4%)
-- test: 1 (0.9%)
-- testing: 4 (3.5%)
-- uiux: 9 (7.9%)
+- artifacts: 26 (21.8%)
+- automation: 5 (4.2%)
+- batch: 10 (8.4%)
+- config: 11 (9.2%)
+- docs: 10 (8.4%)
+- flags: 1 (0.8%)
+- logging: 5 (4.2%)
+- observability: 5 (4.2%)
+- plugins: 1 (0.8%)
+- quality: 1 (0.8%)
+- runner: 23 (19.3%)
+- security: 5 (4.2%)
+- test: 1 (0.8%)
+- testing: 4 (3.4%)
+- uiux: 11 (9.2%)
 
 ### Risk
-- high: 7 (6.1%)
-- low: 12 (10.5%)
-- medium: 3 (2.6%)
-- none: 92 (80.7%)
+- high: 7 (5.9%)
+- low: 12 (10.1%)
+- medium: 3 (2.5%)
+- none: 97 (81.5%)
 
 ## 3. リスク詳細 (High / Medium / etc.)
 
@@ -84,6 +84,10 @@ Strict Orphans (自動抽出 = 依存なし & 参照されず):
 - 244: [docs][feat] action_runner_template 利用方法ドキュメント整備 & 実装サンプル追加
 - 255: git-scriptのURL評価制限緩和
 - 264: リファクタ提案: 大きすぎる Python ファイルの分割とモジュール化
+- 276: Batch: Recording file not copied to artifacts runs folder when using CSV batch
+- 277: Artifacts UI: Provide UI listing for screenshots, text & element extracts
+- 279: Config: Consolidate configuration menus, env files, and defaults
+- 280: Browser Settings: Improve Browser Settings menu clarity & enforce behavior across run types
 
 Curated Orphan List (summary.data_quality_checks.orphan_issues_without_dependents_or_depends):
 - 55: browser_control pytest パス修正
@@ -110,6 +114,10 @@ Curated Orphan List (summary.data_quality_checks.orphan_issues_without_dependent
 - 244: [docs][feat] action_runner_template 利用方法ドキュメント整備 & 実装サンプル追加
 - 255: git-scriptのURL評価制限緩和
 - 264: リファクタ提案: 大きすぎる Python ファイルの分割とモジュール化
+- 276: Batch: Recording file not copied to artifacts runs folder when using CSV batch
+- 277: Artifacts UI: Provide UI listing for screenshots, text & element extracts
+- 279: Config: Consolidate configuration menus, env files, and defaults
+- 280: Browser Settings: Improve Browser Settings menu clarity & enforce behavior across run types
 
 Missing Strict Orphans in curated list: (none)
 Extra non-strict entries in curated list: (none)
@@ -220,6 +228,11 @@ Sorted By: critical_path_rank
 | 270 | 設計: Feature Flag 運用設計とメタデータ仕様 | P1 | 1 | config |  | 1 | 1 | 1 | 0 |  |
 | 271 | 実装: Feature Flags コアライブラリと Profile ベースセットアップ | P1 | 1 | config |  | 1 | 2 | 2 | 0 |  |
 | 272 | UI: Admin UI による Feature Flag 管理画面の実装 | P1 | 1 | flags |  | 1 | 1 | 2 | 0 |  |
+| 276 | Batch: Recording file not copied to artifacts runs folder when using CSV batch | P1 | 2 | artifacts |  | 1 | 0 | 0 | 0 |  |
+| 277 | Artifacts UI: Provide UI listing for screenshots, text & element extracts | P2 | 2 | artifacts |  | 1 | 0 | 0 | 0 |  |
+| 278 | UI: Control tab visibility with Feature Flags (per-tab toggles & presets) | P1 | 2 | uiux |  | 1 | 2 | 1 | 0 |  |
+| 279 | Config: Consolidate configuration menus, env files, and defaults | P2 | 2 | config |  | 1 | 0 | 0 | 0 |  |
+| 280 | Browser Settings: Improve Browser Settings menu clarity & enforce behavior across run types | P2 | 2 | uiux |  | 1 | 0 | 0 | 0 |  |
 | 34 | 要素値キャプチャ & エクスポート | P1 | 1 | artifacts |  | 1 | 2 | 2 | 0 | #93 |
 | 38 | 録画統一後回帰テストスイート | P2 | 1-late | artifacts |  | 1 | 4 | 5 | 0 | #103 |
 | 40 | CSV D&D UI 連携 | P2 | 2 | batch |  | 1 | 2 | 1 | 0 | #172 |
@@ -1040,6 +1053,51 @@ Sorted By: critical_path_rank
 - CriticalPathRank: 1
 - LongestDistance: 1
 - Depends (2): 269, 271
+- Dependents (0): (none)
+- Progress: {"state": "open"}
+
+### Issue 276: Batch: Recording file not copied to artifacts runs folder when using CSV batch
+- Priority: P1, Phase: 2, Area: artifacts
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+- Progress: {"state": "open"}
+
+### Issue 277: Artifacts UI: Provide UI listing for screenshots, text & element extracts
+- Priority: P2, Phase: 2, Area: artifacts
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+- Progress: {"state": "open"}
+
+### Issue 278: UI: Control tab visibility with Feature Flags (per-tab toggles & presets)
+- Priority: P1, Phase: 2, Area: uiux
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 2
+- Depends (1): 64
+- Dependents (0): (none)
+- Progress: {"state": "open"}
+
+### Issue 279: Config: Consolidate configuration menus, env files, and defaults
+- Priority: P2, Phase: 2, Area: config
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+- Progress: {"state": "open"}
+
+### Issue 280: Browser Settings: Improve Browser Settings menu clarity & enforce behavior across run types
+- Priority: P2, Phase: 2, Area: uiux
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 0
+- Depends (0): (none)
 - Dependents (0): (none)
 - Progress: {"state": "open"}
 
