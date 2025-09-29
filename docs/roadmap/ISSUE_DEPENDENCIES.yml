@@ -385,10 +385,6 @@ issues:
   "227": {title: "[ui/ux][enhancement] LLM有効時のエラーメッセージ改善とUI統一性確保", meta: {area: uiux, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
   "257": {title: "[batch] CSV Batch Job Execution Not Triggered - Browser Automation Missing", meta: {area: batch, type: bug, priority: P0, phase: "2", stability: experimental}, depends: ["39", "198"], dependents: [], risk: null, progress: {state: done}, critical_path_rank: 1}
 
-  "229": {title: "[ui/ux][enhancement] UI/UXの統一性確保とデザインシステムの確立", meta: {area: uiux, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
-  "228": {title: "[configuration][enhancement] LLM設定の改善と設定ガイドの明確化", meta: {area: config, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
-  "227": {title: "[ui/ux][enhancement] LLM有効時のエラーメッセージ改善とUI統一性確保", meta: {area: uiux, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
-
 summary:
   total_issues: 114
   high_risk: ["31", "46", "49", "54", "62", "176", "237"]
@@ -420,10 +416,10 @@ summary:
       - "244"
       - "255"
       - "264"
-  generated_at_utc: "2025-09-26T12:00:00Z"
+  generated_at_utc: "2025-09-28T11:47:15Z"
 
 last_synced:
-  utc: "2025-09-26T12:00:00Z"
+  utc: "2025-09-28T10:00:00Z"
   issues:
     "255": "OPEN"
     "251": "OPEN"

@@ -39,3 +39,7 @@ flags:
     description: "スクリーンショット重複 (ユーザー指定名) 保存を有効化 (#87)"
     type: bool
     default: true
+  security.allow_pickle_config:
+    description: "設定ファイルの pickle (.pkl) 読み込みを許可 (セキュリティリスクあり、デフォルト無効)"
+    type: bool
+    default: false
