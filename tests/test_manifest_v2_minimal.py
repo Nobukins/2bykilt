@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from src.utils.fs_paths import get_artifacts_base_dir
 
 from src.core.artifact_manager import ArtifactManager, reset_artifact_manager_singleton
 from src.runtime.run_context import RunContext
@@ -18,7 +19,7 @@ def test_manifest_flag_off(tmp_path, monkeypatch):
     reset_artifact_manager_singleton()
     FeatureFlags.set_override("artifacts.enable_manifest_v2", False)
     # Remove any leftover artifacts directory for this run id to avoid contamination
-    leftover_dir = Path("artifacts") / "runs" / "MFLAGOFF1-art"
+    leftover_dir = get_artifacts_base_dir() / "runs" / "MFLAGOFF1-art"
     if leftover_dir.exists():
         import shutil
         try:

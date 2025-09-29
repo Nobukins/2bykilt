@@ -6,6 +6,7 @@ import os
 import tempfile
 import shutil
 from pathlib import Path
+from src.utils.fs_paths import get_artifacts_base_dir
 from unittest.mock import patch, MagicMock
 
 from src.script.script_manager import run_script
@@ -18,7 +19,7 @@ class TestGitScriptTypeRecording:
     def setup_method(self):
         """Setup test environment"""
         self.test_dir = Path(tempfile.mkdtemp())
-        self.artifacts_dir = self.test_dir / "artifacts"
+        self.artifacts_dir = get_artifacts_base_dir() / "runs" / "test-git-script"
         self.artifacts_dir.mkdir(parents=True)
 
         # Mock git repository structure

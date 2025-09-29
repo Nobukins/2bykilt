@@ -8,6 +8,7 @@ import tempfile
 import pytest
 import logging
 from pathlib import Path
+from src.utils.fs_paths import get_artifacts_base_dir
 from unittest.mock import Mock, patch
 from io import StringIO
 
@@ -1570,7 +1571,7 @@ class TestBatchRetry:
             import os
             os.chdir(temp_dir)
             
-            artifacts_dir = Path("artifacts") / "runs"
+            artifacts_dir = get_artifacts_base_dir() / "runs"
             batch_dir = artifacts_dir / f"{run_context.run_id_base}-{manifest.batch_id[:8]}-batch"
             batch_dir.mkdir(parents=True, exist_ok=True)
             

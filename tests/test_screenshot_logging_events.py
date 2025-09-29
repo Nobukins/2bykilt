@@ -1,5 +1,6 @@
 import re
 from pathlib import Path
+from src.utils.fs_paths import get_artifacts_base_dir
 import base64
 import pytest
 
@@ -13,7 +14,7 @@ def test_screenshot_logging_events_success(monkeypatch, tmp_path, capsys):
             return b"binaryimagedata123"  # 19 bytes
     # isolate run context artifacts root
     monkeypatch.chdir(tmp_path)
-    (Path("artifacts")/"runs").mkdir(parents=True, exist_ok=True)
+    (get_artifacts_base_dir()/"runs").mkdir(parents=True, exist_ok=True)
     RunContext.reset()
     page = DummyPage()
     path, b64 = capture_page_screenshot(page, prefix="evt")
@@ -28,7 +29,7 @@ def test_screenshot_logging_events_failure(monkeypatch, tmp_path, capsys):
         def screenshot(self, type="png"):
             raise TimeoutError("timed out")
     monkeypatch.chdir(tmp_path)
-    (Path("artifacts")/"runs").mkdir(parents=True, exist_ok=True)
+    (get_artifacts_base_dir()/"runs").mkdir(parents=True, exist_ok=True)
     RunContext.reset()
     page = DummyPageFail()
     path, b64 = capture_page_screenshot(page, prefix="evt_fail")
