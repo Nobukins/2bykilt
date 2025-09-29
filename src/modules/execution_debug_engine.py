@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import traceback
 from datetime import datetime
 from src.browser.browser_debug_manager import BrowserDebugManager
 from src.modules.yaml_parser import load_yaml_from_file, InstructionLoader
@@ -38,6 +39,12 @@ class ExecutionDebugEngine:
         try:
             logger.info("ブラウザを初期化しています...")
             browser_data = await self.browser_manager.initialize_custom_browser(use_own_browser, headless)
+
+            # Handle browser initialization failure
+            if not browser_data or (isinstance(browser_data, dict) and browser_data.get("status") == "error"):
+                error_msg = browser_data.get("message", "不明なエラーでブラウザを初期化できませんでした") if isinstance(browser_data, dict) else "ブラウザデータが返されませんでした"
+                logger.error(f"ブラウザ初期化エラー: {error_msg}")
+                return
 
             # Get or create tab using the specified strategy
             context, page, is_new = await self.browser_manager.get_or_create_tab(tab_selection)
@@ -109,7 +116,11 @@ class ExecutionDebugEngine:
         try:
             logger.info(f"Googleで検索しています: {query}")
             browser_data = await self.browser_manager.initialize_custom_browser(use_own_browser, headless)
-            browser = browser_data["browser"]
+            if not browser_data or (isinstance(browser_data, dict) and browser_data.get("status") == "error"):
+                error_msg = browser_data.get("message", "不明なエラーでブラウザを初期化できませんでした") if isinstance(browser_data, dict) else "ブラウザデータが返されませんでした"
+                logger.error(f"ブラウザ初期化エラー: {error_msg}")
+                return
+            browser = browser_data.get("browser")
             context = browser.contexts[0] if browser.contexts else await browser.new_context()
             page = await context.new_page()
             await page.goto("https://www.google.com", wait_until="domcontentloaded")
@@ -131,7 +142,11 @@ class ExecutionDebugEngine:
         try:
             logger.info(f"Beatportで検索しています: {query}")
             browser_data = await self.browser_manager.initialize_custom_browser(use_own_browser, headless)
-            browser = browser_data["browser"]
+            if not browser_data or (isinstance(browser_data, dict) and browser_data.get("status") == "error"):
+                error_msg = browser_data.get("message", "不明なエラーでブラウザを初期化できませんでした") if isinstance(browser_data, dict) else "ブラウザデータが返されませんでした"
+                logger.error(f"ブラウザ初期化エラー: {error_msg}")
+                return
+            browser = browser_data.get("browser")
             context = browser.contexts[0] if browser.contexts else await browser.new_context()
             page = await context.new_page()
             await page.goto("https://www.beatport.com", wait_until="domcontentloaded")
@@ -153,7 +168,11 @@ class ExecutionDebugEngine:
         try:
             logger.info(f"URLに移動しています: {url}")
             browser_data = await self.browser_manager.initialize_custom_browser(use_own_browser, headless)
-            browser = browser_data["browser"]
+            if not browser_data or (isinstance(browser_data, dict) and browser_data.get("status") == "error"):
+                error_msg = browser_data.get("message", "不明なエラーでブラウザを初期化できませんでした") if isinstance(browser_data, dict) else "ブラウザデータが返されませんでした"
+                logger.error(f"ブラウザ初期化エラー: {error_msg}")
+                return
+            browser = browser_data.get("browser")
             context = browser.contexts[0] if browser.contexts else await browser.new_context()
             page = await context.new_page()
             await page.goto(url, wait_until="domcontentloaded")
@@ -201,12 +220,12 @@ class ExecutionDebugEngine:
                 headless=headless,
                 tab_selection_strategy=tab_selection_strategy
             )
-            
-            if not browser_data or "status" in browser_data and browser_data["status"] == "error":
-                error_msg = browser_data.get("message", "不明なエラーでブラウザを初期化できませんでした") if browser_data else "ブラウザデータが返されませんでした"
+
+            if not browser_data or (isinstance(browser_data, dict) and browser_data.get("status") == "error"):
+                error_msg = browser_data.get("message", "不明なエラーでブラウザを初期化できませんでした") if isinstance(browser_data, dict) else "ブラウザデータが返されませんでした"
                 logger.error(f"ブラウザ初期化エラー: {error_msg}")
                 return {"error": error_msg}
-                
+
             browser = browser_data.get("browser")
             if not browser:
                 logger.error("ブラウザインスタンスが初期化されていません")
@@ -352,7 +371,11 @@ class ExecutionDebugEngine:
         try:
             logger.info(f"複雑なシーケンスを実行しています: {params}")
             browser_data = await self.browser_manager.initialize_custom_browser(use_own_browser, headless)
-            browser = browser_data["browser"]
+            if not browser_data or (isinstance(browser_data, dict) and browser_data.get("status") == "error"):
+                error_msg = browser_data.get("message", "不明なエラーでブラウザを初期化できませんでした") if isinstance(browser_data, dict) else "ブラウザデータが返されませんでした"
+                logger.error(f"ブラウザ初期化エラー: {error_msg}")
+                return
+            browser = browser_data.get("browser")
             context = browser.contexts[0] if browser.contexts else await browser.new_context()
             page = await context.new_page()
             await page.goto(params["url"], wait_until="domcontentloaded")
