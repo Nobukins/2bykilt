@@ -17,10 +17,11 @@ import os
 import secrets
 import threading
 from pathlib import Path
+from src.utils.fs_paths import get_artifacts_base_dir
 from typing import ClassVar
 
 
-_ARTIFACT_ROOT = Path("artifacts") / "runs"
+_ARTIFACT_ROOT = get_artifacts_base_dir() / "runs"
 
 
 def _generate_run_id_base() -> str:

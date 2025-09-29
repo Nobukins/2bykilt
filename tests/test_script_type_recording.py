@@ -7,6 +7,7 @@ import tempfile
 import shutil
 from pathlib import Path
 from unittest.mock import patch, MagicMock
+from src.utils.fs_paths import get_artifacts_base_dir
 
 from src.script.script_manager import run_script
 from src.utils.recording_dir_resolver import create_or_get_recording_dir
@@ -19,7 +20,7 @@ class TestScriptTypeRecording:
         """Setup test environment"""
         self.test_dir = Path(tempfile.mkdtemp())
         self.myscript_dir = self.test_dir / "myscript"
-        self.artifacts_dir = self.test_dir / "artifacts"
+        self.artifacts_dir = get_artifacts_base_dir() / "runs" / "test-script-type"
         self.myscript_dir.mkdir(parents=True)
         self.artifacts_dir.mkdir(parents=True)
 

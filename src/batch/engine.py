@@ -24,6 +24,7 @@ from contextlib import contextmanager
 
 from ..core.artifact_manager import ArtifactManager, get_artifact_manager
 from ..runtime.run_context import RunContext
+from src.utils.fs_paths import get_artifacts_base_dir
 
 from .summary import BatchSummary
 
@@ -253,7 +254,7 @@ class BatchEngine:
             return rel.as_posix()
         except Exception:  # noqa: BLE001
             try:
-                rel = p.relative_to(Path("artifacts"))
+                rel = p.relative_to(get_artifacts_base_dir())
                 return rel.as_posix()
             except Exception:  # noqa: BLE001
                 return p.name
@@ -673,7 +674,7 @@ class BatchEngine:
 
     def _search_batch_manifest_in_artifacts(self, batch_id: str) -> Optional[BatchManifest]:
         """Search for batch manifest in artifacts/runs directory."""
-        artifacts_root = Path("artifacts") / "runs"
+        artifacts_root = get_artifacts_base_dir() / "runs"
 
         if not artifacts_root.exists():
             return None
@@ -942,7 +943,7 @@ class BatchEngine:
             return manifest_file
 
         # Search through all batch manifest files in artifacts/runs
-        artifacts_root = Path("artifacts") / "runs"
+        artifacts_root = get_artifacts_base_dir() / "runs"
 
         if not artifacts_root.exists():
             return None
@@ -1255,7 +1256,7 @@ class BatchEngine:
                 pass
 
         # Search in artifacts/runs
-        artifacts_root = Path("artifacts") / "runs"
+        artifacts_root = get_artifacts_base_dir() / "runs"
         if not artifacts_root.exists():
             return None
 

@@ -10,6 +10,7 @@ import json
 import os
 import pytest
 from pathlib import Path
+from src.utils.fs_paths import get_artifacts_base_dir
 
 from src.config.feature_flags import FeatureFlags
 
@@ -62,7 +63,7 @@ class TestLazyArtifactCreation:
         assert result is False  # undefined flags return False for bool
 
         # Check that artifact was created
-        artifacts_dir = Path("artifacts") / "runs"
+        artifacts_dir = get_artifacts_base_dir() / "runs"
         if artifacts_dir.exists():
             flags_dirs = [d for d in artifacts_dir.iterdir() if d.is_dir() and d.name.endswith("-flags")]
             if flags_dirs:
@@ -88,7 +89,7 @@ class TestLazyArtifactCreation:
         assert result is False
 
         # Check that no artifact was created
-        artifacts_dir = Path("artifacts") / "runs"
+        artifacts_dir = get_artifacts_base_dir() / "runs"
         if artifacts_dir.exists():
             flags_dirs = [d for d in artifacts_dir.iterdir() if d.is_dir() and d.name.endswith("-flags")]
             # Should be empty or not exist
@@ -144,7 +145,7 @@ class TestLazyArtifactCreation:
         FeatureFlags.get("undefined.flag.3", expected_type=str)
 
         # Should only have created one flags directory
-        artifacts_dir = Path("artifacts") / "runs"
+        artifacts_dir = get_artifacts_base_dir() / "runs"
         if artifacts_dir.exists():
             flags_dirs = [d for d in artifacts_dir.iterdir() if d.is_dir() and d.name.endswith("-flags")]
             assert len(flags_dirs) <= 1  # At most one flags directory

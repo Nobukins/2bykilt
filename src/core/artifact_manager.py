@@ -45,6 +45,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from src.config.feature_flags import FeatureFlags
 from src.runtime.run_context import RunContext
+from src.utils.fs_paths import get_artifacts_base_dir
 
 _ARTIFACT_COMPONENT = "art"
 _MANIFEST_FILENAME = "manifest_v2.json"
@@ -195,7 +196,8 @@ class ArtifactManager:
             return rel.as_posix()
         except Exception:  # noqa: BLE001
             pass
-        artifacts_root = Path("artifacts")
+
+        artifacts_root = get_artifacts_base_dir()
         try:
             rel = p.relative_to(artifacts_root)
             return rel.as_posix()
@@ -406,7 +408,7 @@ class ArtifactManager:
     # ---------------- Listing / Query --------------
     @staticmethod
     def list_manifests(limit: int | None = None) -> List[Dict[str, Any]]:
-        root = Path("artifacts") / "runs"
+        root = get_artifacts_base_dir() / "runs"
         manifests: List[Dict[str, Any]] = []
         for p in sorted(root.glob("*-art"), reverse=True):
             m = p / _MANIFEST_FILENAME

@@ -290,9 +290,12 @@ class MultiEnvConfigLoader:
         warnings: List[Dict[str, Any]],
     ) -> Path:
         # REVIEW FIX: remove duplicated path construction; only mkdir when not created via RunContext
-        out_dir = Path("artifacts") / "runs" / pseudo_run_id
-        if not (RunContext and pseudo_run_id.startswith(RunContext.get().run_id_base)):
-            out_dir.mkdir(parents=True, exist_ok=True)
+        from src.utils.fs_paths import get_artifacts_run_dir
+        out_dir = get_artifacts_run_dir(pseudo_run_id)
+        # fs_paths already ensures dir exists; preserve RunContext check for compatibility
+        if RunContext and pseudo_run_id.startswith(RunContext.get().run_id_base):
+            # ensure parent exists but avoid double-mkdir if run context already created
+            out_dir.parent.mkdir(parents=True, exist_ok=True)
         out_file = out_dir / "effective_config.json"
         payload = {
             "env": env,

@@ -56,12 +56,13 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 import yaml
+from src.utils.fs_paths import get_artifacts_base_dir
 
 logger = logging.getLogger(__name__)
 
 
 _DEFAULT_FLAGS_FILE = "config/feature_flags.yaml"
-_ARTIFACT_ROOT = Path("artifacts") / "runs"  # retained for backward compatibility
+_ARTIFACT_ROOT = get_artifacts_base_dir() / "runs"  # retained for backward compatibility
 
 try:
     from src.runtime.run_context import RunContext  # local import to avoid cycle

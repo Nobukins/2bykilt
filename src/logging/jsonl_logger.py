@@ -106,20 +106,73 @@ class JsonlLogger:
         # If caller used uppercase or other diff, we choose strictness: reject rather than silently merge
         if stripped != normalized:
             raise ValueError(f"component '{component}' must be lowercase (received normalized '{normalized}')")
-        key = normalized
-        if key in cls._instances:
-            return cls._instances[key]
+        # Include run_id_base in the cache key so different runs (tests or
+        # BYKILT_RUN_ID overrides) do not reuse the same logger instance with
+        # a mismatched file path.
+        try:
+            rc_for_key = RunContext.get()
+            run_id_for_key = rc_for_key.run_id_base
+        except Exception:
+            run_id_for_key = "default"
+
+        cache_key = f"{normalized}:{run_id_for_key}"
         with cls._instances_lock:
-            if key not in cls._instances:
-                # Use LOG_BASE_DIR environment variable, default to ./logs
-                log_base_dir = _get_log_base_dir()
-                # Create category subdirectory: logs/{component}/
+            # Compute desired log base and category directory up-front so we
+            # can validate any cached instance against the canonical target
+            # path. This avoids early-returning a stale instance that points
+            # at an old file location when the run id or working directory
+            # changed between calls.
+            log_base_dir = _get_log_base_dir()
+            try:
+                rc = RunContext.get()
+                run_dir_name = f"{rc.run_id_base}-log"
+            except Exception:
+                run_dir_name = None
+
+            if os.getenv("LOG_BASE_DIR") is None and run_dir_name:
+                # Find repository root (topmost parent with project markers).
+                def _find_repo_root() -> Optional[Path]:
+                    p = Path(__file__).resolve()
+                    candidate: Optional[Path] = None
+                    for parent in p.parents:
+                        if (parent / "pyproject.toml").exists() or (parent / ".git").exists() or (parent / "artifacts").exists():
+                            candidate = parent
+                    return candidate
+
+                repo_root = _find_repo_root()
+                try:
+                    cwd = Path.cwd().resolve()
+                except Exception:
+                    cwd = None
+
+                if repo_root is not None and cwd is not None and cwd.is_relative_to(repo_root):
+                    category_dir = log_base_dir / run_dir_name / component
+                else:
+                    category_dir = log_base_dir / component
+            else:
                 category_dir = log_base_dir / component
-                category_dir.mkdir(parents=True, exist_ok=True)
-                file_path = category_dir / "app.log.jsonl"
-                core = _LoggerCore(component=key, file_path=file_path)
-                cls._instances[key] = JsonlLogger(core)
-            return cls._instances[key]
+
+            category_dir.mkdir(parents=True, exist_ok=True)
+            file_path = category_dir / "app.log.jsonl"
+
+            # Validate cached instance if present. If the cached instance's
+            # file_path parent differs from the desired category_dir, replace
+            # it so callers always receive an instance pointing at the
+            # canonical location.
+            existing = cls._instances.get(cache_key)
+            if existing is not None:
+                try:
+                    existing_parent = existing.file_path.parent
+                except Exception:
+                    existing_parent = None
+                if existing_parent != category_dir:
+                    core = _LoggerCore(component=normalized, file_path=file_path)
+                    cls._instances[cache_key] = JsonlLogger(core)
+            else:
+                core = _LoggerCore(component=normalized, file_path=file_path)
+                cls._instances[cache_key] = JsonlLogger(core)
+
+            return cls._instances[cache_key]
 
     # ------------- Public API (skeleton) -------------
     # ------------- Core Emit -------------

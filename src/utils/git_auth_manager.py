@@ -15,6 +15,7 @@ import os
 import subprocess
 import logging
 from pathlib import Path
+from src.utils.fs_paths import get_artifacts_run_dir
 from typing import Optional, Dict, Any, Tuple
 from urllib.parse import urlparse
 
@@ -31,7 +32,7 @@ class GitAuthenticationManager:
         """Get the authentication error log path"""
         if not self.run_id:
             return None
-        log_path = Path("artifacts/runs") / self.run_id / "git_script_auth_error.log"
+        log_path = get_artifacts_run_dir(self.run_id) / "git_script_auth_error.log"
         log_path.parent.mkdir(parents=True, exist_ok=True)
         return log_path
 

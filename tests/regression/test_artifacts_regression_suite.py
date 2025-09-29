@@ -1,5 +1,6 @@
 import base64
 from pathlib import Path
+from src.utils.fs_paths import get_artifacts_base_dir
 from datetime import datetime, timezone, timedelta
 import json
 
@@ -31,7 +32,7 @@ def _parse_iso8601_relaxed(val: str) -> datetime:
 def test_artifact_manifest_integrated_flow(tmp_path, monkeypatch):
   """Issue #38: Regression suite minimal integrated flow (review fix for datetime parsing)."""
   monkeypatch.chdir(tmp_path)
-  (Path("artifacts") / "runs").mkdir(parents=True, exist_ok=True)
+  (get_artifacts_base_dir() / "runs").mkdir(parents=True, exist_ok=True)
   RunContext.reset()
   reset_artifact_manager_singleton()
   FeatureFlags.clear_all_overrides()
@@ -92,7 +93,7 @@ def test_artifact_manifest_multi_video_transcode_and_retention(tmp_path, monkeyp
     4. Assert only the recent video remains, manifest still consistent
   """
   monkeypatch.chdir(tmp_path)
-  (Path("artifacts") / "runs").mkdir(parents=True, exist_ok=True)
+  (get_artifacts_base_dir() / "runs").mkdir(parents=True, exist_ok=True)
   RunContext.reset()
   reset_artifact_manager_singleton()
   FeatureFlags.clear_all_overrides()
@@ -145,7 +146,7 @@ def test_screenshot_failure_and_persist_fail_branch(tmp_path, monkeypatch):
   Persist fail simulated by raising on duplicate copy write.
   """
   monkeypatch.chdir(tmp_path)
-  (Path("artifacts") / "runs").mkdir(parents=True, exist_ok=True)
+  (get_artifacts_base_dir() / "runs").mkdir(parents=True, exist_ok=True)
   RunContext.reset()
   reset_artifact_manager_singleton()
   FeatureFlags.clear_all_overrides()
@@ -202,7 +203,7 @@ def _manifest_diff(before: dict, after: dict) -> dict:
 def test_manifest_diff_utility(tmp_path, monkeypatch):
   """Issue #38: manifest diff helper sanity."""
   monkeypatch.chdir(tmp_path)
-  (Path("artifacts") / "runs").mkdir(parents=True, exist_ok=True)
+  (get_artifacts_base_dir() / "runs").mkdir(parents=True, exist_ok=True)
   RunContext.reset()
   reset_artifact_manager_singleton()
   FeatureFlags.clear_all_overrides()

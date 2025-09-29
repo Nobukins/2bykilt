@@ -4,6 +4,11 @@ import sys
 import threading
 from datetime import datetime
 from typing import List, Optional, Dict, Any
+from pathlib import Path
+from logging.handlers import TimedRotatingFileHandler
+
+# new helper
+from src.utils.fs_paths import get_logs_dir
 
 LOG_LEVELS = {
     "DEBUG": logging.DEBUG,
@@ -24,14 +29,21 @@ EMOJI_MAP = {
 
 class AppLogger:
     _instance = None
-    _lock = threading.Lock()
+    # Use a re-entrant lock to allow bootstrap_app_logger to call into
+    # AppLogger.__new__ while holding the lock without deadlocking.
+    _lock = threading.RLock()
     _gradio_logs = []
     _max_buffer_size = 1000  # Limit for Gradio logs
     
-    def __new__(cls):
+    def __new__(cls, *args, log_dir: Optional[str] = None, **kwargs):
+        # Accept optional init kwargs so callers can create the singleton
+        # with configuration (used by bootstrap_app_logger). Store the
+        # provided log_dir on the instance before running initialization.
         with cls._lock:
             if cls._instance is None:
                 cls._instance = super(AppLogger, cls).__new__(cls)
+                # Stash any provided log_dir for _initialize_logger to pick up
+                setattr(cls._instance, '_provided_log_dir', log_dir)
                 cls._instance._initialize_logger()
             return cls._instance
     
@@ -39,12 +51,56 @@ class AppLogger:
         self.logger = logging.getLogger('app_logger')
         self.logger.setLevel(logging.DEBUG)
         self.logger.handlers = []
-        
-        log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'logs')
+        # Prefer writing logs to the repository root `logs/` directory when
+        # possible. This prevents accidental writes into `src/logs/` when the
+        # module lives under `src/` (common source layout). If we cannot
+        # discover a repository root, fall back to the current working
+        # directory's `logs/` to preserve previous behavior in tests.
+        def _find_repo_root() -> Optional[str]:
+            # Prefer scanning from the current working directory upwards so
+            # tests that create a temporary repo layout (tmp_path) are
+            # detected when the test changes CWD. Fall back to scanning the
+            # module's file parents if nothing is found from CWD.
+            markers = ("pyproject.toml", ".git", "artifacts")
+            try:
+                cwd = Path.cwd().resolve()
+                for parent in (cwd, *cwd.parents):
+                    for m in markers:
+                        if (parent / m).exists():
+                            return str(parent)
+            except Exception:
+                pass
+
+            try:
+                p = Path(__file__).resolve()
+            except Exception:
+                return None
+            candidate = None
+            for parent in p.parents:
+                for m in markers:
+                    if (parent / m).exists():
+                        candidate = parent
+                        break
+                if candidate:
+                    break
+            return str(candidate) if candidate is not None else None
+
+        # Allow tests or callers to inject an explicit log dir via
+        # self._provided_log_dir (set by __new__ when bootstrap_app_logger
+        # creates the instance). If provided, honoring it here overrides
+        # repo-root detection.
+        if hasattr(self, '_provided_log_dir') and self._provided_log_dir:
+            log_dir = Path(self._provided_log_dir).expanduser().resolve()
+            log_dir.mkdir(parents=True, exist_ok=True)
+        else:
+            # prefer centralized logs under repo-root or env override
+            log_dir = get_logs_dir()
         os.makedirs(log_dir, exist_ok=True)
-        
-        log_file = os.path.join(log_dir, f'app_{datetime.now().strftime("%Y%m%d")}.log')
-        file_handler = logging.FileHandler(log_file, encoding='utf-8')
+        # Expose chosen log dir for tests and debugging
+        self._log_dir = log_dir
+        log_file = Path(self._log_dir) / f'app_{datetime.now().strftime("%Y%m%d")}.log'
+        # Use timed rotating handler to avoid unbounded growth
+        file_handler = TimedRotatingFileHandler(str(log_file), when='midnight', backupCount=14, encoding='utf-8')
         file_handler.setLevel(logging.DEBUG)
         
         console_handler = logging.StreamHandler(sys.stdout)
@@ -121,4 +177,44 @@ class AppLogger:
         self.info("=== Execution Result ===")
         self.info(f"Result: {result}")
 
-logger = AppLogger()
+def bootstrap_app_logger(log_dir: Optional[str] = None, level: str = "DEBUG", force: bool = False) -> AppLogger:
+    """Initialize or return the singleton AppLogger.
+
+    - log_dir: explicit path to logs (overrides repo-root detection)
+    - level: logging level name
+    - force: if True, re-create instance even if one exists (useful for tests)
+    """
+    # Avoid taking the same re-entrant lock here to prevent lock-ordering
+    # issues during initialization. The creation race is acceptable during
+    # single-threaded startup; tests can use `force=True` to reinitialize.
+    if AppLogger._instance is None or force:
+        AppLogger._instance = AppLogger(log_dir=log_dir)
+    return AppLogger._instance
+
+
+def get_app_logger() -> AppLogger:
+    """Return the initialized AppLogger; bootstrap with defaults if missing."""
+    if AppLogger._instance is None:
+        return bootstrap_app_logger()
+    return AppLogger._instance
+
+
+class _LazyLogger:
+    """Proxy object so existing `from ... import logger` usages keep working.
+
+    Attribute access is forwarded to the real AppLogger instance (created on
+    first use via get_app_logger()). This keeps import-time behavior safe
+    while allowing tests to control initialization via bootstrap_app_logger().
+    """
+    def __getattr__(self, name: str):
+        inst = get_app_logger()
+        return getattr(inst, name)
+
+    def __repr__(self) -> str:  # pragma: no cover - trivial
+        return f"<LazyLogger proxy to {get_app_logger()!r}>"
+
+
+# Module-level exported logger (backwards-compatible). Use bootstrap_app_logger()
+# at startup (bykilt.py) to control log directory and options. Tests can call
+# bootstrap_app_logger(..., force=True) to reinitialize under test CWD.
+logger = _LazyLogger()

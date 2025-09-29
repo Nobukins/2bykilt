@@ -1,6 +1,7 @@
 import json
 import logging
 from pathlib import Path
+from src.utils.fs_paths import get_artifacts_base_dir
 import base64
 import pytest
 
@@ -50,7 +51,7 @@ def test_screenshot_json_structure_success(monkeypatch, tmp_path, capsys):
             return b"binaryimagedata123"  # 18 bytes
 
     monkeypatch.chdir(tmp_path)
-    (Path("artifacts") / "runs").mkdir(parents=True, exist_ok=True)
+    (get_artifacts_base_dir() / "runs").mkdir(parents=True, exist_ok=True)
     RunContext.reset()
     cap_handler, _ = _with_capture()
     page = DummyPage()
@@ -79,7 +80,7 @@ def test_screenshot_json_structure_failure(monkeypatch, tmp_path, capsys):
             raise TimeoutError("timed out")
 
     monkeypatch.chdir(tmp_path)
-    (Path("artifacts") / "runs").mkdir(parents=True, exist_ok=True)
+    (get_artifacts_base_dir() / "runs").mkdir(parents=True, exist_ok=True)
     RunContext.reset()
     cap_handler, _ = _with_capture()
     page = DummyPageFail()
