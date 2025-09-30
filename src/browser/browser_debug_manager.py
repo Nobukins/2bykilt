@@ -102,14 +102,20 @@ class BrowserDebugManager:
 
     async def _check_browser_running(self, port):
         """指定ポートでブラウザが実行中かチェック"""
-        try:
-            import requests
-            response = requests.get(f"http://localhost:{port}/json/version", timeout=2)
-            logger.debug(f"✅ ポート{port}でブラウザが実行中: {response.status_code}")
-            return True
-        except Exception:
-            logger.debug(f"❌ ポート{port}でブラウザは実行されていません")
-            return False
+        max_checks = 10  # 最大10回チェック
+        for i in range(max_checks):
+            try:
+                import requests
+                response = requests.get(f"http://localhost:{port}/json/version", timeout=2)
+                logger.debug(f"✅ ポート{port}でブラウザが実行中: {response.status_code}")
+                return True
+            except Exception:
+                if i < max_checks - 1:
+                    logger.debug(f"❌ ポート{port}でブラウザは実行されていません (チェック {i+1}/{max_checks})、1秒待機...")
+                    await asyncio.sleep(1)
+                else:
+                    logger.debug(f"❌ ポート{port}でブラウザは実行されていません (最終チェック)")
+        return False
 
     async def _start_browser_process(self, browser_path, user_data_dir, debugging_port):
         """ブラウザプロセスを起動"""
@@ -130,7 +136,8 @@ class BrowserDebugManager:
         
         try:
             self.chrome_process = subprocess.Popen(cmd_args)
-            await asyncio.sleep(3)  # 起動待機
+            # 起動待機時間を増やして接続可能になるまで待つ
+            await asyncio.sleep(5)  # 3秒から5秒に増やす
             logger.info("✅ ブラウザプロセス起動完了")
         except Exception as e:
             logger.error(f"❌ ブラウザプロセス起動失敗: {e}")
@@ -172,17 +179,30 @@ class BrowserDebugManager:
             if not await self._check_browser_running(debugging_port):
                 logger.info(f"🚀 {browser_type}プロセスを起動")
                 await self._start_browser_process(browser_path, user_data_dir, debugging_port)
+                # プロセス起動後に接続可能になるまで待つ
+                if not await self._check_browser_running(debugging_port):
+                    logger.error(f"❌ ブラウザプロセス起動後もポート{debugging_port}が利用できません")
+                    return {"status": "error", "message": f"{browser_type}プロセス起動失敗またはCDPポートが利用できません"}
             
-            try:
-                browser = await self.playwright.chromium.connect_over_cdp(
-                    endpoint_url=f'http://localhost:{debugging_port}'
-                )
-                self.global_browser = browser
-                logger.info(f"✅ {browser_type}プロセスへの接続成功")
-                return {"browser": browser, "status": "success", "browser_type": browser_type}
-            except Exception as e:
-                logger.error(f"❌ {browser_type}プロセスへの接続失敗: {e}")
-                return {"status": "error", "message": f"{browser_type}への接続に失敗: {e}"}
+                        # CDP接続をリトライ (最大3回)
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    logger.info(f"🔗 CDP接続試行 {attempt + 1}/{max_retries}")
+                    browser = await self.playwright.chromium.connect_over_cdp(
+                        endpoint_url=f'http://localhost:{debugging_port}'
+                    )
+                    self.global_browser = browser
+                    logger.info(f"✅ {browser_type}プロセスへの接続成功")
+                    return {"browser": browser, "status": "success", "browser_type": browser_type, "is_cdp": True}
+                except Exception as e:
+                    logger.warning(f"❌ CDP接続失敗 (試行 {attempt + 1}/{max_retries}): {e}")
+                    if attempt < max_retries - 1:
+                        logger.info("⏳ 1秒待機して再試行...")
+                        await asyncio.sleep(1)
+                    else:
+                        logger.error(f"❌ CDP接続が {max_retries} 回失敗しました")
+                        return {"status": "error", "message": f"{browser_type}へのCDP接続に失敗: {e}"}
         else:
             # Playwright管理ブラウザを起動
             logger.info(f"� Playwright管理{browser_type}を起動")
@@ -209,7 +229,7 @@ class BrowserDebugManager:
                 actual_path = launch_options.get("executable_path", "デフォルトChromium")
                 logger.info(f"✅ ブラウザ起動成功: {actual_path}")
                 
-                return {"browser": browser, "status": "success", "browser_type": browser_type}
+                return {"browser": browser, "status": "success", "browser_type": browser_type, "is_cdp": False, "playwright": self.playwright}
             except Exception as e:
                 logger.error(f"❌ {browser_type}起動失敗: {e}")
                 
@@ -221,7 +241,7 @@ class BrowserDebugManager:
                         browser = await self.playwright.chromium.launch(**launch_options)
                         self.global_browser = browser
                         logger.info("✅ デフォルトChromiumでの起動成功")
-                        return {"browser": browser, "status": "success", "browser_type": "chromium"}
+                        return {"browser": browser, "status": "success", "browser_type": "chromium", "is_cdp": False, "playwright": self.playwright}
                     except Exception as fallback_e:
                         logger.error(f"❌ デフォルトChromiumでの起動も失敗: {fallback_e}")
                 

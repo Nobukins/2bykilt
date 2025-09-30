@@ -191,7 +191,14 @@ class ExecutionDebugEngine:
         try:
             logger.info(f"フォーム入力を実行しています: {params}")
             browser_data = await self.browser_manager.initialize_custom_browser(use_own_browser, headless)
-            browser = browser_data["browser"]
+
+            # Guard against initialization failures returning an error dict or None
+            if not browser_data or (isinstance(browser_data, dict) and browser_data.get("status") == "error"):
+                error_msg = browser_data.get("message", "不明なエラーでブラウザを初期化できませんでした") if isinstance(browser_data, dict) else "ブラウザデータが返されませんでした"
+                logger.error(f"ブラウザ初期化エラー: {error_msg}")
+                return
+
+            browser = browser_data.get("browser")
             context = browser.contexts[0] if browser.contexts else await browser.new_context()
             page = await context.new_page()
             await page.goto(params["url"], wait_until="domcontentloaded")
@@ -511,7 +518,14 @@ class ExecutionDebugEngine:
             logger.info(f"Executing {len(commands)} commands of type: {action_type}")
             
             browser_data = await self.browser_manager.initialize_custom_browser(use_own_browser, headless)
-            browser = browser_data["browser"]
+
+            # Guard against initialization failures returning an error dict or None
+            if not browser_data or (isinstance(browser_data, dict) and browser_data.get("status") == "error"):
+                error_msg = browser_data.get("message", "不明なエラーでブラウザを初期化できませんでした") if isinstance(browser_data, dict) else "ブラウザデータが返されませんでした"
+                logger.error(f"ブラウザ初期化エラー: {error_msg}")
+                return
+
+            browser = browser_data.get("browser")
             
             tab_strategy = tab_selection or commands_data.get('tab_selection_strategy', 'new_tab')
             logger.debug(f"Initial tab selection strategy: {tab_strategy}, from arg: {tab_selection}")
