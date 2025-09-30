@@ -438,8 +438,6 @@ class ExecutionDebugEngine:
             logger.debug(f"commands_data type: {type(commands_data)}")
             logger.debug(f"commands_data value: {commands_data}")
             
-            logger.debug(f"initial keep_tab_open state: {commands_data.get('keep_tab_open', 'Not Set')}")
-            
             action_type = None
             keep_tab_open = None
             
@@ -486,12 +484,34 @@ class ExecutionDebugEngine:
                     logger.error(traceback.format_exc())
                     return
             
+            logger.debug(f"initial keep_tab_open state: {commands_data.get('keep_tab_open', 'Not Set') if isinstance(commands_data, dict) else 'Not a dict'}")
+            
             if isinstance(commands_data, dict) and 'keep_tab_open' in commands_data:
                 logger.debug(f"keep_tab_open from commands_data: {commands_data['keep_tab_open']}")
             
             action_type = action_type or commands_data.get("action_type", "unlock-future")
             commands = commands_data.get("commands", [])
             slowmo = commands_data.get("slowmo", 1000)
+            
+            # パラメータ置換を行う
+            if params:
+                import re
+                def replace_params(obj):
+                    if isinstance(obj, str):
+                        # ${params.key} を置換
+                        def replacer(match):
+                            param_key = match.group(1)
+                            return str(params.get(param_key, match.group(0)))
+                        return re.sub(r'\$\{params\.(\w+)\}', replacer, obj)
+                    elif isinstance(obj, dict):
+                        return {k: replace_params(v) for k, v in obj.items()}
+                    elif isinstance(obj, list):
+                        return [replace_params(item) for item in obj]
+                    else:
+                        return obj
+                
+                commands = replace_params(commands)
+                logger.debug(f"Parameters replaced in commands: {params}")
             
             if keep_tab_open is None:
                 keep_tab_open = commands_data.get("keep_tab_open", True)
