@@ -175,10 +175,15 @@ class BrowserDebugManager:
             # 外部ブラウザプロセスに接続
             logger.info(f"🔗 外部{browser_type}プロセスに接続を試行")
             
+            # CDP用の一時user-data-dirを作成（デフォルトディレクトリではremote debuggingが許可されないため）
+            import tempfile
+            temp_user_data_dir = tempfile.mkdtemp(prefix="chrome_cdp_")
+            logger.info(f"🔧 CDP用の一時user-data-dirを使用: {temp_user_data_dir}")
+            
             # ブラウザプロセスが既に動いているかチェック
             if not await self._check_browser_running(debugging_port):
                 logger.info(f"🚀 {browser_type}プロセスを起動")
-                await self._start_browser_process(browser_path, user_data_dir, debugging_port)
+                await self._start_browser_process(browser_path, temp_user_data_dir, debugging_port)
                 # プロセス起動後に接続可能になるまで待つ
                 if not await self._check_browser_running(debugging_port):
                     logger.error(f"❌ ブラウザプロセス起動後もポート{debugging_port}が利用できません")
