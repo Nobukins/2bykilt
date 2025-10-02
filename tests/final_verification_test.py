@@ -10,6 +10,16 @@ import sys
 import shutil
 from pathlib import Path
 from playwright.async_api import async_playwright
+import pytest
+
+# These final verification tests are interactive and require a real browser/profile.
+# By default they should be skipped during automated runs. To run locally set:
+#   RUN_LOCAL_FINAL_VERIFICATION=1 pytest tests/final_verification_test.py
+if not os.environ.get("RUN_LOCAL_FINAL_VERIFICATION"):
+    pytest.skip(
+        "Skipping interactive final verification tests (local only). Set RUN_LOCAL_FINAL_VERIFICATION=1 to run.",
+        allow_module_level=True,
+    )
 
 async def test_browser_profile(browser_type):
     """指定されたブラウザでプロファイル読み込みテストを実行

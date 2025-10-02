@@ -1,5 +1,6 @@
 import asyncio
 import os
+import shlex
 import sys
 import subprocess
 import uuid
@@ -117,6 +118,25 @@ class BrowserDebugManager:
                     logger.debug(f"❌ ポート{port}でブラウザは実行されていません (最終チェック)")
         return False
 
+    async def _check_existing_chrome_with_debug_port(self, user_data_dir, debugging_port):
+        """既存のChromeプロセスがデバッグポートを使用しているかチェック"""
+        try:
+            import psutil
+            for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+                try:
+                    if 'chrome' in proc.info['name'].lower() or 'chromium' in proc.info['name'].lower():
+                        cmdline = proc.info['cmdline']
+                        if cmdline and any(f'--remote-debugging-port={debugging_port}' in arg for arg in cmdline):
+                            logger.info(f"✅ 既存のChromeプロセスがポート{debugging_port}を使用しています (PID: {proc.info['pid']})")
+                            return True
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+        except ImportError:
+            logger.debug("psutilが利用できないため、既存プロセスチェックをスキップ")
+        except Exception as e:
+            logger.debug(f"既存Chromeプロセスチェック中にエラー: {e}")
+        return False
+
     async def _start_browser_process(self, browser_path, user_data_dir, debugging_port):
         """ブラウザプロセスを起動"""
         if not browser_path or not os.path.exists(browser_path):
@@ -132,7 +152,7 @@ class BrowserDebugManager:
         if user_data_dir:
             cmd_args.append(f"--user-data-dir={user_data_dir}")
         
-        logger.info(f"🚀 ブラウザプロセス起動: {' '.join(cmd_args)}")
+        logger.info(f"🚀 ブラウザプロセス起動: {shlex.join(cmd_args)}")
         
         try:
             self.chrome_process = subprocess.Popen(cmd_args)
@@ -175,21 +195,21 @@ class BrowserDebugManager:
             # 外部ブラウザプロセスに接続
             logger.info(f"🔗 外部{browser_type}プロセスに接続を試行")
             
-            # CDP用の一時user-data-dirを作成（デフォルトディレクトリではremote debuggingが許可されないため）
+            # CDP接続のための一時ディレクトリを作成
             import tempfile
-            temp_user_data_dir = tempfile.mkdtemp(prefix="chrome_cdp_")
-            logger.info(f"🔧 CDP用の一時user-data-dirを使用: {temp_user_data_dir}")
+            temp_user_data_dir = tempfile.mkdtemp(prefix="chrome_debug_")
+            logger.info(f"🔧 CDP用の一時user-data-dirを作成: {temp_user_data_dir}")
             
-            # ブラウザプロセスが既に動いているかチェック
+            # ブラウザプロセスを起動
+            logger.info(f"🚀 {browser_type}プロセスを起動")
+            await self._start_browser_process(browser_path, temp_user_data_dir, debugging_port)
+            
+            # プロセス起動後に接続可能になるまで待つ
             if not await self._check_browser_running(debugging_port):
-                logger.info(f"🚀 {browser_type}プロセスを起動")
-                await self._start_browser_process(browser_path, temp_user_data_dir, debugging_port)
-                # プロセス起動後に接続可能になるまで待つ
-                if not await self._check_browser_running(debugging_port):
-                    logger.error(f"❌ ブラウザプロセス起動後もポート{debugging_port}が利用できません")
-                    return {"status": "error", "message": f"{browser_type}プロセス起動失敗またはCDPポートが利用できません"}
+                logger.error(f"❌ ブラウザプロセス起動後もポート{debugging_port}が利用できません")
+                return {"status": "error", "message": f"{browser_type}プロセス起動失敗またはCDPポートが利用できません"}
             
-                        # CDP接続をリトライ (最大3回)
+            # CDP接続をリトライ (最大3回)
             max_retries = 3
             for attempt in range(max_retries):
                 try:

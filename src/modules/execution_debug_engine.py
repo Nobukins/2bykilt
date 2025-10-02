@@ -83,7 +83,7 @@ class ExecutionDebugEngine:
                     await page.keyboard.press(key)
                     logger.info(f"キー '{key}' を押しました")
                 elif action == "extract_content":
-                    selectors = args if args else ["h1", "h2", "h3", "p"]
+                    selectors = args if args else ["h1"]
                     content = {}
                     for selector in selectors:
                         elements = await page.query_selector_all(selector)
@@ -91,6 +91,15 @@ class ExecutionDebugEngine:
                         content[selector] = texts
                     logger.info("抽出されたコンテンツ:")
                     logger.info(json.dumps(content, indent=2, ensure_ascii=False))
+                elif action == "screenshot":
+                    screenshot_path = args[0] if args else f"screenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+                    await page.screenshot(path=screenshot_path)
+                    logger.info(f"スクリーンショットを保存しました: {screenshot_path}")
+                elif action == "close_tab":
+                    await page.close()
+                    logger.info("タブを閉じました")
+                    # タブを閉じた後は処理を終了
+                    break
 
                 logger.info("コマンドを実行しました。次のコマンドは3秒後...")
                 await asyncio.sleep(3)
