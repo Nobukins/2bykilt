@@ -1,28 +1,12 @@
-"""
-Pytest configuration for test path setup.
-
-This file ensures tests can import project modules without hardcoded absolute paths.
-It dynamically detects the repository root and adds either the repo root or the
-`src` directory to sys.path. An optional environment variable `BYKILT_ROOT`
-can override the detection (useful for non-standard layouts).
-"""
-
-from __future__ import annotations
-
+from pathlib import Path
 import os
 import sys
-from pathlib import Path
+import pytest
 
 
 def _detect_project_root(start: Path) -> Path:
-    """Detect the repository root by walking up until a marker is found.
-
-    Markers include common project files: pyproject.toml, README.md, .git
-    """
-
-    markers = {"pyproject.toml", "README.md", ".git"}
+    markers = {"pyproject.toml", "README.md", ".git", "artifacts"}
     current = start.resolve()
-
     for parent in [current] + list(current.parents):
         try:
             entries = {p.name for p in parent.iterdir()}
@@ -39,15 +23,16 @@ def _ensure_sys_path(path: Path) -> None:
         sys.path.insert(0, p)
 
 
-def pytest_configure(config):  # noqa: D401 - pytest hook
-    """Pytest configure hook to set up import paths."""
+def pytest_configure(config):
+    # Register commonly used markers to avoid pytest warnings
+    config.addinivalue_line("markers", "integration: mark test as integration-heavy (requires network/browser)")
+    config.addinivalue_line("markers", "local_only: mark test that should only run on a developer machine")
 
-    # 1) Allow explicit override
+    # 1) Allow explicit override for project root
     root_env = os.environ.get("BYKILT_ROOT")
     if root_env:
         root_path = Path(root_env).expanduser().resolve()
     else:
-        # 2) Auto-detect based on this file's location
         this_file = Path(__file__).resolve()
         root_path = _detect_project_root(this_file.parent)
 
@@ -59,3 +44,27 @@ def pytest_configure(config):  # noqa: D401 - pytest hook
 
     # Optional: expose for tests that may need it
     os.environ.setdefault("BYKILT_ROOT_EFFECTIVE", str(root_path))
+
+
+def pytest_collection_modifyitems(config, items):
+    """
+    Skip integration / local_only tests by default unless corresponding
+    environment variables are set. This centralizes the previous per-file
+    env guards and makes CI configuration simpler.
+
+    Environment variables:
+      RUN_LOCAL_INTEGRATION=1  -> run @pytest.mark.integration tests
+      RUN_LOCAL_FINAL_VERIFICATION=1 -> run @pytest.mark.local_only tests
+    """
+    run_integration = os.environ.get("RUN_LOCAL_INTEGRATION")
+    run_final = os.environ.get("RUN_LOCAL_FINAL_VERIFICATION")
+
+    skip_integration = pytest.mark.skip(reason="Integration tests skipped by default. Set RUN_LOCAL_INTEGRATION=1 to enable")
+    skip_final = pytest.mark.skip(reason="Local-only tests skipped by default. Set RUN_LOCAL_FINAL_VERIFICATION=1 to enable")
+
+    for item in list(items):
+        if "integration" in item.keywords and not run_integration:
+            item.add_marker(skip_integration)
+        if "local_only" in item.keywords and not run_final:
+            item.add_marker(skip_final)
+

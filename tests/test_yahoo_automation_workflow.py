@@ -4,6 +4,7 @@ import os
 from src.modules.execution_debug_engine import ExecutionDebugEngine
 
 @pytest.mark.asyncio
+@pytest.mark.local_only
 async def test_yahoo_automation_workflow():
     """Test complete yahoo.co.jp automation workflow with screenshot, h1 extraction, and tab management"""
     engine = ExecutionDebugEngine()

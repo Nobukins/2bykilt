@@ -6,11 +6,7 @@ import asyncio
 import logging
 import pytest
 
-# This integration test performs network and real-browser operations.
-# Skip by default during automated/CI-style runs. To execute locally set:
-#   RUN_LOCAL_INTEGRATION=1 pytest tests/integration/test_git_script_only.py
-if not os.environ.get("RUN_LOCAL_INTEGRATION"):
-    pytest.skip("Skipping heavy integration test (requires network/browser). Set RUN_LOCAL_INTEGRATION=1 to run.", allow_module_level=True)
+pytestmark = pytest.mark.integration
 
 # Add src to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))

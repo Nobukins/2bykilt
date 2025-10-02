@@ -238,6 +238,10 @@ def create_temp_browser_profile(browser_type):
         'temp_dir': temp_dir
     }
 
+import pytest
+
+@pytest.mark.asyncio
+@pytest.mark.local_only
 async def test_browser_with_temp_profile(browser_type):
     """一時プロファイルでブラウザテストを実行
 
