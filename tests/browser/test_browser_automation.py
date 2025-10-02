@@ -9,11 +9,9 @@ from dotenv import load_dotenv
 
 # .envファイルを読み込み
 load_dotenv(override=True)
+# Rely on tests/conftest.py to add the project's `src` to sys.path
 
-# プロジェクトのsrcディレクトリをPythonパスに追加
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
-
-from browser.browser_config import BrowserConfig
+from src.browser.browser_config import BrowserConfig
 
 def test_browser_automation():
     print("=== ブラウザ自動化テスト開始 ===")

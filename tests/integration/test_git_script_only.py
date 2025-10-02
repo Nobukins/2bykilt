@@ -4,6 +4,9 @@ import os
 import sys
 import asyncio
 import logging
+import pytest
+
+pytestmark = pytest.mark.integration
 
 # Add src to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))

@@ -56,7 +56,8 @@ def test_secret_mask_artifact(tmp_path, monkeypatch):
     from src.utils.fs_paths import get_artifacts_base_dir
     art_dir = get_artifacts_base_dir() / "runs"
     assert art_dir.exists()
-    newest = sorted(art_dir.iterdir())[-1]
+    # Choose the most recently modified run directory (robust against preexisting fixtures)
+    newest = max(art_dir.iterdir(), key=lambda p: p.stat().st_mtime)
     data = json.loads((newest / "effective_config.json").read_text(encoding="utf-8"))
     assert data["config"]["secrets"]["api_key"] == "***"
     assert "secrets.api_key" in data["masked_hashes"]
