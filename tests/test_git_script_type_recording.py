@@ -7,7 +7,7 @@ import tempfile
 import shutil
 from pathlib import Path
 from src.utils.fs_paths import get_artifacts_base_dir
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 
 from src.script.script_manager import run_script
 from src.utils.recording_dir_resolver import create_or_get_recording_dir
@@ -20,7 +20,7 @@ class TestGitScriptTypeRecording:
         """Setup test environment"""
         self.test_dir = Path(tempfile.mkdtemp())
         self.artifacts_dir = get_artifacts_base_dir() / "runs" / "test-git-script"
-        self.artifacts_dir.mkdir(parents=True)
+        self.artifacts_dir.mkdir(parents=True, exist_ok=True)
 
         # Mock git repository structure
         self.mock_repo_dir = self.test_dir / "mock_repo"
@@ -57,17 +57,18 @@ def test_git_script_recording(page: Page):
         """Clean up test environment"""
         shutil.rmtree(self.test_dir)
 
+    @pytest.mark.asyncio
     @patch('src.script.script_manager.clone_git_repo')
     @patch('src.script.script_manager.process_execution')
-    def test_git_script_type_recording_path(self, mock_process_execution, mock_clone_repo):
+    async def test_git_script_type_recording_path(self, mock_process_execution, mock_clone_repo):
         """Test that git-script type uses correct recording path"""
         # Mock the git clone
         mock_clone_repo.return_value = str(self.mock_repo_dir)
 
-        # Mock the process execution
-        mock_process = MagicMock()
+        # Mock the process execution with AsyncMock
+        mock_process = AsyncMock()
         mock_process.returncode = 0
-        mock_process.communicate.return_value = (b"Test output", b"")
+        mock_process.communicate = AsyncMock(return_value=(b"Test output", b""))
         mock_process_execution.return_value = (mock_process, ["Test output"])
 
         # Test script info for git-script
@@ -86,7 +87,7 @@ def test_git_script_recording(page: Page):
              patch('os.environ', {'BYKILT_USE_NEW_METHOD': 'false'}):  # Use legacy method for testing
 
             # Execute the script
-            result, script_path = run_script(
+            result, script_path = await run_script(
                 script_info=script_info,
                 params=params,
                 headless=True,
@@ -113,17 +114,18 @@ def test_git_script_recording(page: Page):
         assert "artifacts" in expected_recording_path
         assert "videos" in expected_recording_path
 
+    @pytest.mark.asyncio
     @patch('src.script.script_manager.clone_git_repo')
     @patch('src.script.script_manager.process_execution')
-    def test_git_script_with_custom_recording_path(self, mock_process_execution, mock_clone_repo):
+    async def test_git_script_with_custom_recording_path(self, mock_process_execution, mock_clone_repo):
         """Test git-script with custom recording path"""
         # Mock the git clone
         mock_clone_repo.return_value = str(self.mock_repo_dir)
 
-        # Mock the process execution
-        mock_process = MagicMock()
+        # Mock the process execution with AsyncMock
+        mock_process = AsyncMock()
         mock_process.returncode = 0
-        mock_process.communicate.return_value = (b"Test output", b"")
+        mock_process.communicate = AsyncMock(return_value=(b"Test output", b""))
         mock_process_execution.return_value = (mock_process, ["Test output"])
 
         custom_path = str(self.artifacts_dir / "custom" / "git" / "videos")
@@ -140,7 +142,7 @@ def test_git_script_recording(page: Page):
              patch('os.environ', {'BYKILT_USE_NEW_METHOD': 'false'}):
 
             # Execute with custom recording path
-            result, script_path = run_script(
+            result, script_path = await run_script(
                 script_info=script_info,
                 params={},
                 headless=True,
@@ -153,8 +155,9 @@ def test_git_script_recording(page: Page):
             expected_path = str(create_or_get_recording_dir(custom_path))
             assert env_vars['RECORDING_PATH'] == expected_path
 
+    @pytest.mark.asyncio
     @patch('src.script.script_manager.clone_git_repo')
-    def test_git_script_script_not_found(self, mock_clone_repo):
+    async def test_git_script_script_not_found(self, mock_clone_repo):
         """Test git-script when script file doesn't exist"""
         # Mock the git clone
         mock_clone_repo.return_value = str(self.mock_repo_dir)
@@ -173,7 +176,7 @@ def test_git_script_recording(page: Page):
              patch('os.environ', {'BYKILT_USE_NEW_METHOD': 'false'}):
 
             # Execute the script - should fail
-            result, script_path = run_script(
+            result, script_path = await run_script(
                 script_info=script_info,
                 params={},
                 headless=True

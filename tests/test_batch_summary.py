@@ -12,7 +12,6 @@ from unittest.mock import Mock
 from src.batch.summary import BatchSummary, BatchSummaryGenerator, generate_batch_summary
 
 
-@pytest.mark.skip(reason="Existing bug: BatchSummary API changed - unrelated to Issue #241")
 class TestBatchSummary:
     """Test BatchSummary dataclass."""
 
@@ -21,6 +20,7 @@ class TestBatchSummary:
         summary = BatchSummary(
             batch_id="test-batch",
             run_id="test-run",
+            csv_path="batch.csv",
             total_jobs=10,
             completed_jobs=8,
             failed_jobs=2,
@@ -39,6 +39,7 @@ class TestBatchSummary:
         data = {
             "batch_id": "test-batch",
             "run_id": "test-run",
+            "csv_path": "batch.csv",
             "total_jobs": 10,
             "completed_jobs": 8,
             "failed_jobs": 2,
@@ -166,6 +167,7 @@ class TestBatchSummaryGenerator:
         summary = BatchSummary(
             batch_id="test-batch",
             run_id="test-run",
+            csv_path="tests/data/sample.csv",
             total_jobs=5,
             completed_jobs=4,
             failed_jobs=1,

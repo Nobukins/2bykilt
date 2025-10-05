@@ -425,7 +425,8 @@ async def run_script(
     params: Dict[str, str], 
     headless: bool = False, 
     save_recording_path: Optional[str] = None,
-    browser_type: Optional[str] = None
+    browser_type: Optional[str] = None,
+    git_script_resolver = None
 ) -> Tuple[str, Optional[str]]:
     """
     Run a browser automation script
@@ -436,6 +437,7 @@ async def run_script(
         headless: Boolean indicating if browser should run in headless mode
         save_recording_path: Path to save browser recordings
         browser_type: Browser type to use (chrome/edge), overrides config if provided
+        git_script_resolver: Optional injected resolver for testing (defaults to singleton)
         
     Returns:
         tuple: (execution message, script path)
@@ -568,13 +570,9 @@ markers =
                     env['RECORDING_PATH'] = unified_recording_path
                     logger.info(f"Recording enabled, saving to: {unified_recording_path}")
                 
-                # Add headless mode control via pytest-playwright command line options
+                # Headless mode is configured via env/fixtures in generated script; avoid pytest CLI flags
                 if headless:
-                    command.extend(['--headless'])
-                    logger.info(f"🔍 Setting browser to headless mode")
-                else:
-                    command.extend(['--headed'])
-                    logger.info(f"🔍 Setting browser to headed mode")
+                    logger.info("🔍 Headless mode requested (handled via script fixtures)")
                 
                 # Execute the pytest command
                 process = await asyncio.create_subprocess_exec(
@@ -612,7 +610,7 @@ markers =
                     # Move generated files from myscript to artifacts directory
                     try:
                         await move_script_files_to_artifacts(script_info, script_path, 'browser-control')
-                        logger.info("✅ Browser control files moved to artifacts directory")
+                        logger.info("✅ Browser control files archived to artifacts directory")
                     except Exception as e:
                         logger.warning(f"⚠️ Failed to move browser control files to artifacts: {e}")
                     
@@ -622,10 +620,14 @@ markers =
                 logger.info(f"🔍 Processing git-script: {script_info.get('name', 'unknown')}")
                 
                 # NEW: Use git_script_resolver to resolve script information
-                from src.script.git_script_resolver import get_git_script_resolver
-                from src.runtime.run_context import RunContext
-                run_context = RunContext.get()
-                resolver = get_git_script_resolver(run_id=run_context.run_id_base)
+                # Use injected resolver or get singleton instance
+                if git_script_resolver is None:
+                    from src.script.git_script_resolver import get_git_script_resolver
+                    from src.runtime.run_context import RunContext
+                    run_context = RunContext.get()
+                    resolver = get_git_script_resolver(run_id=run_context.run_id_base)
+                else:
+                    resolver = git_script_resolver
                 
                 # If not provided, try to resolve from script name
                 if not script_info.get('git') or not script_info.get('script_path'):
@@ -1496,32 +1498,32 @@ async def move_script_files_to_artifacts(script_info: Dict[str, Any], script_pat
                 # Move the generated script
                 script_file = myscript_dir / 'browser_control.py'
                 if script_file.exists():
-                    shutil.move(str(script_file), str(run_dir / 'browser_control.py'))
-                    logger.info(f"📄 Moved browser_control.py to {run_dir}")
+                    shutil.copy2(str(script_file), str(run_dir / 'browser_control.py'))
+                    logger.info(f"📄 Copied browser_control.py to {run_dir}")
                 
                 # Move pytest.ini if it exists
                 pytest_ini = myscript_dir / 'pytest.ini'
                 if pytest_ini.exists():
-                    shutil.move(str(pytest_ini), str(run_dir / 'pytest.ini'))
-                    logger.info(f"📄 Moved pytest.ini to {run_dir}")
+                    shutil.copy2(str(pytest_ini), str(run_dir / 'pytest.ini'))
+                    logger.info(f"📄 Copied pytest.ini to {run_dir}")
                 
                 # Move any generated __pycache__ files
                 pycache_dir = myscript_dir / '__pycache__'
                 if pycache_dir.exists():
                     try:
-                        shutil.move(str(pycache_dir), str(run_dir / '__pycache__'))
-                        logger.info(f"📄 Moved __pycache__ to {run_dir}")
+                        shutil.copytree(str(pycache_dir), str(run_dir / '__pycache__'), dirs_exist_ok=True)
+                        logger.info(f"📄 Copied __pycache__ to {run_dir}")
                     except Exception as e:
-                        logger.warning(f"⚠️ Could not move __pycache__: {e}")
+                        logger.warning(f"⚠️ Could not copy __pycache__: {e}")
                 
                 # Move any .pytest_cache files
                 pytest_cache_dir = myscript_dir / '.pytest_cache'
                 if pytest_cache_dir.exists():
                     try:
-                        shutil.move(str(pytest_cache_dir), str(run_dir / '.pytest_cache'))
-                        logger.info(f"📄 Moved .pytest_cache to {run_dir}")
+                        shutil.copytree(str(pytest_cache_dir), str(run_dir / '.pytest_cache'), dirs_exist_ok=True)
+                        logger.info(f"📄 Copied .pytest_cache to {run_dir}")
                     except Exception as e:
-                        logger.warning(f"⚠️ Could not move .pytest_cache: {e}")
+                        logger.warning(f"⚠️ Could not copy .pytest_cache: {e}")
         
         # Create a metadata file with execution information
         metadata = {
@@ -1536,12 +1538,12 @@ async def move_script_files_to_artifacts(script_info: Dict[str, Any], script_pat
         with open(metadata_file, 'w', encoding='utf-8') as f:
             import json
             json.dump(metadata, f, indent=2, ensure_ascii=False)
-        
+
         logger.info(f"📋 Created execution metadata: {metadata_file}")
-        logger.info(f"✅ Successfully moved {script_type} files to artifacts directory")
-        
+        logger.info(f"✅ Successfully archived {script_type} files to artifacts directory")
+
     except Exception as e:
-        logger.error(f"❌ Failed to move script files to artifacts: {e}")
+        logger.error(f"❌ Failed to archive script files to artifacts: {e}")
         # Don't raise exception to avoid breaking the main execution flow
 
 async def execute_git_script_new_method(

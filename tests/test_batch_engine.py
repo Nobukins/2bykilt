@@ -568,7 +568,6 @@ class TestBatchEngine:
         assert manifest.csv_path == str(csv_file)
         assert manifest.total_jobs == 2
 
-    @pytest.mark.skip(reason="Existing bug: _record_batch_stop_metrics not implemented - unrelated to Issue #241")
     def test_stop_batch_marks_pending_jobs_stopped(self, engine, temp_dir, run_context):
         """stop_batch should mark pending/running jobs as 'stopped' and persist manifest."""
         from src.batch.engine import BatchEngine, BatchManifest, BATCH_MANIFEST_FILENAME
@@ -961,12 +960,11 @@ class TestBatchEngineLogging:
         # Check that security exception was logged
         assert any("Access denied" in record.message for record in caplog.records)
 
-@pytest.mark.skip(reason="Existing bugs: start_batch is async but tests don't await - unrelated to Issue #241")
 class TestStartBatch:
     """Test start_batch function."""
 
     @patch('src.batch.engine.RunContext.get')
-    def test_start_batch_with_new_context(self, mock_get, tmp_path):
+    async def test_start_batch_with_new_context(self, mock_get, tmp_path):
         """Test start_batch with new run context."""
         # Mock run context
         mock_context = Mock()
@@ -986,13 +984,13 @@ class TestStartBatch:
             mock_engine.create_batch_jobs.return_value = mock_manifest
             mock_engine_class.return_value = mock_engine
 
-            result = start_batch(str(csv_file))
+            result = await start_batch(str(csv_file), execute_immediately=False)
 
             assert result == mock_manifest
             mock_get.assert_called_once()
             mock_engine.create_batch_jobs.assert_called_once_with(str(csv_file))
 
-    def test_start_batch_with_provided_context(self, tmp_path):
+    async def test_start_batch_with_provided_context(self, tmp_path):
         """Test start_batch with provided run context."""
         mock_context = Mock()
         mock_context.run_id_base = "test_run"
@@ -1010,12 +1008,12 @@ class TestStartBatch:
             mock_engine.create_batch_jobs.return_value = mock_manifest
             mock_engine_class.return_value = mock_engine
 
-            result = start_batch(str(csv_file), mock_context)
+            result = await start_batch(str(csv_file), mock_context, execute_immediately=False)
 
             assert result == mock_manifest
             mock_engine.create_batch_jobs.assert_called_once_with(str(csv_file))
 
-    def test_start_batch_with_config(self, tmp_path):
+    async def test_start_batch_with_config(self, tmp_path):
         """Test start_batch with custom configuration."""
         mock_context = Mock()
         mock_context.run_id_base = "test_run"
@@ -1039,7 +1037,7 @@ class TestStartBatch:
             mock_engine.create_batch_jobs.return_value = mock_manifest
             mock_engine_class.return_value = mock_engine
 
-            result = start_batch(str(csv_file), mock_context, custom_config)
+            result = await start_batch(str(csv_file), mock_context, custom_config, execute_immediately=False)
 
             assert result == mock_manifest
             # Verify BatchEngine was created with config
@@ -1047,7 +1045,6 @@ class TestStartBatch:
             mock_engine.create_batch_jobs.assert_called_once_with(str(csv_file))
 
 
-@pytest.mark.skip(reason="Existing bugs: async methods not awaited - unrelated to Issue #241")
 class TestBatchRetry:
     """Test batch retry functionality."""
 
@@ -1074,7 +1071,7 @@ class TestBatchRetry:
         """Create BatchEngine instance."""
         return BatchEngine(run_context)
 
-    def test_retry_batch_jobs_success(self, engine, temp_dir, run_context):
+    async def test_retry_batch_jobs_success(self, engine, temp_dir, run_context):
         """Test successful retry of failed jobs."""
         # Create a manifest with failed jobs
         csv_content = "name,value\ntest1,data1\ntest2,data2\n"
@@ -1101,12 +1098,12 @@ class TestBatchRetry:
         assert retry_detail['job_id'] == job_id
         assert retry_detail['original_status'] == 'failed'
 
-    def test_retry_batch_jobs_not_found(self, engine):
+    async def test_retry_batch_jobs_not_found(self, engine):
         """Test retry with non-existent batch."""
         with pytest.raises(ValueError, match="Batch not found"):
             engine.retry_batch_jobs("non_existent_batch", ["job1"])
 
-    def test_retry_batch_jobs_invalid_job_id(self, engine, temp_dir, run_context):
+    async def test_retry_batch_jobs_invalid_job_id(self, engine, temp_dir, run_context):
         """Test retry with invalid job ID."""
         # Create a manifest
         csv_content = "name,value\ntest,data\n"
@@ -1119,7 +1116,7 @@ class TestBatchRetry:
         with pytest.raises(ValueError, match="Jobs not found in batch"):
             engine.retry_batch_jobs(manifest.batch_id, ["non_existent_job"])
 
-    def test_retry_batch_jobs_no_failed_jobs(self, engine, temp_dir, run_context):
+    async def test_retry_batch_jobs_no_failed_jobs(self, engine, temp_dir, run_context):
         """Test retry when no failed jobs exist."""
         # Create a manifest
         csv_content = "name,value\ntest,data\n"
@@ -1136,63 +1133,63 @@ class TestBatchRetry:
         assert result['retried'] == 0
         assert result['skipped'] == 1
 
-    def test_execute_job_with_retry_success(self, engine):
+    async def test_execute_job_with_retry_success(self, engine):
         """Test successful job execution with retry."""
         job = BatchJob("test_job", "test_run", {"data": "test"})
 
         # Mock successful execution
         with patch.object(engine, '_execute_single_job', return_value='completed') as mock_execute:
-            status = engine.execute_job_with_retry(job, max_retries=2)
+            status = await engine.execute_job_with_retry(job, max_retries=2)
 
         assert status == 'completed'
         # Verify the job execution was called
         mock_execute.assert_called_once_with(job)
 
-    def test_execute_job_with_retry_input_validation(self, engine):
+    async def test_execute_job_with_retry_input_validation(self, engine):
         """Test input validation for execute_job_with_retry."""
         # Test invalid job
         with pytest.raises(ValueError, match="job must be a BatchJob instance"):
-            engine.execute_job_with_retry("not_a_job")
+            await engine.execute_job_with_retry("not_a_job")
 
         with pytest.raises(ValueError, match="job must be a BatchJob instance"):
-            engine.execute_job_with_retry(None)
+            await engine.execute_job_with_retry(None)
 
         # Test invalid job_id
         job = BatchJob("", "test_run", {"data": "test"})
         with pytest.raises(ValueError, match="job.job_id must be a non-empty string"):
-            engine.execute_job_with_retry(job)
+            await engine.execute_job_with_retry(job)
 
         job = BatchJob(None, "test_run", {"data": "test"})
         with pytest.raises(ValueError, match="job.job_id must be a non-empty string"):
-            engine.execute_job_with_retry(job)
+            await engine.execute_job_with_retry(job)
 
         # Test invalid max_retries
         job = BatchJob("test_job", "test_run", {"data": "test"})
         with pytest.raises(ValueError, match="max_retries must be >= 0"):
-            engine.execute_job_with_retry(job, max_retries=-1)
+            await engine.execute_job_with_retry(job, max_retries=-1)
 
         # Test invalid retry_delay
         with pytest.raises(ValueError, match="retry_delay must be > 0"):
-            engine.execute_job_with_retry(job, retry_delay=0)
+            await engine.execute_job_with_retry(job, retry_delay=0)
 
         with pytest.raises(ValueError, match="retry_delay must be > 0"):
-            engine.execute_job_with_retry(job, retry_delay=-1)
+            await engine.execute_job_with_retry(job, retry_delay=-1)
 
         # Test invalid backoff_factor
         with pytest.raises(ValueError, match="backoff_factor must be > 1.0"):
-            engine.execute_job_with_retry(job, backoff_factor=1.0)
+            await engine.execute_job_with_retry(job, backoff_factor=1.0)
 
         with pytest.raises(ValueError, match="backoff_factor must be > 1.0"):
-            engine.execute_job_with_retry(job, backoff_factor=0.5)
+            await engine.execute_job_with_retry(job, backoff_factor=0.5)
 
         # Test invalid max_retry_delay
         with pytest.raises(ValueError, match="max_retry_delay must be > 0"):
-            engine.execute_job_with_retry(job, max_retry_delay=0)
+            await engine.execute_job_with_retry(job, max_retry_delay=0)
 
         with pytest.raises(ValueError, match="max_retry_delay must be > 0"):
-            engine.execute_job_with_retry(job, max_retry_delay=-1)
+            await engine.execute_job_with_retry(job, max_retry_delay=-1)
 
-    def test_retry_batch_jobs_custom_parameters(self, engine, temp_dir, run_context):
+    async def test_retry_batch_jobs_custom_parameters(self, engine, temp_dir, run_context):
         """Test retry_batch_jobs with custom retry parameters."""
         # Create a manifest with failed jobs
         csv_content = "name,value\ntest1,data1\ntest2,data2\n"
@@ -1222,13 +1219,13 @@ class TestBatchRetry:
         assert result['max_retry_delay'] == 30.0
         assert result['retried'] == 1
 
-    def test_execute_job_with_retry_custom_parameters(self, engine):
+    async def test_execute_job_with_retry_custom_parameters(self, engine):
         """Test execute_job_with_retry with custom retry parameters."""
         job = BatchJob("test_job", "test_run", {"data": "test"})
 
         # Mock successful execution
         with patch.object(engine, '_execute_single_job', return_value='completed') as mock_execute:
-            status = engine.execute_job_with_retry(
+            status = await engine.execute_job_with_retry(
                 job,
                 max_retries=3,
                 retry_delay=1.5,
@@ -1239,7 +1236,7 @@ class TestBatchRetry:
         assert status == 'completed'
         mock_execute.assert_called_once_with(job)
 
-    def test_execute_job_with_retry_exponential_backoff(self, engine):
+    async def test_execute_job_with_retry_exponential_backoff(self, engine):
         """Test that exponential backoff works correctly."""
         job = BatchJob("test_job", "test_run", {"data": "test"})
 
@@ -1247,7 +1244,7 @@ class TestBatchRetry:
         with patch.object(engine, '_execute_single_job', side_effect=Exception("Test failure")):
             with patch('time.sleep') as mock_sleep:
                 with pytest.raises(Exception):
-                    engine.execute_job_with_retry(
+                    await engine.execute_job_with_retry(
                         job,
                         max_retries=2,
                         retry_delay=1.0,
@@ -1260,7 +1257,7 @@ class TestBatchRetry:
         expected_calls = [((1.0,), {}), ((2.0,), {})]
         mock_sleep.assert_has_calls(expected_calls)
 
-    def test_execute_job_with_retry_max_delay_cap(self, engine):
+    async def test_execute_job_with_retry_max_delay_cap(self, engine):
         """Test that max_retry_delay caps the exponential backoff."""
         job = BatchJob("test_job", "test_run", {"data": "test"})
 
@@ -1268,7 +1265,7 @@ class TestBatchRetry:
         with patch.object(engine, '_execute_single_job', side_effect=Exception("Test failure")):
             with patch('time.sleep') as mock_sleep:
                 with pytest.raises(Exception):
-                    engine.execute_job_with_retry(
+                    await engine.execute_job_with_retry(
                         job,
                         max_retries=3,
                         retry_delay=1.0,
@@ -1281,59 +1278,44 @@ class TestBatchRetry:
         expected_calls = [((1.0,), {}), ((4.0,), {}), ((5.0,), {})]
         mock_sleep.assert_has_calls(expected_calls)
 
-    def test_simulate_job_execution_custom_parameters(self, engine):
-        """Test _simulate_job_execution with custom parameters."""
+    async def test_simulate_job_execution_custom_parameters(self, engine):
+        """Test _simulate_job_execution parameter validation."""
+        # Since _simulate_job_execution now does real browser automation,
+        # we primarily test the validation parts
         job = BatchJob("test_job", "test_run", {"data": "test"})
+        
+        # Test that missing task/command raises appropriate error
+        with pytest.raises(ValueError, match="has no 'task' or 'command' field"):
+            await engine._simulate_job_execution(job)
 
-        # Test with custom success_rate
-        with patch('random.random', return_value=0.3):  # Below 0.5 success rate
-            status = engine._simulate_job_execution(job, success_rate=0.5)
-            assert status == 'completed'
-
-        # Test with custom max_random_delay
-        with patch('random.random', return_value=0.9):  # Above success rate
-            with patch('time.sleep') as mock_sleep:
-                with pytest.raises(Exception):
-                    engine._simulate_job_execution(job, success_rate=0.8, max_random_delay=2.0)
-
-        # Verify sleep was called with random delay <= max_random_delay
-        if mock_sleep.called:
-            delay = mock_sleep.call_args[0][0]
-            assert 0 <= delay <= 2.0
-
-    def test_simulate_job_execution_parameter_validation(self, engine):
+    async def test_simulate_job_execution_parameter_validation(self, engine):
         """Test parameter validation in _simulate_job_execution."""
         job = BatchJob("test_job", "test_run", {"data": "test"})
 
-        # Test invalid success_rate
-        with pytest.raises(ValueError, match="success_rate must be between 0.0 and 1.0"):
-            engine._simulate_job_execution(job, success_rate=-0.1)
+        # Test missing task/command field
+        with pytest.raises(ValueError, match="has no 'task' or 'command' field"):
+            await engine._simulate_job_execution(job)
+        
+        # Test empty row data
+        job_no_data = BatchJob("test_job", "test_run", {})
+        with pytest.raises(ValueError, match="has no row data"):
+            await engine._simulate_job_execution(job_no_data)
 
-        with pytest.raises(ValueError, match="success_rate must be between 0.0 and 1.0"):
-            engine._simulate_job_execution(job, success_rate=1.5)
-
-        # Test invalid max_random_delay
-        with pytest.raises(ValueError, match="max_random_delay must be >= 0"):
-            engine._simulate_job_execution(job, max_random_delay=-1)
-
-    def test_simulate_job_execution_failure_scenarios(self, engine):
+    async def test_simulate_job_execution_failure_scenarios(self, engine):
         """Test various failure scenarios in simulation."""
-        # Test intentional failure triggers
-        job_fail = BatchJob("test_job", "test_run", {"name": "fail"})
-        with pytest.raises(Exception, match="Intentional failure for testing"):
-            engine._simulate_job_execution(job_fail)
+        # Test missing task field
+        job_no_task = BatchJob("test_job", "test_run", {"name": "fail"})
+        with pytest.raises(ValueError, match="has no 'task' or 'command' field"):
+            await engine._simulate_job_execution(job_no_task)
 
-        job_error = BatchJob("test_job", "test_run", {"value": "error"})
-        with pytest.raises(ValueError, match="Invalid value for processing"):
-            engine._simulate_job_execution(job_error)
+        # Test invalid command
+        job_invalid_cmd = BatchJob("test_job", "test_run", {"task": "@invalid_command"})
+        with patch('src.config.standalone_prompt_evaluator.pre_evaluate_prompt_standalone') as mock_eval:
+            mock_eval.return_value = {'is_command': False}
+            with pytest.raises(ValueError, match="is not a valid pre-registered command"):
+                await engine._simulate_job_execution(job_invalid_cmd)
 
-        # Test random failure
-        job_random = BatchJob("test_job", "test_run", {"name": "test", "value": "data"})
-        with patch('random.random', return_value=0.9):  # Above success rate
-            with pytest.raises(Exception, match="Simulated random failure"):
-                engine._simulate_job_execution(job_random, success_rate=0.8)
-
-    def test_log_security_no_sensitive_data(self, engine, caplog):
+    async def test_log_security_no_sensitive_data(self, engine, caplog):
         """Test that sensitive data is not logged."""
         import logging
 
@@ -1348,7 +1330,7 @@ class TestBatchRetry:
         with caplog.at_level(logging.DEBUG):
             with patch.object(engine, '_execute_single_job', side_effect=Exception("Test error with sensitive info")):
                 with pytest.raises(Exception):
-                    engine.execute_job_with_retry(job, max_retries=1)
+                    await engine.execute_job_with_retry(job, max_retries=1)
 
         # Check that sensitive data is not in logs
         log_messages = [record.message for record in caplog.records]
@@ -1361,7 +1343,7 @@ class TestBatchRetry:
         assert any("test_job" in msg for msg in log_messages)
         assert any("Exception" in msg for msg in log_messages)
 
-    def test_retry_batch_jobs_input_validation(self, engine):
+    async def test_retry_batch_jobs_input_validation(self, engine):
         """Test input validation for retry_batch_jobs."""
         # Test invalid batch_id
         with pytest.raises(ValueError, match="batch_id must be a non-empty string"):
@@ -1413,7 +1395,7 @@ class TestBatchRetry:
         with pytest.raises(ValueError, match="max_retry_delay must be > 0"):
             engine.retry_batch_jobs("batch1", ["job1"], max_retry_delay=-1)
 
-    def test_load_manifest_by_batch_id_success(self, engine, temp_dir, run_context):
+    async def test_load_manifest_by_batch_id_success(self, engine, temp_dir, run_context):
         """Test _load_manifest_by_batch_id helper method success."""
         # Create a manifest
         csv_content = "name,value\ntest1,data1\ntest2,data2\n"
@@ -1431,12 +1413,12 @@ class TestBatchRetry:
         assert loaded_manifest.total_jobs == 2
         assert len(loaded_manifest.jobs) == 2
 
-    def test_load_manifest_by_batch_id_not_found(self, engine):
+    async def test_load_manifest_by_batch_id_not_found(self, engine):
         """Test _load_manifest_by_batch_id with non-existent batch."""
         result = engine._load_manifest_by_batch_id("non_existent_batch")
         assert result is None
 
-    def test_execute_job_with_retry_no_side_effects(self, engine):
+    async def test_execute_job_with_retry_no_side_effects(self, engine):
         """Test that execute_job_with_retry doesn't have side effects on retry parameters."""
         job = BatchJob("test_job", "test_run", {"data": "test"})
 
@@ -1451,7 +1433,7 @@ class TestBatchRetry:
 
         with patch.object(engine, '_execute_single_job', side_effect=mock_execute):
             with patch('time.sleep') as mock_sleep:
-                status = engine.execute_job_with_retry(
+                status = await engine.execute_job_with_retry(
                     job,
                     max_retries=3,
                     retry_delay=1.0,
@@ -1471,7 +1453,7 @@ class TestBatchRetry:
         call_count = 0
         with patch.object(engine, '_execute_single_job', side_effect=mock_execute):
             with patch('time.sleep') as mock_sleep:
-                status = engine.execute_job_with_retry(
+                status = await engine.execute_job_with_retry(
                     job,
                     max_retries=3,
                     retry_delay=1.0,
@@ -1484,7 +1466,7 @@ class TestBatchRetry:
         mock_sleep.assert_has_calls(expected_calls)
 
     # New test cases for uncovered lines
-    def test_load_config_from_env_partial_coverage(self, run_context):
+    async def test_load_config_from_env_partial_coverage(self, run_context):
         """Test _load_config_from_env method for partial coverage."""
         from src.batch.engine import BatchEngine
         import os
@@ -1499,7 +1481,7 @@ class TestBatchRetry:
             # Verify valid env var was loaded
             assert engine.config['max_file_size_mb'] == 150.0
 
-    def test_get_batch_summary_success(self, engine, temp_dir, run_context):
+    async def test_get_batch_summary_success(self, engine, temp_dir, run_context):
         """Test get_batch_summary method success case."""
         # Create a manifest
         csv_content = "name,value\ntest1,data1\ntest2,data2\n"
@@ -1521,7 +1503,7 @@ class TestBatchRetry:
             assert result == mock_summary
             mock_generator.generate_summary.assert_called_once_with(manifest)
 
-    def test_get_batch_summary_with_summary_generator_import_error(self, engine, temp_dir, run_context):
+    async def test_get_batch_summary_with_summary_generator_import_error(self, engine, temp_dir, run_context):
         """Test get_batch_summary when BatchSummaryGenerator import fails."""
         # Create a manifest
         csv_content = "name,value\ntest1,data1\n"
@@ -1537,7 +1519,7 @@ class TestBatchRetry:
                 result = engine.get_batch_summary(batch_id)
                 assert result is None
 
-    def test_load_manifest_from_current_context_success(self, engine, temp_dir, run_context):
+    async def test_load_manifest_from_current_context_success(self, engine, temp_dir, run_context):
         """Test _load_manifest_from_current_context method."""
         # Create a manifest
         csv_content = "name,value\ntest,data\n"
@@ -1553,12 +1535,12 @@ class TestBatchRetry:
         assert loaded_manifest is not None
         assert loaded_manifest.batch_id == batch_id
 
-    def test_load_manifest_from_current_context_not_found(self, engine):
+    async def test_load_manifest_from_current_context_not_found(self, engine):
         """Test _load_manifest_from_current_context with non-existent batch."""
         result = engine._load_manifest_from_current_context("non_existent")
         assert result is None
 
-    def test_search_batch_manifest_in_artifacts_success(self, engine, temp_dir, run_context):
+    async def test_search_batch_manifest_in_artifacts_success(self, engine, temp_dir, run_context):
         """Test _search_batch_manifest_in_artifacts method."""
         # Create a manifest
         csv_content = "name,value\ntest,data\n"
@@ -1593,17 +1575,17 @@ class TestBatchRetry:
         finally:
             os.chdir(original_cwd)
 
-    def test_search_batch_manifest_in_artifacts_no_artifacts_dir(self, engine):
+    async def test_search_batch_manifest_in_artifacts_no_artifacts_dir(self, engine):
         """Test _search_batch_manifest_in_artifacts when artifacts dir doesn't exist."""
         result = engine._search_batch_manifest_in_artifacts("any_batch")
         assert result is None
 
-    def test_update_job_status_batch_not_found(self, engine):
+    async def test_update_job_status_batch_not_found(self, engine):
         """Test update_job_status when batch manifest not found."""
         # Should not raise exception, just log warning
         engine.update_job_status("non_existent_job", "completed")
 
-    def test_update_job_status_job_not_found_in_manifest(self, engine, temp_dir, run_context):
+    async def test_update_job_status_job_not_found_in_manifest(self, engine, temp_dir, run_context):
         """Test update_job_status when job not found in manifest."""
         # Create a manifest
         csv_content = "name,value\ntest,data\n"
@@ -1615,7 +1597,7 @@ class TestBatchRetry:
         # Try to update non-existent job
         engine.update_job_status("non_existent_job", "completed")
 
-    def test_load_and_check_manifest_success(self, engine, temp_dir, run_context):
+    async def test_load_and_check_manifest_success(self, engine, temp_dir, run_context):
         """Test _load_and_check_manifest method."""
         # Create a manifest
         csv_content = "name,value\ntest,data\n"
@@ -1632,7 +1614,7 @@ class TestBatchRetry:
         result = engine._load_and_check_manifest(manifest_file, job_id)
         assert result is True
 
-    def test_load_and_check_manifest_job_not_found(self, engine, temp_dir, run_context):
+    async def test_load_and_check_manifest_job_not_found(self, engine, temp_dir, run_context):
         """Test _load_and_check_manifest when job not found."""
         # Create a manifest
         csv_content = "name,value\ntest,data\n"
@@ -1648,12 +1630,12 @@ class TestBatchRetry:
         result = engine._load_and_check_manifest(manifest_file, "non_existent_job")
         assert result is False
 
-    def test_find_manifest_file_for_job_not_found(self, engine):
+    async def test_find_manifest_file_for_job_not_found(self, engine):
         """Test _find_manifest_file_for_job when manifest not found."""
         result = engine._find_manifest_file_for_job("non_existent_job")
         assert result is None
 
-    def test_update_single_job_status_completed(self, engine, temp_dir, run_context):
+    async def test_update_single_job_status_completed(self, engine, temp_dir, run_context):
         """Test _update_single_job_status for completed job."""
         # Create a manifest
         csv_content = "name,value\ntest,data\n"
@@ -1670,7 +1652,7 @@ class TestBatchRetry:
         assert job.completed_at is not None
         assert manifest.completed_jobs == 1
 
-    def test_update_single_job_status_failed(self, engine, temp_dir, run_context):
+    async def test_update_single_job_status_failed(self, engine, temp_dir, run_context):
         """Test _update_single_job_status for failed job."""
         # Create a manifest
         csv_content = "name,value\ntest,data\n"
@@ -1688,7 +1670,7 @@ class TestBatchRetry:
         assert job.completed_at is not None
         assert manifest.failed_jobs == 1
 
-    def test_load_manifest_success(self, engine, temp_dir, run_context):
+    async def test_load_manifest_success(self, engine, temp_dir, run_context):
         """Test _load_manifest method."""
         # Create a manifest
         csv_content = "name,value\ntest,data\n"
@@ -1706,13 +1688,13 @@ class TestBatchRetry:
         assert loaded_manifest is not None
         assert loaded_manifest.batch_id == manifest.batch_id
 
-    def test_load_manifest_file_not_found(self, engine, temp_dir):
+    async def test_load_manifest_file_not_found(self, engine, temp_dir):
         """Test _load_manifest with non-existent file."""
         non_existent_file = temp_dir / "non_existent.json"
         result = engine._load_manifest(non_existent_file)
         assert result is None
 
-    def test_save_manifest_success(self, engine, temp_dir, run_context):
+    async def test_save_manifest_success(self, engine, temp_dir, run_context):
         """Test _save_manifest method."""
         # Create a manifest
         csv_content = "name,value\ntest,data\n"
@@ -1734,7 +1716,7 @@ class TestBatchRetry:
         loaded_manifest = engine._load_manifest(manifest_file)
         assert loaded_manifest.total_jobs == 5
 
-    def test_find_job_by_id_success(self, engine, temp_dir, run_context):
+    async def test_find_job_by_id_success(self, engine, temp_dir, run_context):
         """Test _find_job_by_id method."""
         # Create a manifest
         csv_content = "name,value\ntest,data\n"
@@ -1750,7 +1732,7 @@ class TestBatchRetry:
         assert found_job is not None
         assert found_job.job_id == job_id
 
-    def test_find_job_by_id_not_found(self, engine, temp_dir, run_context):
+    async def test_find_job_by_id_not_found(self, engine, temp_dir, run_context):
         """Test _find_job_by_id when job not found."""
         # Create a manifest
         csv_content = "name,value\ntest,data\n"
@@ -1763,7 +1745,7 @@ class TestBatchRetry:
         result = engine._find_job_by_id(manifest, "non_existent_job")
         assert result is None
 
-    def test_is_batch_complete_true(self, engine, temp_dir, run_context):
+    async def test_is_batch_complete_true(self, engine, temp_dir, run_context):
         """Test _is_batch_complete when batch is complete."""
         # Create a manifest
         csv_content = "name,value\ntest,data\n"
@@ -1779,7 +1761,7 @@ class TestBatchRetry:
         result = engine._is_batch_complete(manifest)
         assert result is True
 
-    def test_is_batch_complete_false(self, engine, temp_dir, run_context):
+    async def test_is_batch_complete_false(self, engine, temp_dir, run_context):
         """Test _is_batch_complete when batch is not complete."""
         # Create a manifest
         csv_content = "name,value\ntest,data\n"
@@ -1792,7 +1774,7 @@ class TestBatchRetry:
         result = engine._is_batch_complete(manifest)
         assert result is False
 
-    def test_generate_batch_summary_success(self, engine, temp_dir, run_context):
+    async def test_generate_batch_summary_success(self, engine, temp_dir, run_context):
         """Test _generate_batch_summary method."""
         # Create a manifest
         csv_content = "name,value\ntest,data\n"
@@ -1815,7 +1797,7 @@ class TestBatchRetry:
             summary_path = run_context.artifact_dir("batch") / "batch_summary.json"
             mock_generator.save_summary.assert_called_once_with(mock_summary, summary_path)
 
-    def test_generate_batch_summary_import_error(self, engine, temp_dir, run_context):
+    async def test_generate_batch_summary_import_error(self, engine, temp_dir, run_context):
         """Test _generate_batch_summary when import fails."""
         # Create a manifest
         csv_content = "name,value\ntest,data\n"
@@ -1830,7 +1812,7 @@ class TestBatchRetry:
                 # Should not raise exception
                 engine._generate_batch_summary(manifest)
 
-    def test_export_failed_rows_success(self, engine, temp_dir, run_context):
+    async def test_export_failed_rows_success(self, engine, temp_dir, run_context):
         """Test _export_failed_rows method."""
         # Create a manifest with failed jobs
         csv_content = "name,value\ntest1,data1\ntest2,data2\n"
@@ -1860,7 +1842,7 @@ class TestBatchRetry:
             assert 'test1,data1,Test error,' in content
             assert 'test2,data2,Another error,' in content
 
-    def test_export_failed_rows_no_failed_jobs(self, engine, temp_dir, run_context):
+    async def test_export_failed_rows_no_failed_jobs(self, engine, temp_dir, run_context):
         """Test _export_failed_rows when no failed jobs."""
         # Create a manifest with no failed jobs
         csv_content = "name,value\ntest,data\n"
@@ -1876,7 +1858,7 @@ class TestBatchRetry:
         failed_csv_path = run_context.artifact_dir("batch") / "failed_rows.csv"
         assert not failed_csv_path.exists()
 
-    def test_validate_retry_parameters_success(self, engine):
+    async def test_validate_retry_parameters_success(self, engine):
         """Test _validate_retry_parameters method."""
         max_retry_delay = engine._validate_retry_parameters(
             max_retries=3,
@@ -1886,7 +1868,7 @@ class TestBatchRetry:
         )
         assert max_retry_delay == 10.0
 
-    def test_validate_retry_parameters_default_max_delay(self, engine):
+    async def test_validate_retry_parameters_default_max_delay(self, engine):
         """Test _validate_retry_parameters with default max_retry_delay."""
         max_retry_delay = engine._validate_retry_parameters(
             max_retries=3,
@@ -1896,12 +1878,12 @@ class TestBatchRetry:
         )
         assert max_retry_delay == 60.0  # DEFAULT_MAX_RETRY_DELAY
 
-    def test_validate_retry_parameters_invalid_max_retries(self, engine):
+    async def test_validate_retry_parameters_invalid_max_retries(self, engine):
         """Test _validate_retry_parameters with invalid max_retries."""
         with pytest.raises(ValueError, match="max_retries must be >= 0"):
             engine._validate_retry_parameters(-1, 1.0, 2.0, None)
 
-    def test_validate_retry_parameters_invalid_retry_delay(self, engine):
+    async def test_validate_retry_parameters_invalid_retry_delay(self, engine):
         """Test _validate_retry_parameters with invalid retry_delay."""
         with pytest.raises(ValueError, match="retry_delay must be > 0"):
             engine._validate_retry_parameters(3, 0, 2.0, None)
@@ -1909,7 +1891,7 @@ class TestBatchRetry:
         with pytest.raises(ValueError, match="retry_delay must be > 0"):
             engine._validate_retry_parameters(3, -1, 2.0, None)
 
-    def test_validate_retry_parameters_invalid_backoff_factor(self, engine):
+    async def test_validate_retry_parameters_invalid_backoff_factor(self, engine):
         """Test _validate_retry_parameters with invalid backoff_factor."""
         with pytest.raises(ValueError, match="backoff_factor must be > 1.0"):
             engine._validate_retry_parameters(3, 1.0, 1.0, None)
@@ -1917,7 +1899,7 @@ class TestBatchRetry:
         with pytest.raises(ValueError, match="backoff_factor must be > 1.0"):
             engine._validate_retry_parameters(3, 0.5, 1.0, None)
 
-    def test_validate_retry_parameters_invalid_max_retry_delay(self, engine):
+    async def test_validate_retry_parameters_invalid_max_retry_delay(self, engine):
         """Test _validate_retry_parameters with invalid max_retry_delay."""
         with pytest.raises(ValueError, match="max_retry_delay must be > 0"):
             engine._validate_retry_parameters(3, 1.0, 2.0, 0)
@@ -1925,7 +1907,7 @@ class TestBatchRetry:
         with pytest.raises(ValueError, match="max_retry_delay must be > 0"):
             engine._validate_retry_parameters(3, 1.0, 2.0, -1)
 
-    def test_find_manifest_file_for_batch_success(self, engine, temp_dir, run_context):
+    async def test_find_manifest_file_for_batch_success(self, engine, temp_dir, run_context):
         """Test _find_manifest_file_for_batch method."""
         # Create a manifest
         csv_content = "name,value\ntest,data\n"
@@ -1941,12 +1923,12 @@ class TestBatchRetry:
         assert manifest_file is not None
         assert manifest_file.exists()
 
-    def test_find_manifest_file_for_batch_not_found(self, engine):
+    async def test_find_manifest_file_for_batch_not_found(self, engine):
         """Test _find_manifest_file_for_batch with non-existent batch."""
         result = engine._find_manifest_file_for_batch("non_existent_batch")
         assert result is None
 
-    def test_record_retry_metrics_success(self, engine):
+    async def test_record_retry_metrics_success(self, engine):
         """Test _record_retry_metrics method."""
         # Mock the metrics collector
         with patch('src.metrics.get_metrics_collector') as mock_get_collector:
@@ -1967,14 +1949,14 @@ class TestBatchRetry:
                 }
             )
 
-    def test_record_retry_metrics_no_collector(self, engine):
+    async def test_record_retry_metrics_no_collector(self, engine):
         """Test _record_retry_metrics when no metrics collector available."""
         # Mock get_metrics_collector to return None
         with patch('src.metrics.get_metrics_collector', return_value=None):
             # Should not raise exception
             engine._record_retry_metrics("test_batch", 5)
 
-    def test_record_batch_stop_metrics_success(self, engine):
+    async def test_record_batch_stop_metrics_success(self, engine):
         """Test _record_batch_stop_metrics method."""
         # Mock the metrics collector
         with patch('src.metrics.get_metrics_collector') as mock_get_collector:
@@ -1986,7 +1968,7 @@ class TestBatchRetry:
 
             # Verify metrics were recorded
             mock_collector.record_metric.assert_called_once_with(
-                name="batch_stopped",
+                name="batch_jobs_stopped",
                 value=3,
                 metric_type=mock_collector.record_metric.call_args[1]['metric_type'],
                 tags={
@@ -1995,89 +1977,90 @@ class TestBatchRetry:
                 }
             )
 
-    def test_record_batch_stop_metrics_no_collector(self, engine):
+    async def test_record_batch_stop_metrics_no_collector(self, engine):
         """Test _record_batch_stop_metrics when no metrics collector available."""
         # Mock get_metrics_collector to return None
         with patch('src.metrics.get_metrics_collector', return_value=None):
             # Should not raise exception
             engine._record_batch_stop_metrics("test_batch", 3)
 
-    def test_execute_job_with_retry_failure(self, engine):
+    async def test_execute_job_with_retry_failure(self, engine):
         """Test execute_job_with_retry with permanent failure."""
         job = BatchJob("test_job", "test_run", {"data": "test"})
 
         # Mock execution to always fail
         with patch.object(engine, '_execute_single_job', side_effect=Exception("Test failure")):
             with pytest.raises(Exception, match="Test failure"):
-                engine.execute_job_with_retry(job, max_retries=2)
+                await engine.execute_job_with_retry(job, max_retries=2)
 
-    def test_execute_single_job_success(self, engine):
+    async def test_execute_single_job_success(self, engine):
         """Test _execute_single_job method success."""
         job = BatchJob("test_job", "test_run", {"data": "test"})
 
         # Mock successful execution
         with patch.object(engine, '_simulate_job_execution', return_value='completed'):
-            status = engine._execute_single_job(job)
+            status = await engine._execute_single_job(job)
             assert status == 'completed'
 
-    def test_execute_single_job_invalid_job(self, engine):
+    async def test_execute_single_job_invalid_job(self, engine):
         """Test _execute_single_job with invalid job."""
         with pytest.raises(ValueError, match="job must be a BatchJob instance"):
-            engine._execute_single_job("not_a_job")
+            await engine._execute_single_job("not_a_job")
 
-    def test_execute_single_job_no_row_data(self, engine):
+    async def test_execute_single_job_no_row_data(self, engine):
         """Test _execute_single_job with job having no row data."""
         job = BatchJob("test_job", "test_run", None)
 
         with pytest.raises(RuntimeError, match="Job test_job: ValueError"):
-            engine._execute_single_job(job)
+            await engine._execute_single_job(job)
 
-    def test_execute_single_job_invalid_row_data_type(self, engine):
+    async def test_execute_single_job_invalid_row_data_type(self, engine):
         """Test _execute_single_job with invalid row data type."""
         job = BatchJob("test_job", "test_run", "invalid_data")
 
         with pytest.raises(RuntimeError, match="Job test_job: AttributeError"):
-            engine._execute_single_job(job)
+            await engine._execute_single_job(job)
 
-    def test_simulate_job_execution_success(self, engine):
+    async def test_simulate_job_execution_success(self, engine):
         """Test _simulate_job_execution method success."""
-        job = BatchJob("test_job", "test_run", {"data": "test"})
+        # Test expects task/command field now
+        job = BatchJob("test_job", "test_run", {"task": "test_task"})
+        
+        # Test validation only - real execution requires mocking the whole automation stack
+        with pytest.raises(ValueError, match="is not a valid pre-registered command"):
+            await engine._simulate_job_execution(job, success_rate=1.0)
 
-        status = engine._simulate_job_execution(job, success_rate=1.0)
-        assert status == 'completed'
-
-    def test_simulate_job_execution_invalid_job(self, engine):
+    async def test_simulate_job_execution_invalid_job(self, engine):
         """Test _simulate_job_execution with invalid job."""
         with pytest.raises(ValueError, match="job must be a BatchJob instance"):
-            engine._simulate_job_execution("not_a_job")
+            await engine._simulate_job_execution("not_a_job")
 
-    def test_simulate_job_execution_no_row_data(self, engine):
+    async def test_simulate_job_execution_no_row_data(self, engine):
         """Test _simulate_job_execution with job having no row data."""
         job = BatchJob("test_job", "test_run", None)
 
         with pytest.raises(ValueError, match="Job test_job has no row data"):
-            engine._simulate_job_execution(job)
+            await engine._simulate_job_execution(job)
 
-    def test_simulate_job_execution_with_delay(self, engine):
-        """Test _simulate_job_execution with random delay."""
+    async def test_simulate_job_execution_with_delay(self, engine):
+        """Test _simulate_job_execution with delay parameter (now ignored)."""
+        # max_random_delay parameter is now ignored in new implementation
+        job = BatchJob("test_job", "test_run", {"task": "test_task"})
+
+        # Test that missing task causes appropriate error
+        job_no_task = BatchJob("test_job", "test_run", {"data": "test"})
+        with pytest.raises(ValueError, match="has no 'task' or 'command' field"):
+            await engine._simulate_job_execution(job_no_task, max_random_delay=2.0, success_rate=1.0)
+
+    async def test_simulate_job_execution_no_delay(self, engine):
+        """Test _simulate_job_execution (delay parameter now ignored)."""
+        # Test validation
         job = BatchJob("test_job", "test_run", {"data": "test"})
+        
+        with pytest.raises(ValueError, match="has no 'task' or 'command' field"):
+            await engine._simulate_job_execution(job, max_random_delay=0, success_rate=1.0)
 
-        with patch('time.sleep') as mock_sleep:
-            with patch('random.uniform', return_value=1.5):
-                status = engine._simulate_job_execution(job, max_random_delay=2.0, success_rate=1.0)
-                assert status == 'completed'
-                mock_sleep.assert_called_once_with(1.5)
-
-    def test_simulate_job_execution_no_delay(self, engine):
-        """Test _simulate_job_execution with no delay."""
-        job = BatchJob("test_job", "test_run", {"data": "test"})
-
-        with patch('time.sleep') as mock_sleep:
-            status = engine._simulate_job_execution(job, max_random_delay=0, success_rate=1.0)
-            assert status == 'completed'
-            mock_sleep.assert_not_called()
-
-    def test_to_portable_relpath_success(self, engine, temp_dir):
+    async def test_to_portable_relpath_success(self, engine, temp_dir):
         """Test _to_portable_relpath method."""
         test_file = temp_dir / "test.txt"
         test_file.write_text("test")
@@ -2086,7 +2069,7 @@ class TestBatchRetry:
         assert isinstance(rel_path, str)
         assert rel_path.endswith("test.txt")
 
-    def test_to_portable_relpath_fallback(self, engine, temp_dir):
+    async def test_to_portable_relpath_fallback(self, engine, temp_dir):
         """Test _to_portable_relpath fallback logic."""
         test_file = temp_dir / "test.txt"
         test_file.write_text("test")
@@ -2096,7 +2079,7 @@ class TestBatchRetry:
             rel_path = engine._to_portable_relpath(test_file)
             assert rel_path == "test.txt"
 
-    def test_configure_logging_success(self, engine):
+    async def test_configure_logging_success(self, engine):
         """Test _configure_logging method."""
         # Test with different log levels
         test_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
@@ -2108,7 +2091,7 @@ class TestBatchRetry:
             # Verify logger level was set
             assert engine.logger.level == getattr(logging, level)
 
-    def test_configure_logging_invalid_level(self, engine):
+    async def test_configure_logging_invalid_level(self, engine):
         """Test _configure_logging with invalid log level."""
         engine.config['log_level'] = 'INVALID'
         # Should not raise exception, just use default

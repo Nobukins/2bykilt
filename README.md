@@ -665,3 +665,36 @@ python -m pytest
 # 特定のテストスイート実行
 python -m pytest tests/batch/ -v
 ```
+
+## 🧪 テストガイド (Test Guide)
+
+テスト実行とスキップポリシーの最新情報は `docs/test-execution-guide.md` に集約しました。
+
+クイックリンク:
+- 全体: docs/test-execution-guide.md
+- 目的別: 
+  - フル実行: `pytest -q`
+  - スキップ理由一覧: `pytest -rs -q`
+  - バッチエンジンのみ: `pytest tests/test_batch_engine.py -v`
+
+現在のスキップ分類 (106 → 31 に削減 済):
+- LLM依存 (ENABLE_LLM=false 時 1件)
+- local_only (重い/最終検証向け)
+- integration (環境依存/ブラウザ)
+- git_script_integration (Resolverリファクタ待ち 8件)
+
+環境フラグ:
+```
+ENABLE_LLM=true                 # LLMテストを有効化
+RUN_LOCAL_INTEGRATION=1         # integrationを実行
+RUN_LOCAL_FINAL_VERIFICATION=1  # final verification (local_only) 実行
+```
+
+クリーンアップ:
+```
+./scripts/clean_test_artifacts.sh          # 生成アーティファクト最小クリア
+./scripts/clean_test_logs.sh --dry-run     # ログ/カバレッジ/キャッシュ確認
+./scripts/clean_test_logs.sh               # 実行
+```
+
+詳細な手順・将来のマーカー設計(#81)はガイド参照。

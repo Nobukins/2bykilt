@@ -11,7 +11,6 @@ import asyncio
 from unittest.mock import patch, MagicMock, AsyncMock
 
 from src.script.script_manager import run_script
-from src.script.git_script_resolver import get_git_script_resolver
 
 
 class TestGitScriptIntegration:
@@ -19,26 +18,26 @@ class TestGitScriptIntegration:
 
     @pytest.fixture
     def mock_resolver(self):
-        """Mock the git script resolver for testing"""
-        with patch('src.script.git_script_resolver.get_git_script_resolver') as mock_get_resolver:
-            mock_resolver = MagicMock()
-            mock_get_resolver.return_value = mock_resolver
-            yield mock_resolver
+        """Create a mock git script resolver for testing"""
+        mock_resolver = MagicMock()
+        # Set up common async methods
+        mock_resolver.resolve_git_script = AsyncMock()
+        mock_resolver.validate_script_info = AsyncMock()
+        return mock_resolver
 
-    @pytest.mark.skip(reason="Mocking issue with get_git_script_resolver - needs refactoring")
     @pytest.mark.asyncio
     async def test_git_script_resolution_integration(self, mock_resolver):
         """Test that git-script resolution is called during script execution"""
         # Mock resolver to return resolved script info
-        mock_resolver.resolve_git_script = AsyncMock(return_value={
+        mock_resolver.resolve_git_script.return_value = {
             'type': 'git-script',
             'git': 'https://github.com/test/repo.git',
             'script_path': 'scripts/test.py',
             'version': 'main',
             'resolved_from': 'llms.txt'
-        })
+        }
 
-        mock_resolver.validate_script_info = AsyncMock(return_value=(True, "Valid"))
+        mock_resolver.validate_script_info.return_value = (True, "Valid")
 
         # Mock the actual script execution to avoid real git operations
         with patch('src.script.script_manager.clone_git_repo', new_callable=AsyncMock) as mock_clone:
@@ -53,10 +52,11 @@ class TestGitScriptIntegration:
                     # Missing git and script_path - should be resolved
                 }
 
-                result, script_path = await run_script(
+                result, _ = await run_script(
                     script_info=script_info,
                     params={'query': 'test'},
-                    headless=True
+                    headless=True,
+                    git_script_resolver=mock_resolver
                 )
 
                 # Verify resolver was called
@@ -66,12 +66,11 @@ class TestGitScriptIntegration:
                 # Verify script execution was attempted
                 assert result is not None
 
-    @pytest.mark.skip(reason="Mocking issue with get_git_script_resolver - needs refactoring")
     @pytest.mark.asyncio
     async def test_git_script_with_predefined_info(self, mock_resolver):
         """Test git-script execution when git/script_path are already provided"""
         # Mock validation only (no resolution needed)
-        mock_resolver.validate_script_info = AsyncMock(return_value=(True, "Valid"))
+        mock_resolver.validate_script_info.return_value = (True, "Valid")
 
         with patch('src.script.script_manager.clone_git_repo', new_callable=AsyncMock) as mock_clone:
             with patch('src.script.script_manager.process_execution', new_callable=AsyncMock) as mock_process:
@@ -87,10 +86,11 @@ class TestGitScriptIntegration:
                     'version': 'main'
                 }
 
-                result, script_path = await run_script(
+                result, _ = await run_script(
                     script_info=script_info,
                     params={'query': 'test'},
-                    headless=True
+                    headless=True,
+                    git_script_resolver=mock_resolver
                 )
 
                 # Verify resolver validation was called but not resolution
@@ -99,57 +99,63 @@ class TestGitScriptIntegration:
 
                 assert result is not None
 
-    @pytest.mark.skip(reason="Mocking issue with get_git_script_resolver - needs refactoring")
     @pytest.mark.asyncio
     async def test_git_script_resolution_failure(self, mock_resolver):
         """Test handling when git-script resolution fails"""
         # Mock the resolver's resolve_git_script method to return None
-        mock_resolver.resolve_git_script = AsyncMock(return_value=None)
+        mock_resolver.resolve_git_script.return_value = None
 
         script_info = {
             'type': 'git-script',
             'name': 'non-existent-script'
         }
 
-        # The test expects ValueError to be raised when resolution fails
-        with pytest.raises(ValueError, match="Could not resolve git-script"):
-            await run_script(
-                script_info=script_info,
-                params={},
-                headless=True
-            )
+        # The exception is caught and returned as error message
+        result, script_path = await run_script(
+            script_info=script_info,
+            params={},
+            headless=True,
+            git_script_resolver=mock_resolver
+        )
+        
+        # Verify error is returned
+        assert "Could not resolve git-script" in result
+        assert script_path is None
 
-    @pytest.mark.skip(reason="Mocking issue with get_git_script_resolver - needs refactoring")
     @pytest.mark.asyncio
     async def test_git_script_validation_failure(self, mock_resolver):
         """Test handling when git-script validation fails"""
         # Mock resolver to pass resolution but fail validation
-        mock_resolver.resolve_git_script = AsyncMock(return_value={
+        mock_resolver.resolve_git_script.return_value = {
             'type': 'git-script',
             'git': 'https://github.com/test/repo.git',
             'script_path': 'scripts/test.py'
-        })
+        }
 
-        mock_resolver.validate_script_info = AsyncMock(return_value=(False, "Invalid configuration"))
+        mock_resolver.validate_script_info.return_value = (False, "Invalid configuration")
 
         script_info = {
             'type': 'git-script',
             'name': 'test-script'
         }
 
-        with pytest.raises(ValueError, match="Invalid git-script configuration"):
-            await run_script(
-                script_info=script_info,
-                params={},
-                headless=True
-            )
+        # Exception is caught and returned as error message
+        result, script_path = await run_script(
+            script_info=script_info,
+            params={},
+            headless=True,
+            git_script_resolver=mock_resolver
+        )
+        
+        # Verify error is returned
+        assert "Invalid git-script configuration" in result
+        assert script_path is None
 
-    @pytest.mark.skip(reason="Mocking issue with get_git_script_resolver - needs refactoring")
     @pytest.mark.asyncio
     async def test_git_script_new_method_execution(self, mock_resolver):
         """Test git-script execution using NEW METHOD (2024+)"""
         # Mock resolver methods
-        mock_resolver.validate_script_info = AsyncMock(return_value=(True, "Valid"))
+        mock_resolver.validate_script_info.return_value = (True, "Valid")
 
         # Mock NEW METHOD execution
         with patch('src.script.script_manager.execute_git_script_new_method', new_callable=AsyncMock) as mock_new_method:
@@ -167,10 +173,11 @@ class TestGitScriptIntegration:
                     'script_path': 'scripts/test.py'
                 }
 
-                result, script_path = await run_script(
+                result, _ = await run_script(
                     script_info=script_info,
                     params={'query': 'test'},
-                    headless=True
+                    headless=True,
+                    git_script_resolver=mock_resolver
                 )
 
                 # Verify NEW METHOD was called
@@ -184,95 +191,105 @@ class TestGitScriptIntegration:
                 else:
                     os.environ.pop('BYKILT_USE_NEW_METHOD', None)
 
-    @pytest.mark.skip(reason="Mocking issue with get_git_script_resolver - needs refactoring")
     @pytest.mark.asyncio
     async def test_git_script_legacy_method_execution(self, mock_resolver):
         """Test git-script execution using LEGACY METHOD"""
         # Mock resolver methods
-        mock_resolver.validate_script_info = AsyncMock(return_value=(True, "Valid"))
+        mock_resolver.validate_script_info.return_value = (True, "Valid")
 
         # Mock legacy method components
         with patch('src.script.script_manager.clone_git_repo', new_callable=AsyncMock) as mock_clone:
             with patch('src.script.script_manager.process_execution', new_callable=AsyncMock) as mock_process:
                 with patch('src.script.script_manager.patch_search_script_for_chrome', new_callable=AsyncMock) as mock_patch:
-                    mock_clone.return_value = '/tmp/test_repo'
-                    mock_process.return_value = (MagicMock(), ['Legacy method executed'])
-                    mock_patch.return_value = None
+                    with patch('os.path.exists') as mock_exists:
+                        mock_clone.return_value = '/tmp/test_repo'
+                        mock_process.return_value = (MagicMock(returncode=0, communicate=AsyncMock(return_value=(b'', b''))), ['Legacy method executed'])
+                        mock_patch.return_value = None
+                        mock_exists.return_value = True
 
-                    # Set environment to use LEGACY METHOD
-                    original_env = os.environ.get('BYKILT_USE_NEW_METHOD')
-                    os.environ['BYKILT_USE_NEW_METHOD'] = 'false'
+                        # Set environment to use LEGACY METHOD
+                        original_env = os.environ.get('BYKILT_USE_NEW_METHOD')
+                        os.environ['BYKILT_USE_NEW_METHOD'] = 'false'
 
-                    try:
-                        script_info = {
-                            'type': 'git-script',
-                            'name': 'test-script',
-                            'git': 'https://github.com/test/repo.git',
-                            'script_path': 'scripts/test.py',
-                            'command': 'python test.py'
-                        }
+                        try:
+                            script_info = {
+                                'type': 'git-script',
+                                'name': 'test-script',
+                                'git': 'https://github.com/test/repo.git',
+                                'script_path': 'scripts/test.py',
+                                'command': 'python test.py'
+                            }
 
-                        result, script_path = await run_script(
-                            script_info=script_info,
-                            params={'query': 'test'},
-                            headless=True
-                        )
+                            result, _ = await run_script(
+                                script_info=script_info,
+                                params={'query': 'test'},
+                                headless=True,
+                                git_script_resolver=mock_resolver
+                            )
 
-                        # Verify legacy method components were called
-                        mock_clone.assert_called_once()
-                        mock_process.assert_called_once()
-                        mock_patch.assert_called_once()
+                            # Verify legacy method components were called
+                            mock_clone.assert_called_once()
+                            mock_process.assert_called_once()
+                            mock_patch.assert_called_once()
 
-                        assert result is not None
+                            assert result is not None
 
-                    finally:
-                        # Restore original environment
-                        if original_env is not None:
-                            os.environ['BYKILT_USE_NEW_METHOD'] = original_env
-                        else:
-                            os.environ.pop('BYKILT_USE_NEW_METHOD', None)
+                        finally:
+                            # Restore original environment
+                            if original_env is not None:
+                                os.environ['BYKILT_USE_NEW_METHOD'] = original_env
+                            else:
+                                os.environ.pop('BYKILT_USE_NEW_METHOD', None)
 
-    @pytest.mark.skip(reason="Mocking issue with get_git_script_resolver - needs refactoring")
     @pytest.mark.asyncio
     async def test_git_script_resolution_order(self, mock_resolver):
         """Test that git-script resolution follows correct priority order"""
-        # Test absolute path resolution (highest priority)
-        with patch.object(mock_resolver, '_resolve_absolute_path', new_callable=AsyncMock) as mock_absolute:
-            with patch.object(mock_resolver, '_resolve_relative_path', new_callable=AsyncMock) as mock_relative:
-                with patch.object(mock_resolver, '_resolve_from_llms_txt', new_callable=AsyncMock) as mock_llms:
+        # Test that resolver is called with the script name
+        mock_resolver.resolve_git_script.return_value = {
+            'type': 'script', 
+            'resolved_from': 'absolute_path',
+            'git': 'https://github.com/test/repo.git',
+            'script_path': 'test.py'
+        }
+        mock_resolver.validate_script_info.return_value = (True, "Valid")
 
-                    mock_absolute.return_value = {'type': 'script', 'resolved_from': 'absolute_path'}
-                    mock_relative.return_value = None
-                    mock_llms.return_value = None
+        with patch('src.script.script_manager.execute_git_script_new_method', new_callable=AsyncMock) as mock_exec:
+            mock_exec.return_value = ("Success", "/path/to/script")
 
-                    script_info = {
-                        'type': 'git-script',
-                        'name': '/absolute/path/to/script.py'
-                    }
+            script_info = {
+                'type': 'git-script',
+                'name': '/absolute/path/to/script.py'
+            }
 
-                    # This should trigger absolute path resolution
-                    mock_resolver.resolve_git_script = AsyncMock(return_value=mock_absolute.return_value)
+            await run_script(
+                script_info=script_info,
+                params={},
+                headless=True,
+                git_script_resolver=mock_resolver
+            )
 
-                    result = await mock_resolver.resolve_git_script('/absolute/path/to/script.py')
+            # Verify resolver was called with the absolute path
+            mock_resolver.resolve_git_script.assert_called_once_with('/absolute/path/to/script.py', {})
 
-                    # Verify absolute path resolution was attempted first
-                    mock_absolute.assert_called()
-
-    @pytest.mark.skip(reason="Mocking issue with get_git_script_resolver - needs refactoring")
     @pytest.mark.asyncio
     async def test_git_script_error_handling(self, mock_resolver):
         """Test error handling in git-script processing"""
         # Mock resolver to raise exception during resolution
-        mock_resolver.resolve_git_script = AsyncMock(side_effect=Exception("Resolution failed"))
+        mock_resolver.resolve_git_script.side_effect = Exception("Resolution failed")
 
         script_info = {
             'type': 'git-script',
             'name': 'failing-script'
         }
 
-        with pytest.raises(Exception):
-            await run_script(
-                script_info=script_info,
-                params={},
-                headless=True
-            )
+        # Exception is caught and returned as error message
+        result, script_path = await run_script(
+            script_info=script_info,
+            params={},
+            headless=True,
+            git_script_resolver=mock_resolver
+        )
+        
+        # Verify error is returned
+        assert "Resolution failed" in result
+        assert script_path is None

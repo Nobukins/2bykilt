@@ -251,3 +251,6 @@ pip-audit-normalized.json
 
 # Metrics artifacts (local runs)
 artifacts/metrics/*.csv
+
+# Temporary files for recording under src/artifacts
+src/artifacts/**
