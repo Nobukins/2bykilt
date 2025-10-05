@@ -187,6 +187,16 @@ Note: PR #286 was merged to stabilize the pytest suite and improve runner/script
 - #279: Config: Consolidate configuration menus, env files, and defaults
 - #280: Browser Settings: Improve Browser Settings menu clarity & enforce behavior across run types
 
+この一覧は `ISSUE_DEPENDENCIES.yml` に定義された全 Issue を簡潔に示します（人間用の素早い参照）。自動化スクリプトは上の GENERATED 範囲を更新し、下のコンパクト索引は検証用に維持してください。
+
+#### Phase2: コンパクト全件索引 (パリティ保証)
+
+この一覧は `ISSUE_DEPENDENCIES.yml` に定義された全 Issue を簡潔に示します（人間用の素早い参照）。自動化スクリプトは上の GENERATED 範囲を更新し、下のコンパクト索引は検証用に維持してください。
+
+この一覧は `ISSUE_DEPENDENCIES.yml` に定義された全 Issue を簡潔に示します（人間用の素早い参照）。自動化スクリプトは上の GENERATED 範囲を更新し、下のコンパクト索引は検証用に維持してください。
+
+(以下コンパクト索引は継続して表示されています。)
+
 - #101: Issue #101 (refer to ISSUE_DEPENDENCIES.yml) (CLOSED)
 - #263: Issue #263 (refer to ISSUE_DEPENDENCIES.yml) (CLOSED)
 - #92: Issue #92 (refer to ISSUE_DEPENDENCIES.yml)
@@ -197,7 +207,6 @@ Note: PR #286 was merged to stabilize the pytest suite and improve runner/script
     I -->|YES| K[人間: 統合 & コミット]
     K --> L[自動: CI/CD実行]
     L --> M[人間: リリース判断]
-```
 
 #### 3. 効率化プロトコル
 
