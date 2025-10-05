@@ -1,6 +1,6 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-10-05T03:21:04+00:00
+Generated at (UTC): 2025-10-05T12:30:14+00:00
 
 ## 1. メタサマリー
 
@@ -536,6 +536,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 0
 - Depends (0): (none)
 - Dependents (0): (none)
+- Progress: {"state": "in-progress", "note": "partial: PR #286 applied - further stability work remains"}
 
 ### Issue 102: Flags artifacts helper
 - Priority: P2, Phase: 2, Area: config
@@ -811,7 +812,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 0
 - Depends (1): 221
 - Dependents (0): (none)
-- Progress: {"state": "open"}
+- Progress: {"state": "in-progress", "note": "partial: PR #286 addressed script/artifact paths; UI follow-up required"}
 
 ### Issue 226: [runner][bug] search-linkedin 実行時エラー修正
 - Priority: P0, Phase: 2, Area: runner
@@ -865,7 +866,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 0
 - Depends (0): (none)
 - Dependents (0): (none)
-- Progress: {"state": "open"}
+- Progress: {"state": "in-progress", "note": "partial: many tests stabilized in PR #286; additional coverage tasks remain"}
 
 ### Issue 240: P0: Fix user profile utilization in browser launch - Critical SSO/Cookie functionality missing
 - Priority: P0, Phase: 2, Area: config
@@ -1063,7 +1064,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 0
 - Depends (0): (none)
 - Dependents (0): (none)
-- Progress: {"state": "open"}
+- Progress: {"state": "in-progress", "note": "partial: run_script artifact move added in PR #286; CSV batch integration verification pending"}
 
 ### Issue 277: Artifacts UI: Provide UI listing for screenshots, text & element extracts
 - Priority: P2, Phase: 2, Area: artifacts
