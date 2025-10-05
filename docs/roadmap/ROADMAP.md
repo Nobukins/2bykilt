@@ -189,6 +189,7 @@ Note: PR #286 was merged to stabilize the pytest suite and improve runner/script
 
 - #101: Issue #101 (refer to ISSUE_DEPENDENCIES.yml) (CLOSED)
 - #263: Issue #263 (refer to ISSUE_DEPENDENCIES.yml) (CLOSED)
+- #92: Issue #92 (refer to ISSUE_DEPENDENCIES.yml)
 
     F -->|YES| H[人間: コードレビュー]
     H --> I{レビューPASS?}
