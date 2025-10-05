@@ -63,9 +63,60 @@ Progress Summary (Phase2): Phase2-04 Done / Phase2-05 Done / Phase2-06 Done / Ph
 Note: PR #286 was merged to stabilize the pytest suite and improve runner/script artifact behavior. As a result, several issues were partially addressed and marked in-progress in `ISSUE_DEPENDENCIES.yml` (notably #81, #224, #231, #276). Further follow-up work and UI verification remains for those items.
 
 
+
 ### Phase2 - 全Issueインデックス (ISSUE_DEPENDENCIES.yml と一致)
 
-このサブセクションには、`docs/roadmap/ISSUE_DEPENDENCIES.yml` に定義されている全ての Issue 番号とタイトルを列挙します。これにより、YAML 側で管理されているすべての Issue が B. フェーズ (Phase2 統合) の文脈内に明示的に表示されます。
+このサブセクションは、`ISSUE_DEPENDENCIES.yml` をソースにして Wave 単位でグルーピングした視認性の高い一覧を提供します。
+
+使い方 (Agent / 自動生成向け):
+
+- `ISSUE_DEPENDENCIES.yml` をパースして issue の `meta.phase` / `meta.priority` / `progress.state` を取得します。
+- Agent はファイル内の `<!-- GENERATED:phase2-index -->` 範囲を上書きして Wave ベースの一覧を生成してください。
+- Wave ヘッダは: `#### Wave: <name> — <短い説明> (完了数/全件数)` の形式で出力します。
+- 各 Issue 行は短く: `- #NNN [P0|P1|P2|P3] (state) : Title` で表現してください。
+
+<!-- GENERATED:phase2-index START -->
+#### Wave: Phase1 (phase='1') (14/23)
+
+- #25 [P0] (done) : git_script が llms.txt で指定したスクリプトを正しく解決するよう修正
+- #28 [P0] (done) : 録画ファイル保存パス統一
+- #30 [P0] (done) : 録画タイプ間不整合是正
+- #31 [P0] (done) : 統一ログ設計 (JSON Lines)
+- #32 [P0] (done) : Run/Job ID 基盤
+- #33 [P0] (open) : スクリーンショット取得ユーティリティ
+- #34 [P1] (done) : 要素値キャプチャ & エクスポート
+- #35 [P0] (done) : アーティファクト manifest v2
+- #36 [P1] (done) : アーティファクト一覧 API
+- #37 [P1] (done) : 動画アーティファクト保持期間
+- ... (+13 more)
+
+#### Wave: Phase1-late (phase='1-late') (6/14)
+
+- #38 [P2] (done) : 録画統一後回帰テストスイート
+- #43 [P1] (open) : ENABLE_LLM パリティ
+- #57 [P1] (done) : ログ保持期間 & ローテーション
+- #60 [P1] (open) : シークレットマスキング拡張
+- #63 [P0] (open) : llms.txt スキーマ & バリデータ
+- #66 [P2] (open) : ドキュメント整備 第1弾
+- ... (+7 more)
+
+#### Wave: Phase2 (phase='2') (20/82)
+
+- #39 [P1] (done) : CSV 駆動バッチエンジンコア
+- #40 [P2] (done) : CSV D&D UI 連携
+- #41 [P2] (done) : バッチ進捗・サマリー
+- #42 [P2] (done) : バッチ部分リトライ
+- #46 [P2] (open) : Run/Job タイムアウト & キャンセル
+- #47 [P2] (open) : 並列実行キュー & 制限
+- #48 [P2] (open) : 環境変数バリデーション & 診断
+- #49 [P3] (open) : ユーザースクリプト プラグインアーキテクチャ
+- #51 [P2] (open) : Windows プロファイル永続化
+- #52 [P2] (open) : サンドボックス allow/deny パス
+- ... (+72 more)
+
+<!-- GENERATED:phase2-index END -->
+
+（上の GENERATED 範囲は Agent による再生成を想定した見出し付きの Wave 表示例です。下に続く "コンパクト全件索引" は検証・参照用に維持します。）
 
 - #25: git_script が llms.txt で指定したスクリプトを正しく解決するよう修正
 - #28: 録画ファイル保存パス統一
@@ -187,11 +238,8 @@ Note: PR #286 was merged to stabilize the pytest suite and improve runner/script
 - #279: Config: Consolidate configuration menus, env files, and defaults
 - #280: Browser Settings: Improve Browser Settings menu clarity & enforce behavior across run types
 
-この一覧は `ISSUE_DEPENDENCIES.yml` に定義された全 Issue を簡潔に示します（人間用の素早い参照）。自動化スクリプトは上の GENERATED 範囲を更新し、下のコンパクト索引は検証用に維持してください。
 
 #### Phase2: コンパクト全件索引 (パリティ保証)
-
-この一覧は `ISSUE_DEPENDENCIES.yml` に定義された全 Issue を簡潔に示します（人間用の素早い参照）。自動化スクリプトは上の GENERATED 範囲を更新し、下のコンパクト索引は検証用に維持してください。
 
 この一覧は `ISSUE_DEPENDENCIES.yml` に定義された全 Issue を簡潔に示します（人間用の素早い参照）。自動化スクリプトは上の GENERATED 範囲を更新し、下のコンパクト索引は検証用に維持してください。
 
