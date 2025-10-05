@@ -390,9 +390,39 @@ issues:
   "278": {title: "UI: Control tab visibility with Feature Flags (per-tab toggles & presets)", meta: {area: uiux, type: enhancement, priority: P1, phase: "2", stability: core}, depends: ["64"], dependents: [], progress: {state: open}, risk: null, critical_path_rank: 1}
   "279": {title: "Config: Consolidate configuration menus, env files, and defaults", meta: {area: config, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], progress: {state: open}, risk: null, critical_path_rank: 1}
   "280": {title: "Browser Settings: Improve Browser Settings menu clarity & enforce behavior across run types", meta: {area: uiux, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], progress: {state: open}, risk: null, critical_path_rank: 1}
+  "285":
+    title: "Browser-Use/Web-UIをベースとしてUI周りのリファクタリング"
+    meta:
+      area: uiux
+      type: enhancement
+      # inferred from labels: priority:P2
+      priority: P2
+      # inferred: UI refactor belongs in Phase2
+      phase: "2"
+      stability: core
+    depends: []
+    dependents: []
+    risk: high # inferred from issue label 'risk/high'
+    progress:
+      state: open
+    critical_path_rank: 1
+  "287":
+    title: "Template for new issue and new PR"
+    meta:
+      area: docs
+      type: enhancement
+      priority: P3 # inferred as low priority governance/template work
+      phase: "2"
+      stability: core
+    depends: []
+    dependents: []
+    risk: null
+    progress:
+      state: open
+    critical_path_rank: 10
 summary:
-  total_issues: 119
-  high_risk: ["31", "46", "49", "54", "62", "176", "237"]
+  total_issues: 121
+  high_risk: ["31", "46", "49", "54", "62", "176", "237", "285"]
   longest_chain_example: ["65", "64", "63", "66", "67"]
   data_quality_checks:
     no_cycles_detected: true
@@ -425,6 +455,8 @@ summary:
       - "277"
       - "279"
       - "280"
+      - "285"
+      - "287"
 
 last_synced:
   utc: "2025-10-05T12:00:00Z"
@@ -485,6 +517,8 @@ last_synced:
     "278": "OPEN"
     "279": "OPEN"
     "280": "OPEN"
+    "285": "OPEN"
+    "287": "OPEN"
 
 validation_rules:
   - "All blocking dependencies must be completed before starting an issue"
