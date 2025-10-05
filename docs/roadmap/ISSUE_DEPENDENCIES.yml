@@ -293,7 +293,7 @@ issues:
       2}
   "81": {title: "Async/Browser テスト安定化計画", meta: {area: runner, type: stability, 
         priority: P1, phase: "1", stability: core}, depends: [], dependents: [], 
-      risk: null, critical_path_rank: 2}
+      risk: null, critical_path_rank: 2, progress: {state: in-progress, note: "partial: PR #286 applied - further stability work remains"}}
   "87": {title: "スクリーンショット重複保存フラグ導入", meta: {area: artifacts, type: feat, 
         priority: P1, phase: "1-late", stability: core}, depends: ["33", "35"], 
       dependents: ["83"], progress: {state: done, primary_pr: 96}, risk: null, critical_path_rank: 1}
@@ -351,7 +351,7 @@ issues:
   "221": {title: "[artifacts][bug] script 以外で録画ファイル未生成 (browser-control/git-script)", meta: {area: artifacts, type: bug, priority: P1, phase: "2", stability: core}, depends: ["219", "220"], dependents: ["224"], risk: null, progress: {state: open}, critical_path_rank: 3}
   "222": {title: "[logging][feat] ログ出力ディレクトリ/カテゴリ標準化 & src/logs/ 廃止", meta: {area: logging, type: feat, priority: P1, phase: "2", stability: core}, depends: ["56", "57"], dependents: ["223"], risk: null, progress: {state: open}, critical_path_rank: 2}
   "223": {title: "[logging][bug] LOG_LEVEL 環境変数が反映されない (初期化順序バグ)", meta: {area: logging, type: bug, priority: P0, phase: "2", stability: core}, depends: ["222"], dependents: [], risk: null, progress: {state: done, primary_pr: 233}, critical_path_rank: 1}
-  "224": {title: "[ui/ux][config] RECORDING_PATH UI と環境変数の競合解消", meta: {area: uiux, type: enhancement, priority: P1, phase: "2", stability: core}, depends: ["221"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "224": {title: "[ui/ux][config] RECORDING_PATH UI と環境変数の競合解消", meta: {area: uiux, type: enhancement, priority: P1, phase: "2", stability: core}, depends: ["221"], dependents: [], risk: null, progress: {state: in-progress, note: "partial: PR #286 addressed script/artifact paths; UI follow-up required"}, critical_path_rank: 1}
 
   "237": {title: "Bug: Recording file generation not working for any run type", meta: {area: artifacts, type: bug, priority: P0, phase: "2", stability: core}, depends: ["221"], dependents: [], risk: high, progress: {state: done, primary_pr: 239}, critical_path_rank: 4}
   "218": {title: "テストカバレッジ率の向上", meta: {area: testing, type: enhancement, priority: P2, phase: "2", stability: experimental}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
@@ -378,14 +378,14 @@ issues:
   "250": {title: "Phase2-13 Runner Fixes Parallel", meta: {area: runner, type: bug, priority: P0, phase: "2", stability: core}, depends: ["220", "221"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
   "249": {title: "Phase2-07 Metrics Advancement", meta: {area: observability, type: enhancement, priority: P0, phase: "2", stability: core}, depends: ["222"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
   "248": {title: "CSV Batch Processing Enhancement Priority", meta: {area: batch, type: enhancement, priority: P1, phase: "2", stability: experimental}, depends: ["198", "173"], dependents: [], risk: null, progress: {state: in-progress}, critical_path_rank: 1}
-  "231": {title: "[testing][enhancement] テストスイートの改善とカバレッジ向上", meta: {area: testing, type: enhancement, priority: P2, phase: "2", stability: experimental}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "231": {title: "[testing][enhancement] テストスイートの改善とカバレッジ向上", meta: {area: testing, type: enhancement, priority: P2, phase: "2", stability: experimental}, depends: [], dependents: [], risk: null, progress: {state: in-progress, note: "partial: many tests stabilized in PR #286; additional coverage tasks remain"}, critical_path_rank: 1}
   "230": {title: "[documentation][enhancement] ドキュメントの改善とユーザガイドの充実", meta: {area: docs, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
   "229": {title: "[ui/ux][enhancement] UI/UXの統一性確保とデザインシステムの確立", meta: {area: uiux, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
   "228": {title: "[configuration][enhancement] LLM設定の改善と設定ガイドの明確化", meta: {area: config, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
   "227": {title: "[ui/ux][enhancement] LLM有効時のエラーメッセージ改善とUI統一性確保", meta: {area: uiux, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
   "257": {title: "[batch] CSV Batch Job Execution Not Triggered - Browser Automation Missing", meta: {area: batch, type: bug, priority: P0, phase: "2", stability: experimental}, depends: ["39", "198"], dependents: [], risk: null, progress: {state: done}, critical_path_rank: 1}
 
-  "276": {title: "Batch: Recording file not copied to artifacts runs folder when using CSV batch", meta: {area: artifacts, type: bug, priority: P1, phase: "2", stability: core}, depends: [], dependents: [], progress: {state: open}, risk: null, critical_path_rank: 1}
+  "276": {title: "Batch: Recording file not copied to artifacts runs folder when using CSV batch", meta: {area: artifacts, type: bug, priority: P1, phase: "2", stability: core}, depends: [], dependents: [], progress: {state: in-progress, note: "partial: run_script artifact move added in PR #286; CSV batch integration verification pending"}, risk: null, critical_path_rank: 1}
   "277": {title: "Artifacts UI: Provide UI listing for screenshots, text & element extracts", meta: {area: artifacts, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], progress: {state: open}, risk: null, critical_path_rank: 1}
   "278": {title: "UI: Control tab visibility with Feature Flags (per-tab toggles & presets)", meta: {area: uiux, type: enhancement, priority: P1, phase: "2", stability: core}, depends: ["64"], dependents: [], progress: {state: open}, risk: null, critical_path_rank: 1}
   "279": {title: "Config: Consolidate configuration menus, env files, and defaults", meta: {area: config, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], progress: {state: open}, risk: null, critical_path_rank: 1}
@@ -427,7 +427,7 @@ summary:
       - "280"
 
 last_synced:
-  utc: "2025-09-29T01:03:38Z"
+  utc: "2025-10-05T12:00:00Z"
   issues:
     "255": "OPEN"
     "251": "OPEN"
@@ -465,7 +465,8 @@ last_synced:
     "109": "OPEN"
     "108": "OPEN"
     "107": "OPEN"
-    "101": "OPEN"
+    "101": "CLOSED"
+    "263": "CLOSED"
     "92": "OPEN"
     "81": "OPEN"
     "67": "OPEN"
