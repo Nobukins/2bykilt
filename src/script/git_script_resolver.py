@@ -560,3 +560,8 @@ def get_git_script_resolver(cache_dir_name: Optional[str] = None, git_timeout: O
                 _git_script_resolver = GitScriptResolver(cache_dir_name=cache_dir_name, git_timeout=git_timeout, run_id=run_id)
 
     return _git_script_resolver
+
+def reset_git_script_resolver():
+    """Reset the global git script resolver instance (for testing)"""
+    global _git_script_resolver
+    _git_script_resolver = None

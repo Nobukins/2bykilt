@@ -1296,6 +1296,28 @@ class BatchEngine:
         except Exception as e:
             self.logger.debug(f"Failed to record retry metrics: {e}")
 
+    def _record_batch_stop_metrics(self, batch_id: str, stopped_count: int) -> None:
+        """Record metrics for batch stop operations."""
+        try:
+            from ..metrics import get_metrics_collector, MetricType
+
+            collector = get_metrics_collector()
+            if collector is None:
+                return
+
+            collector.record_metric(
+                name="batch_jobs_stopped",
+                value=stopped_count,
+                metric_type=MetricType.COUNTER,
+                tags={
+                    "batch_id": batch_id,
+                    "run_id": self.run_context.run_id_base
+                }
+            )
+
+        except Exception as e:
+            self.logger.debug(f"Failed to record batch stop metrics: {e}")
+
     # ------------------------------------------------------------------
     # Batch Stop (graceful) Support
     # ------------------------------------------------------------------

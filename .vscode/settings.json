@@ -2,5 +2,10 @@
     "sonarlint.connectedMode.project": {
         "connectionId": "nobukins",
         "projectKey": "Nobukins_2bykilt"
-    }
+    },
+    "python.testing.pytestArgs": [
+        "tests"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
 }

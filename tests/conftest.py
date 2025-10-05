@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 import sys
+import shutil
 import pytest
 
 
@@ -67,4 +68,37 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(skip_integration)
         if "local_only" in item.keywords and not run_final:
             item.add_marker(skip_final)
+
+
+@pytest.fixture(scope="function")
+def cleanup_singletons():
+    """
+    Fixture to reset singletons before and after each test.
+    
+    This fixture should be explicitly used by tests that need clean singleton state.
+    Use this instead of autouse to avoid conflicts with monkeypatch.chdir(tmp_path).
+    
+    Usage:
+        def test_something(tmp_path, monkeypatch, cleanup_singletons):
+            monkeypatch.chdir(tmp_path)
+            # test code here
+    """
+    # Import here to avoid circular dependencies
+    from src.core.artifact_manager import reset_artifact_manager_singleton
+    from src.config.feature_flags import FeatureFlags
+    from src.runtime.run_context import RunContext
+    
+    # Pre-test cleanup: reset singletons
+    RunContext.reset()
+    reset_artifact_manager_singleton()
+    FeatureFlags.clear_all_overrides()
+    
+    # Run the test
+    yield
+    
+    # Post-test cleanup: reset singletons again
+    RunContext.reset()
+    reset_artifact_manager_singleton()
+    FeatureFlags.clear_all_overrides()
+
 
