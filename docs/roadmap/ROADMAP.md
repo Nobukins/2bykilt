@@ -63,25 +63,25 @@
 
 | Wave (Phase2-XX) | Focus | Issues (順序) | 状態 | 備考 |
 |------------------|-------|---------------|------|------|
-| Phase2-01 | Runner 安定化基盤 | #46 ✅ → #47 ✅ → #48 | Planned | タイムアウト→並列→環境変数診断 |
+| Phase2-01 | Runner 安定化基盤 | #46 → #47 → #48 | Planned | タイムアウト→並列→環境変数診断 |
 | Phase2-02 | Sandbox 強化 & Exec 安全性 | #62 (PoC→Enforce) → #52 | Planned | システムコール/パス制限 → allow/deny 実装 |
 | Phase2-03 | Runner 拡張 (CDP/Windows) | #53 → #54 → #51 | Planned | 調査→抽象レイヤ→Win プロファイル |
 | Phase2-04 | Batch 価値強化 (完了) | #39 ✅ → #41 ✅ → #42 ✅ → #40 ✅ | Done | CSV コア→進捗→部分リトライ→UI |
 | Phase2-05 | Batch 成果物/エクスポート | #175 ✅ → #176 ✅ | Done | ポリシー成果物 & 宣言的抽出 PoC |
 | Phase2-06 | Artifacts 安定化 / 統合 | #111 ✅ → #110 ✅ → #106 → #104 | Done | 録画/パス統合 完了。flag enforcement/最終整備は反映済み (#193) |
-| Phase2-07 | Observability 完全化 | #58 ✅ → #59 ✅ → #102 → #222 → #223 ✅ | In Progress | Metrics API / Flag artifacts helper / ログ標準化 / LOG_LEVEL 修正 |
+| Phase2-07 | Observability 完全化 | #58 ✅ → #59 ✅ → #102 🏗️ → #222 → #223 ✅ | In Progress | Metrics API / Flag artifacts helper / ログ標準化 / LOG_LEVEL 修正 |
 | Phase2-08 | Quality / Coverage Gate | #109 → #107 → #108 | OPEN | カバレッジ→警告除去→Edge安定化 |
 | Phase2-09 | Security / Compliance | #154 ✅ (follow-ups TBD) | Partial | 追加セキュリティギャップ分析 (#177 ✅ 連携) |
 | Phase2-10 | Plugin 基盤 | #49 (part1 / part2) | Planned | 増分2段階 (Loader → Lifecycle) |
-| Phase2-11 | Docs & Automation | #66 → #67 → #92 → #81 → #178 ✅ | Done | 整備 / enrichment / workflow 追加 (dependency-pipeline workflow実装完了) |
-| Phase2-12 | MVP 定義 & ギャップ | #177 | ✅ Done | Enterprise readiness matrix 実装完了 (docs/mvp/README.md) |
-| Phase2-13 | Runner 構成標準化 & CI/Docs 追随 | #50 ✅ → #200 ✅ → #201 ✅ → #202 ✅ → #196 ✅ → #203 ✅ → #219 ✅ → #220 → #221 → #237 ✅ → #238 | In Progress | 配置規約→代表スクリプト→CI→Docs完了 / search-linkedin失敗 / browser-control失敗 / 録画未生成 / 録画ファイル生成バグ / LLM無効時browser-control失敗 / Note: PR #286 applied runtime fixes and test stabilizations affecting this group. |
-| Phase2-14 | UI/UX Internationalization | #199 → #224 | Planned | JA ベース → EN 追加。辞書/ヘルパ/トグル/フォールバック / RECORDING_PATH 競合解消 (partial: PR #286 fixed script/artifact path handling; UI follow-up required) |
-| Phase2-15 | Batch 安定化フォロー | #198 | Planned | CSV 入力正規化（NamedString 対応）+ 最小テスト |
+| Phase2-11 | Docs & Automation | #66 → #67 → #92 → #81 🏗️ → #178 | Done | 整備 / enrichment / workflow 追加 (dependency-pipeline workflow実装完了) |
+| Phase2-12 | MVP 定義 & ギャップ | #177 ✅ | ✅ Done | Enterprise readiness matrix 実装完了 (docs/mvp/README.md) |
+| Phase2-13 | Runner 構成標準化 & CI/Docs 追随 | #50 🏗️ → #200 🏗️ → #201 ✅ → #202 ✅ → #196 ✅ → #203 → #219 ✅ → #220 → #221 → #237 ✅ → #238 | In Progress | 配置規約→代表スクリプト→CI→Docs完了 / search-linkedin失敗 / browser-control失敗 / 録画未生成 / 録画ファイル生成バグ / LLM無効時browser-control失敗 / Note: PR #286 applied runtime fixes and test stabilizations affecting this group. |
+| Phase2-14 | UI/UX Internationalization | #199 → #224 🏗️ | Planned | JA ベース → EN 追加。辞書/ヘルパ/トグル/フォールバック / RECORDING_PATH 競合解消 (partial: PR #286 fixed script/artifact path handling; UI follow-up required) |
+| Phase2-15 | Batch 安定化フォロー | #198 ✅ | Planned | CSV 入力正規化（NamedString 対応）+ 最小テスト |
 | Phase2-16 | Critical Bug Fixes | #240 → #241 | Planned | User profile SSO/Cookie → Unlock-Future browser automation (エンタープライズ拡張、後回し) |
 | Phase2-17 | Feature Flag UI Integration | #242 | OPEN | Hide LLM tabs when disabled |
-| Phase2-18 | Testing & Quality Improvements | #231 → #218 → #115 → #108 → #107 | OPEN | Test suite / Coverage / Regression / Flakes / Warnings |
-| Phase2-19 | Documentation Enhancements | #244 → #211 → #127 → #230 → #113 → #174 | OPEN | Action runner template / LLM docs / Batch docs / General docs / Cleanup / Artifact flow |
+| Phase2-18 | Testing & Quality Improvements | #231 🏗️ → #218 → #115 → #108 → #107 | OPEN | Test suite / Coverage / Regression / Flakes / Warnings |
+| Phase2-19 | Documentation Enhancements | #244 → #211 → #127 🏗️ → #230 → #113 → #174 | OPEN | Action runner template / LLM docs / Batch docs / General docs / Cleanup / Artifact flow |
 | Phase2-20 | UI/UX Polish | #209 → #229 → #227 → #212 | OPEN | Results menu / Design system / Error messages / Codegen menu |
 | Phase2-21 | Configuration & LLM Settings | #228 | OPEN | LLM設定改善 |
 | Phase2-22 | Artifacts & Multi-tab Support | #194 → #246 → #247 | OPEN | Tab index manifest / Screenshot enhancement / Element extraction enhancement |
