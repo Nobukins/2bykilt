@@ -1,22 +1,24 @@
 """
-LLMServiceGateway スタブ (Phase1-2 基盤)
+LLMServiceGateway (Phase4 完全実装)
 
 ENABLE_LLM=true 時に AI モジュールを隔離ランタイム（サンドボックス/サイドカー）
 経由で実行するためのゲートウェイインターフェース。
 
-Phase1-2 スコープ:
+Phase1-2 実装内容:
 - インターフェース定義とスタブ実装
 - ENABLE_LLM=false 時のバイパス機構
 
-Phase3-4 拡張予定:
-- 実際のサンドボックス/サイドカー起動ロジック
-- シークレット管理統合（Vault連携）
+Phase3-4 拡張内容:
+- ✅ Docker サンドボックス統合 (DockerLLMSandbox)
+- ✅ 実際の LLM 推論実装
+- シークレット管理統合（Vault連携 - Phase4 後半）
 - 監査ログフック
 - レート制限とネットワークポリシー
 
 関連:
 - docs/security/SECURITY_MODEL.md
 - docs/plan/cdp-webui-modernization.md (Section 5.6)
+- src/llm/docker_sandbox.py
 """
 
 import os
@@ -170,23 +172,143 @@ class LLMServiceGatewayStub(LLMServiceGateway):
         return self._enabled
 
 
-# シングルトンインスタンス（Phase1-2 では簡易実装）
+# シングルトンインスタンス（Phase4 で Docker 実装追加）
 _gateway_instance: Optional[LLMServiceGateway] = None
 
 
-def get_llm_gateway() -> LLMServiceGateway:
+class DockerLLMServiceGateway(LLMServiceGateway):
+    """
+    Docker サンドボックス統合 LLM Gateway (Phase4)
+    
+    DockerLLMSandbox を使用して安全な LLM 実行を提供。
+    
+    Phase4 機能:
+    - Docker コンテナでの LLM 分離実行
+    - ネットワーク制限、リソース制限
+    - Seccomp/AppArmor セキュリティプロファイル
+    """
+    
+    def __init__(self):
+        super().__init__()
+        self._sandbox = None
+        self._enabled = os.getenv("ENABLE_LLM", "false").lower() == "true"
+        self._initialized = False
+    
+    async def initialize(self) -> None:
+        """Docker サンドボックス初期化"""
+        if not self._enabled:
+            logger.info("ENABLE_LLM=false, skipping Docker sandbox initialization")
+            self._initialized = True
+            return
+        
+        try:
+            from .docker_sandbox import DockerLLMSandbox
+            
+            logger.info("Initializing Docker LLM sandbox (Phase4)")
+            
+            self._sandbox = DockerLLMSandbox(
+                image="python:3.11-slim",
+                network_mode="none",  # 完全ネットワーク分離
+                memory_limit="512m",
+                enable_seccomp=True,
+                enable_apparmor=True
+            )
+            
+            await self._sandbox.start()
+            logger.info("Docker LLM sandbox initialized successfully")
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize Docker sandbox: {e}", exc_info=True)
+            raise LLMServiceError(f"Sandbox initialization failed: {e}") from e
+        
+        self._initialized = True
+    
+    async def invoke_llm(
+        self,
+        prompt: str,
+        context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Docker サンドボックス経由で LLM 呼び出し"""
+        if not self._initialized:
+            raise LLMServiceError("Gateway not initialized")
+        
+        if not self._enabled:
+            logger.info("ENABLE_LLM=false, skipping LLM invocation")
+            return {
+                "text": "(LLM disabled)",
+                "usage": {"prompt_tokens": 0, "completion_tokens": 0},
+                "bypass": True
+            }
+        
+        try:
+            logger.info(f"Invoking LLM via Docker sandbox (prompt length: {len(prompt)})")
+            
+            # サンドボックス経由で LLM 実行
+            result = await self._sandbox.invoke_llm(
+                prompt=prompt,
+                model=context.get("model", "gpt-3.5-turbo") if context else "gpt-3.5-turbo",
+                max_tokens=context.get("max_tokens", 1000) if context else 1000,
+                temperature=context.get("temperature", 0.7) if context else 0.7
+            )
+            
+            logger.info(f"LLM invocation successful (tokens={result.get('usage', {}).get('total_tokens')})")
+            
+            return {
+                "text": result.get("response", ""),
+                "usage": result.get("usage", {}),
+                "model": result.get("model"),
+                "sandbox_metrics": self._sandbox.get_metrics() if self._sandbox else {}
+            }
+            
+        except Exception as e:
+            logger.error(f"LLM invocation failed: {e}", exc_info=True)
+            raise LLMServiceError(f"LLM invocation failed: {e}") from e
+    
+    async def shutdown(self) -> None:
+        """Docker サンドボックスシャットダウン"""
+        logger.info("Shutting down DockerLLMServiceGateway")
+        
+        if self._sandbox:
+            try:
+                await self._sandbox.stop()
+                logger.info("Docker sandbox stopped successfully")
+            except Exception as e:
+                logger.warning(f"Failed to stop sandbox: {e}")
+        
+        self._sandbox = None
+        self._initialized = False
+    
+    def is_enabled(self) -> bool:
+        """LLM 機能有効状態を確認"""
+        return self._enabled
+
+
+def get_llm_gateway(use_docker: bool = True) -> LLMServiceGateway:
     """
     LLMServiceGateway のグローバルインスタンスを取得
     
+    Args:
+        use_docker: Docker サンドボックス使用 (Phase4)
+    
     Returns:
-        LLMServiceGateway: ゲートウェイインスタンス（スタブまたは実装）
+        LLMServiceGateway: ゲートウェイインスタンス
     """
     global _gateway_instance
     
     if _gateway_instance is None:
-        # Phase3 で環境変数や設定に応じて実装クラスを切り替え
-        _gateway_instance = LLMServiceGatewayStub()
-        logger.debug("Created LLMServiceGateway singleton (stub)")
+        # Phase4: ENABLE_LLM=true かつ Docker 利用可能なら DockerLLMServiceGateway
+        enable_llm = os.getenv("ENABLE_LLM", "false").lower() == "true"
+        
+        if enable_llm and use_docker:
+            try:
+                _gateway_instance = DockerLLMServiceGateway()
+                logger.debug("Created DockerLLMServiceGateway singleton (Phase4)")
+            except Exception as e:
+                logger.warning(f"Failed to create Docker gateway, falling back to stub: {e}")
+                _gateway_instance = LLMServiceGatewayStub()
+        else:
+            _gateway_instance = LLMServiceGatewayStub()
+            logger.debug("Created LLMServiceGatewayStub singleton")
     
     return _gateway_instance
 
