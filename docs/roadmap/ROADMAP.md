@@ -57,12 +57,57 @@
 | Docs | #66 → #67 | In Progress | Doc Sync >90% 維持方針 |
 | A8 | 後続の新規作成issue | Planned | 追加Issueの評価とスケジュール反映 |
 
-Progress Summary (Phase 1): Wave A1 100% / Wave A2 100% / Wave A3 100% / Wave A4 100% / Wave A5 100% / Wave A6 100% / Wave A7 100% ( #60 Security Base 完了) 残: Group B Phase 2 へ移行。Draft/試行 PR は進捗計測に含めず。
-Progress Summary (Phase2): Phase2-04 Done / Phase2-05 Done / Phase2-06 Done / Phase2-07 In Progress (4/5 issues completed) / Phase2-11 Done / Phase2-12 Done / Phase2-13 In Progress (8/11 issues completed) / Early focus shifts to Phase2-01 (Runner) & Phase2-07 (Metrics surfacing) / Upcoming gating: coverage (#109) & sandbox (#62)。
+### Phase2 (拡張 / 高度化 / 継続改善 統合)
 
-Note: PR #286 was merged to stabilize the pytest suite and improve runner/script artifact behavior. As a result, several issues were partially addressed and marked in-progress in `ISSUE_DEPENDENCIES.yml` (notably #81, #224, #231, #276). Further follow-up work and UI verification remains for those items.
+従来の Group B / C を統合し、優先度と依存関係に基づき再編した Wave (Phase2-XX) を定義。
 
+| Wave (Phase2-XX) | Focus | Issues (順序) | 状態 | 備考 |
+|------------------|-------|---------------|------|------|
+| Phase2-01 | Runner 安定化基盤 | #46 → #47 → #48 | Planned | タイムアウト→並列→環境変数診断 |
+| Phase2-02 | Sandbox 強化 & Exec 安全性 | #62 (PoC→Enforce) → #52 | Planned | システムコール/パス制限 → allow/deny 実装 |
+| Phase2-03 | Runner 拡張 (CDP/Windows) | #53 → #54 → #51 | Planned | 調査→抽象レイヤ→Win プロファイル |
+| Phase2-04 | Batch 価値強化 (完了) | #39 ✅ → #41 ✅ → #42 ✅ → #40 ✅ | Done | CSV コア→進捗→部分リトライ→UI |
+| Phase2-05 | Batch 成果物/エクスポート | #175 ✅ → #176 ✅ | Done | ポリシー成果物 & 宣言的抽出 PoC |
+| Phase2-06 | Artifacts 安定化 / 統合 | #111 ✅ → #110 ✅ → #106 → #104 | Done | 録画/パス統合 完了。flag enforcement/最終整備は反映済み (#193) |
+| Phase2-07 | Observability 完全化 | #58 ✅ → #59 ✅ → #102 🏗️ → #222 → #223 ✅ | In Progress | Metrics API / Flag artifacts helper / ログ標準化 / LOG_LEVEL 修正 |
+| Phase2-08 | Quality / Coverage Gate | #109 → #107 → #108 | OPEN | カバレッジ→警告除去→Edge安定化 |
+| Phase2-09 | Security / Compliance | #154 ✅ (follow-ups TBD) | Partial | 追加セキュリティギャップ分析 (#177 ✅ 連携) |
+| Phase2-10 | Plugin 基盤 | #49 (part1 / part2) | Planned | 増分2段階 (Loader → Lifecycle) |
+| Phase2-11 | Docs & Automation | #66 → #67 → #92 → #81 🏗️ → #178 | Done | 整備 / enrichment / workflow 追加 (dependency-pipeline workflow実装完了) |
+| Phase2-12 | MVP 定義 & ギャップ | #177 ✅ | ✅ Done | Enterprise readiness matrix 実装完了 (docs/mvp/README.md) |
+| Phase2-13 | Runner 構成標準化 & CI/Docs 追随 | #50 🏗️ → #200 🏗️ → #201 ✅ → #202 ✅ → #196 ✅ → #203 → #219 ✅ → #220 → #221 → #237 ✅ → #238 | In Progress | 配置規約→代表スクリプト→CI→Docs完了 / search-linkedin失敗 / browser-control失敗 / 録画未生成 / 録画ファイル生成バグ / LLM無効時browser-control失敗 / Note: PR #286 applied runtime fixes and test stabilizations affecting this group. |
+| Phase2-14 | UI/UX Internationalization | #199 → #224 🏗️ | Planned | JA ベース → EN 追加。辞書/ヘルパ/トグル/フォールバック / RECORDING_PATH 競合解消 (partial: PR #286 fixed script/artifact path handling; UI follow-up required) |
+| Phase2-15 | Batch 安定化フォロー | #198 ✅ | Planned | CSV 入力正規化（NamedString 対応）+ 最小テスト |
+| Phase2-16 | Critical Bug Fixes | #240 → #241 | Planned | User profile SSO/Cookie → Unlock-Future browser automation (エンタープライズ拡張、後回し) |
+| Phase2-17 | Feature Flag UI Integration | #242 | OPEN | Hide LLM tabs when disabled |
+| Phase2-18 | Testing & Quality Improvements | #231 🏗️ → #218 → #115 → #108 → #107 | OPEN | Test suite / Coverage / Regression / Flakes / Warnings |
+| Phase2-19 | Documentation Enhancements | #244 → #211 → #127 🏗️ → #230 → #113 → #174 | OPEN | Action runner template / LLM docs / Batch docs / General docs / Cleanup / Artifact flow |
+| Phase2-20 | UI/UX Polish | #209 → #229 → #227 → #212 | OPEN | Results menu / Design system / Error messages / Codegen menu |
+| Phase2-21 | Configuration & LLM Settings | #228 | OPEN | LLM設定改善 |
+| Phase2-22 | Artifacts & Multi-tab Support | #194 → #246 → #247 | OPEN | Tab index manifest / Screenshot enhancement / Element extraction enhancement |
+| Phase2-23 | Automation & Security Monitoring | #192 → #114 | OPEN | Pip-audit schedule / Pytest guard |
+| Phase2-24 | Observability UI | #197 | OPEN | UI graphs and presets |
 
+**Phase2-12 MVP Matrix 詳細:**
+
+- **機能性軸**: Batch Processing, Artifacts, Logging & Metrics, Configuration, Runner Core
+- **透明性軸**: Execution Visibility, Error Reporting, Performance Metrics, Debug Information, Status Tracking
+- **監査性軸**: Action Logging, Data Provenance, Change Tracking, Access Control, Retention Policy
+- **セキュリティ軸**: Secret Management, Input Validation, Sandbox Execution, Network Security, Vulnerability Management
+- **成熟度レベル**: L0（Prototype）→ L1（Usable）→ L2（Hardened）→ L3（Ready）
+- **Measurable Signals**: 各軸・レベルで定量的な達成基準を定義
+- **ギャップ分析**: High Priority Gapsとして#175, #62, #109を特定
+
+Gate 条件:
+
+- Group A
+  - P0/P1 ≥95%
+  - #58 稼働
+  - #38 緑
+- Docs
+  - 同期率>90%
+
+---
 
 ### Phase2 - 全Issueインデックス (ISSUE_DEPENDENCIES.yml と一致)
 
@@ -76,6 +121,8 @@ Note: PR #286 was merged to stabilize the pytest suite and improve runner/script
 - 各 Issue 行は短く: `- #NNN [P0|P1|P2|P3] (state) : Title` で表現してください。
 
 <!-- GENERATED:phase2-index START -->
+<!-- GENERATED:phase2-index START -->
+<!-- Auto-generated from docs/roadmap/ISSUE_DEPENDENCIES.yml (last_synced: 2025-10-05T12:00:00Z) -->
 #### Wave: Phase1 (phase='1') (14/23)
 
 - #25 [P0] (done) : git_script が llms.txt で指定したスクリプトを正しく解決するよう修正
@@ -88,7 +135,10 @@ Note: PR #286 was merged to stabilize the pytest suite and improve runner/script
 - #35 [P0] (done) : アーティファクト manifest v2
 - #36 [P1] (done) : アーティファクト一覧 API
 - #37 [P1] (done) : 動画アーティファクト保持期間
-- ... (+13 more)
+- #38 [P2] (done) : 録画統一後回帰テストスイート
+- #43 [P1] (open) : ENABLE_LLM パリティ
+- #56 [P0] (done) : 統一 JSON Lines ロギング実装
+- #57 [P1] (done) : ログ保持期間 & ローテーション
 
 #### Wave: Phase1-late (phase='1-late') (6/14)
 
@@ -98,10 +148,10 @@ Note: PR #286 was merged to stabilize the pytest suite and improve runner/script
 - #60 [P1] (open) : シークレットマスキング拡張
 - #63 [P0] (open) : llms.txt スキーマ & バリデータ
 - #66 [P2] (open) : ドキュメント整備 第1弾
-- ... (+7 more)
 
-#### Wave: Phase2 (phase='2') (20/82)
+#### Wave: Phase2 (phase='2') (>=82 total)
 
+<!-- NOTE: Phase2 contains many issues; we list a prioritized sample here (agent can expand to full listing on demand) -->
 - #39 [P1] (done) : CSV 駆動バッチエンジンコア
 - #40 [P2] (done) : CSV D&D UI 連携
 - #41 [P2] (done) : バッチ進捗・サマリー
@@ -112,8 +162,39 @@ Note: PR #286 was merged to stabilize the pytest suite and improve runner/script
 - #49 [P3] (open) : ユーザースクリプト プラグインアーキテクチャ
 - #51 [P2] (open) : Windows プロファイル永続化
 - #52 [P2] (open) : サンドボックス allow/deny パス
-- ... (+72 more)
+- #53 [P2] (open) : cdp-use 追加タイプ調査
+- #54 [P1] (open) : cdp-use デュアルエンジン抽象レイヤ
+- #58 [P1] (done) : メトリクス計測基盤
+- #59 [P2] (done) : Run メトリクス API
+- #102 [P2] (in-progress) : Flags artifacts helper
+- #111 [P0] (done) : 録画/パス統合
+- #110 [P0] (done) : browser-control gap fix
+- #175 [P1] (done) : バッチ行単位成果物キャプチャ基盤
+- #176 [P1] (done) : 宣言的抽出スキーマ
+- #198 [P1] (done) : CSV NamedString 入力の正規化
+- #219 [P0] (done) : search-linkedin 初期コマンド失敗修正
+- #220 [P1] (open) : browser-control タイプ実行失敗の調査と修正
+- #221 [P1] (open) : script 以外で録画ファイル未生成 (browser-control/git-script)
+- #224 [P1] (in-progress) : RECORDING_PATH UI と環境変数の競合解消
+- #237 [P0] (done) : Recording file generation not working - fix
+- #240 [P0] (open) : Fix user profile utilization in browser launch
+- #241 [P0] (open) : Fix Unlock-Future type browser automation
+- #242 [P1] (open) : Optimize Feature Flag usage for UI menu control
+- #246 [P2] (open) : スクリーンショットの取得・保存機能強化
+- #247 [P2] (open) : ブラウザ要素の取得・保存機能強化
+- #248 [P1] (in-progress) : CSV Batch Processing Enhancement Priority
+- #249 [P0] (open) : Phase2-07 Metrics Advancement
+- #250 [P0] (open) : Phase2-13 Runner Fixes Parallel
+- #251 [P0] (open) : Phase2-14 Config Conflicts
+- #255 [P2] (open) : git-scriptのURL評価制限緩和
+- #257 [P0] (done) : CSV Batch Job Execution Not Triggered - Browser Automation Missing (fixed)
+- #276 [P1] (in-progress) : Recording file not copied to artifacts runs folder when using CSV batch
+- #277 [P2] (open) : Artifacts UI: Provide UI listing for screenshots, text & element extracts
+- #278 [P1] (open) : UI: Control tab visibility with Feature Flags
+- #279 [P2] (open) : Config: Consolidate configuration menus, env files, and defaults
+- #280 [P2] (open) : Browser Settings: Improve Browser Settings menu clarity
 
+<!-- Full Phase2 listing is available in the compact index below; agents should regenerate this block from ISSUE_DEPENDENCIES.yml for a complete Wave-by-Wave breakdown. -->
 <!-- GENERATED:phase2-index END -->
 
 （上の GENERATED 範囲は Agent による再生成を想定した見出し付きの Wave 表示例です。下に続く "コンパクト全件索引" は検証・参照用に維持します。）
@@ -151,7 +232,7 @@ Note: PR #286 was merged to stabilize the pytest suite and improve runner/script
 - #58: メトリクス計測基盤
 - #59: Run メトリクス API
 - #60: シークレットマスキング拡張
-- #61: [maint][security] 既存依存セキュリティスキャン基盤の最適化 & 運用強化
+- #61: (maint/security) 既存依存セキュリティスキャン基盤の最適化 & 運用強化
 - #62: 実行サンドボックス機能制限
 - #63: llms.txt スキーマ & バリデータ
 - #64: フィーチャーフラグフレームワーク
@@ -168,61 +249,61 @@ Note: PR #286 was merged to stabilize the pytest suite and improve runner/script
 - #102: Flags artifacts helper
 - #107: Cleanup: PytestReturnNotNone warnings across component tests
 - #108: Stabilize Edge headless navigation flake (TargetClosedError)
-- #109: [quality][coverage] Sonar 新規行カバレッジ向上とQuality Gate再挑戦 (#105 追随)
+- #109: (quality/coverage) Sonar 新規行カバレッジ向上とQuality Gate再挑戦 (#105 追随)
 - #110: browser-control gap fix
 - #111: 録画/パス統合
 - #113: docs: cleanup archived references to tests/pytest.ini (post PR #112)
 - #114: ci: evaluate relaxing pytest.ini guard scope for docs/archive references (follow-up to PR #112)
-- #115: [A3][regression][hardening] Post-#38 回帰スイート強化
-- #127: [docs][batch] CSVバッチエンジン統合ドキュメントの包括的改善
+- #115: (A3/regression/hardening) Post-#38 回帰スイート強化
+- #127: (docs/batch) CSVバッチエンジン統合ドキュメントの包括的改善
 - #154: pip-audit stabilization in CI with normalizer + targeted suppressions
-- #173: [UI][batch][#40 follow-up] CSV Preview & Command Argument Mapping
-- #174: [artifacts][batch] Clarify Artifact Output & Access Flow
+- #173: (UI/batch/#40 follow-up) CSV Preview & Command Argument Mapping
+- #174: (artifacts/batch) Clarify Artifact Output & Access Flow
 - #175: バッチ行単位成果物キャプチャ基盤 (スクリーンショット/要素値/ログ関連紐付け)
 - #176: 宣言的抽出スキーマ (CSV列→コマンド引数/抽出ポリシーマッピング)
 - #177: MVP エンタープライズ Readiness マトリクス定義
 - #178: CI: dependency-pipeline workflow 追加 (生成物 idempotent 検証自動化)
-- #192: [security][follow-up] Issue #154 pip-audit stabilization - monthly security monitoring schedule
-- #194: [artifacts] Tab index manifest for multi-tab recordings
+- #192: (security/follow-up) Issue #154 pip-audit stabilization - monthly security monitoring schedule
+- #194: (artifacts) Tab index manifest for multi-tab recordings
 - #196: CI: local selector smoke を統合
-- #197: [dashboard] UI graphs and preset expansion
-- #198: [batch] CSV NamedString 入力の正規化
-- #199: [ui/ux] Internationalization (i18n): JA base → EN 追加
-- #200: [policy] myscript 配置規約の策定
-- #201: [runner] myscript スクリプト修正（パス統一・生成物出力）
-- #202: [ci] アーティファクト収集/キャッシュ更新（myscript 構成対応）
-- #203: [docs] README/チュートリアル/ガイド更新（myscript 構成・出力ポリシー）
-- #208: [ui/ux] Option Availability - 利用可能なオプションの可視化改善
-- #209: [ui/ux] Results menu - 実行結果表示メニューの改善
-- #210: [ui/ux] Recordings menu - 録画ファイル管理メニューの改善
-- #211: [docs] LLM 統合ドキュメント整備
-- #212: [ui/ux] Playwright Codegenメニューの保存ボタン統合改善
+- #197: (dashboard) UI graphs and preset expansion
+- #198: (batch) CSV NamedString 入力の正規化
+- #199: (ui/ux) Internationalization (i18n): JA base → EN 追加
+- #200: (policy) myscript 配置規約の策定
+- #201: (runner) myscript スクリプト修正（パス統一・生成物出力）
+- #202: (ci) アーティファクト収集/キャッシュ更新（myscript 構成対応）
+- #203: (docs) README/チュートリアル/ガイド更新（myscript 構成・出力ポリシー）
+- #208: (ui/ux) Option Availability - 利用可能なオプションの可視化改善
+- #209: (ui/ux) Results menu - 実行結果表示メニューの改善
+- #210: (ui/ux) Recordings menu - 録画ファイル管理メニューの改善
+- #211: (docs) LLM 統合ドキュメント整備
+- #212: (ui/ux) Playwright Codegenメニューの保存ボタン統合改善
 - #218: テストカバレッジ率の向上
-- #219: [runner][bug] search-linkedin 初期コマンド失敗 (pytest経由引数未解釈)
-- #220: [runner][bug] browser-control タイプ実行失敗の調査と修正
-- #221: [artifacts][bug] script 以外で録画ファイル未生成 (browser-control/git-script)
-- #222: [logging][feat] ログ出力ディレクトリ/カテゴリ標準化 & src/logs/ 廃止
-- #223: [logging][bug] LOG_LEVEL 環境変数が反映されない (初期化順序バグ)
-- #224: [ui/ux][config] RECORDING_PATH UI と環境変数の競合解消
-- #226: [runner][bug] search-linkedin 実行時エラー修正
-- #227: [ui/ux][enhancement] LLM有効時のエラーメッセージ改善とUI統一性確保
-- #228: [configuration][enhancement] LLM設定の改善と設定ガイドの明確化
-- #229: [ui/ux][enhancement] UI/UXの統一性確保とデザインシステムの確立
-- #230: [documentation][enhancement] ドキュメントの改善とユーザガイドの充実
-- #231: [testing][enhancement] テストスイートの改善とカバレッジ向上
+- #219: (runner/bug) search-linkedin 初期コマンド失敗 (pytest経由引数未解釈)
+- #220: (runner/bug) browser-control タイプ実行失敗の調査と修正
+- #221: (artifacts/bug) script 以外で録画ファイル未生成 (browser-control/git-script)
+- #222: (logging/feat) ログ出力ディレクトリ/カテゴリ標準化 & src/logs/ 廃止
+- #223: (logging/bug) LOG_LEVEL 環境変数が反映されない (初期化順序バグ)
+- #224: (ui/ux/config) RECORDING_PATH UI と環境変数の競合解消
+- #226: (runner/bug) search-linkedin 実行時エラー修正
+- #227: (ui/ux/enhancement) LLM有効時のエラーメッセージ改善とUI統一性確保
+- #228: (configuration/enhancement) LLM設定の改善と設定ガイドの明確化
+- #229: (ui/ux/enhancement) UI/UXの統一性確保とデザインシステムの確立
+- #230: (documentation/enhancement) ドキュメントの改善とユーザガイドの充実
+- #231: (testing/enhancement) テストスイートの改善とカバレッジ向上
 - #237: Bug: Recording file generation not working for any run type
 - #240: P0: Fix user profile utilization in browser launch - Critical SSO/Cookie functionality missing
 - #241: P0: Fix Unlock-Future type browser automation - Operations hang without execution
 - #242: P1: Optimize Feature Flag usage for UI menu control - Hide LLM tabs when disabled
-- #244: [docs][feat] action_runner_template 利用方法ドドキュメント整備 & 実装サンプル追加
-- #246: [artifacts][feat] スクリーンショットの取得・保存機能強化
-- #247: [artifacts][feat] ブラウザ要素の取得・保存機能強化
+- #244: (docs/feat) action_runner_template 利用方法ドドキュメント整備 & 実装サンプル追加
+- #246: (artifacts/feat) スクリーンショットの取得・保存機能強化
+- #247: (artifacts/feat) ブラウザ要素の取得・保存機能強化
 - #248: CSV Batch Processing Enhancement Priority
 - #249: Phase2-07 Metrics Advancement
 - #250: Phase2-13 Runner Fixes Parallel
 - #251: Phase2-14 Config Conflicts
 - #255: git-scriptのURL評価制限緩和
-- #257: [batch] CSV Batch Job Execution Not Triggered - Browser Automation Missing
+- #257: (batch) CSV Batch Job Execution Not Triggered - Browser Automation Missing
 - #264: リファクタ提案: 大きすぎる Python ファイルの分割とモジュール化
 - #265: 改善提案: 複数フォルダ配下の録画ファイルを再帰的に発見・一覧表示
 - #266: Discovery: 録画ファイル検出ユーティリティ（Discovery）
@@ -237,24 +318,6 @@ Note: PR #286 was merged to stabilize the pytest suite and improve runner/script
 - #278: UI: Control tab visibility with Feature Flags (per-tab toggles & presets)
 - #279: Config: Consolidate configuration menus, env files, and defaults
 - #280: Browser Settings: Improve Browser Settings menu clarity & enforce behavior across run types
-
-
-#### Phase2: コンパクト全件索引 (パリティ保証)
-
-この一覧は `ISSUE_DEPENDENCIES.yml` に定義された全 Issue を簡潔に示します（人間用の素早い参照）。自動化スクリプトは上の GENERATED 範囲を更新し、下のコンパクト索引は検証用に維持してください。
-
-(以下コンパクト索引は継続して表示されています。)
-
-- #101: Issue #101 (refer to ISSUE_DEPENDENCIES.yml) (CLOSED)
-- #263: Issue #263 (refer to ISSUE_DEPENDENCIES.yml) (CLOSED)
-- #92: Issue #92 (refer to ISSUE_DEPENDENCIES.yml)
-
-    F -->|YES| H[人間: コードレビュー]
-    H --> I{レビューPASS?}
-    I -->|NO| J[人間: フィードバック & 修正依頼]
-    I -->|YES| K[人間: 統合 & コミット]
-    K --> L[自動: CI/CD実行]
-    L --> M[人間: リリース判断]
 
 #### 3. 効率化プロトコル
 
@@ -350,7 +413,6 @@ Note: PR #286 was merged to stabilize the pytest suite and improve runner/script
 
 ---
 
-
 ## G. KPI
 
 P0 Burn-down / Wave Completion / Blocked >2d / Cycle Time / Regression Green / Doc Sync Lag / Flag Stale Count
@@ -365,65 +427,106 @@ Flags / 後方互換 Schema / 追加専用ログ→削除遅延 / Sandbox enforc
 
 ## I. 次アクション
 
-Phase2 再編後の短期優先セットを以下に再定義。A フェーズは完了済みのため記述簡略化。
+### 優先順位付け方針 (更新済)
 
-### 優先順位付け方針
+- ✅ 基盤機能完了: Group A (A1-A7) は完了済み。以後は Phase2 の Wave ごとに小さな PR 単位で進める。
+- ✅ ユーザーインパクト重視: #39 は Done（ユーザー価値高）。
+- ✅ セキュリティ留意: #60 は Done、フォローアップIssueは個別に扱う。
+- 🔶 Open Issue はカテゴリ/優先度で P0/P1 を最優先にする。
 
-- **基盤機能完了**: Group A (A1-A4) の全Waveが完了したため、新機能開発を優先
-- **ユーザーインパクト重視**: #39 ✅ (CSV駆動バッチエンジン) はユーザー体験向上効果が高いため優先
-- **セキュリティ重視**: #60 ✅ (シークレットマスキング拡張) はセキュリティ強化のため優先
-- **Open Issue 評価**: 全Open Issueをカテゴリ分類し、P0/P1を優先、依存関係を考慮した順序付け
-- **初期リリース価値優先**: エンタープライズ企業ではSSOが一般的だが、最初に対応したいアプリにはSSO認証がないため、ブラウザ上でユーザー名・パスワード入力が必要。CSVファイル連携でのテンプレート複数バッチ処理連続実行の方がユーザー価値が高く、優先度を調整
+### 短期 (Phase2 Kick — 状況付き)
 
-### 短期 (Phase2 Kick Re-aligned)
+1. CSVバッチ処理強化優先
+    - #198 (CSV入力正規化) — ✅ Done
+    - #173 (CSV Preview & Command Argument Mapping) — 🔶 In Progress
+    - #175 (バッチ行単位成果物キャプチャ) — ✅ Done
 
-1. **CSVバッチ処理強化優先**: #198 (CSV入力正規化) → #173 (CSV Preview & Command Argument Mapping) → #175 ✅ (バッチ行単位成果物キャプチャ) | ユーザー価値高いバッチ処理を優先
-2. Phase2-07 前倒し: #59 ✅ Run Metrics API → #102 ✅ Flags artifacts helper → #222 (ログ標準化) → #223 ✅ (LOG_LEVEL修正)
-3. Phase2-13 並行: #219 ✅ (search-linkedin失敗) → #220 (browser-control失敗) → #221 (録画未生成) | 基盤部分完了、残り3件のバグ修正着手
-4. Phase2-14 設定競合: #224 (RECORDING_PATH UI/環境変数競合) | #221 安定化後着手
-5. Docs ギャップ定義: #177 ✅ MVP Matrix Draft → ギャップ派生 Issue 起票
-6. Workflow 整合性: #178 ✅ dependency-pipeline workflow 実装完了 (自動生成・コミット機能統合)
+2. Phase2-07 前倒し (Observability)
+    - #59 (Run Metrics API) — ✅ Done
+    - #102 (Flags artifacts helper) — 🏗️ In Progress
+    - #222 (ログ標準化) — 🔜 Planned
+    - #223 (LOG_LEVEL 修正) — ✅ Done
 
-- **Roadmap sync**: Add new issues #264–#272 to ISSUE_DEPENDENCIES.yml and ROADMAP (branch: docs/update-roadmap-2025-09-26). Run validation scripts and open PR if green.
+3. Phase2-13 並行 (Runner 標準化 / バグ修正)
+    - #219 — ✅ Done
+    - #220 — 🔶 Open / Triage
+    - #221 — 🔶 Open / Investigation
 
-### 中期 (Phase2 Expansion)
+4. Phase2-14 設定競合対応
+    - #224 — 🏗️ In Progress (PR #286 により一部解決、UI フォローアップ残り)
 
-1. Runner 構成標準化 & CI 整備: #200 ✅ → #201 ✅ → #196 ✅ → #202 ✅（並行: #203 Docs 追随）
-2. Sandbox Enforcement Path: #62 PoC → enforce gate → #52 allow/deny materialization
-3. Runner Concurrency & Diagnostics: #47 ✅ queue infra → #48 env validation diagnostics
-4. Plugin Increment (part1): #49 loader + registration minimal
-5. Artifact/Manifest フォロー: #106 flag enforcement warn → #104 仕上げ（必要に応じ）
-6. Artifacts 強化: #246 (Screenshot enhancement) → #247 (Element extraction enhancement)
-7. SSO/プロファイル機能: #240 (User profile SSO/Cookie) → #241 (Unlock-Future browser automation) | エンタープライズ向け拡張として後回し
+5. Docs ギャップ定義
+    - #177 — ✅ Done (MVP Matrix)
+    - ギャップ派生 Issue を引き続き起票（docs owners 担当）
+
+6. Workflow 整合性
+    - #178 — ✅ Done (dependency-pipeline workflow 実装)
+
+### 中期 (Phase2 Expansion — 状態付き)
+
+1. Runner 構成標準化 & CI 整備
+    - #200 — 🏗️ In Progress
+    - #201 — ✅ Done
+    - #196 — ✅ Done
+    - #202 — ✅ Done
+    - #203 — 🔶 Planned (Docs follow-up)
+
+2. Sandbox Enforcement Path
+    - #62 — 🔜 Planned (PoC -> Enforce)
+    - #52 — 🔜 Planned (allow/deny 実装)
+
+3. Runner Concurrency & Diagnostics
+    - #47 — ✅ Done
+    - #48 — 🔶 In Progress
+
+4. Plugin Increment
+    - #49 — 🔜 Planned (part1)
+
+5. Artifact/Manifest フォロー
+    - #106 → #104 — 🔶 Planned / follow-up
+
+6. Artifacts 強化
+    - #246 / #247 — 🔶 Open
+
+7. SSO / プロファイル
+    - #240 / #241 — 🔶 Planned / Low priority
 
 ### 長期 (Phase2 Later)
 
-1. UI/UX i18n 展開: #199（EN 辞書整備、切替UI、フォールバック最適化）
-2. Batch フォローアップ: #198（CSV 入力正規化 + 最小テスト）
-3. Plugin Lifecycle & Hooks (#49 part2)
-4. CDP 二重エンジン: #53 research → #54 abstraction
-5. Windows Profile Persist: #51 after queue stability
-6. Quality Gate Hardening: #109 coverage gate automation + fail-fast
-7. Docs/Automation: #92 enrichment pipeline + #81 async test stabilization synergy
+- UI/UX i18n (#199) — 🔜 Planned
+- Batch follow-ups (#198) — ✅ Done (core)
+- Plugin lifecycle (#49 part2) — Planned
+- CDP dual-engine research (#53→#54) — Planned
+- Windows profile persist (#51) — Planned
+- Coverage gate hardening (#109) — 🔶 Open
+- Docs/Automation (#92 / #81) — 🔶 Open / Enrichment
 
-### 完了基準 (Group A → Group B 移行)
+### 完了基準 (更新)
 
-- ✅ Group A: 全Wave完了 (A1-A7 100%)
-- ✅ Security Base: 最低限のセキュリティ対策完了
-- ✅ 新機能: 少なくとも1つのユーザー価値提供機能稼働
-- ⏳ Docs: 同期率維持 (90%+)
+- ✅ Group A: 全Wave完了
+- ✅ Security Base: 基本完了
+- ✅ 新機能: 最低 1 機能稼働
+- ⏳ Docs: 同期率 >= 90% を維持
 
-### リスク管理
+### 新規 Issue（追加記述）
 
-- **新機能リスク**: #39 ✅ は experimental だが、Phase 2 先頭として慎重に実装
-- **セキュリティ優先**: #60 ✅ を A5 と並行して早期完了
-- **後方互換**: Flag ベースの段階的導入を徹底
+- #264: リファクタ提案 — 大きすぎる Python ファイルの分割とモジュール化。目的: 可読性・テスト分離。
+- #265: 録画ファイル検出改善 — 複数フォルダ配下を再帰的に発見・一覧表示するユーティリティ。
+- #266: Discovery: 録画ファイル検出ユーティリティ（#265 依存）。
+- #267: API: 録画ファイル検索 API 設計（#265/#266 依存）。
+- #268: UI: 録画ファイル集約ビューと実装（UX: 検索・フィルタ・プレビュー）。
+- #269: Feature Flag 運用提案 — Profile ベースでのフラグ適用設計。
+- #270: 設計: Feature Flag 運用設計とメタデータ仕様（#269 依存）。
+- #271: 実装: Feature Flags コアライブラリと Profile ベースセットアップ（#269/#270 依存）。
+- #272: UI: Admin UI による Feature Flag 管理画面の実装（運用向け）
 
 ### 最優先課題
 
 - **今すぐ着手すべき**: #198 (CSV Batch Processing: 'NamedString' has no attribute 'read') - バッチ処理安定化でユーザー価値向上
 - **次に着手すべき**: #173 (CSV Preview & Command Argument Mapping) - UI改善でバッチ利用性向上
 - **並行着手可能**: #242 (P1: Optimize Feature Flag usage for UI menu control) - Hide LLM tabs when disabled
+
+---
 
 ### 開発フロー (Mermaid - Phase2 色付け試案)
 
@@ -522,6 +625,13 @@ gitGraph
 ---
 
 ## J. 改訂履歴
+
+Progress Summary (Phase 1):
+    Wave A1 100% / Wave A2 100% / Wave A3 100% / Wave A4 100% / Wave A5 100% / Wave A6 100% / Wave A7 100% ( #60 Security Base 完了) 残: Group B Phase 2 へ移行。Draft/試行 PR は進捗計測に含めず。
+Progress Summary (Phase2): 
+    Phase2-04 Done / Phase2-05 Done / Phase2-06 Done / Phase2-07 In Progress (4/5 issues completed) / Phase2-11 Done / Phase2-12 Done / Phase2-13 In Progress (8/11 issues completed) / Early focus shifts to Phase2-01 (Runner) & Phase2-07 (Metrics surfacing) / Upcoming gating: coverage (#109) & sandbox (#62)。
+
+Note: PR #286 was merged to stabilize the pytest suite and improve runner/script artifact behavior. As a result, several issues were partially addressed and marked in-progress in `ISSUE_DEPENDENCIES.yml` (notably #81, #224, #231, #276). Further follow-up work and UI verification remains for those items.
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
