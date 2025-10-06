@@ -27,7 +27,6 @@ import pytest
 from src.config.feature_flags import FeatureFlags, _reset_feature_flags_for_tests
 import gradio as gr
 
-from src.config.feature_flags import FeatureFlags
 from src.ui.command_helper import CommandHelper
 from src.ui.components import (
     create_run_history,
