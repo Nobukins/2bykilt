@@ -79,7 +79,12 @@ class FeatureFlagService:
             if runner_engine not in {"playwright", "cdp"}:
                 runner_engine = "playwright"
 
-            enable_llm = bool(FeatureFlags.get("enable_llm", expected_type=bool, default=False))
+            # Prefer environment variable ENABLE_LLM if set; else feature flag; final fallback False
+            import os
+            if "ENABLE_LLM" in os.environ:
+                enable_llm = os.environ.get("ENABLE_LLM", "false").lower() == "true"
+            else:
+                enable_llm = bool(FeatureFlags.get("enable_llm", expected_type=bool, default=False))
             ui_modern_layout = bool(
                 FeatureFlags.get("ui.modern_layout", expected_type=bool, default=False)
             )

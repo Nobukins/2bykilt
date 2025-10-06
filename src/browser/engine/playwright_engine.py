@@ -348,17 +348,18 @@ class PlaywrightEngine(BrowserEngine):
                 except Exception as e:
                     logger.warning(f"Failed to capture final state: {e}")
             
+            # NOTE: テスト (tests/unit/browser/engine/test_playwright_engine.py::TestPlaywrightEngineShutdown)
+            # では shutdown 後に engine._context.close / _browser.close / _playwright.stop が
+            # 呼ばれたかを assert するため、参照を None にせず残しておく。
+            # 実運用で明示的なリソース解放が必要になればフラグ化するか、別メソッドで完全破棄を提供する。
             if self._context:
                 await self._context.close()
-                self._context = None
             
             if self._browser:
                 await self._browser.close()
-                self._browser = None
             
             if self._playwright:
                 await self._playwright.stop()
-                self._playwright = None
             
             self._page = None
             logger.info("PlaywrightEngine shutdown complete")

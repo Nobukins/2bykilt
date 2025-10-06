@@ -26,6 +26,7 @@ except ImportError:
     gr = None  # type: ignore
 
 from .components import (
+    create_run_panel,
     create_settings_panel,
     create_trace_viewer,
     create_run_history,
@@ -56,6 +57,7 @@ class ModernUI:
         self._settings_panel = create_settings_panel()
         self._trace_viewer = create_trace_viewer()
         self._run_history = create_run_history()
+        self._run_panel = create_run_panel()
 
     def build_interface(self) -> Optional["gr.Blocks"]:
         """
@@ -94,15 +96,7 @@ class ModernUI:
             with gr.Tabs():
                 # Tab 1: メイン実行画面 (既存 UI - ここでは省略)
                 with gr.Tab("🚀 実行画面"):
-                    gr.Markdown(
-                        """
-                        **既存の unlock-future UI をここに統合**
-
-                        Phase3 では既存 Gradio UI をこのタブに移動。
-                        Phase4 で CDP エンジン選択 UI を追加予定。
-                        """
-                    )
-                    # TODO: 既存 UI コンポーネントを統合
+                    self._run_panel.render()
 
                 # Tab 2: 設定パネル
                 with gr.Tab("⚙️ 設定"):

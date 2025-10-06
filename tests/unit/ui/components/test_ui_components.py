@@ -25,7 +25,16 @@ from unittest.mock import MagicMock, mock_open, patch
 import pytest
 
 from src.config.feature_flags import FeatureFlags, _reset_feature_flags_for_tests
-from src.ui.components import create_run_history, create_settings_panel, create_trace_viewer
+import gradio as gr
+
+from src.config.feature_flags import FeatureFlags
+from src.ui.command_helper import CommandHelper
+from src.ui.components import (
+    create_run_history,
+    create_run_panel,
+    create_settings_panel,
+    create_trace_viewer,
+)
 @pytest.fixture(autouse=True)
 def reset_feature_flags():
     _reset_feature_flags_for_tests()
@@ -223,3 +232,77 @@ class TestRunHistory:
             assert history._history_data[0]["command_summary"] == "New command"
 
             Path(tmp.name).unlink()
+
+
+class TestRunAgentPanel:
+    """RunAgentPanel コンポーネントテスト。"""
+
+    @patch("src.ui.components.run_panel.gr", None)
+    def test_render_without_gradio(self):
+        panel = create_run_panel()
+        with pytest.raises(RuntimeError):
+            panel.render()
+
+    def test_render_with_gradio_blocks(self):
+        panel = create_run_panel()
+        FeatureFlags.set_override("enable_llm", False)
+        with gr.Blocks():
+            rendered = panel.render()
+        assert isinstance(rendered, gr.Column)
+
+    def test_resolve_llm_defaults_disabled(self):
+        panel = create_run_panel()
+        config = {"llm_provider": "openai", "llm_model_name": "gpt-4o"}
+        provider_choices, provider_value, model_choices, model_value = panel._resolve_llm_defaults(
+            enable_llm=False,
+            config=config,
+        )
+
+        assert provider_choices == ["openai"]
+        assert provider_value == "openai"
+        assert model_choices == ["gpt-4o"]
+        assert model_value == "gpt-4o"
+
+    def test_handle_command_selection(self):
+        panel = create_run_panel()
+        panel._command_helper = MagicMock()
+        panel._command_helper.get_commands_for_display.return_value = [
+            ["search", "desc", "format"],
+            ["visit", "desc", "format"],
+        ]
+        panel._command_helper.generate_command_template.return_value = "search query="
+
+        evt = MagicMock()
+        evt.index = (0, 0)
+
+        result = panel._handle_command_selection(evt)
+
+        assert result == "@search query="
+
+    def test_handle_engine_change_updates_feature_flag(self):
+        panel = create_run_panel()
+        FeatureFlags.clear_all_overrides()
+
+        dropdown_update, status_update = panel._handle_engine_change("cdp")
+
+        assert FeatureFlags.get("runner.engine", expected_type=str) == "cdp"
+        assert dropdown_update["value"] == "cdp"
+        assert "CDP" in status_update["value"]
+
+    def test_format_engine_status_reports_override(self):
+        panel = create_run_panel()
+        FeatureFlags.set_override("runner.engine", "cdp")
+        state = panel._flag_service.get_current_state(force_refresh=True)
+        text = panel._format_engine_status(state)
+        assert "override:runtime" in text
+        assert "CDP" in text
+
+
+class TestCommandHelper:
+    def test_generate_command_template_without_params(self):
+        with patch.object(CommandHelper, "_extract_commands_from_config", return_value=[{"name": "noop", "description": ""}]):
+            helper = CommandHelper()
+
+        template = helper.generate_command_template("noop")
+
+        assert template == "noop"

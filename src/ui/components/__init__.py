@@ -21,6 +21,7 @@ Phase4 拡張予定:
 from .settings_panel import SettingsPanel, create_settings_panel
 from .trace_viewer import TraceViewer, create_trace_viewer
 from .run_history import RunHistory, create_run_history
+from .run_panel import RunAgentPanel, create_run_panel
 
 __all__ = [
     "SettingsPanel",
@@ -29,4 +30,6 @@ __all__ = [
     "create_trace_viewer",
     "RunHistory",
     "create_run_history",
+    "RunAgentPanel",
+    "create_run_panel",
 ]

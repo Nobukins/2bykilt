@@ -66,7 +66,7 @@ def test_browser_control(page: Page):
         print(f"📄 Page title: {title}")
         
         # Process automation flow if defined
-        flow = [{'action': 'command', 'url': 'https://nogtips.wordpress.com/', 'wait_until': 'domcontentloaded'}, {'action': 'scroll_to_bottom'}, {'action': 'click', 'selector': '#eu-cookie-law > form > input'}, {'action': 'click', 'selector': '#search-2 > form > label > input'}, {'action': 'fill_form', 'selector': '#search-2 > form > label > input', 'value': 'Browser-Control'}, {'action': 'keyboard_press', 'selector': 'Enter'}]
+        flow = [{'action': 'navigate', 'url': 'https://example.com', 'wait_until': 'domcontentloaded'}]
         if flow:
             print(f"🔄 Processing {len(flow)} automation steps...")
             for step in flow:

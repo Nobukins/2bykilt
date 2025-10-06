@@ -192,22 +192,37 @@ class BrowserDebugManager:
         logger.info(f"  - debugging_port: {debugging_port}")
 
         if use_own_browser:
+            # 既存のCDP接続を再利用
+            if self.global_browser:
+                try:
+                    # ブラウザがまだ有効かテスト
+                    contexts = self.global_browser.contexts
+                    logger.info(f"✅ 既存のCDPブラウザを再利用 (contexts: {len(contexts)})")
+                    return {"browser": self.global_browser, "status": "success", "browser_type": browser_type, "is_cdp": True}
+                except Exception as e:
+                    logger.warning(f"⚠️ 既存ブラウザが無効: {e} - 再初期化します")
+                    self.global_browser = None
+            
             # 外部ブラウザプロセスに接続
             logger.info(f"🔗 外部{browser_type}プロセスに接続を試行")
             
-            # CDP接続のための一時ディレクトリを作成
-            import tempfile
-            temp_user_data_dir = tempfile.mkdtemp(prefix="chrome_debug_")
-            logger.info(f"🔧 CDP用の一時user-data-dirを作成: {temp_user_data_dir}")
-            
-            # ブラウザプロセスを起動
-            logger.info(f"🚀 {browser_type}プロセスを起動")
-            await self._start_browser_process(browser_path, temp_user_data_dir, debugging_port)
-            
-            # プロセス起動後に接続可能になるまで待つ
-            if not await self._check_browser_running(debugging_port):
-                logger.error(f"❌ ブラウザプロセス起動後もポート{debugging_port}が利用できません")
-                return {"status": "error", "message": f"{browser_type}プロセス起動失敗またはCDPポートが利用できません"}
+            # 既存のデバッグポートをチェック（既に起動中の可能性）
+            if await self._check_browser_running(debugging_port):
+                logger.info(f"✅ ポート{debugging_port}で既に{browser_type}が実行中です - 既存プロセスに接続します")
+            else:
+                # 一時プロファイルを使用（個人プロファイルとの競合を回避）
+                import tempfile
+                actual_user_data_dir = tempfile.mkdtemp(prefix="chrome_debug_cdp_")
+                logger.info(f"🔧 CDP用の一時user-data-dirを作成: {actual_user_data_dir}")
+                
+                # ブラウザプロセスを起動
+                logger.info(f"🚀 {browser_type}プロセスを起動")
+                await self._start_browser_process(browser_path, actual_user_data_dir, debugging_port)
+                
+                # プロセス起動後に接続可能になるまで待つ
+                if not await self._check_browser_running(debugging_port):
+                    logger.error(f"❌ ブラウザプロセス起動後もポート{debugging_port}が利用できません")
+                    return {"status": "error", "message": f"{browser_type}プロセス起動失敗またはCDPポートが利用できません"}
             
             # CDP接続をリトライ (最大3回)
             max_retries = 3
@@ -354,72 +369,56 @@ class BrowserDebugManager:
         # Fallback: Use the last tab as the active tab
         return all_pages[-1], False
 
-    async def get_or_create_tab(self, tab_selection="active_tab"):
+    async def get_or_create_tab(self, strategy="new_tab"):
         """
-        タブ選択戦略に基づいてタブを取得または作成します
+        Get or create a tab in the browser using the specified strategy.
         
         Args:
-            tab_selection: タブの選択戦略：
-                - "new_tab": 新しいタブを作成
-                - "active_tab": 現在表示されているタブを使用
-                - "last_tab": コンテキスト内の最後のタブを使用
+            strategy: Tab selection strategy ("new_tab", "active_tab", "last_tab", "reuse_tab")
         
         Returns:
-            tuple: (context, page, is_new)
+            tuple: (context, page, is_new_tab)
         """
+        logger.debug(f"🔍 get_or_create_tab strategy={strategy}")
+        
         if not self.global_browser:
-            raise ValueError("Browser must be initialized before creating or selecting tabs")
-
-        context = self.global_browser.contexts[0] if self.global_browser.contexts else await self.global_browser.new_context()
+            raise RuntimeError("ブラウザが初期化されていません")
         
-        # 新しいタブを作成するケース
-        if tab_selection == "new_tab" or not context.pages:
-            print("✅ 新しいタブを作成します")
-            print(f"🔍 タブ選択戦略: {tab_selection}")
+        # Get or create context
+        contexts = self.global_browser.contexts
+        if not contexts:
+            logger.debug("新しいコンテキストを作成します")
+            context = await self.global_browser.new_context()
+        else:
+            logger.debug(f"既存のコンテキストを使用します ({len(contexts)} 個）")
+            context = contexts[0]
+        
+        # Get or create page based on strategy
+        pages = context.pages
+        
+        if strategy == "new_tab":
+            logger.debug("✅ 新しいタブを作成します")
             page = await context.new_page()
-            return context, page, True
-        
-        # アクティブなタブを使用するケース
-        elif tab_selection == "active_tab" and context.pages:
-            try:
-                # CDPでアクティブなタブを取得（可能な場合）
-                if hasattr(self, 'cdp_session') and self.cdp_session:
-                    targets = await self.cdp_session.send('Target.getTargets')
-                    active_targets = [t for t in targets.get('targetInfos', []) if t.get('type') == 'page' and t.get('attached')]
-                    if active_targets:
-                        active_target_id = active_targets[0].get('targetId')
-                        # アクティブなターゲットに対応するページを探す
-                        for existing_page in context.pages:
-                            if hasattr(existing_page, '_target_id') and existing_page._target_id == active_target_id:
-                                print("✅ アクティブなタブを使用します")
-                                print(f"🔍 タブ選択戦略: {tab_selection}")
-                                return context, existing_page, False
-                
-                # フォールバック: 最初のページを使用
-                if context.pages:
-                    print("✅ 最初のタブを使用します (アクティブタブを特定できませんでした)")
-                    print(f"🔍 タブ選択戦略: {tab_selection}")
-                    return context, context.pages[0], False
-                    
-            except Exception as e:
-                print(f"⚠️ アクティブタブの選択中にエラーが発生しました: {e}")
-                print("✅ 新しいタブにフォールバックします")
-            
-            # エラーまたはアクティブなタブが見つからない場合、新しいタブを作成
+            is_new = True
+        elif strategy == "reuse_tab" and pages:
+            logger.debug(f"♻️ 既存タブを再利用します (total: {len(pages)})")
+            page = pages[-1]  # 最後のタブを再利用
+            is_new = False
+        elif strategy == "active_tab" and pages:
+            logger.debug(f"✅ アクティブなタブを使用します (total: {len(pages)})")
+            page = pages[0]
+            is_new = False
+        elif strategy == "last_tab" and pages:
+            logger.debug(f"✅ 最後のタブを使用します (total: {len(pages)})")
+            page = pages[-1]
+            is_new = False
+        else:
+            logger.debug("デフォルト: 新しいタブを作成")
             page = await context.new_page()
-            return context, page, True
-            
-        # 最後のタブを使用するケース
-        elif tab_selection == "last_tab" and context.pages:
-            print("✅ 最後のタブを使用します")
-            print(f"🔍 タブ選択戦略: {tab_selection}")
-            return context, context.pages[-1], False
+            is_new = True
         
-        # デフォルトケース - 新しいタブを作成
-        print("✅ 新しいタブを作成します")
-        print(f"🔍 タブ選択戦略: {tab_selection}")
-        page = await context.new_page()
-        return context, page, True
+        logger.debug(f"🔍 タブ選択戦略: {strategy}")
+        return context, page, is_new
 
     async def highlight_automated_tab(self, page):
         """

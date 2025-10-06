@@ -96,20 +96,44 @@ def capture_page_screenshot(page, prefix: str = _DEF_PREFIX, image_format: str =
     try:
         path = mgr.save_screenshot_bytes(raw_bytes, prefix=f"{prefix}")
         size_bytes = len(raw_bytes) if isinstance(raw_bytes, (bytes, bytearray)) else None
-        write_dup = True
+        # Evaluate feature flag (default ON to preserve legacy behavior if flag subsystem unavailable)
         try:
             write_dup = FeatureFlags.is_enabled("artifacts.screenshot.user_named_copy_enabled")  # type: ignore
         except Exception:
             write_dup = True
+
         duplicate_copy = False
+
+        # Gather existing prefixed screenshots (including those from prior test runs sharing RUN_ID)
+        try:
+            existing = list(path.parent.glob(f"{prefix}_*.{image_format.lower()}"))
+        except Exception as scan_exc:  # noqa: BLE001
+            existing = []
+            logger.debug(f"[screenshot_manager] duplicate_scan_error error={scan_exc}")
+
         if write_dup:
             user_named = path.parent / fname
+            # Prune stale duplicates except current canonical path and new duplicate target
+            for old in existing:
+                if old.name not in {path.name, user_named.name}:
+                    try:
+                        old.unlink(missing_ok=True)  # type: ignore[arg-type]
+                    except Exception as prune_exc:  # noqa: BLE001
+                        logger.debug(f"[screenshot_manager] duplicate_prune_skip target={old} error={prune_exc}")
             if not user_named.exists():
                 try:
                     user_named.write_bytes(raw_bytes)
                 except Exception as dup_exc:  # noqa: BLE001
                     logger.warning(f"[screenshot_manager] duplicate_copy_fail target={user_named} error={dup_exc}")
             duplicate_copy = user_named.exists()
+        else:
+            # Flag disabled -> ensure no leftover duplicate artifacts (keep only canonical path)
+            for old in existing:
+                if old.name != path.name:
+                    try:
+                        old.unlink(missing_ok=True)  # type: ignore[arg-type]
+                    except Exception as prune_exc:  # noqa: BLE001
+                        logger.debug(f"[screenshot_manager] duplicate_prune_skip (flag_off) target={old} error={prune_exc}")
         b64 = base64.b64encode(raw_bytes).decode("utf-8")
         logger.info(
             f"[screenshot_manager] capture_success event=screenshot.capture_success prefix={prefix} path={path} duplicate_copy={duplicate_copy} latency_ms={capture_latency_ms} size_bytes={size_bytes}"

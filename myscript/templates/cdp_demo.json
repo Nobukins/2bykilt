@@ -1,0 +1,5 @@
+[
+  {"action": "command", "args": ["https://example.com"]},
+  {"action": "wait_for_navigation"},
+  {"action": "screenshot", "args": ["artifacts/cdp-demo/example.png"]}
+]

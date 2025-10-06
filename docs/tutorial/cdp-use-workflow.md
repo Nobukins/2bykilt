@@ -76,73 +76,155 @@ Modern UI は Phase3 で導入した Gradio ベースの画面です。設定パ
 
 > ℹ️ Modern UI を閉じるとランタイムオーバーライドはリセットされます。永続化したい場合は環境変数または `.env` で設定してください。
 
-## 3. Unlock Future コマンドを CDP 経路で実行する
+## 3. Unlock Future コマンドを CDP 経路で実行する（MVP 実装）
 
-### 3.1 サンプル JSON の作成
+### 3.1 現状の制約と MVP アプローチ
 
-`myscript/templates/` など任意の場所に `cdp_demo.json` を作成し、以下の最小アクションを定義します。
+Phase0〜4 で設計した `CDPEngine` / `EngineLoader` は `cdp-use` ライブラリの API 不整合により現時点で動作しません。本チュートリアルの MVP では **既存の `BrowserDebugManager` + `ExecutionDebugEngine` 経路**を活用し、Modern UI 経由で CDP 接続を検証します。
 
-```json
-[
-  {"action": "command", "args": ["https://example.com"]},
-  {"action": "wait_for_navigation"},
-  {"action": "screenshot", "args": ["artifacts/cdp-demo/example.png"]}
-]
-```
+#### CDP 接続の仕組み（MVP）
 
-### 3.2 ワークフロースクリプトの作成
+1. `BrowserDebugManager.initialize_browser(use_own_browser=True)` で CDP デバッグポート接続
+2. `global_browser` インスタンスを再利用してセッション永続化
+3. 個人プロファイル (`user_data_dir`) を優先して起動
 
-`myscript/bin/run_cdp_demo.py` を新規作成し、以下のコードを配置します。`UnlockFutureAdapter` が JSON を読み込み、指定したエンジンで順次アクションを実行します。
+### 3.2 Modern UI 経由での CDP 実行手順（推奨: オプションA）
 
-```python
-#!/usr/bin/env python3
-"""CDP デモスクリプト"""
+#### オプション A: 自動起動モード（推奨・最も簡単）
 
-import asyncio
-from pathlib import Path
+システムが自動的にChromeをCDP対応で起動します。**個人プロファイルとの競合を避けるため、一時プロファイルを使用します。**
 
-from src.browser.engine.browser_engine import LaunchContext
-from src.browser.engine.loader import EngineLoader
-from src.browser.unlock_future_adapter import UnlockFutureAdapter
+1. **全てのChromeを終了**
 
-JSON_PATH = Path("myscript/templates/cdp_demo.json")
+   ```bash
+   # macOS
+   killall "Google Chrome"
+   
+   # Linux
+   pkill -f chrome
+   ```
 
-async def main() -> None:
-    engine = EngineLoader.load_engine("cdp")
-    adapter = UnlockFutureAdapter(engine)
+2. **サーバー起動**
 
-    try:
-        await engine.launch(LaunchContext(headless=True, trace_enabled=True))
-        results = await adapter.execute_unlock_future_json(JSON_PATH)
+   ```bash
+   python -m src.ui.main_ui
+   ```
 
-        for i, result in enumerate(results, start=1):
-            status = "✅" if result.success else "❌"
-            print(f"{status} Step {i}: {result.action_type} ({result.duration_ms:.1f}ms)")
-    finally:
-        await engine.shutdown()
+3. **ブラウザで <http://0.0.0.0:7860> を開く**
 
-if __name__ == "__main__":
-    asyncio.run(main())
-```
+4. **Run Agent タブで設定**
+   - `Runner Engine` → `cdp` を選択（表示用）
+   - `🌐 Browser` アコーディオンを展開
+   - `Use existing browser profile` を**オフ**（一時プロファイル使用）
+   - `Keep browser open` をオン
 
-### 3.3 実行と確認
+5. 手順1（コマンド実行）と手順2（ログ確認）は共通手順を参照
+
+#### オプション B: 事前起動モード（上級者向け）
+
+既にデバッグポート付きで起動済みのChromeに接続します。個人プロファイル・拡張機能・ブックマークがそのまま使えますが、**設定が難しい**です。
+
+**重要な前提条件**:
+
+- Chrome を通常起動したままでは動作しません
+- 個人プロファイルは一度完全に閉じる必要があります
+- デバッグポート付きでのみ起動する必要があります
+
+1. **全てのChromeを完全終了**
+
+   ```bash
+   killall "Google Chrome"
+   # プロセスが完全に終了したことを確認
+   sleep 2
+   ```
+
+2. **デバッグポート付きでChromeを手動起動（個人プロファイルは使用しない）**
+
+   ```bash
+   # macOS - 一時プロファイルで起動
+   /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
+     --remote-debugging-port=9222 \
+     --user-data-dir=$(mktemp -d) \
+     --no-first-run \
+     --no-default-browser-check &
+   ```
+
+   > 💡 起動後、`chrome://version` を開いてコマンドラインに `--remote-debugging-port=9222` が含まれることを確認してください
+
+3. **接続確認**
+
+   ```bash
+   curl http://localhost:9222/json/version
+   ```
+
+   JSONレスポンスが返れば成功です。
+
+4. **サーバー起動**
+
+   ```bash
+   python -m src.ui.main_ui
+   ```
+
+5. **ブラウザで <http://0.0.0.0:7860> を開く**（デバッグポート付きChromeの別タブで）
+
+6. **Run Agent タブで設定**
+   - `Runner Engine` → `cdp` を選択
+   - `🌐 Browser` アコーディオンを展開
+   - `Use existing browser profile` をオン（既存接続を使用）
+   - `Keep browser open` をオン（セッション確認用）
+
+#### 共通手順: コマンド実行と検証
+
+1. **コマンド実行**  
+   Task Description に以下を入力:
+
+   ```text
+   @nogtips-jsonpayload query=CDP
+   ```
+
+   `▶️ Run Agent` をクリック
+
+2. **ログ確認**  
+   ターミナルに以下のようなログが出力されたら CDP 経路です:
+
+   ```text
+   INFO [browser_debug_manager] ✅ 既存のCDPブラウザを再利用
+   INFO - 🔍 個人user-data-dirを使用: /Users/.../Chrome
+   INFO - ✅ chromeプロセスへの接続成功
+   ```
+
+3. **Chrome で検証（任意）**  
+   立ち上がった Chrome で `chrome://version` を開き、コマンドラインに `--remote-debugging-port=9222` が含まれることを確認
+
+### 3.3 連続コマンドのセッション再利用テスト
+
+2回目のコマンド実行時、新規ブラウザが立ち上がらず既存タブが再利用されたら成功です:
+
+1. 前述の手順でブラウザを立ち上げたまま
+2. Task Description に別のコマンド（例: `@click-jsonpayload selector=#example`）を入力
+3. `▶️ Run Agent` を再度クリック
+4. ログに `✅ 既存のCDPブラウザを再利用` が出れば OK
+
+### 3.4 トラブルシューティング
+
+| 症状 | 原因 | 対処 |
+|------|------|------|
+| `TargetClosedError` | 前回のタブが手動で閉じられた | Chrome を完全終了して再実行 |
+| 新しいブラウザが毎回立ち上がる | `Keep browser open` がオフ | UI で設定をオンに |
+| 個人プロファイルが使えない | `Use existing browser profile` がオフ | UI で設定をオンに、またはログで `個人user-data-dirを使用` を確認 |
+
+### 3.5 アーティファクト確認
+
+実行後、以下に成果物が保存されます:
+
+- **ログ**: `logs/runner.log` に CDP 接続ログ
+- **スクリーンショット**: `artifacts/runs/<timestamp>/` 配下
+- **Feature Flag 解決結果**: `artifacts/runs/*-flags/feature_flags_resolved.json`
 
 ```bash
-RUNNER_ENGINE=cdp python myscript/bin/run_cdp_demo.py
+# 最新の flags 結果を確認
+cat "$(ls -td artifacts/runs/*-flags | head -n 1)/feature_flags_resolved.json" | grep runner.engine
 ```
-
-出力例:
-
-```text
-✅ Step 1: navigate (1245.2ms)
-✅ Step 2: wait_for_navigation (994.7ms)
-✅ Step 3: screenshot (312.4ms)
-```
-
-アーティファクト:
-
-- `artifacts/cdp-demo/example.png` : スクリーンショット
-- `artifacts/traces/trace_*.zip` : `LaunchContext.trace_enabled=True` によって生成されたトレースファイル
 
 ## 4. テレメトリーとログの確認
 
