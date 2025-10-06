@@ -171,6 +171,16 @@ export ENABLE_LLM=true
 python bykilt.py
 ```
 
+### 🖥️ CLI起動オプション
+
+UIを起動するためのCLI呼び出しは以下のいずれの形式でも利用できます。既存のIP/PORTやテーマのオプションと組み合わせ可能です。
+
+- `python bykilt.py`（デフォルト動作）
+- `python bykilt.py --ui`
+- `python bykilt.py ui`
+
+例: `python bykilt.py --ui --ip 0.0.0.0 --port 8080 --theme Glass`
+
 ## ✨ 2bykiltの魔法の力
 
 ### 🎮 ブラウザ操作を魔法として記録・再生

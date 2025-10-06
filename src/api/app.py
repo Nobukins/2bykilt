@@ -19,6 +19,9 @@ from src.utils.app_logger import logger
 import gradio as gr
 from src.core.artifact_manager import ArtifactManager
 from src.api.metrics_router import router as metrics_router
+from src.api.realtime_router import router as realtime_router
+from src.api.trace_viewer_router import router as trace_viewer_router
+from src.ui.services import ensure_playwright_trace_assets
 
 # Simplified CSP middleware
 class CSPMiddleware(BaseHTTPMiddleware):
@@ -40,6 +43,19 @@ def create_fastapi_app(demo, args):
         FastAPI: The configured FastAPI application
     """
     app = FastAPI()
+
+    @app.on_event("startup")
+    async def _ensure_trace_assets() -> None:
+        try:
+            ensure_playwright_trace_assets()
+        except RuntimeError as exc:  # pragma: no cover - optional dependency scenario
+            logger.warning(
+                "Playwright trace viewer assets unavailable",
+                extra={
+                    "event": "trace_viewer.assets.missing",
+                    "error": repr(exc),
+                },
+            )
     
     # CORS設定（環境変数 ALLOWED_ORIGINS を利用、デフォルトは http://localhost:7788 ）
     allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://127.0.0.1:7788").split(",")
@@ -67,11 +83,12 @@ def create_fastapi_app(demo, args):
 
     # Metrics API (Issue #59)
     app.include_router(metrics_router)
+    app.include_router(realtime_router)
+    app.include_router(trace_viewer_router)
 
     # Artifact manifest listing (#36)
     @app.get("/api/artifacts")
     async def list_artifacts(limit: int = 10, type: str | None = None):  # noqa: A002
-        manager = ArtifactManager()
         manifests = ArtifactManager.list_manifests(limit=limit)
         # Flatten artifacts with run association
         items = []

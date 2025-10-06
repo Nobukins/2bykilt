@@ -11,6 +11,9 @@ from pathlib import Path
 from .collector import MetricsCollector, get_metrics_collector, MetricType
 
 
+DEFAULT_STORAGE_PATH = "artifacts/metrics"
+
+
 class MetricsConfig:
     """Configuration for metrics collection."""
 
@@ -21,7 +24,7 @@ class MetricsConfig:
                  export_interval_minutes: int = 60,
                  system_metrics_interval_seconds: int = 60):
         self.enabled = enabled
-        self.storage_path = storage_path or "artifacts/metrics"
+        self.storage_path = storage_path or DEFAULT_STORAGE_PATH
         self.retention_seconds = retention_hours * 3600
         self.export_interval_seconds = export_interval_minutes * 60
         self.system_metrics_interval_seconds = system_metrics_interval_seconds
@@ -31,7 +34,7 @@ class MetricsConfig:
         """Create configuration from environment variables."""
         return cls(
             enabled=os.getenv("METRICS_ENABLED", "true").lower() == "true",
-            storage_path=os.getenv("METRICS_STORAGE_PATH", "artifacts/metrics"),
+            storage_path=os.getenv("METRICS_STORAGE_PATH", DEFAULT_STORAGE_PATH),
             retention_hours=int(os.getenv("METRICS_RETENTION_HOURS", "24")),
             export_interval_minutes=int(os.getenv("METRICS_EXPORT_INTERVAL_MINUTES", "60")),
             system_metrics_interval_seconds=int(os.getenv("METRICS_SYSTEM_INTERVAL_SECONDS", "60"))
@@ -42,7 +45,7 @@ class MetricsConfig:
         """Create configuration from dictionary."""
         return cls(
             enabled=config_dict.get("enabled", True),
-            storage_path=config_dict.get("storage_path", "artifacts/metrics"),
+            storage_path=config_dict.get("storage_path", DEFAULT_STORAGE_PATH),
             retention_hours=config_dict.get("retention_hours", 24),
             export_interval_minutes=config_dict.get("export_interval_minutes", 60),
             system_metrics_interval_seconds=config_dict.get("system_metrics_interval_seconds", 60)
@@ -98,6 +101,19 @@ class MetricsManager:
         # Performance metrics
         self.collector.create_series("performance.execution_time", MetricType.TIMER, self.config.retention_seconds)
         self.collector.create_series("performance.memory_usage", MetricType.GAUGE, self.config.retention_seconds)
+
+        # Browser engine metrics (Phase4 rollout observability)
+        self.collector.create_series("browser_engine.launch.total", MetricType.COUNTER, self.config.retention_seconds)
+        self.collector.create_series("browser_engine.launch.failure_total", MetricType.COUNTER, self.config.retention_seconds)
+        self.collector.create_series("browser_engine.action.duration_ms", MetricType.HISTOGRAM, self.config.retention_seconds)
+        self.collector.create_series("browser_engine.action.success_total", MetricType.COUNTER, self.config.retention_seconds)
+        self.collector.create_series("browser_engine.action.failure_total", MetricType.COUNTER, self.config.retention_seconds)
+        self.collector.create_series("browser_engine.action.artifact_count", MetricType.GAUGE, self.config.retention_seconds)
+        self.collector.create_series("browser_engine.session.total_actions", MetricType.GAUGE, self.config.retention_seconds)
+        self.collector.create_series("browser_engine.session.failed_actions", MetricType.GAUGE, self.config.retention_seconds)
+        self.collector.create_series("browser_engine.session.avg_latency_ms", MetricType.GAUGE, self.config.retention_seconds)
+        self.collector.create_series("browser_engine.session.duration_ms", MetricType.GAUGE, self.config.retention_seconds)
+        self.collector.create_series("browser_engine.session.artifacts_captured", MetricType.GAUGE, self.config.retention_seconds)
 
     def is_enabled(self) -> bool:
         """Check if metrics collection is enabled."""

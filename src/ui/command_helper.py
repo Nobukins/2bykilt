@@ -24,7 +24,8 @@ class CommandHelper:
                         # 基本情報だけを抽出
                         cmd = {
                             'name': action['name'],
-                            'description': action.get('description', '')
+                            'description': action.get('description', ''),
+                            'params': []
                         }
                         
                         # パラメータがあれば追加
@@ -122,7 +123,8 @@ class CommandHelper:
             return command_name
         
         result = command_name
-        required_params = [p for p in cmd['params'] if p.get('required', False)]
+        params = cmd.get('params', [])
+        required_params = [p for p in params if p.get('required', False)]
         
         # Add placeholders for required parameters
         for param in required_params:

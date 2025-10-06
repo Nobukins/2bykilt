@@ -2831,11 +2831,31 @@ def main():
 
     # For UI or default case, proceed with Gradio
     parser = argparse.ArgumentParser(description="Gradio UI for 2Bykilt Agent")
+    parser.add_argument(
+        "--ui",
+        action="store_true",
+        help="Launch the Gradio UI (default mode). Provided for CLI compatibility.",
+    )
+    parser.add_argument(
+        "mode",
+        nargs="?",
+        choices=["ui"],
+        help="Legacy alias for `--ui`. Optional; defaults to UI mode when omitted.",
+    )
     parser.add_argument("--ip", type=str, default="127.0.0.1", help="IP address to bind to")
     parser.add_argument("--port", type=int, default=7788, help="Port to listen on")
     parser.add_argument("--theme", type=str, default="Ocean", choices=theme_map.keys(), help="Theme to use for the UI")
     parser.add_argument("--dark-mode", action="store_true", help="Enable dark mode")
     args = parser.parse_args()
+
+    # Normalize legacy UI flags/commands so downstream code has a single source of truth
+    if getattr(args, "mode", None) == "ui":
+        # Mirror the boolean flag for easier detection and future branching if needed
+        setattr(args, "ui", True)
+
+    ui_requested = getattr(args, "ui", False)
+    if ui_requested:
+        print("🖥️  UI mode requested via CLI flags")
 
     print(f"🔍 DEBUG: Selected theme: {args.theme}")
     print(f"🔍 DEBUG: Dark mode enabled: {args.dark_mode}")
