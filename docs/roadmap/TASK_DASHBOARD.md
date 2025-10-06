@@ -1,50 +1,50 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-10-06T03:20:32+00:00
+Generated at (UTC): 2025-10-06T14:13:44+00:00
 
 ## 1. メタサマリー
 
-- Total Issues: 119
-- High Risk (declared): 7 → 31, 46, 49, 54, 62, 176, 237
+- Total Issues: 121
+- High Risk (declared): 8 → 31, 46, 49, 54, 62, 176, 237, 285
 - Cycle Detected: false (none)
-- Strict Orphans: 28
-- Curated Orphan List Count: 28
+- Strict Orphans: 30
+- Curated Orphan List Count: 30
 
 ## 2. 分布 (Distribution)
 
 ### Priority
-- P0: 27 (22.7%)
-- P1: 38 (31.9%)
-- P2: 52 (43.7%)
-- P3: 2 (1.7%)
+- P0: 27 (22.3%)
+- P1: 38 (31.4%)
+- P2: 53 (43.8%)
+- P3: 3 (2.5%)
 
 ### Phase
-- 1: 23 (19.3%)
-- 1-late: 14 (11.8%)
-- 2: 82 (68.9%)
+- 1: 23 (19.0%)
+- 1-late: 14 (11.6%)
+- 2: 84 (69.4%)
 
 ### Area
-- artifacts: 26 (21.8%)
-- automation: 5 (4.2%)
-- batch: 10 (8.4%)
-- config: 11 (9.2%)
-- docs: 10 (8.4%)
+- artifacts: 26 (21.5%)
+- automation: 5 (4.1%)
+- batch: 10 (8.3%)
+- config: 11 (9.1%)
+- docs: 11 (9.1%)
 - flags: 1 (0.8%)
-- logging: 5 (4.2%)
-- observability: 5 (4.2%)
+- logging: 5 (4.1%)
+- observability: 5 (4.1%)
 - plugins: 1 (0.8%)
 - quality: 1 (0.8%)
-- runner: 23 (19.3%)
-- security: 5 (4.2%)
+- runner: 23 (19.0%)
+- security: 5 (4.1%)
 - test: 1 (0.8%)
-- testing: 4 (3.4%)
-- uiux: 11 (9.2%)
+- testing: 4 (3.3%)
+- uiux: 12 (9.9%)
 
 ### Risk
-- high: 7 (5.9%)
-- low: 12 (10.1%)
+- high: 8 (6.6%)
+- low: 12 (9.9%)
 - medium: 3 (2.5%)
-- none: 97 (81.5%)
+- none: 98 (81.0%)
 
 ## 3. リスク詳細 (High / Medium / etc.)
 
@@ -56,6 +56,7 @@ High Risk Issues:
 - 62: 実行サンドボックス機能制限 (area=security, priority=P0)
 - 176: 宣言的抽出スキーマ (CSV列→コマンド引数/抽出ポリシーマッピング) (area=batch, priority=P1)
 - 237: Bug: Recording file generation not working for any run type (area=artifacts, priority=P0)
+- 285: Browser-Use/Web-UIをベースとしてUI周りのリファクタリング (area=uiux, priority=P2)
 
 ## 4. Orphans
 
@@ -88,6 +89,8 @@ Strict Orphans (自動抽出 = 依存なし & 参照されず):
 - 277: Artifacts UI: Provide UI listing for screenshots, text & element extracts
 - 279: Config: Consolidate configuration menus, env files, and defaults
 - 280: Browser Settings: Improve Browser Settings menu clarity & enforce behavior across run types
+- 285: Browser-Use/Web-UIをベースとしてUI周りのリファクタリング
+- 287: Template for new issue and new PR
 
 Curated Orphan List (summary.data_quality_checks.orphan_issues_without_dependents_or_depends):
 - 55: browser_control pytest パス修正
@@ -118,6 +121,8 @@ Curated Orphan List (summary.data_quality_checks.orphan_issues_without_dependent
 - 277: Artifacts UI: Provide UI listing for screenshots, text & element extracts
 - 279: Config: Consolidate configuration menus, env files, and defaults
 - 280: Browser Settings: Improve Browser Settings menu clarity & enforce behavior across run types
+- 285: Browser-Use/Web-UIをベースとしてUI周りのリファクタリング
+- 287: Template for new issue and new PR
 
 Missing Strict Orphans in curated list: (none)
 Extra non-strict entries in curated list: (none)
@@ -138,6 +143,7 @@ Sorted By: critical_path_rank
 
 | ID | Title | Pri | Phase | Area | Risk | CP Rank | LongestDist | Depends | Dependents | PrimaryPR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 287 | Template for new issue and new PR | P3 | 2 | docs |  | 10 | 0 | 0 | 0 |  |
 | 219 | [runner][bug] search-linkedin 初期コマンド失敗 (pytest経由引数未解釈) | P0 | 2 | runner |  | 5 | 4 | 2 | 2 | #232 |
 | 32 | Run/Job ID 基盤 | P0 | 1 | runner |  | 5 | 0 | 0 | 10 | #79 |
 | 65 | マルチ環境設定ローダ | P0 | 1 | config |  | 5 | 0 | 0 | 4 |  |
@@ -233,6 +239,7 @@ Sorted By: critical_path_rank
 | 278 | UI: Control tab visibility with Feature Flags (per-tab toggles & presets) | P1 | 2 | uiux |  | 1 | 2 | 1 | 0 |  |
 | 279 | Config: Consolidate configuration menus, env files, and defaults | P2 | 2 | config |  | 1 | 0 | 0 | 0 |  |
 | 280 | Browser Settings: Improve Browser Settings menu clarity & enforce behavior across run types | P2 | 2 | uiux |  | 1 | 0 | 0 | 0 |  |
+| 285 | Browser-Use/Web-UIをベースとしてUI周りのリファクタリング | P2 | 2 | uiux | high | 1 | 0 | 0 | 0 |  |
 | 34 | 要素値キャプチャ & エクスポート | P1 | 1 | artifacts |  | 1 | 2 | 2 | 0 | #93 |
 | 38 | 録画統一後回帰テストスイート | P2 | 1-late | artifacts |  | 1 | 4 | 5 | 0 | #103 |
 | 40 | CSV D&D UI 連携 | P2 | 2 | batch |  | 1 | 2 | 1 | 0 | #172 |
@@ -259,6 +266,15 @@ Sorted By: critical_path_rank
 | 90 | Temp test issue for enrichment | P2 | 2 | test |  |  | 0 | 0 | 0 |  |
 
 ## 7. 依存詳細 (Fan-in / Fan-out)
+
+### Issue 287: Template for new issue and new PR
+- Priority: P3, Phase: 2, Area: docs
+- Risk: (none)
+- CriticalPathRank: 10
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+- Progress: {"state": "open"}
 
 ### Issue 219: [runner][bug] search-linkedin 初期コマンド失敗 (pytest経由引数未解釈)
 - Priority: P0, Phase: 2, Area: runner
@@ -1096,6 +1112,15 @@ Sorted By: critical_path_rank
 ### Issue 280: Browser Settings: Improve Browser Settings menu clarity & enforce behavior across run types
 - Priority: P2, Phase: 2, Area: uiux
 - Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+- Progress: {"state": "open"}
+
+### Issue 285: Browser-Use/Web-UIをベースとしてUI周りのリファクタリング
+- Priority: P2, Phase: 2, Area: uiux
+- Risk: high
 - CriticalPathRank: 1
 - LongestDistance: 0
 - Depends (0): (none)
