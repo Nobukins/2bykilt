@@ -78,7 +78,7 @@ class TestFeatureFlagService:
         state = service.get_current_state()
 
         # 不正値は "playwright" にフォールバック
-        assert state.runner_engine == "invalid"  # ロードはそのまま
+        assert state.runner_engine == "playwright"  # フォールバックを検証
         # 実際の使用時に検証される想定
 
     def test_singleton_pattern(self):
