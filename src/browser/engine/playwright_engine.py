@@ -110,9 +110,12 @@ class PlaywrightEngine(BrowserEngine):
             # ページ作成
             self._page = await self._context.new_page()
             logger.info("Playwright browser launched successfully")
+
+            self._on_launch_success(context)
             
         except Exception as e:
             logger.error(f"Failed to launch Playwright browser: {e}")
+            self._on_launch_failure(e)
             await self.shutdown(capture_final_state=False)
             raise EngineLaunchError(f"Playwright launch failed: {e}") from e
     
@@ -358,11 +361,12 @@ class PlaywrightEngine(BrowserEngine):
                 self._playwright = None
             
             self._page = None
-            self._metrics.shutdown_at = datetime.now(timezone.utc)
             logger.info("PlaywrightEngine shutdown complete")
             
         except Exception as e:
             logger.error(f"Error during shutdown: {e}")
+        finally:
+            self._on_shutdown()
     
     def supports_action(self, action_type: str) -> bool:
         """

@@ -16,10 +16,11 @@ Phase4 拡張予定:
 - docs/plan/cdp-webui-modernization.md (Section 5.4)
 """
 
-import os
 import logging
 from typing import Dict, Any, Optional
 from dataclasses import dataclass, field
+
+from src.config.feature_flags import FeatureFlags
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,8 @@ class FeatureFlagState:
     enable_llm: bool = False
     ui_modern_layout: bool = False
     ui_trace_viewer: bool = False
+    ui_run_history: bool = True
+    ui_realtime_updates: bool = True
     metadata: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -67,18 +70,67 @@ class FeatureFlagService:
         Returns:
             FeatureFlagState: 読み取った状態
         """
+        metadata: Dict[str, Any] = {"source": "feature_flags"}
+
+        try:
+            runner_engine = str(
+                FeatureFlags.get("runner.engine", expected_type=str, default="playwright")
+            ).lower()
+            if runner_engine not in {"playwright", "cdp"}:
+                runner_engine = "playwright"
+
+            enable_llm = bool(FeatureFlags.get("enable_llm", expected_type=bool, default=False))
+            ui_modern_layout = bool(
+                FeatureFlags.get("ui.modern_layout", expected_type=bool, default=False)
+            )
+            ui_trace_viewer = bool(
+                FeatureFlags.get("ui.trace_viewer", expected_type=bool, default=False)
+            )
+            ui_run_history = bool(
+                FeatureFlags.get("ui.run_history", expected_type=bool, default=True)
+            )
+            ui_realtime_updates = bool(
+                FeatureFlags.get("ui.realtime_updates", expected_type=bool, default=True)
+            )
+
+        except Exception as exc:  # pragma: no cover - defensive fallback
+            import os
+
+            metadata.update(
+                {
+                    "source": "environment_fallback",
+                    "error": repr(exc),
+                }
+            )
+            runner_engine = os.getenv("RUNNER_ENGINE", "playwright").lower()
+            enable_llm = os.getenv("ENABLE_LLM", "false").lower() == "true"
+            ui_modern_layout = os.getenv("UI_MODERN_LAYOUT", "false").lower() == "true"
+            ui_trace_viewer = os.getenv("UI_TRACE_VIEWER", "false").lower() == "true"
+            ui_run_history = os.getenv("UI_RUN_HISTORY", "true").lower() == "true"
+            ui_realtime_updates = os.getenv("UI_REALTIME_UPDATES", "true").lower() == "true"
+
         state = FeatureFlagState(
-            runner_engine=os.getenv("RUNNER_ENGINE", "playwright").lower(),
-            enable_llm=os.getenv("ENABLE_LLM", "false").lower() == "true",
-            ui_modern_layout=os.getenv("UI_MODERN_LAYOUT", "false").lower() == "true",
-            ui_trace_viewer=os.getenv("UI_TRACE_VIEWER", "false").lower() == "true",
-            metadata={
-                "env_loaded": True,
-                "source": "environment_variables"
-            }
+            runner_engine=runner_engine,
+            enable_llm=enable_llm,
+            ui_modern_layout=ui_modern_layout,
+            ui_trace_viewer=ui_trace_viewer,
+            ui_run_history=ui_run_history,
+            ui_realtime_updates=ui_realtime_updates,
+            metadata=metadata,
         )
-        
-        logger.debug(f"Loaded feature flags: engine={state.runner_engine}, llm={state.enable_llm}")
+
+        logger.debug(
+            "Loaded feature flags",
+            extra={
+                "event": "feature_flags.loaded",
+                "engine": state.runner_engine,
+                "enable_llm": state.enable_llm,
+                "ui_modern_layout": state.ui_modern_layout,
+                "ui_trace_viewer": state.ui_trace_viewer,
+                "ui_run_history": state.ui_run_history,
+                "ui_realtime_updates": state.ui_realtime_updates,
+            },
+        )
         return state
     
     def is_engine_available(self, engine_type: str) -> bool:
@@ -110,10 +162,11 @@ class FeatureFlagService:
         
         return {
             "trace_viewer": state.ui_trace_viewer,
-            "run_history": state.ui_modern_layout,
+            "run_history": state.ui_run_history and state.ui_modern_layout,
             "engine_selector": True,  # 常に表示
             "llm_status": True,  # ENABLE_LLM 状態を常に表示
-            "settings_panel": state.ui_modern_layout
+            "settings_panel": state.ui_modern_layout,
+            "realtime_updates": state.ui_realtime_updates,
         }
 
 

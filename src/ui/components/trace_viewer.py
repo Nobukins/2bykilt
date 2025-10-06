@@ -1,17 +1,13 @@
 """
-トレースビューア UI コンポーネント (Phase3)
+トレースビューア UI コンポーネント (Phase4 拡張)
 
-ブラウザ自動化のトレースファイル (.zip) を読み込み、表示する Gradio コンポーネント。
+ブラウザ自動化のトレースファイル (.zip) を読み込み、Playwright Trace Viewer
+を Gradio 上に埋め込み表示するコンポーネント。
 
-Phase3 スコープ:
-- トレース ZIP ファイルの読み込み UI
-- トレースメタデータ表示 (実行時間、URL、アクション数)
-- プレースホルダメッセージ ("Phase4 で Playwright Inspector 埋め込み予定")
-
-Phase4 拡張予定:
-- Playwright Trace Viewer の iframe 埋め込み
-- トレース再生コントロール (再生/一時停止)
-- アクションログとスクリーンショットのタイムライン同期
+実装範囲:
+- トレース ZIP のアップロードとメタデータ解析
+- Playwright Trace Viewer (iframe) の自動埋め込み
+- セッション管理 (短時間キャッシュ)
 
 関連:
 - docs/plan/cdp-webui-modernization.md (Section 5.3: UI Modularization)
@@ -19,59 +15,48 @@ Phase4 拡張予定:
 - src/browser/engine/playwright_engine.py (トレース生成元)
 """
 
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Optional, Dict, Any
-import zipfile
+from __future__ import annotations
+
 import json
 import logging
+import zipfile
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
 
 try:
     import gradio as gr
-except ImportError:
+except ImportError:  # pragma: no cover - optional dependency
     gr = None  # type: ignore
 
-from ..services.feature_flag_service import get_feature_flag_service
+if TYPE_CHECKING:
+    import gradio as gradio_typing
+
+from ..services import (
+    get_feature_flag_service,
+    prepare_playwright_trace_session,
+    prune_playwright_trace_sessions,
+)
 
 logger = logging.getLogger(__name__)
 
+VIEWER_HEIGHT_PX = 720
+_VIEWER_PLACEHOLDER = """
+<div class="trace-viewer-placeholder">
+  <p>Playwright トレースを選択すると、ここに再生ビューアが表示されます。</p>
+</div>
+"""
+
 
 class TraceViewer:
-    """
-    トレースビューア Gradio コンポーネント。
+    """Gradio UI コンポーネント: Playwright トレースビューア"""
 
-    Phase3 実装:
-    - トレースファイル選択 UI
-    - メタデータ解析と表示
-    - Phase4 への拡張ノート表示
-
-    Attributes:
-        _flag_service: FeatureFlagService インスタンス
-        _trace_path: 読み込み済みトレース ZIP パス
-        _metadata: トレースメタデータ (実行時間、URL など)
-    """
-
-    def __init__(self):
+    def __init__(self) -> None:
         self._flag_service = get_feature_flag_service()
         self._trace_path: Optional[Path] = None
         self._metadata: Dict[str, Any] = {}
 
-    def render(self) -> "gr.Column":
-        """
-        Gradio UI レンダリング。
-
-        Returns:
-            gr.Column: トレースビューア UI カラム
-
-        Phase3 UI 構成:
-        - トレース ZIP ファイルアップロード
-        - メタデータ表示エリア
-        - Phase4 プレースホルダメッセージ
-
-        Phase4 拡張予定:
-        - iframe 埋め込みエリア
-        - 再生コントロールボタン
-        """
+    def render(self) -> "gradio_typing.Column":  # pragma: no cover - UI composition
         if gr is None:
             logger.warning("Gradio not installed, cannot render TraceViewer")
             return None  # type: ignore
@@ -79,7 +64,6 @@ class TraceViewer:
         with gr.Column(visible=self._is_visible()) as col:
             gr.Markdown("## 🎬 トレースビューア")
 
-            # トレースファイル選択
             with gr.Row():
                 trace_file = gr.File(
                     label="トレース ZIP ファイル",
@@ -87,149 +71,191 @@ class TraceViewer:
                     type="filepath",
                 )
 
-            # メタデータ表示
             metadata_display = gr.JSON(
                 label="トレースメタデータ",
                 value={},
             )
 
-            # Phase4 プレースホルダ
-            gr.Markdown(
-                """
-                **Phase4 実装予定:**
-                - Playwright Trace Viewer 埋め込み
-                - アクションタイムライン同期
-                - スクリーンショットプレビュー
-                - ネットワークログ表示
-
-                現在は ZIP ファイル内のメタデータのみ表示可能です。
-                """
+            viewer_frame = gr.HTML(
+                value=_VIEWER_PLACEHOLDER,
+                label="トレース再生ビューア",
             )
 
-            # イベントハンドラ
+            status_message = gr.Markdown(value="")
+
             trace_file.change(
                 fn=self._load_trace,
                 inputs=[trace_file],
-                outputs=[metadata_display],
+                outputs=[metadata_display, viewer_frame, status_message],
             )
 
         return col
 
+    def get_current_trace(self) -> Optional[Path]:
+        """現在読み込み済みのトレースパスを返す"""
+        return self._trace_path
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
     def _is_visible(self) -> bool:
-        """
-        トレースビューアの表示可否判定。
-
-        UI_TRACE_VIEWER フラグに基づく。
-
-        Returns:
-            bool: 表示可否
-        """
+        # フラグのキャッシュを常に最新化し、テスト環境や UI セッションの
+        # 切り替えに追随できるようにする。
+        self._flag_service.get_current_state(force_refresh=True)
         visibility = self._flag_service.get_ui_visibility_config()
         return visibility.get("trace_viewer", False)
 
-    def _load_trace(self, trace_path: Optional[str]) -> Dict[str, Any]:
-        """
-        トレース ZIP ファイル読み込み。
-
-        Args:
-            trace_path: アップロードされたトレース ZIP パス
-
-        Returns:
-            Dict[str, Any]: トレースメタデータ
-                - engine_type: エンジンタイプ (Playwright/CDP)
-                - created_at: 作成日時
-                - duration_ms: 実行時間 (ミリ秒)
-                - actions_count: アクション数
-                - urls: 訪問した URL リスト
-                - artifacts: アーティファクトファイル名
-
-        Phase3 実装:
-        - ZIP 内の metadata.json 読み込み
-        - 基本統計情報の抽出
-
-        Phase4 拡張予定:
-        - Playwright trace 形式の直接解析
-        - CDP trace イベントのパース
-        """
+    def _load_trace(
+        self, trace_path: Optional[str]
+    ) -> Tuple[Dict[str, Any], str, str]:
         if not trace_path:
-            return {}
+            return {}, _VIEWER_PLACEHOLDER, ""
 
         try:
             zip_path = Path(trace_path)
             if not zip_path.exists():
-                logger.warning(f"Trace file not found: {trace_path}")
-                return {"error": "ファイルが見つかりません"}
+                logger.warning("Trace file not found: %s", trace_path)
+                return (
+                    {"error": "ファイルが見つかりません"},
+                    _VIEWER_PLACEHOLDER,
+                    "",
+                )
 
             metadata = self._extract_metadata(zip_path)
             self._trace_path = zip_path
-            self._metadata = metadata
 
-            logger.info(f"Trace loaded: {zip_path.name}")
-            return metadata
+            viewer_html, status, enriched_metadata = self._maybe_prepare_viewer(
+                zip_path, metadata
+            )
+            self._metadata = enriched_metadata
 
-        except Exception as e:
-            logger.error(f"Failed to load trace: {e}", exc_info=True)
-            return {"error": f"トレース読み込み失敗: {str(e)}"}
+            logger.info("Trace loaded: %s", zip_path.name)
+            return enriched_metadata, viewer_html, status
+
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.error(
+                "Failed to load trace",
+                exc_info=True,
+                extra={"error": repr(exc)},
+            )
+            return (
+                {"error": f"トレース読み込み失敗: {exc}"},
+                _VIEWER_PLACEHOLDER,
+                "",
+            )
+
+    def _maybe_prepare_viewer(
+        self, zip_path: Path, metadata: Dict[str, Any]
+    ) -> Tuple[str, str, Dict[str, Any]]:
+        prune_playwright_trace_sessions()
+        updated_metadata = dict(metadata)
+        updated_metadata.setdefault("viewer", {})
+
+        if not self._looks_like_playwright_trace(zip_path):
+            updated_metadata["viewer"].update(
+                {
+                    "embedded": False,
+                    "reason": "not_playwright_trace",
+                    "checked_at": datetime.now(timezone.utc).isoformat(),
+                }
+            )
+            return (
+                _VIEWER_PLACEHOLDER,
+                "ℹ️ Playwright トレース形式ではないため埋め込みをスキップしました。",
+                updated_metadata,
+            )
+
+        try:
+            session = prepare_playwright_trace_session(zip_path)
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning(
+                "Failed to prepare Playwright trace session",
+                extra={
+                    "event": "trace_viewer.playwright.session.fail",
+                    "error": repr(exc),
+                    "trace_path": str(zip_path),
+                },
+            )
+            updated_metadata["viewer"].update(
+                {
+                    "embedded": False,
+                    "reason": f"session_error:{exc}",
+                    "checked_at": datetime.now(timezone.utc).isoformat(),
+                }
+            )
+            return (
+                _VIEWER_PLACEHOLDER,
+                f"⚠️ Playwright トレースの埋め込みに失敗しました: {exc}",
+                updated_metadata,
+            )
+
+        iframe_html = self._build_iframe_html(session.viewer_url())
+        status = (
+            "✅ Playwright トレースを自動的に読み込みました。"
+            "ビューアは最新のセッションのみ保持されます。"
+        )
+        updated_metadata["viewer"].update(
+            {
+                "embedded": True,
+                "session_id": session.session_id,
+                "viewer_url": session.viewer_url(),
+                "prepared_at": datetime.now(timezone.utc).isoformat(),
+            }
+        )
+        return iframe_html, status, updated_metadata
+
+    @staticmethod
+    def _build_iframe_html(viewer_url: str) -> str:
+        return (
+            "<div class=\"trace-viewer-frame\">"
+            f"<iframe src=\"{viewer_url}\" width=\"100%\" height=\"{VIEWER_HEIGHT_PX}\" "
+            "allowfullscreen style=\"border:1px solid var(--border-color,#e5e7eb);\"></iframe>"
+            "</div>"
+        )
+
+    @staticmethod
+    def _looks_like_playwright_trace(zip_path: Path) -> bool:
+        if zip_path.suffix.lower() not in {".zip", ".trace", ".trace.zip"}:
+            return False
+        try:
+            with zipfile.ZipFile(zip_path, "r") as zf:
+                names = set(zf.namelist())
+        except zipfile.BadZipFile:
+            return False
+        return bool({"trace.trace", "resources"} & names)
 
     def _extract_metadata(self, zip_path: Path) -> Dict[str, Any]:
-        """
-        ZIP ファイルからメタデータ抽出。
-
-        Args:
-            zip_path: トレース ZIP パス
-
-        Returns:
-            Dict[str, Any]: メタデータ辞書
-
-        実装:
-        - metadata.json が存在すればパース
-        - なければ ZIP 内ファイルから推測
-        """
         metadata: Dict[str, Any] = {
             "file_name": zip_path.name,
-            "file_size_kb": zip_path.stat().st_size / 1024,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "file_size_kb": round(zip_path.stat().st_size / 1024, 2),
+            "loaded_at": datetime.now(timezone.utc).isoformat(),
         }
 
         try:
             with zipfile.ZipFile(zip_path, "r") as zf:
-                # metadata.json を探す
-                if "metadata.json" in zf.namelist():
-                    with zf.open("metadata.json") as f:
-                        json_data = json.load(f)
-                        metadata.update(json_data)
-                else:
-                    # ファイルリストから推測
-                    metadata["artifacts"] = zf.namelist()
+                names = zf.namelist()
+                metadata["artifacts"] = names
+                metadata.setdefault("urls", [])
+                metadata.setdefault("actions_count", 0)
+
+                if "metadata.json" in names:
+                    with zf.open("metadata.json") as fp:
+                        metadata.update(json.load(fp))
+
+                if "trace.trace" in names:
+                    metadata["playwright_trace"] = True
+
+                if not metadata.get("actions_count"):
                     metadata["actions_count"] = len(
-                        [n for n in zf.namelist() if "screenshot" in n]
+                        [name for name in names if "screenshot" in name]
                     )
 
-        except Exception as e:
-            logger.warning(f"Failed to extract metadata: {e}")
-            metadata["parse_error"] = str(e)
+        except Exception as exc:
+            logger.warning("Failed to extract metadata", exc_info=False)
+            metadata["parse_error"] = repr(exc)
 
         return metadata
 
-    def get_current_trace(self) -> Optional[Path]:
-        """
-        現在読み込み済みのトレースパス取得。
-
-        Returns:
-            Optional[Path]: トレース ZIP パス (未読み込みなら None)
-        """
-        return self._trace_path
-
 
 def create_trace_viewer() -> TraceViewer:
-    """
-    TraceViewer インスタンス作成ファクトリ。
-
-    Returns:
-        TraceViewer: 新規インスタンス
-
-    使用例:
-        viewer = create_trace_viewer()
-        viewer_ui = viewer.render()
-    """
     return TraceViewer()

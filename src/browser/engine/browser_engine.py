@@ -104,10 +104,7 @@ class BrowserEngine(ABC):
         self._context = None
         self._page = None
         self._browser = None
-        self._metrics = EngineMetrics(
-            engine_type=engine_type.value,
-            started_at=datetime.now(timezone.utc)
-        )
+        self._metrics = EngineMetrics(engine_type=engine_type.value)
     
     @abstractmethod
     async def launch(self, context: LaunchContext) -> None:
@@ -206,3 +203,45 @@ class BrowserEngine(ABC):
         
         if result.artifacts:
             self._metrics.artifacts_captured += len(result.artifacts)
+
+        self._record_action_metrics(result)
+
+    def _record_action_metrics(self, result: ActionResult) -> None:
+        try:
+            from .telemetry import EngineTelemetryRecorder
+        except Exception:
+            return
+
+        EngineTelemetryRecorder.record_action(self.engine_type.value, result)
+
+    def _on_launch_success(self, context: LaunchContext) -> None:
+        # 起動完了時刻を更新し、テレメトリーへ送出
+        self._metrics.started_at = datetime.now(timezone.utc)
+
+        try:
+            from .telemetry import EngineTelemetryRecorder
+        except Exception:
+            return
+
+        EngineTelemetryRecorder.record_launch_success(self.engine_type.value, context)
+
+    def _on_launch_failure(self, error: Exception) -> None:
+        try:
+            from .telemetry import EngineTelemetryRecorder
+        except Exception:
+            return
+
+        EngineTelemetryRecorder.record_launch_failure(self.engine_type.value, error)
+
+    def _on_shutdown(self) -> None:
+        if self._metrics.shutdown_at is not None:
+            return
+
+        self._metrics.shutdown_at = datetime.now(timezone.utc)
+
+        try:
+            from .telemetry import EngineTelemetryRecorder
+        except Exception:
+            return
+
+        EngineTelemetryRecorder.record_session_summary(self.engine_type.value, self._metrics)

@@ -42,6 +42,10 @@ from .browser_engine import (
 logger = logging.getLogger(__name__)
 
 
+ENGINE_NOT_LAUNCHED_ERROR = "Engine not launched"
+RUNTIME_EVALUATE_COMMAND = "Runtime.evaluate"
+
+
 class CDPEngine(BrowserEngine):
     """
     Chrome DevTools Protocol (CDP) ベースのブラウザエンジン実装
@@ -122,9 +126,11 @@ class CDPEngine(BrowserEngine):
             await self._enable_debugging()
             
             logger.info("CDP browser launched successfully with sandbox")
+            self._on_launch_success(context)
             
         except Exception as e:
             logger.error(f"Failed to launch CDP browser: {e}")
+            self._on_launch_failure(e)
             await self.shutdown(capture_final_state=False)
             raise EngineLaunchError(f"CDP launch failed: {e}") from e
     
@@ -140,7 +146,7 @@ class CDPEngine(BrowserEngine):
             ActionResult: 実行結果
         """
         if not self._cdp_client or not self._page_id:
-            raise ActionExecutionError("navigate", "Engine not launched")
+            raise ActionExecutionError("navigate", ENGINE_NOT_LAUNCHED_ERROR)
         
         start_time = time.time()
         
@@ -211,7 +217,7 @@ class CDPEngine(BrowserEngine):
             ActionResult: 実行結果
         """
         if not self._cdp_client or not self._page_id:
-            raise ActionExecutionError("dispatch", "Engine not launched")
+            raise ActionExecutionError("dispatch", ENGINE_NOT_LAUNCHED_ERROR)
         
         action_type = action.get("type", "unknown")
         start_time = time.time()
@@ -223,8 +229,8 @@ class CDPEngine(BrowserEngine):
                     selector=action["selector"],
                     file_paths=action["files"]
                 )
-            
-            elif action_type == "set_cookie":
+
+            if action_type == "set_cookie":
                 return await self.set_cookie(
                     name=action["name"],
                     value=action["value"],
@@ -233,68 +239,72 @@ class CDPEngine(BrowserEngine):
                     secure=action.get("secure", False),
                     http_only=action.get("http_only", False)
                 )
-            
-            elif action_type == "evaluate_js":
-                # 任意 JavaScript 実行
+
+            if action_type == "evaluate_js":
                 expression = action["expression"]
                 result = await self._cdp_client.send_command(
-                    "Runtime.evaluate",
+                    RUNTIME_EVALUATE_COMMAND,
                     page_id=self._page_id,
                     params={"expression": expression}
                 )
-                
+
                 duration_ms = (time.time() - start_time) * 1000
                 logger.info(f"Executed JavaScript: {expression[:50]}...")
-                
+
                 action_result = ActionResult(
                     success=True,
                     action_type=action_type,
                     duration_ms=duration_ms,
-                    metadata={"expression": expression, "result": result.get("result")}
+                    metadata={
+                        "expression": expression,
+                        "result": result.get("result")
+                    }
                 )
                 self._update_metrics(action_result)
                 return action_result
-            
+
             # Phase2: 基本アクション
             if action_type == "click":
                 selector = action["selector"]
-                # CDP では座標計算が必要だが Phase2 では evaluate でフォールバック
                 await self._cdp_client.send_command(
-                    "Runtime.evaluate",
+                    RUNTIME_EVALUATE_COMMAND,
                     page_id=self._page_id,
                     params={
                         "expression": f"document.querySelector('{selector}').click()"
                     }
                 )
                 logger.info(f"Clicked: {selector} (via Runtime.evaluate)")
-                
+
             elif action_type == "fill":
                 selector = action["selector"]
                 text = action["text"]
                 escaped_text = text.replace("'", "\\'").replace("\n", "\\n")
                 await self._cdp_client.send_command(
-                    "Runtime.evaluate",
+                    RUNTIME_EVALUATE_COMMAND,
                     page_id=self._page_id,
                     params={
                         "expression": f"document.querySelector('{selector}').value = '{escaped_text}'"
                     }
                 )
                 logger.info(f"Filled '{selector}' with text (length={len(text)})")
-                
+
             elif action_type == "screenshot":
-                path = action.get("path", f"screenshot_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.png")
+                path = action.get(
+                    "path",
+                    f"screenshot_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.png"
+                )
                 result = await self._cdp_client.send_command(
                     "Page.captureScreenshot",
                     page_id=self._page_id,
                     params={"format": "png"}
                 )
-                
-                # Base64 データをファイルに保存
+
                 import base64
+
                 screenshot_data = base64.b64decode(result["data"])
                 Path(path).parent.mkdir(parents=True, exist_ok=True)
                 Path(path).write_bytes(screenshot_data)
-                
+
                 logger.info(f"Screenshot saved: {path}")
                 duration_ms = (time.time() - start_time) * 1000
                 action_result = ActionResult(
@@ -305,10 +315,10 @@ class CDPEngine(BrowserEngine):
                 )
                 self._update_metrics(action_result)
                 return action_result
-                
-            else:
+
+            elif action_type not in {"navigate"}:
                 raise ActionExecutionError(action_type, f"Unsupported action type: {action_type}")
-            
+
             duration_ms = (time.time() - start_time) * 1000
             action_result = ActionResult(
                 success=True,
@@ -415,11 +425,12 @@ class CDPEngine(BrowserEngine):
                 self._cdp_client = None
             
             self._page_id = None
-            self._metrics.shutdown_at = datetime.now(timezone.utc)
             logger.info("CDPEngine shutdown complete")
             
         except Exception as e:
             logger.error(f"Error during shutdown: {e}")
+        finally:
+            self._on_shutdown()
     
     def supports_action(self, action_type: str) -> bool:
         """
@@ -531,7 +542,7 @@ class CDPEngine(BrowserEngine):
         if not self._cdp_client or not self._page_id:
             raise ActionExecutionError(
                 "enable_network_interception",
-                "Engine not launched"
+                ENGINE_NOT_LAUNCHED_ERROR
             )
         
         try:
@@ -614,7 +625,7 @@ class CDPEngine(BrowserEngine):
             )
         """
         if not self._cdp_client or not self._page_id:
-            raise ActionExecutionError("upload_file", "Engine not launched")
+            raise ActionExecutionError("upload_file", ENGINE_NOT_LAUNCHED_ERROR)
         
         start_time = time.time()
         
@@ -629,7 +640,7 @@ class CDPEngine(BrowserEngine):
             
             # セレクタから要素の object ID 取得
             result = await self._cdp_client.send_command(
-                "Runtime.evaluate",
+                RUNTIME_EVALUATE_COMMAND,
                 page_id=self._page_id,
                 params={
                     "expression": f"document.querySelector('{selector}')",
@@ -711,7 +722,7 @@ class CDPEngine(BrowserEngine):
             ActionResult: 実行結果
         """
         if not self._cdp_client or not self._page_id:
-            raise ActionExecutionError("set_cookie", "Engine not launched")
+            raise ActionExecutionError("set_cookie", ENGINE_NOT_LAUNCHED_ERROR)
         
         start_time = time.time()
         
@@ -719,7 +730,7 @@ class CDPEngine(BrowserEngine):
             # 現在の URL からドメイン取得（domain 未指定時）
             if domain is None:
                 current_url_result = await self._cdp_client.send_command(
-                    "Runtime.evaluate",
+                    RUNTIME_EVALUATE_COMMAND,
                     page_id=self._page_id,
                     params={"expression": "window.location.hostname"}
                 )
@@ -773,7 +784,7 @@ class CDPEngine(BrowserEngine):
             
             raise ActionExecutionError("set_cookie", error_msg, e) from e
     
-    async def get_console_messages(self) -> List[Dict[str, Any]]:
+    def get_console_messages(self) -> List[Dict[str, Any]]:
         """
         収集したコンソールメッセージを取得 (Phase4)
         
@@ -782,7 +793,7 @@ class CDPEngine(BrowserEngine):
         """
         return self._console_messages.copy()
     
-    async def get_intercepted_requests(self) -> Dict[str, Any]:
+    def get_intercepted_requests(self) -> Dict[str, Any]:
         """
         傍受したリクエスト情報を取得 (Phase4)
         

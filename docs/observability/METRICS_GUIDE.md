@@ -2,6 +2,8 @@
 
 最終更新: 2025-08-26
 
+<!-- markdownlint-disable -->
+
 ## 概要
 
 2bykilt プロジェクトのメトリクス計測とモニタリング標準を定義します。システム健全性の可視化と効果的な運用を実現します。
@@ -78,6 +80,30 @@ queue_pending_jobs = Gauge(
     ['queue_name']
 )
 ```
+
+### ブラウザエンジン テレメトリー（2025-10-06追加）
+
+CDP / Playwright エンジンのロールアウト状況を観測するため、Runner 側に標準メトリクスを追加しました。`METRICS_ENABLED=true` かつ `initialize_metrics()` が呼ばれている環境では自動で収集されます。
+
+| メトリクス名 | 種別 | ラベル | 説明 |
+|--------------|------|--------|------|
+| `browser_engine.launch.total` | Counter | `engine`, `browser_type`, `headless`, `trace_enabled`, `sandbox_mode` | エンジン起動成功回数 |
+| `browser_engine.launch.failure_total` | Counter | `engine`, `error_kind` | エンジン起動失敗回数 |
+| `browser_engine.action.duration_ms` | Histogram | `engine`, `action`, `success` | アクション完了までの所要時間 (ms) |
+| `browser_engine.action.success_total` | Counter | `engine`, `action` | アクション成功回数 |
+| `browser_engine.action.failure_total` | Counter | `engine`, `action`, `error_kind` | アクション失敗回数 |
+| `browser_engine.action.artifact_count` | Gauge | `engine`, `action` | 生成アーティファクト数 (スクリーンショット/トレース等) |
+| `browser_engine.session.total_actions` | Gauge | `engine` | セッション内で実行した総アクション数 |
+| `browser_engine.session.failed_actions` | Gauge | `engine` | セッション内で失敗したアクション数 |
+| `browser_engine.session.avg_latency_ms` | Gauge | `engine` | セッション平均レイテンシ (ms) |
+| `browser_engine.session.duration_ms` | Gauge | `engine` | セッション稼働時間 (ms) |
+| `browser_engine.session.artifacts_captured` | Gauge | `engine` | セッション中に生成したアーティファクト数 |
+
+#### 活用ヒント
+
+- `engine=playwright|cdp` のラベルでフラグ切替の効果を比較できます。
+- `error_kind` は例外クラス名やタイムアウト等を正規化した値です。失敗傾向の把握に利用してください。
+- セッション系メトリクスは `shutdown` 時にのみ確定します。異常終了時でも値が残るよう、クリーンアップ処理は `finally` ブロックで送出しています。
 
 ### 3. Histogram（ヒストグラム）
 分布を追跡する指標

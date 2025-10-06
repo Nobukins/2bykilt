@@ -43,3 +43,23 @@ flags:
     description: "設定ファイルの pickle (.pkl) 読み込みを許可 (セキュリティリスクあり、デフォルト無効)"
     type: bool
     default: false
+  runner.engine:
+    description: "既定ブラウザエンジン (playwright/cdp)"
+    type: str
+    default: playwright
+  ui.modern_layout:
+    description: "モダン UI レイアウトを有効化"
+    type: bool
+    default: false
+  ui.trace_viewer:
+    description: "トレースビューアタブを表示"
+    type: bool
+    default: false
+  ui.run_history:
+    description: "実行履歴タブを表示"
+    type: bool
+    default: true
+  ui.realtime_updates:
+    description: "UI リアルタイム更新 (WebSocket) を有効化"
+    type: bool
+    default: true

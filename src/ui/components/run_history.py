@@ -21,7 +21,7 @@ Phase4 拡張予定:
 
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Literal
+from typing import TYPE_CHECKING, List, Dict, Any, Optional, Literal
 import json
 import logging
 
@@ -29,6 +29,9 @@ try:
     import gradio as gr
 except ImportError:
     gr = None  # type: ignore
+
+if TYPE_CHECKING:
+    import gradio as gradio_typing
 
 from ..services.feature_flag_service import get_feature_flag_service
 
@@ -60,11 +63,12 @@ class RunHistory:
         self._flag_service = get_feature_flag_service()
         self._history_file = history_file or Path("logs/run_history.json")
         self._history_data: List[Dict[str, Any]] = []
+        self._current_filter: FilterType = "all"
 
         # 履歴ファイル読み込み
         self._load_history()
 
-    def render(self) -> Optional["gr.Column"]:
+    def render(self) -> Optional["gradio_typing.Column"]:
         """
         Gradio UI レンダリング。
 
@@ -88,6 +92,10 @@ class RunHistory:
         if not self._is_visible():
             return None
 
+        self._flag_service.get_current_state(force_refresh=True)
+        visibility = self._flag_service.get_ui_visibility_config()
+        realtime_enabled = visibility.get("realtime_updates", True)
+
         with gr.Column() as col:
             gr.Markdown("## 📜 実行履歴")
 
@@ -104,7 +112,7 @@ class RunHistory:
             history_df = gr.Dataframe(
                 headers=["実行時刻", "ステータス", "コマンド概要", "実行時間 (秒)"],
                 datatype=["str", "str", "str", "number"],
-                value=self._format_history_data("all"),
+                value=self._format_history_data(self._current_filter),
                 interactive=False,
                 wrap=True,
             )
@@ -112,16 +120,32 @@ class RunHistory:
             # 統計情報
             stats_md = gr.Markdown(value=self._get_stats_summary())
 
-            # Phase4 プレースホルダ
-            gr.Markdown(
-                """
-                **Phase4 実装予定:**
-                - リアルタイム履歴更新
-                - トレースビューアへのリンク
-                - CSV/JSON エクスポート
-                - 成功率ダッシュボード
-                """
-            )
+            realtime_signal = gr.Textbox(visible=False, elem_id="run-history-ws-signal")
+
+            if realtime_enabled:
+                gr.HTML(
+                    """
+<script>
+(function() {
+  const textbox = document.querySelector('#run-history-ws-signal textarea');
+  if (!textbox) { return; }
+  function connect() {
+    const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const ws = new WebSocket(`${proto}://${window.location.host}/ws/run-history`);
+    ws.onmessage = (event) => {
+      textbox.value = event.data;
+      textbox.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    ws.onclose = () => {
+      setTimeout(connect, 3000);
+    };
+  }
+  connect();
+})();
+</script>
+                    """,
+                    elem_id="run-history-ws-script",
+                )
 
             # イベントハンドラ
             filter_radio.change(
@@ -135,6 +159,13 @@ class RunHistory:
                 outputs=[history_df, stats_md],
             )
 
+            if realtime_enabled:
+                realtime_signal.change(
+                    fn=self._handle_realtime_update,
+                    inputs=[realtime_signal],
+                    outputs=[history_df, stats_md],
+                )
+
         return col
 
     def _is_visible(self) -> bool:
@@ -146,6 +177,7 @@ class RunHistory:
         Returns:
             bool: 表示可否
         """
+        self._flag_service.get_current_state(force_refresh=True)
         visibility = self._flag_service.get_ui_visibility_config()
         return visibility.get("run_history", True)  # デフォルトで表示
 
@@ -229,13 +261,9 @@ class RunHistory:
         Returns:
             List[List[Any]]: フィルタ済みデータフレーム
         """
-        filter_map = {
-            "全て": "all",
-            "成功のみ": "success",
-            "失敗のみ": "failure",
-        }
-        filter_type = filter_map.get(filter_label, "all")
-        return self._format_history_data(filter_type)  # type: ignore
+        filter_type = self._map_filter_label(filter_label)
+        self._current_filter = filter_type
+        return self._format_history_data(filter_type)
 
     def _refresh_history(self) -> tuple:
         """
@@ -245,9 +273,32 @@ class RunHistory:
             tuple: (更新後データフレーム, 統計サマリ Markdown)
         """
         self._load_history()
-        data = self._format_history_data("all")
+        data = self._format_history_data(self._current_filter)
         stats = self._get_stats_summary()
         return data, stats
+
+    def _handle_realtime_update(self, payload: str) -> tuple:
+        if not payload:
+            return (
+                gr.update(),
+                gr.update(value=self._get_stats_summary()),
+            )
+
+        try:
+            data = json.loads(payload)
+            entries = data.get("entries", [])
+        except json.JSONDecodeError:
+            logger.warning("Invalid realtime payload, skipping update")
+            return (
+                gr.update(),
+                gr.update(value=self._get_stats_summary()),
+            )
+
+        self._history_data = entries
+        rows = self._format_history_data(self._current_filter)
+        stats = data.get("stats") or {}
+        stats_md = self._format_stats_from_payload(stats)
+        return rows, stats_md
 
     def _get_stats_summary(self) -> str:
         """
@@ -276,6 +327,25 @@ class RunHistory:
             f"成功率: {success_rate:.1f}% | "
             f"平均実行時間: {avg_duration:.2f} 秒"
         )
+
+    def _format_stats_from_payload(self, stats: Dict[str, Any]) -> str:
+        total = stats.get("total", 0)
+        success_rate = stats.get("success_rate", 0.0)
+        avg_duration = stats.get("avg_duration", 0.0)
+        return (
+            f"**統計:** 総実行回数: {total} | "
+            f"成功率: {success_rate:.1f}% | "
+            f"平均実行時間: {avg_duration:.2f} 秒"
+        )
+
+    @staticmethod
+    def _map_filter_label(filter_label: str) -> FilterType:
+        filter_map = {
+            "全て": "all",
+            "成功のみ": "success",
+            "失敗のみ": "failure",
+        }
+        return filter_map.get(filter_label, "all")
 
     def add_entry(
         self,

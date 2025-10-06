@@ -19,9 +19,23 @@ from .feature_flag_service import (
     FeatureFlagState,
     get_feature_flag_service,
 )
+from .playwright_trace_service import (
+    PlaywrightTraceService,
+    TraceViewerSession,
+    ensure_playwright_trace_assets,
+    get_playwright_trace_session,
+    prepare_playwright_trace_session,
+    prune_playwright_trace_sessions,
+)
 
 __all__ = [
     "FeatureFlagService",
     "FeatureFlagState",
     "get_feature_flag_service",
+    "PlaywrightTraceService",
+    "TraceViewerSession",
+    "ensure_playwright_trace_assets",
+    "get_playwright_trace_session",
+    "prepare_playwright_trace_session",
+    "prune_playwright_trace_sessions",
 ]

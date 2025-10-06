@@ -29,6 +29,7 @@ from .browser_engine import (
     ActionExecutionError,
     ArtifactCaptureError,
 )
+from .telemetry import EngineTelemetryRecorder
 
 __all__ = [
     "BrowserEngine",
@@ -40,6 +41,7 @@ __all__ = [
     "EngineLaunchError",
     "ActionExecutionError",
     "ArtifactCaptureError",
+    "EngineTelemetryRecorder",
 ]
 
 __version__ = "1.0.0-alpha"

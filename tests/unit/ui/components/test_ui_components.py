@@ -17,17 +17,22 @@ Phase4 拡張予定:
 - docs/plan/cdp-webui-modernization.md (Section 7: Testing Strategy)
 """
 
-import pytest
-from unittest.mock import patch, MagicMock, mock_open
-from pathlib import Path
 import json
 import tempfile
+from pathlib import Path
+from unittest.mock import MagicMock, mock_open, patch
 
-from src.ui.components import (
-    create_settings_panel,
-    create_trace_viewer,
-    create_run_history,
-)
+import pytest
+
+from src.config.feature_flags import FeatureFlags, _reset_feature_flags_for_tests
+from src.ui.components import create_run_history, create_settings_panel, create_trace_viewer
+@pytest.fixture(autouse=True)
+def reset_feature_flags():
+    _reset_feature_flags_for_tests()
+    FeatureFlags.clear_all_overrides()
+    yield
+    FeatureFlags.clear_all_overrides()
+
 
 
 class TestSettingsPanel:
@@ -37,9 +42,8 @@ class TestSettingsPanel:
     def test_render_without_gradio(self):
         """Gradio 未インストール時のレンダリング。"""
         panel = create_settings_panel()
-        result = panel.render()
-
-        assert result is None  # Gradio なしでは None 返却
+        with pytest.raises(RuntimeError):
+            panel.render()
 
     @patch.dict(
         "os.environ",
@@ -53,8 +57,8 @@ class TestSettingsPanel:
         panel = create_settings_panel()
         summary = panel.get_status_summary()
 
-        assert "RUNNER_ENGINE: playwright" in summary
-        assert "ENABLE_LLM: true" in summary
+        assert "Engine=playwright" in summary
+        assert "LLM=ON" in summary
 
 
 class TestTraceViewer:
@@ -104,15 +108,15 @@ class TestTraceViewer:
 
             Path(tmp_zip.name).unlink()
 
-    @patch.dict("os.environ", {"UI_TRACE_VIEWER": "true"})
     def test_is_visible_enabled(self):
         """UI_TRACE_VIEWER 有効時の表示判定。"""
+        FeatureFlags.set_override("ui.trace_viewer", True)
         viewer = create_trace_viewer()
         assert viewer._is_visible() is True
 
-    @patch.dict("os.environ", {}, clear=True)
     def test_is_visible_disabled(self):
         """UI_TRACE_VIEWER 無効時の表示判定。"""
+        FeatureFlags.set_override("ui.trace_viewer", False)
         viewer = create_trace_viewer()
         assert viewer._is_visible() is False
 
