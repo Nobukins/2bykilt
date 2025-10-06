@@ -270,7 +270,8 @@ class CDPEngine(BrowserEngine):
                     RUNTIME_EVALUATE_COMMAND,
                     page_id=self._page_id,
                     params={
-                        "expression": f"document.querySelector('{selector}').click()"
+                        "expression": "(s) => { const el = document.querySelector(s); if (el) el.click(); }",
+                        "arguments": [selector]
                     }
                 )
                 logger.info(f"Clicked: {selector} (via Runtime.evaluate)")
