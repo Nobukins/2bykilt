@@ -146,10 +146,11 @@ class SettingsPanel:
         Returns:
             str: ステータスサマリー
         """
-        state = self.flag_service.get_current_state()
+        state = self.flag_service.get_current_state(force_refresh=True)
         return (
-            f"Engine={state.runner_engine}, "
-            f"LLM={'ON' if state.enable_llm else 'OFF'}, "
+            f"RUNNER_ENGINE: {state.runner_engine} | "
+            f"Engine={state.runner_engine} | "
+            f"LLM={'ON' if state.enable_llm else 'OFF'} | "
             f"ModernUI={'ON' if state.ui_modern_layout else 'OFF'}"
         )
 

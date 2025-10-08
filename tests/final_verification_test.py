@@ -8,18 +8,47 @@ import asyncio
 import os
 import sys
 import shutil
+import threading
 from pathlib import Path
 from playwright.async_api import async_playwright
 import pytest
+from _pytest.outcomes import OutcomeException
 
 # These final verification tests are interactive and require a real browser/profile.
 # By default they should be skipped during automated runs. To run locally set:
 #   RUN_LOCAL_FINAL_VERIFICATION=1 pytest tests/final_verification_test.py
 import pytest
 
-pytestmark = pytest.mark.local_only
+_HAS_CHROME_PROFILE = bool(os.environ.get('CHROME_USER_DATA'))
+_HAS_EDGE_PROFILE = bool(os.environ.get('EDGE_USER_DATA'))
 
-async def test_browser_profile(browser_type):
+pytestmark = [
+    pytest.mark.local_only,
+    pytest.mark.skipif(
+        not (_HAS_CHROME_PROFILE or _HAS_EDGE_PROFILE),
+        reason="Set CHROME_USER_DATA or EDGE_USER_DATA to enable final verification tests",
+    ),
+]
+
+def _resolve_browser_requirements(browser_type):
+    bt_name = getattr(browser_type, 'name', browser_type)
+    normalized = str(bt_name).lower() if bt_name is not None else ""
+    if normalized == 'edge':
+        return {
+            "browser_path": os.environ.get('EDGE_PATH', '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge'),
+            "original_profile": os.environ.get('EDGE_USER_DATA', ''),
+            "profile_settings_url": "edge://settings/profiles",
+            "skip_reason": "EDGE_USER_DATA not configured",
+        }
+    return {
+        "browser_path": os.environ.get('CHROME_PATH', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'),
+        "original_profile": os.environ.get('CHROME_USER_DATA', ''),
+        "profile_settings_url": "chrome://settings/people",
+        "skip_reason": "CHROME_USER_DATA not configured",
+    }
+
+
+async def _run_browser_profile(browser_type):
     """指定されたブラウザでプロファイル読み込みテストを実行
 
     The incoming browser_type may be a Playwright BrowserType object (with a .name attr)
@@ -34,15 +63,16 @@ async def test_browser_profile(browser_type):
     print(f"🧪 {display} プロファイル最終検証開始")
     print(f"{'='*60}")
     
-    # 環境変数から設定を取得
-    if browser_type == 'edge':
-        browser_path = os.environ.get('EDGE_PATH', '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge')
-        original_profile = os.environ.get('EDGE_USER_DATA', '')
-        profile_settings_url = "edge://settings/profiles"
-    else:  # chrome
-        browser_path = os.environ.get('CHROME_PATH', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
-        original_profile = os.environ.get('CHROME_USER_DATA', '')
-        profile_settings_url = "chrome://settings/people"
+    details = _resolve_browser_requirements(browser_type)
+    browser_path = details["browser_path"]
+    original_profile = details["original_profile"]
+    profile_settings_url = details["profile_settings_url"]
+    skip_reason = details["skip_reason"]
+
+    if not original_profile or not os.path.exists(original_profile):
+        pytest.skip(skip_reason)
+    if not browser_path or not os.path.exists(browser_path):
+        pytest.skip(f"Browser binary not found at {browser_path}")
     
     print(f"📍 Browser Path: {browser_path}")
     print(f"📍 Original Profile: {original_profile}")
@@ -462,16 +492,47 @@ async def test_browser_profile(browser_type):
     
     return test_results
 
+def test_browser_profile(browser_type):
+    """pytest entry point that runs the async verification inside a dedicated loop."""
+    details = _resolve_browser_requirements(browser_type)
+    browser_path = details["browser_path"]
+    original_profile = details["original_profile"]
+
+    if not original_profile or not os.path.exists(original_profile):
+        pytest.skip(details["skip_reason"])
+    if not browser_path or not os.path.exists(browser_path):
+        pytest.skip(f"Browser binary not found at {browser_path}")
+
+    result_container: dict[str, object] = {}
+
+    def _runner():
+        try:
+            result_container["value"] = asyncio.run(_run_browser_profile(browser_type))
+        except (Exception, OutcomeException) as exc:  # pragma: no cover - propagated below
+            result_container["error"] = exc
+
+    thread = threading.Thread(target=_runner, name="final-verification-runner")
+    thread.start()
+    thread.join()
+
+    if "error" in result_container:
+        raise result_container["error"]  # type: ignore[misc]
+    results = result_container.get("value")
+    assert isinstance(results, dict)
+    # Sanity check: the browser should at least launch successfully for the test to be meaningful.
+    assert results.get("launch_success") is True
+
+
 async def main():
     """最終検証のメイン関数"""
     print("🎯 最終検証：Chrome & Edge プロファイル読み込みテスト")
     print("新しい作法（2025年5月以降対応）での動作検証")
     
     # Edge のテスト
-    edge_results = await test_browser_profile('edge')
+    edge_results = await _run_browser_profile('edge')
     
     # Chrome のテスト
-    chrome_results = await test_browser_profile('chrome')
+    chrome_results = await _run_browser_profile('chrome')
     
     # 結果のサマリー
     print(f"\n{'='*60}")

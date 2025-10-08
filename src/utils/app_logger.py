@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import sys
 import threading
 from datetime import datetime
@@ -47,44 +48,10 @@ class AppLogger:
                 cls._instance._initialize_logger()
             return cls._instance
     
-    def _initialize_logger(self):
+    def _initialize_logger(self):  # noqa: PLR0915 - initialization orchestrates multiple concerns
         self.logger = logging.getLogger('app_logger')
         self.logger.setLevel(logging.DEBUG)
         self.logger.handlers = []
-        # Prefer writing logs to the repository root `logs/` directory when
-        # possible. This prevents accidental writes into `src/logs/` when the
-        # module lives under `src/` (common source layout). If we cannot
-        # discover a repository root, fall back to the current working
-        # directory's `logs/` to preserve previous behavior in tests.
-        def _find_repo_root() -> Optional[str]:
-            # Prefer scanning from the current working directory upwards so
-            # tests that create a temporary repo layout (tmp_path) are
-            # detected when the test changes CWD. Fall back to scanning the
-            # module's file parents if nothing is found from CWD.
-            markers = ("pyproject.toml", ".git", "artifacts")
-            try:
-                cwd = Path.cwd().resolve()
-                for parent in (cwd, *cwd.parents):
-                    for m in markers:
-                        if (parent / m).exists():
-                            return str(parent)
-            except Exception:
-                pass
-
-            try:
-                p = Path(__file__).resolve()
-            except Exception:
-                return None
-            candidate = None
-            for parent in p.parents:
-                for m in markers:
-                    if (parent / m).exists():
-                        candidate = parent
-                        break
-                if candidate:
-                    break
-            return str(candidate) if candidate is not None else None
-
         # Allow tests or callers to inject an explicit log dir via
         # self._provided_log_dir (set by __new__ when bootstrap_app_logger
         # creates the instance). If provided, honoring it here overrides
@@ -112,6 +79,10 @@ class AppLogger:
         
         self.logger.addHandler(file_handler)
         self.logger.addHandler(console_handler)
+
+        # Dedicated directory for persisted browser execution logs
+        self._execution_log_dir = Path(self._log_dir) / "browser_runs"
+        self._execution_log_dir.mkdir(parents=True, exist_ok=True)
     
     def get_gradio_logs(self, max_logs: int = 100, level: Optional[str] = None) -> List[str]:
         with self._lock:
@@ -124,16 +95,46 @@ class AppLogger:
         if level.upper() in LOG_LEVELS:
             self.logger.setLevel(LOG_LEVELS[level.upper()])
     
-    def _log(self, level: int, message: str, emoji: bool = True, save_for_gradio: bool = True):
-        """Internal logging method with emoji support."""
+    def _log(
+        self,
+        level: int,
+        message: str,
+        *args,
+        emoji: bool = True,
+        save_for_gradio: bool = True,
+        exc_info: bool = False,
+        stacklevel: int = 3,
+        **kwargs,
+    ):
+        """Internal logging method with emoji support and %-style formatting."""
+        # Backwards compatibility: allow positional bool to toggle Gradio buffering
+        if args and len(args) == 1 and isinstance(args[0], bool) and "%" not in message and "{" not in message:
+            save_for_gradio = bool(args[0])
+            args = ()
+
+        formatted_message = message
+        if args:
+            try:
+                formatted_message = message % args
+            except Exception:  # pragma: no cover - safety fallback
+                extra_parts = " ".join(str(arg) for arg in args)
+                formatted_message = f"{message} {extra_parts}" if extra_parts else message
+
         level_name = logging.getLevelName(level)
         if emoji and level_name in EMOJI_MAP:
-            message = f"{EMOJI_MAP[level_name]} {message}"
-        self.logger.log(level, message)
+            formatted_message = f"{EMOJI_MAP[level_name]} {formatted_message}"
+
+        log_kwargs = {"exc_info": exc_info, "stacklevel": stacklevel}
+        extra = kwargs.get("extra")
+        if extra is not None:
+            log_kwargs["extra"] = extra
+
+        self.logger.log(level, formatted_message, **log_kwargs)
+
         if save_for_gradio:
             with self._lock:
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                self._gradio_logs.append(f"[{timestamp}] [{level_name}] {message}")
+                self._gradio_logs.append(f"[{timestamp}] [{level_name}] {formatted_message}")
                 # Limit buffer size
                 if len(self._gradio_logs) > self._max_buffer_size:
                     self._gradio_logs = self._gradio_logs[-self._max_buffer_size:]
@@ -143,21 +144,64 @@ class AppLogger:
         with self._lock:
             self._gradio_logs.clear()
     
-    def debug(self, message: str, save_for_gradio: bool = True):
-        self._log(logging.DEBUG, message, save_for_gradio=save_for_gradio)
+    def debug(self, message: str, *args, save_for_gradio: bool = True, **kwargs):
+        self._log(logging.DEBUG, message, *args, save_for_gradio=save_for_gradio, **kwargs)
     
-    def info(self, message: str, save_for_gradio: bool = True):
-        self._log(logging.INFO, message, save_for_gradio=save_for_gradio)
+    def info(self, message: str, *args, save_for_gradio: bool = True, **kwargs):
+        self._log(logging.INFO, message, *args, save_for_gradio=save_for_gradio, **kwargs)
     
-    def warning(self, message: str, save_for_gradio: bool = True):
-        self._log(logging.WARNING, message, save_for_gradio=save_for_gradio)
+    def warning(self, message: str, *args, save_for_gradio: bool = True, **kwargs):
+        self._log(logging.WARNING, message, *args, save_for_gradio=save_for_gradio, **kwargs)
     
-    def error(self, message: str, save_for_gradio: bool = True):
-        self._log(logging.ERROR, message, save_for_gradio=save_for_gradio)
+    def error(self, message: str, *args, save_for_gradio: bool = True, **kwargs):
+        self._log(logging.ERROR, message, *args, save_for_gradio=save_for_gradio, **kwargs)
     
-    def critical(self, message: str, save_for_gradio: bool = True):
-        self._log(logging.CRITICAL, message, save_for_gradio=save_for_gradio)
+    def critical(self, message: str, *args, save_for_gradio: bool = True, **kwargs):
+        self._log(logging.CRITICAL, message, *args, save_for_gradio=save_for_gradio, **kwargs)
+
+    def exception(self, message: str, *args, save_for_gradio: bool = True, **kwargs):
+        self._log(
+            logging.ERROR,
+            message,
+            *args,
+            save_for_gradio=save_for_gradio,
+            exc_info=True,
+            **kwargs,
+        )
     
+    def persist_action_run_log(
+        self,
+        action_name: str,
+        content: str,
+        *,
+        command: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Path:
+        """Persist automation execution output to a timestamped log file."""
+
+        safe_action = re.sub(r"[^A-Za-z0-9_.-]+", "_", action_name or "unnamed")
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        log_path = self._execution_log_dir / f"{timestamp}-{safe_action}.log"
+
+        header_lines = [
+            f"timestamp: {datetime.now().isoformat()}",
+            f"action: {action_name}",
+        ]
+
+        if command:
+            header_lines.append(f"command: {command}")
+
+        if metadata:
+            for key, value in metadata.items():
+                header_lines.append(f"{key}: {value}")
+
+        header_lines.append("")
+        header = "\n".join(header_lines)
+        body = content if content.endswith("\n") else f"{content}\n"
+
+        log_path.write_text(f"{header}{body}", encoding="utf-8")
+        return log_path
+
     def log_prompt_analysis(self, prompt: str, analysis: Dict[str, Any]):
         self.info("=== Prompt Analysis ===")
         self.info(f"Input: {prompt}")

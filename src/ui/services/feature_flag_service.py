@@ -70,6 +70,8 @@ class FeatureFlagService:
         Returns:
             FeatureFlagState: 読み取った状態
         """
+        # Ensure we observe the latest environment or runtime overrides on every load
+        FeatureFlags.invalidate_cache()
         metadata: Dict[str, Any] = {"source": "feature_flags"}
 
         try:
@@ -148,6 +150,9 @@ class FeatureFlagService:
         Returns:
             bool: 利用可否
         """
+        state = self.get_current_state()
+        if state.runner_engine != engine_type:
+            return False
         try:
             from src.browser.engine.loader import EngineLoader
             available = EngineLoader.list_available_engines()
@@ -167,7 +172,7 @@ class FeatureFlagService:
         
         return {
             "trace_viewer": state.ui_trace_viewer,
-            "run_history": state.ui_run_history and state.ui_modern_layout,
+            "run_history": state.ui_run_history,
             "engine_selector": True,  # 常に表示
             "llm_status": True,  # ENABLE_LLM 状態を常に表示
             "settings_panel": state.ui_modern_layout,

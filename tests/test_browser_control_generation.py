@@ -1,11 +1,28 @@
 import os
 import re
 import asyncio
-import importlib
-import sys
+import threading
 from pathlib import Path
+from _pytest.outcomes import OutcomeException
 
-import pytest
+
+def _run_async(coro_fn):
+    result = {}
+
+    def worker():
+        try:
+            result["value"] = asyncio.run(coro_fn())
+        except (Exception, OutcomeException) as exc:  # pragma: no cover - surfaced in main thread
+            result["error"] = exc
+
+    thread = threading.Thread(target=worker, name="browser-control-test", daemon=True)
+    thread.start()
+    thread.join()
+
+    if "error" in result:
+        raise result["error"]
+
+    return result["value"]
 
 
 def _read_generated_script(path: Path) -> str:
@@ -13,8 +30,7 @@ def _read_generated_script(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-@pytest.mark.asyncio
-async def test_generate_browser_control_script_session_scope(tmp_path, monkeypatch):
+def test_generate_browser_control_script_session_scope(tmp_path, monkeypatch):
     """Regression test for Issue #220.
 
     Ensures that the generated browser_control.py uses session-scoped fixtures
@@ -47,6 +63,7 @@ async def test_generate_browser_control_script_session_scope(tmp_path, monkeypat
             returncode = 0
 
             async def communicate(self):
+                await asyncio.sleep(0)
                 # Simulate minimal pytest output
                 return (
                     b"============================= test session starts ==============================\n1 passed in 0.01s\n",
@@ -56,17 +73,21 @@ async def test_generate_browser_control_script_session_scope(tmp_path, monkeypat
         created_commands["cmd"] = cmd
         created_commands["cwd"] = kwargs.get("cwd")
         created_commands["env"] = kwargs.get("env")
+        await asyncio.sleep(0)
         return DummyProc()
 
     monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_subprocess_exec)
 
-    msg, script_path = await run_script(
-        script_info=script_info,
-        params=params,
-        headless=True,
-        save_recording_path=str(recording_dir),
-        browser_type="chromium",
-    )
+    def _invoke_run_script():
+        return run_script(
+            script_info=script_info,
+            params=params,
+            headless=True,
+            save_recording_path=str(recording_dir),
+            browser_type="chromium",
+        )
+
+    msg, script_path = _run_async(_invoke_run_script)
 
     assert script_path, f"Script path not returned: {msg}"
     script_text = _read_generated_script(Path(script_path))

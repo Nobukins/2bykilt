@@ -1,10 +1,19 @@
 # search_script.py 
-import pytest
-from playwright.async_api import async_playwright, Page, expect
 import asyncio
 import os
+import re
 import sys
 from pathlib import Path
+
+import pytest
+from playwright.async_api import (
+    Error as PlaywrightError,
+    Locator,
+    Page,
+    TimeoutError as PlaywrightTimeoutError,
+    async_playwright,
+    expect,
+)
 
 # プロジェクトのsrcディレクトリをPythonパスに追加
 project_root = Path(__file__).parent.parent.parent
@@ -29,6 +38,14 @@ except ImportError:
         except Exception:
             import tempfile
             return tempfile.gettempdir()
+
+VISIBLE_SEARCH_BOX_SELECTOR = (
+    'input[type="search" i]:visible, '
+    'input[name*="search" i]:visible, '
+    'input[placeholder*="search" i]:visible, '
+    'input[placeholder*="検索" i]:visible'
+)
+
 
 pytest_plugins = ["pytest_asyncio"]  # Add this line to enable async test support
 
@@ -99,6 +116,33 @@ async def show_countdown_overlay(page, seconds=5):
         if (statusText) statusText.textContent = 'ブラウザを終了しています';
     }""")
     await page.wait_for_timeout(1000)  # 閉じる前に1秒待機
+
+
+async def locate_visible_search_box(page: Page, *, timeout: float = 5000) -> Locator:
+    """nogtips.wordpress.com の検索ボックスを安全に特定して返す"""
+
+    locator_candidates = [
+        page.get_by_role("searchbox", name=re.compile("検索|search", re.IGNORECASE)),
+        page.get_by_placeholder(re.compile("検索|search", re.IGNORECASE)),
+        page.locator(VISIBLE_SEARCH_BOX_SELECTOR),
+    ]
+
+    last_error: PlaywrightTimeoutError | None = None
+    for locator in locator_candidates:
+        candidate = locator.first
+        try:
+            await candidate.wait_for(state="visible", timeout=timeout)
+            await candidate.scroll_into_view_if_needed()
+            return candidate
+        except PlaywrightTimeoutError as exc:  # noqa: PERF203
+            last_error = exc
+        except PlaywrightError:
+            continue
+
+    message = "Visible search box not found on nogtips.wordpress.com"
+    if last_error:
+        raise PlaywrightTimeoutError(message) from last_error
+    raise PlaywrightTimeoutError(message)
 
 @pytest.mark.asyncio  # This mark will now be recognized
 async def test_text_search(request) -> None:
@@ -780,9 +824,11 @@ async def test_text_search(request) -> None:
         await page.get_by_role("button", name="閉じて承認").click()
         await page.get_by_role("link", name="nogtips").click()
         await page.get_by_role("heading", name="LLMs.txtについて").get_by_role("link").click()
-        await page.get_by_role("searchbox", name="検索:").click()
-        await page.get_by_role("searchbox", name="検索:").fill(query)
-        await page.get_by_role("searchbox", name="検索:").press("Enter")
+
+        search_box = await locate_visible_search_box(page)
+        await search_box.click()
+        await search_box.fill(query)
+        await search_box.press("Enter")
 
         await page.wait_for_timeout(5000)  # 検索結果を少し表示
 
@@ -827,9 +873,11 @@ async def test_nogtips_simple(request) -> None:
             # 検索ボックスを操作（779-785行目のシンプルなスタイル）
             await page.get_by_role("link", name="nogtips").click()
             await page.get_by_role("heading", name="LLMs.txtについて").get_by_role("link").click()
-            await page.get_by_role("searchbox", name="検索:").click()
-            await page.get_by_role("searchbox", name="検索:").fill(query)
-            await page.get_by_role("searchbox", name="検索:").press("Enter")
+            
+            search_box = await locate_visible_search_box(page)
+            await search_box.click(timeout=5000)
+            await search_box.fill(query)
+            await search_box.press("Enter")
             
             # 結果を表示
             await page.wait_for_timeout(5000)
@@ -930,53 +978,15 @@ async def test_nogtips_search(request) -> None:
             # 検索ボックスを探して入力（nogtipsスタイルで安定した操作）
             print(f"🔍 Searching for: {query}")
             
-            # nogtips.wordpress.comの検索ボックスを操作（安定したスタイルを採用）
             print("🔎 Finding nogtips.wordpress.com search box...")
-            
-            # 複数のセレクタで検索ボックスを探す
-            search_selectors = [
-                'input[type="search"]',
-                'input[name="q"]',
-                'input[name="query"]',
-                'input[name="search"]',
-                'input[placeholder*="検索" i]',
-                'input[placeholder*="search" i]',
-                '.search-input',
-                '.search-box input',
-                '#search-input',
-                '#search-box input'
-            ]
-            
-            search_box = None
-            for selector in search_selectors:
-                try:
-                    search_box = await page.query_selector(selector)
-                    if search_box:
-                        print(f"✅ Found search box with selector: {selector}")
-                        break
-                except:
-                    continue
-            
-            if not search_box:
-                # フォールバックとしてrole="searchbox"を使用
-                try:
-                    search_box = await page.get_by_role("searchbox").first
-                    print("✅ Found search box with role='searchbox'")
-                except:
-                    pass
-            
-            if not search_box:
-                print("❌ Could not find search box on nogtips.wordpress.com")
-                # ページのスクリーンショットを撮ってデバッグ
-                await page.screenshot(path=os.path.join(recording_dir, "nogtips_no_search_box.png"))
-                raise Exception("Search box not found on nogtips.wordpress.com")
-            
+            search_box = await locate_visible_search_box(page)
+
             print("🖱️ Clicking search box...")
             await search_box.click()
-            
+
             print(f"⌨️ Filling search query: {query}")
             await search_box.fill(query)
-            
+
             print("⏎ Pressing Enter...")
             await search_box.press("Enter")
             

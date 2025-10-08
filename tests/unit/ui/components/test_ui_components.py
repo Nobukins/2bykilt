@@ -28,6 +28,7 @@ from src.config.feature_flags import FeatureFlags, _reset_feature_flags_for_test
 import gradio as gr
 
 from src.ui.command_helper import CommandHelper
+from src.ui.main_ui import _sync_gradio_module
 from src.ui.components import (
     create_run_history,
     create_run_panel,
@@ -38,8 +39,10 @@ from src.ui.components import (
 def reset_feature_flags():
     _reset_feature_flags_for_tests()
     FeatureFlags.clear_all_overrides()
+    _sync_gradio_module(gr)
     yield
     FeatureFlags.clear_all_overrides()
+    _sync_gradio_module(gr)
 
 
 

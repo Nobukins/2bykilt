@@ -10,6 +10,27 @@ actions:
     command: python -m pytest myscript/search_script.py::test_nogtips_simple --query ${params.query} --no-cov
     slowmo: 2500
 
+  - name: get-title
+    type: browser-control
+    slowmo: 1000
+    params:
+      - name: output_file
+        required: false
+        type: string
+        description: "抽出結果を書き出すファイルパス (未指定時は自動生成)"
+      - name: output_mode
+        required: false
+        type: string
+        description: "ファイル書き込みモード。append (既定) または overwrite"
+    flow:
+      - action: command
+        url: "https://nogtips.wordpress.com/"
+        wait_until: "domcontentloaded"
+      - action: scroll_to_bottom  # ページ下部へスクロールしてCookie同意ボタンを表示
+      - action: extract_content
+        selectors:
+          - selector: "h1"
+
   - name: search-nogtips
     type: browser-control
     slowmo: 1000
@@ -32,6 +53,16 @@ actions:
         value: "${params.query}"
       - action: keyboard_press
         selector: "Enter"
+      - action: screenshot
+        prefix: "nogtips_search"
+        full_page: true
+      - action: extract_content
+        selectors:
+          - selector: "h1"
+            label: "primary_articles"
+            fields:
+              - text
+              - html
 
   - name: phrase-search
     type: browser-control
@@ -128,3 +159,47 @@ actions:
         type: string
         description: "Action to execute"
     command: 'python ${template}'
+
+  - name: demo-artifact-capture
+    type: action_runner_template
+    template: templates/artifact_capture_runner.py
+    description: "デモ: スクリーンショットと要素抽出を自動実行"
+    params:
+      - name: browser
+        required: false
+        type: string
+        description: "Playwright browser type (chromium/firefox/webkit)"
+      - name: prefix
+        required: false
+        type: string
+        description: "Artifact name prefix"
+    command: python ${template} --variant demo --browser ${params.browser|chromium} --prefix ${params.prefix|demo_capture}
+
+  - name: nogtips-artifact-capture
+    type: action_runner_template
+    template: templates/artifact_capture_runner.py
+    description: "nogtips検索フローでアーティファクトを取得"
+    params:
+      - name: query
+        required: true
+        type: string
+        description: "Search query to execute"
+      - name: browser
+        required: false
+        type: string
+        description: "Playwright browser type (chromium/firefox/webkit)"
+      - name: prefix
+        required: false
+        type: string
+        description: "Artifact name prefix"
+    command: python ${template} --variant nogtips --query "${params.query}" --browser ${params.browser|chromium} --prefix ${params.prefix|nogtips_capture}
+
+  - name: yahoo
+    type: action_runner_template
+    action_script: yahoo
+    params:
+      - name: query
+        required: true
+        type: string
+        description: "検索クエリ"
+    command: python ./myscript/unified_action_launcher.py --action ${action_script} --query "${params.query}" --slowmo 1500 --countdown 3

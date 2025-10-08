@@ -131,7 +131,7 @@ class GitScriptAutomator:
         # Chromium（Playwright内蔵）を使用する場合はプロファイルなしで起動
         if self.browser_launcher.is_using_builtin_chromium():
             logger.warning("⚠️ Using Playwright built-in Chromium - launching without profile to avoid API key warnings")
-            return await self.browser_launcher.launch_chromium_without_profile(record_video_dir)
+            return await self.browser_launcher.launch_chromium_without_profile(record_video_dir, headless=headless)
         
         # SeleniumProfile の準備（Google Chrome/Edge用）
         if not self.current_selenium_profile:

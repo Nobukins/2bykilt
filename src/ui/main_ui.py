@@ -17,13 +17,35 @@ Phase4 拡張予定:
 - docs/plan/cdp-webui-modernization.md (Section 5.3: UI Modularization)
 """
 
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 import logging
 
 try:
     import gradio as gr
 except ImportError:
     gr = None  # type: ignore
+
+if TYPE_CHECKING:
+    import gradio as gradio_typing
+else:  # pragma: no cover - runtime-only fallback
+    gradio_typing = None  # type: ignore
+
+def _sync_gradio_module(gr_module):
+    """Ensure all UI modules share the same Gradio reference (mockable in tests)."""
+    global gr
+    gr = gr_module  # align local reference
+    try:
+        from src.ui.components import settings_panel, run_panel, run_history, trace_viewer
+        from src.ui import stream_manager
+
+        settings_panel.gr = gr_module
+        run_panel.gr = gr_module
+        run_history.gr = gr_module
+        trace_viewer.gr = gr_module
+        stream_manager.gr = gr_module
+    except Exception:
+        # During import-time failures we keep best-effort; actual usage will raise later.
+        pass
 
 from .components import (
     create_run_panel,
@@ -53,13 +75,14 @@ class ModernUI:
     """
 
     def __init__(self):
+        _sync_gradio_module(gr)
         self._flag_service = get_feature_flag_service()
         self._settings_panel = create_settings_panel()
         self._trace_viewer = create_trace_viewer()
         self._run_history = create_run_history()
         self._run_panel = create_run_panel()
 
-    def build_interface(self) -> Optional["gr.Blocks"]:
+    def build_interface(self) -> Optional["gradio_typing.Blocks"]:
         """
         Gradio Blocks インターフェース構築。
 
