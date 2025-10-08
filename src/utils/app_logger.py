@@ -178,8 +178,23 @@ class AppLogger:
         metadata: Optional[Dict[str, Any]] = None,
     ) -> Path:
         """Persist automation execution output to a timestamped log file."""
-
-        safe_action = re.sub(r"[^A-Za-z0-9_.-]+", "_", action_name or "unnamed")
+        # REVIEW NOTE: Following PR #301 review (discussion_r2412687742), we tighten
+        # sanitization to avoid leading '.' (hidden files) and sequences of dots which
+        # add little semantic value and could confuse users when scanning the logs dir.
+        # Policy:
+        #   * Allow only [A-Za-z0-9_-]
+        #   * Replace any disallowed run with a single '_'
+        #   * Collapse consecutive '_' to one
+        #   * Strip leading/trailing '_' (fallback to 'unnamed' if empty)
+        # This intentionally disallows '.' inside the action slug; the timestamp already
+        # separates the slug from the extension (.log) so extra dots are unnecessary.
+        raw = action_name or "unnamed"
+        safe_action = re.sub(r"[^A-Za-z0-9_-]+", "_", raw)
+        # Collapse duplicate underscores and hyphens separately for cleaner slugs
+        safe_action = re.sub(r"_+", "_", safe_action)
+        safe_action = re.sub(r"-+", "-", safe_action).strip("_-")
+        if not safe_action:
+            safe_action = "unnamed"
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         log_path = self._execution_log_dir / f"{timestamp}-{safe_action}.log"
 
