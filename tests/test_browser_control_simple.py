@@ -3,13 +3,34 @@
 Simple test script to verify browser-control execution works
 """
 import asyncio
-import sys
 import os
+import sys
+import threading
+from _pytest.outcomes import OutcomeException
 
 # Import using proper package structure
 from src.modules.direct_browser_control import execute_direct_browser_control
 
-async def test_simple_browser_control():
+def _run_async(coro_fn):
+    result = {}
+
+    def worker():
+        try:
+            result["value"] = asyncio.run(coro_fn())
+        except (Exception, OutcomeException) as exc:  # pragma: no cover - bubble up
+            result["error"] = exc
+
+    thread = threading.Thread(target=worker, name="browser-control-simple", daemon=True)
+    thread.start()
+    thread.join()
+
+    if "error" in result:
+        raise result["error"]
+
+    return result.get("value")
+
+
+def test_simple_browser_control():
     """Test simple browser-control execution"""
     print("Testing browser-control execution...")
 
@@ -23,16 +44,20 @@ async def test_simple_browser_control():
     }
 
     try:
-        result = await execute_direct_browser_control(action, **{"browser_type": "chrome"})
+        result = _run_async(lambda: execute_direct_browser_control(action, **{"browser_type": "chrome"}))
         print(f"Browser control execution result: {result}")
-        return result
-    except Exception as e:
+        assert result
+    except Exception as e:  # pragma: no cover - diagnostic aid
         print(f"Error during browser control execution: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        raise
 
 if __name__ == "__main__":
-    result = asyncio.run(test_simple_browser_control())
-    print(f"Test completed with result: {result}")
-    sys.exit(0 if result else 1)
+    try:
+        test_simple_browser_control()
+        print("Test completed with result: True")
+        sys.exit(0)
+    except Exception:
+        print("Test completed with result: False")
+        sys.exit(1)

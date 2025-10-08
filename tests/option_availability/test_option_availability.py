@@ -10,16 +10,15 @@ Ensures the four main options are present and minimally validated:
 Also validates CI-safe aspects: Chrome config wiring, profile args, and recording path.
 """
 
+import asyncio
 import os
 import sys
+import threading
 from pathlib import Path
 from typing import Dict
 
 import pytest
-@pytest.fixture
-def anyio_backend():
-    # Force asyncio backend to avoid requiring trio in CI-safe runs
-    return "asyncio"
+from _pytest.outcomes import OutcomeException
 
 
 """Ensure project root is on sys.path for 'src' imports when run locally."""
@@ -103,6 +102,24 @@ def _load_actions() -> Dict:
     return by_type
 
 
+def _run_async(coro):
+    result_container: dict[str, object] = {}
+
+    def _runner():
+        try:
+            result_container["value"] = asyncio.run(coro)
+        except (Exception, OutcomeException) as exc:  # pragma: no cover - propagated
+            result_container["error"] = exc
+
+    thread = threading.Thread(target=_runner, name="option-availability-async")
+    thread.start()
+    thread.join()
+
+    if "error" in result_container:
+        raise result_container["error"]  # type: ignore[misc]
+    return result_container.get("value")
+
+
 def test_llms_actions_types_available():
     by_type = _load_actions()
     for needed in ("script", "action_runner_template", "browser-control", "git-script"):
@@ -126,8 +143,7 @@ def test_profile_args_in_get_browser_configs(fake_chrome_env):
     assert f"--user-data-dir={fake_chrome_env['user_data']}" in args
 
 
-@pytest.mark.anyio
-async def test_initialize_browser_calls_new_tab(fake_chrome_env, monkeypatch):
+def test_initialize_browser_calls_new_tab(fake_chrome_env, monkeypatch):
     called = {}
 
     class StubDebugManager:
@@ -135,31 +151,34 @@ async def test_initialize_browser_calls_new_tab(fake_chrome_env, monkeypatch):
             called["use_own_browser"] = use_own_browser
             called["headless"] = headless
             called["tab_selection_strategy"] = tab_selection_strategy
+            await asyncio.sleep(0)
             return {"status": "success", "browser": "stub"}
 
     monkeypatch.setattr(bm, "BrowserDebugManager", lambda: StubDebugManager())
 
-    # Native async execution avoids event loop re-entry issues under coverage
-    result = await initialize_browser(
-        use_own_browser=True,
-        headless=True,
-        browser_type="chrome",
-        auto_fallback=False,
-    )
+    async def _run():
+        return await initialize_browser(
+            use_own_browser=True,
+            headless=True,
+            browser_type="chrome",
+            auto_fallback=False,
+        )
+
+    result = _run_async(_run())
     assert isinstance(result, dict) and result.get("status") == "success"
     assert called.get("tab_selection_strategy") == "new_tab"
 
 
-async def test_execute_script_action_safe_path(monkeypatch):
+def test_execute_script_action_safe_path(monkeypatch):
     m = BrowserAutomationManager(local_path="llms.txt")
     assert m.initialize() is True
     action = next(a for a in m.actions.values() if a.get("type") == "script")
     name = action["name"]
-    ok = await m.execute_action(name, query="LLMs.txt")
+    ok = _run_async(m.execute_action(name, query="LLMs.txt"))
     assert ok is True
 
 
-async def test_execute_git_script_action_mocked(monkeypatch, tmp_path):
+def test_execute_git_script_action_mocked(monkeypatch, tmp_path):
     m = BrowserAutomationManager(local_path="llms.txt")
     assert m.initialize() is True
     m.git_repos_dir = tmp_path / "git_scripts"
@@ -175,7 +194,7 @@ async def test_execute_git_script_action_mocked(monkeypatch, tmp_path):
 
     action = next(a for a in m.actions.values() if a.get("type") == "git-script")
     name = action["name"]
-    ok = await m.execute_action(name, query="LLMs.txt")
+    ok = _run_async(m.execute_action(name, query="LLMs.txt"))
     assert ok is True
 
 

@@ -278,6 +278,14 @@ class FeatureFlags:
                 cls._maybe_write_artifact(force_refresh=True)
 
     @classmethod
+    def invalidate_cache(cls) -> None:
+        """Clear the resolved flag cache so subsequent lookups reflect latest sources."""
+        cls._ensure_loaded()
+        with cls._lock:
+            if cls._resolved_cache:
+                cls._resolved_cache.clear()
+
+    @classmethod
     def dump_snapshot(cls) -> Path:
         """Write a snapshot artifact of current resolved flags and return path.
 

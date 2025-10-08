@@ -17,11 +17,15 @@ BrowserEngine インターフェース準拠で再実装します。
 import asyncio
 import time
 import logging
+import shutil
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 from datetime import datetime, timezone
 
 from playwright.async_api import async_playwright, Browser, BrowserContext, Page
+
+from src.core.screenshot_manager import async_capture_page_screenshot
+from src.core.element_capture import async_capture_element_value
 
 from .browser_engine import (
     BrowserEngine,
@@ -212,34 +216,139 @@ class PlaywrightEngine(BrowserEngine):
                 logger.info(f"Pressed key: {key}")
                 
             elif action_type == "extract_content":
-                selectors = action.get("selectors", ["h1"])
-                content = {}
-                for selector in selectors:
+                raw_selectors = action.get("selectors")
+                if raw_selectors is None and "selector" in action:
+                    raw_selectors = [action["selector"]]
+                if raw_selectors is None:
+                    raw_selectors = ["h1"]
+
+                normalized: List[Dict[str, Any]] = []
+                if isinstance(raw_selectors, list):
+                    for entry in raw_selectors:
+                        if isinstance(entry, dict):
+                            selector_value = entry.get("selector") or entry.get("css")
+                            if not selector_value:
+                                continue
+                            normalized.append({
+                                "selector": selector_value,
+                                "label": entry.get("label") or entry.get("name") or selector_value,
+                                "fields": entry.get("fields"),
+                            })
+                        else:
+                            normalized.append({"selector": str(entry), "label": str(entry)})
+                elif isinstance(raw_selectors, dict):
+                    for label, selector_value in raw_selectors.items():
+                        if isinstance(selector_value, str):
+                            normalized.append({"selector": selector_value, "label": str(label)})
+                        elif isinstance(selector_value, dict):
+                            selector = selector_value.get("selector")
+                            if selector:
+                                normalized.append({
+                                    "selector": selector,
+                                    "label": selector_value.get("label") or str(label),
+                                    "fields": selector_value.get("fields"),
+                                })
+                else:
+                    normalized.append({"selector": str(raw_selectors), "label": str(raw_selectors)})
+
+                default_fields = action.get("fields")
+                saved_paths: List[Dict[str, str]] = []
+                content: Dict[str, Any] = {}
+
+                for entry in normalized:
+                    selector = entry.get("selector")
+                    if not selector:
+                        continue
+                    label = entry.get("label") or selector
+                    fields = entry.get("fields") or default_fields
+
                     elements = await self._page.query_selector_all(selector)
                     texts = [await elem.text_content() for elem in elements]
                     texts = [t.strip() for t in texts if t and t.strip()]
                     content[selector] = texts
-                logger.info(f"Extracted content from {len(selectors)} selectors")
+
+                    try:
+                        saved = await async_capture_element_value(
+                            self._page,
+                            selector=selector,
+                            label=label,
+                            fields=fields,
+                        )
+                        if saved:
+                            saved_paths.append({
+                                "selector": selector,
+                                "label": label,
+                                "path": str(saved),
+                            })
+                    except Exception as capture_exc:  # noqa: BLE001
+                        logger.warning(
+                            "element_capture.async_dispatch_fail",
+                            extra={
+                                "event": "element_capture.async_dispatch_fail",
+                                "selector": selector,
+                                "error": repr(capture_exc),
+                            },
+                        )
+
+                logger.info(f"Extracted content from {len(normalized)} selectors")
                 duration_ms = (time.time() - start_time) * 1000
                 result = ActionResult(
                     success=True,
                     action_type=action_type,
                     duration_ms=duration_ms,
-                    artifacts={"extracted_content": content}
+                    artifacts={
+                        "extracted_content": content,
+                        "element_capture_files": saved_paths,
+                    }
                 )
                 self._update_metrics(result)
                 return result
-                
+
             elif action_type == "screenshot":
-                path = action.get("path", f"screenshot_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.png")
-                await self._page.screenshot(path=path)
-                logger.info(f"Screenshot saved: {path}")
+                target_path = action.get("path")
+                prefix = action.get("prefix") or action.get("label")
+                if not prefix and target_path:
+                    prefix = Path(target_path).stem
+                prefix = prefix or "screenshot"
+                image_format = action.get("format") or (Path(target_path).suffix.lstrip(".") if target_path else "png")
+                full_page = action.get("full_page", False)
+
+                capture_path, b64 = await async_capture_page_screenshot(
+                    self._page,
+                    prefix=prefix,
+                    image_format=image_format,
+                    full_page=full_page,
+                )
+
+                if capture_path is None:
+                    raise ActionExecutionError("screenshot", "Screenshot capture failed")
+
+                if target_path:
+                    try:
+                        Path(target_path).parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copy(capture_path, target_path)
+                    except Exception as copy_exc:  # noqa: BLE001
+                        logger.warning(
+                            "screenshot.copy_fail",
+                            extra={
+                                "event": "screenshot.copy_fail",
+                                "source": str(capture_path),
+                                "target": target_path,
+                                "error": repr(copy_exc),
+                            },
+                        )
+
+                logger.info(f"Screenshot saved: {capture_path}")
                 duration_ms = (time.time() - start_time) * 1000
+                artifacts = {"screenshot_path": str(capture_path)}
+                if b64 and action.get("include_base64"):
+                    artifacts["screenshot_base64"] = b64
+
                 result = ActionResult(
                     success=True,
                     action_type=action_type,
                     duration_ms=duration_ms,
-                    artifacts={"screenshot_path": path}
+                    artifacts=artifacts,
                 )
                 self._update_metrics(result)
                 return result

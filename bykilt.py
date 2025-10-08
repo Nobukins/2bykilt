@@ -13,6 +13,7 @@ import subprocess
 import asyncio
 import json  # Added to fix missing import
 
+from src.utils.app_logger import get_app_logger
 # ============================================================================
 # CLI Interface for Batch Execution (Issue #39) - CHECK BEFORE GRADIO IMPORT
 # ============================================================================
@@ -420,12 +421,31 @@ if ENABLE_LLM:
                                 if stdout_text:
                                     result_message += f"\n\nOutput:\n{stdout_text}"
                                 logger.error(f"Script command '{action_name}' failed (exit code: {process.returncode})")
-                            
+
+                            execution_log_path = get_app_logger().persist_action_run_log(
+                                action_name,
+                                result_message,
+                                command=command,
+                                metadata={"returncode": str(process.returncode)},
+                            )
+                            relative_log_path = os.path.relpath(execution_log_path, project_dir)
+                            result_message += f"\n\nExecution log saved to: {relative_log_path}"
+                            logger.info(f"Execution log saved to: {execution_log_path}")
+
                             return result_message, "", "", "", "", None, None, None, gr.update(), gr.update()
                             
                         except Exception as e:
                             error_msg = f"❌ Error executing script command '{action_name}': {str(e)}\n\nCommand: {command}"
                             logger.error(f"Exception in script command '{action_name}': {str(e)}")
+                            execution_log_path = get_app_logger().persist_action_run_log(
+                                action_name,
+                                error_msg,
+                                command=command,
+                                metadata={"exception": str(e)},
+                            )
+                            relative_log_path = os.path.relpath(execution_log_path, project_dir)
+                            error_msg += f"\n\nExecution log saved to: {relative_log_path}"
+                            logger.info(f"Execution log saved to: {execution_log_path}")
                             return error_msg, "", "", "", "", None, None, None, gr.update(), gr.update()
                     
                     elif action_type in ['action_runner_template', 'git-script']:
@@ -571,7 +591,7 @@ else:
                         
                         stdout_text = safe_decode(stdout)
                         stderr_text = safe_decode(stderr)
-                        
+
                         if process.returncode == 0:
                             result_message = f"✅ Script command '{action_name}' executed successfully\n\nCommand: {command}"
                             if stdout_text:
@@ -585,12 +605,31 @@ else:
                             if stdout_text:
                                 result_message += f"\n\nOutput:\n{stdout_text}"
                             logger.error(f"Script command '{action_name}' failed (exit code: {process.returncode})")
-                        
+
+                        execution_log_path = get_app_logger().persist_action_run_log(
+                            action_name,
+                            result_message,
+                            command=command,
+                            metadata={"returncode": str(process.returncode)},
+                        )
+                        relative_log_path = os.path.relpath(execution_log_path, project_dir)
+                        result_message += f"\n\nExecution log saved to: {relative_log_path}"
+                        logger.info(f"Execution log saved to: {execution_log_path}")
+
                         return result_message, "", "", "", "", None, None, None, gr.update(), gr.update()
-                        
+
                     except Exception as e:
                         error_msg = f"❌ Error executing script command '{action_name}': {str(e)}\n\nCommand: {command}"
                         logger.error(f"Exception in script command '{action_name}': {str(e)}")
+                        execution_log_path = get_app_logger().persist_action_run_log(
+                            action_name,
+                            error_msg,
+                            command=command,
+                            metadata={"exception": str(e)},
+                        )
+                        relative_log_path = os.path.relpath(execution_log_path, project_dir)
+                        error_msg += f"\n\nExecution log saved to: {relative_log_path}"
+                        logger.info(f"Execution log saved to: {execution_log_path}")
                         return error_msg, "", "", "", "", None, None, None, gr.update(), gr.update()
                 
                 elif action_type in ['action_runner_template', 'git-script']:

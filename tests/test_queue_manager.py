@@ -5,12 +5,33 @@ Tests for the QueueManager implementation with concurrency control and manifest 
 """
 
 import asyncio
+import threading
 import pytest
 import time
+from _pytest.outcomes import OutcomeException
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 from src.runner.queue_manager import QueueManager, QueueItem, QueueState, get_queue_manager, reset_queue_manager
+
+
+def _run_async(coro_fn):
+    result = {}
+
+    def worker():
+        try:
+            result["value"] = asyncio.run(coro_fn())
+        except (Exception, OutcomeException) as exc:  # pragma: no cover - surfaced in main thread
+            result["error"] = exc
+
+    thread = threading.Thread(target=worker, name="queue-manager-test", daemon=True)
+    thread.start()
+    thread.join()
+
+    if "error" in result:
+        raise result["error"]
+
+    return result.get("value")
 
 
 class TestQueueManager:
@@ -208,7 +229,7 @@ class TestQueueManager:
     def test_shutdown(self):
         """Test queue manager shutdown"""
 
-        async def test_shutdown():
+        async def _inner():
             # Start stats logging
             await self.manager.start_stats_logging()
 
@@ -234,7 +255,7 @@ class TestQueueManager:
                 # If enqueue fails, that's also acceptable behavior
                 pass
 
-        asyncio.run(test_shutdown())
+        _run_async(_inner)
 
 
 class TestQueueItem:

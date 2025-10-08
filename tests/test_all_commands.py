@@ -3,10 +3,12 @@
 All command types testing script for debugging UI execution issues
 """
 import asyncio
+import logging
 import os
 import sys
-import logging
+import threading
 from pathlib import Path
+from _pytest.outcomes import OutcomeException
 
 # Add project root to path
 project_root = Path(__file__).parent
@@ -23,7 +25,26 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-async def test_action_runner_template():
+def _run_async(coro_fn):
+    result = {}
+
+    def worker():
+        try:
+            result["value"] = asyncio.run(coro_fn())
+        except (Exception, OutcomeException) as exc:
+            result["error"] = exc
+
+    thread = threading.Thread(target=worker, name="test-all-commands-runner", daemon=True)
+    thread.start()
+    thread.join()
+
+    if "error" in result:
+        raise result["error"]
+
+    return result.get("value")
+
+
+async def _run_action_runner_template():
     """Test action_runner_template type"""
     logger.info("\n=== Testing action_runner_template ===")
     
@@ -47,7 +68,7 @@ async def test_action_runner_template():
     params = {'query': 'テストクエリ'}
     
     try:
-        result, path = await run_script(script_info, params, headless=False)
+        result, _ = await run_script(script_info, params, headless=False)
         logger.info(f"✅ action_runner_template result: {result}")
         return True
     except Exception as e:
@@ -56,7 +77,12 @@ async def test_action_runner_template():
         logger.error(traceback.format_exc())
         return False
 
-async def test_browser_control():
+
+def test_action_runner_template():
+    assert _run_async(_run_action_runner_template)
+
+
+async def _run_browser_control():
     """Test browser-control type"""
     logger.info("\n=== Testing browser-control ===")
     
@@ -108,7 +134,12 @@ async def test_browser_control():
         logger.error(traceback.format_exc())
         return False
 
-async def test_git_script():
+
+def test_browser_control():
+    assert _run_async(_run_browser_control)
+
+
+async def _run_git_script():
     """Test git-script type"""
     logger.info("\n=== Testing git-script ===")
     
@@ -135,7 +166,7 @@ async def test_git_script():
     params = {'query': 'gitテスト'}
     
     try:
-        result, path = await run_script(script_info, params, headless=False)
+        result, _ = await run_script(script_info, params, headless=False)
         logger.info(f"✅ git-script result: {result}")
         return True
     except Exception as e:
@@ -144,16 +175,21 @@ async def test_git_script():
         logger.error(traceback.format_exc())
         return False
 
-async def main():
+
+def test_git_script():
+    assert _run_async(_run_git_script)
+
+
+def main():
     """Run all tests"""
     logger.info("Starting comprehensive test of all command types...")
     
     # Test each command type
     results = {}
     
-    results['action_runner_template'] = await test_action_runner_template()
-    results['browser_control'] = await test_browser_control()
-    results['git_script'] = await test_git_script()
+    results['action_runner_template'] = _run_async(_run_action_runner_template)
+    results['browser_control'] = _run_async(_run_browser_control)
+    results['git_script'] = _run_async(_run_git_script)
     
     # Summary
     logger.info("\n=== TEST SUMMARY ===")
@@ -170,4 +206,4 @@ async def main():
         logger.warning("⚠️ Some tests failed. Check logs for details.")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

@@ -57,6 +57,16 @@ RUN_LOCAL_FINAL_VERIFICATION=1 pytest -m local_only -v
 ENABLE_LLM=true pytest -m "not local_only" -v
 ```
 
+### Artifact capture integration checks
+
+The browser automation pipeline now has a focused regression around artifact generation. It exercises both the script-based demo runner and the direct browser-control flow, asserting that screenshots, element captures, and recordings are persisted in the run directory. Run it locally with integration tests enabled:
+
+```bash
+RUN_LOCAL_INTEGRATION=1 pytest tests/integration/test_artifact_capture.py -vv
+```
+
+The suite writes to a temp `ARTIFACTS_BASE_DIR`, so existing local artifacts are untouched. On success you should see one `*-art` run folder per test containing `screenshots/`, `elements/`, and `videos/` entries plus the standard `manifest_v2.json`.
+
 ## Async Test Conventions
 
 All new async tests should:
@@ -108,12 +118,14 @@ pytest $(git diff --name-only origin/main | grep '^tests/' | tr '\n' ' ')
 ## Metrics Related Testing
 
 Batch engine metrics now include `batch_jobs_stopped`. When expanding metrics:
+
 - Provide a `_record_*` helper mirroring `_record_batch_stop_metrics` pattern
 - Patch/spy metric collector in tests for assertion isolation
 
 ## Dealing With git_script_integration Skips
 
 Current blockers: Mocking `get_git_script_resolver` and side effects of cloning/copying. Planned approach (post-PR):
+
 - Introduce resolver injection via fixture or parameter
 - Provide lightweight in-memory or tempdir fake repo
 - Remove class-level skips incrementally

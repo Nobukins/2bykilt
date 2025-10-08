@@ -1,11 +1,16 @@
 import asyncio
 import json
 import os
+import shutil
+from pathlib import Path
 import traceback
 from datetime import datetime
+
 from src.browser.browser_debug_manager import BrowserDebugManager
 from src.modules.yaml_parser import load_yaml_from_file, InstructionLoader
 from src.utils.app_logger import logger
+from src.core.screenshot_manager import async_capture_page_screenshot
+from src.core.element_capture import async_capture_element_value
 
 class ExecutionDebugEngine:
     """デバッグツール用のブラウザコマンド実行エンジン"""
@@ -83,18 +88,106 @@ class ExecutionDebugEngine:
                     await page.keyboard.press(key)
                     logger.info(f"キー '{key}' を押しました")
                 elif action == "extract_content":
-                    selectors = args if args else ["h1"]
+                    options = args[0] if (args and isinstance(args[0], dict)) else {}
+                    selectors = options.get("selectors") or args or ["h1"]
+                    if isinstance(selectors, str):
+                        selectors = [selectors]
+
+                    normalized = []
+                    if isinstance(selectors, list):
+                        for item in selectors:
+                            if isinstance(item, dict):
+                                selector_value = item.get("selector") or item.get("css")
+                                if selector_value:
+                                    normalized.append({
+                                        "selector": selector_value,
+                                        "label": item.get("label") or selector_value,
+                                        "fields": item.get("fields"),
+                                    })
+                            else:
+                                normalized.append({"selector": str(item), "label": str(item)})
+                    elif isinstance(selectors, dict):
+                        for label_key, selector_value in selectors.items():
+                            if isinstance(selector_value, str):
+                                normalized.append({"selector": selector_value, "label": str(label_key)})
+                            elif isinstance(selector_value, dict):
+                                selector = selector_value.get("selector")
+                                if selector:
+                                    normalized.append({
+                                        "selector": selector,
+                                        "label": selector_value.get("label") or str(label_key),
+                                        "fields": selector_value.get("fields"),
+                                    })
+                    else:
+                        normalized.append({"selector": str(selectors), "label": str(selectors)})
+
+                    default_fields = options.get("fields")
                     content = {}
-                    for selector in selectors:
+                    for entry in normalized:
+                        selector = entry.get("selector")
+                        if not selector:
+                            continue
+                        label = entry.get("label") or selector
+                        fields = entry.get("fields") or default_fields
+
                         elements = await page.query_selector_all(selector)
-                        texts = [await element.text_content() for element in elements if (await element.text_content()).strip()]
+                        texts = [await element.text_content() for element in elements]
+                        texts = [t.strip() for t in texts if t and t.strip()]
                         content[selector] = texts
+                        try:
+                            saved = await async_capture_element_value(
+                                page,
+                                selector=selector,
+                                label=label,
+                                fields=fields,
+                            )
+                            if saved:
+                                logger.info(f"要素キャプチャを保存しました: {saved}")
+                        except Exception as capture_exc:  # noqa: BLE001
+                            logger.warning(
+                                "element_capture.async_dispatch_fail",
+                                extra={
+                                    "event": "element_capture.async_dispatch_fail",
+                                    "selector": selector,
+                                    "error": repr(capture_exc),
+                                },
+                            )
+
                     logger.info("抽出されたコンテンツ:")
                     logger.info(json.dumps(content, indent=2, ensure_ascii=False))
                 elif action == "screenshot":
-                    screenshot_path = args[0] if args else f"screenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-                    await page.screenshot(path=screenshot_path)
-                    logger.info(f"スクリーンショットを保存しました: {screenshot_path}")
+                    options = args[0] if (args and isinstance(args[0], dict)) else {}
+                    path_override = options.get("path") or (args[0] if args and isinstance(args[0], str) else None)
+                    prefix = options.get("prefix") or options.get("label") or "screenshot"
+                    image_format = options.get("format", "png")
+                    full_page = options.get("full_page", False)
+
+                    capture_path, _ = await async_capture_page_screenshot(
+                        page,
+                        prefix=prefix,
+                        image_format=image_format,
+                        full_page=full_page,
+                    )
+                    if capture_path is None:
+                        logger.warning("スクリーンショットの取得に失敗しました")
+                    else:
+                        logger.info(f"スクリーンショットを保存しました: {capture_path}")
+                        if path_override:
+                            try:
+                                dest = Path(path_override)
+                                dest.parent.mkdir(parents=True, exist_ok=True)
+                                shutil.copy(capture_path, dest)
+                                logger.info(f"スクリーンショットを {dest} にコピーしました")
+                            except Exception as copy_exc:  # noqa: BLE001
+                                logger.warning(
+                                    "screenshot.copy_fail",
+                                    extra={
+                                        "event": "screenshot.copy_fail",
+                                        "source": str(capture_path),
+                                        "target": path_override,
+                                        "error": repr(copy_exc),
+                                    },
+                                )
                 elif action == "close_tab":
                     await page.close()
                     logger.info("タブを閉じました")

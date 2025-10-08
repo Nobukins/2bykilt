@@ -17,19 +17,37 @@ except Exception:  # fallback safety
 # 条件付きインポート
 if ENABLE_LLM:
     try:
+        # Try to import browser-use types; provide a compatibility shim if
+        # the installed package doesn't expose BrowserContextWindowSize.
         from browser_use.agent.service import Agent
         from browser_use.agent.views import AgentHistoryList
         from browser_use.browser.browser import Browser, BrowserConfig
-        from browser_use.browser.context import BrowserContextConfig, BrowserContextWindowSize
-        
+        try:
+            from browser_use.browser.context import BrowserContextConfig, BrowserContextWindowSize
+        except Exception:
+            from dataclasses import dataclass
+
+            @dataclass
+            class BrowserContextWindowSize:
+                width: int = 1024
+                height: int = 768
+
+            try:
+                from browser_use.browser.context import BrowserContextConfig
+            except Exception:
+                class BrowserContextConfig:  # type: ignore
+                    def __init__(self, *args, **kwargs):
+                        # Placeholder fallback used only to avoid import-time errors
+                        return None
+
         from src.browser.custom_browser import CustomBrowser
         from src.browser.custom_context import BrowserContextConfig as CustomBrowserContextConfig
         from src.controller.custom_controller import CustomController
         from src.agent.custom_agent import CustomAgent
         from src.agent.custom_prompts import CustomSystemPrompt, CustomAgentMessagePrompt
-        
+
         from src.config.llms_parser import pre_evaluate_prompt, extract_params, resolve_sensitive_env_variables
-        
+
         LLM_AGENT_AVAILABLE = True
         print("✅ LLM agent modules loaded successfully")
     except ImportError as e:

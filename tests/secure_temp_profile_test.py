@@ -12,8 +12,20 @@ import tempfile
 import atexit
 import signal
 import re
+import threading
 from pathlib import Path
 from playwright.async_api import async_playwright
+import pytest
+from _pytest.outcomes import OutcomeException
+
+pytestmark = [
+    pytest.mark.timeout(180, method="thread"),
+    pytest.mark.local_only,
+    pytest.mark.skipif(
+        os.environ.get("RUN_SECURE_TEMP_PROFILE") != "1",
+        reason="Set RUN_SECURE_TEMP_PROFILE=1 to enable secure temp profile verification",
+    ),
+]
 
 # 一時プロファイルのパスを管理するグローバル変数
 temp_profiles = []
@@ -40,6 +52,7 @@ def create_temp_browser_profile(browser_type):
     """
     print(f"\n{'='*60}")
     bt_name = getattr(browser_type, 'name', browser_type)
+    browser_name = str(bt_name).lower() if bt_name is not None else ""
     try:
         display = str(bt_name).upper()
     except Exception:
@@ -54,7 +67,7 @@ def create_temp_browser_profile(browser_type):
     print(f"{'='*60}")
     
     # 環境変数から設定を取得
-    if str(bt_name) == 'edge':
+    if browser_name == 'edge':
         browser_path = os.environ.get('EDGE_PATH', '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge')
         original_profile = os.environ.get('EDGE_USER_DATA', '')
     else:  # chrome
@@ -240,15 +253,15 @@ def create_temp_browser_profile(browser_type):
 
 import pytest
 
-@pytest.mark.asyncio
 @pytest.mark.local_only
-async def test_browser_with_temp_profile(browser_type):
+async def _run_temp_profile_verification(browser_type):
     """一時プロファイルでブラウザテストを実行
 
     Normalize browser_type as above to prevent AttributeError when provided an object.
     """
     print(f"\n{'='*60}")
     bt_name = getattr(browser_type, 'name', browser_type)
+    browser_name = str(bt_name).lower() if bt_name is not None else ""
     try:
         display = str(bt_name).upper()
     except Exception:
@@ -269,6 +282,7 @@ async def test_browser_with_temp_profile(browser_type):
         'temp_profile_path': profile_info['temp_dir']
     }
     
+    context = None
     try:
         # Playwright でブラウザ起動テスト
         print(f"🚀 Launching {browser_type} with temporary profile...")
@@ -318,10 +332,12 @@ async def test_browser_with_temp_profile(browser_type):
             print(f"✅ {browser_type} launched successfully with temporary profile")
             
             # プロファイル設定URLの設定
-            if browser_type == 'edge':
+            if browser_name == 'edge':
                 profile_settings_url = "edge://settings/profiles"
+                bookmarks_url = "edge://favorites/"
             else:
                 profile_settings_url = "chrome://settings/people"
+                bookmarks_url = "chrome://bookmarks/"
             
             # 既存ページのクリーンアップ
             for page in context.pages:
@@ -460,7 +476,7 @@ async def test_browser_with_temp_profile(browser_type):
                 if browser_type == 'chrome':
                     await page.goto("chrome://bookmarks/", wait_until='domcontentloaded', timeout=10000)
                 else:
-                    await page.goto("edge://favorites/", wait_until='domcontentloaded', timeout=10000)
+                    await page.goto(bookmarks_url, wait_until='domcontentloaded', timeout=10000)
                 
                 await page.wait_for_timeout(2000)
                 
@@ -483,15 +499,71 @@ async def test_browser_with_temp_profile(browser_type):
             # 5秒間表示してからクローズ
             print(f"⏱️ Displaying for 5 seconds for manual verification...")
             await page.wait_for_timeout(5000)
-            
-            await context.close()
+
+            try:
+                await asyncio.wait_for(context.close(), timeout=15)
+                context = None
+            except Exception as close_err:
+                print(f"⚠️ Context close within block failed: {close_err}")
             
     except Exception as e:
         print(f"❌ Browser launch failed: {e}")
         import traceback
         traceback.print_exc()
-    
+    finally:
+        if context is not None:
+            try:
+                await asyncio.wait_for(context.close(), timeout=15)
+            except Exception as close_exc:
+                print(f"⚠️ Context close timeout or error: {close_exc}")
+                try:
+                    await context.browser.close()
+                except Exception:
+                    pass
+                await asyncio.sleep(1)
     return test_results
+
+
+def test_browser_with_temp_profile(browser_type):
+    """同期テストエントリーポイント：専用スレッドで async 処理を実行"""
+    normalized = getattr(browser_type, 'name', browser_type)
+    browser_name = str(normalized).lower() if normalized is not None else ""
+
+    if browser_name == 'edge':
+        profile_path = os.environ.get('EDGE_USER_DATA', '')
+        binary_path = os.environ.get('EDGE_PATH', '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge')
+        skip_reason = "EDGE_USER_DATA not configured"
+    else:
+        profile_path = os.environ.get('CHROME_USER_DATA', '')
+        binary_path = os.environ.get('CHROME_PATH', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
+        skip_reason = "CHROME_USER_DATA not configured"
+
+    if not profile_path or not os.path.exists(profile_path):
+        pytest.skip(skip_reason)
+    if not binary_path or not os.path.exists(binary_path):
+        pytest.skip(f"Browser binary not found at {binary_path}")
+
+    result_container: dict[str, object] = {}
+
+    def _runner():
+        try:
+            result_container["value"] = asyncio.run(_run_temp_profile_verification(browser_type))
+        except (Exception, OutcomeException) as exc:  # pragma: no cover - error propagated after join
+            result_container["error"] = exc
+
+    thread = threading.Thread(target=_runner, name="secure-temp-profile-runner")
+    thread.start()
+    thread.join(timeout=180)
+
+    if thread.is_alive():
+        raise TimeoutError("secure-temp-profile-runner did not finish within 180s")
+
+    if "error" in result_container:
+        raise result_container["error"]  # type: ignore[misc]
+
+    results = result_container.get("value")
+    assert isinstance(results, dict)
+    assert results.get("launch_success") is True
 
 async def main():
     """メイン関数 - 両ブラウザで一時プロファイルテストを実行"""
