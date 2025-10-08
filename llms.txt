@@ -193,13 +193,3 @@ actions:
         type: string
         description: "Artifact name prefix"
     command: python ${template} --variant nogtips --query "${params.query}" --browser ${params.browser|chromium} --prefix ${params.prefix|nogtips_capture}
-
-  - name: yahoo
-    type: action_runner_template
-    action_script: yahoo
-    params:
-      - name: query
-        required: true
-        type: string
-        description: "検索クエリ"
-    command: python ./myscript/unified_action_launcher.py --action ${action_script} --query "${params.query}" --slowmo 1500 --countdown 3
