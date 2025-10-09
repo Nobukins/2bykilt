@@ -254,3 +254,5 @@ artifacts/metrics/*.csv
 
 # Temporary files for recording under src/artifacts
 src/artifacts/**
+
+.gh/**
