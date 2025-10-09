@@ -137,8 +137,8 @@ def _scan_recursive(
             continue
         if entry.name.startswith("."):
             continue
-        suffix = entry.name.rsplit(".", 1)[-1] if "." in entry.name else ""
-        if suffix and f".{suffix.lower()}" not in extensions:
+        suffix = Path(entry.path).suffix
+        if suffix.lower() not in extensions:
             continue
         try:
             stats = entry.stat(follow_symlinks=False)
