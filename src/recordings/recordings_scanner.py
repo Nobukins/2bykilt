@@ -167,7 +167,7 @@ def _scan_recursive(
 
     heap.sort(key=lambda pair: pair[0], reverse=True)
     ordered_items = [item for _, item in heap]
-    window = islice(ordered_items, offset, offset + limit if limit else None)
+    window = islice(ordered_items, offset, offset + limit) if limit > 0 else iter(())
     return iter(window)
 
 
