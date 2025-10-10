@@ -39,6 +39,10 @@ flags:
     description: "🎥 Recordings 再帰検出を有効化 (#302/#303)"
     type: bool
     default: false
+  artifacts.recordings_gif_fallback_enabled:
+    description: "🎥 Recordings GIF 代替プレビューを有効化 (LLM無効時の動画代替, #302/#306)"
+    type: bool
+    default: false
   artifacts.screenshot.user_named_copy_enabled:
     description: "スクリーンショット重複 (ユーザー指定名) 保存を有効化 (#87)"
     type: bool
