@@ -256,9 +256,9 @@ issues:
   "57": {title: "ログ保持期間 & ローテーション", meta: {area: logging, type: feat, priority: 
         P1, phase: "1-late", stability: core}, depends: ["56"], dependents: [], 
       progress: {state: done, primary_pr: 83}, risk: null, critical_path_rank: 1}
-  "58": {title: "メトリクス計測基盤", meta: {area: observability, type: feat, priority: 
-        P1, phase: "2", stability: core}, depends: ["32"], dependents: ["59"], 
-      risk: null, progress: {state: done, primary_pr: 155}, critical_path_rank: 2}
+  "58": {title: "メトリクス計測基盤 & エクスポータ", meta: {area: observability, type: feat, priority: P1, 
+        phase: "2", stability: core}, depends: ["32"], dependents: ["59"], 
+      risk: null, progress: {state: done, primary_pr: 156}, critical_path_rank: 2}
   "59": {title: "Run メトリクス API", meta: {area: observability, type: feat, 
         priority: P2, phase: "2", stability: core}, depends: ["58"], dependents: [],
     progress: {state: done, primary_pr: 185}, risk: null, critical_path_rank: 1}
@@ -420,10 +420,16 @@ issues:
     progress:
       state: open
     critical_path_rank: 10
+  "302": {title: "[ui/ux][artifacts] 🎥 Recordings: リカーシブ検出 + LLM無効時GIF代替 (Flag対応)", meta: {area: artifacts, type: feat, priority: P2, phase: "2", stability: core}, depends: [], dependents: ["303", "304", "305", "306", "307"], risk: null, progress: {state: in-progress, note: "4/5 sub-issues done; PR #311, #312 pending merge"}, critical_path_rank: 6}
+  "303": {title: "[artifacts] 🎥 Recordings: 再帰探索ユーティリティ + テスト (Flag対応) [Sub of #302]", meta: {area: artifacts, type: feat, priority: P2, phase: "2", stability: core}, depends: ["302"], dependents: ["305"], risk: null, progress: {state: done, primary_pr: 308}, critical_path_rank: 3}
+  "304": {title: "[service] 🎥 Recordings: 一覧取得サービス/API (Flag連携) [Sub of #302]", meta: {area: artifacts, type: feat, priority: P2, phase: "2", stability: core}, depends: ["302", "303"], dependents: ["305"], risk: null, progress: {state: done, primary_pr: 309}, critical_path_rank: 2}
+  "305": {title: "[ui/ux] 🎥 Recordings: タブ統合（ソート/フィルタ/ページング、LLM無効時非表示制御、Flag連携）[Sub of #302]", meta: {area: uiux, type: feat, priority: P2, phase: "2", stability: core}, depends: ["302", "303", "304"], dependents: [], risk: null, progress: {state: done, primary_pr: 310}, critical_path_rank: 1}
+  "306": {title: "[worker] 🎥 Recordings: GIF変換ワーカー/キャッシュ + Flag [Sub of #302]", meta: {area: artifacts, type: feat, priority: P2, phase: "2", stability: core}, depends: ["302"], dependents: ["307"], risk: null, progress: {state: in-progress, note: "implementation complete; PR #311 awaiting merge"}, critical_path_rank: 2}
+  "307": {title: "[docs] 🎥 Recordings: 仕様/Flags/運用手順の更新 [Sub of #302]", meta: {area: docs, type: docs, priority: P2, phase: "2", stability: core}, depends: ["302", "303", "304", "305", "306"], dependents: [], risk: null, progress: {state: done, primary_pr: 312}, critical_path_rank: 1}
 summary:
-  total_issues: 121
+  total_issues: 127
   high_risk: ["31", "46", "49", "54", "62", "176", "237", "285"]
-  longest_chain_example: ["65", "64", "63", "66", "67"]
+  longest_chain_example: ["302", "303", "304", "305"]
   data_quality_checks:
     no_cycles_detected: true
     orphan_issues_without_dependents_or_depends:
@@ -459,9 +465,26 @@ summary:
       - "287"
 
 last_synced:
-  utc: "2025-10-05T12:00:00Z"
+  utc: "2025-10-10T01:15:00Z"
   issues:
+    "307": "CLOSED"
+    "305": "CLOSED"
+    "304": "CLOSED"
+    "303": "CLOSED"
+    "302": "OPEN"
+    "295": "CLOSED"
+    "287": "OPEN"
+    "285": "OPEN"
+    "280": "OPEN"
+    "279": "OPEN"
+    "277": "OPEN"
+    "276": "OPEN"
+    "274": "CLOSED"
+    "264": "OPEN"
+    "263": "CLOSED"
+    "257": "CLOSED"
     "255": "OPEN"
+    "252": "CLOSED"
     "251": "OPEN"
     "250": "OPEN"
     "249": "OPEN"
@@ -470,24 +493,102 @@ last_synced:
     "246": "OPEN"
     "244": "OPEN"
     "242": "OPEN"
-    "241": "OPEN"
+    "241": "CLOSED"
     "240": "OPEN"
+    "238": "CLOSED"
+    "237": "CLOSED"
     "231": "OPEN"
     "230": "OPEN"
     "229": "OPEN"
     "228": "OPEN"
     "227": "OPEN"
+    "226": "CLOSED"
     "224": "OPEN"
+    "223": "CLOSED"
+    "222": "CLOSED"
+    "221": "CLOSED"
+    "220": "CLOSED"
+    "219": "CLOSED"
     "218": "OPEN"
+    "216": "CLOSED"
     "212": "OPEN"
     "211": "OPEN"
     "210": "OPEN"
     "209": "OPEN"
+    "208": "CLOSED"
+    "205": "CLOSED"
+    "203": "CLOSED"
+    "202": "CLOSED"
+    "201": "CLOSED"
+    "200": "CLOSED"
     "199": "OPEN"
+    "198": "CLOSED"
     "197": "OPEN"
+    "196": "CLOSED"
     "194": "OPEN"
     "192": "OPEN"
+    "184": "CLOSED"
     "175": "OPEN"
+    "174": "OPEN"
+    "173": "CLOSED"
+    "127": "OPEN"
+    "115": "OPEN"
+    "114": "OPEN"
+    "113": "OPEN"
+    "109": "OPEN"
+    "108": "OPEN"
+    "107": "OPEN"
+    "106": "CLOSED"
+    "104": "CLOSED"
+    "102": "CLOSED"
+    "101": "CLOSED"
+    "92": "OPEN"
+    "90": "CLOSED"
+    "89": "CLOSED"
+    "88": "CLOSED"
+    "87": "CLOSED"
+    "81": "OPEN"
+    "76": "CLOSED"
+    "67": "OPEN"
+    "66": "OPEN"
+    "65": "CLOSED"
+    "64": "CLOSED"
+    "63": "CLOSED"
+    "62": "OPEN"
+    "61": "CLOSED"
+    "60": "CLOSED"
+    "59": "CLOSED"
+    "58": "CLOSED"
+    "57": "CLOSED"
+    "56": "CLOSED"
+    "55": "CLOSED"
+    "54": "OPEN"
+    "53": "OPEN"
+    "52": "OPEN"
+    "51": "OPEN"
+    "50": "CLOSED"
+    "49": "OPEN"
+    "48": "OPEN"
+    "47": "CLOSED"
+    "46": "CLOSED"
+    "45": "CLOSED"
+    "44": "CLOSED"
+    "43": "OPEN"
+    "42": "CLOSED"
+    "41": "CLOSED"
+    "40": "CLOSED"
+    "39": "CLOSED"
+    "38": "CLOSED"
+    "37": "CLOSED"
+    "36": "CLOSED"
+    "35": "CLOSED"
+    "34": "CLOSED"
+    "33": "CLOSED"
+    "32": "CLOSED"
+    "31": "CLOSED"
+    "30": "CLOSED"
+    "28": "CLOSED"
+    "25": "CLOSED"
     "174": "OPEN"
     "173": "OPEN"
     "127": "OPEN"
