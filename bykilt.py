@@ -1852,6 +1852,9 @@ Tests include browser initialization, profile validation, and recording path ver
                 gr.Markdown("Select and play browser automation recordings")
                 
                 # Service-layer integrated recording functions (Issue #304/#305)
+                # Constants for byte conversion
+                BYTES_TO_MB = 1024 * 1024
+                
                 def update_recordings_list_with_service(recordings_path, limit=50, offset=0):
                     """Service-layer integrated update function with pagination support."""
                     try:
@@ -1867,9 +1870,12 @@ Tests include browser initialization, profile validation, and recording path ver
                         display_choices = []
                         for item in page.items:
                             filename = os.path.basename(item.path)
-                            timestamp = datetime.fromtimestamp(item.modified_at).strftime("%Y-%m-%d %H:%M:%S")
+                            try:
+                                timestamp = datetime.fromtimestamp(item.modified_at).strftime("%Y-%m-%d %H:%M:%S")
+                            except (ValueError, OSError, TypeError):
+                                timestamp = "[invalid timestamp]"
                             run_id_label = f"[{item.run_id}]" if item.run_id else "[unknown]"
-                            size_mb = item.size_bytes / 1024 / 1024
+                            size_mb = item.size_bytes / BYTES_TO_MB
                             display_name = f"{run_id_label} {filename} ({timestamp}, {size_mb:.1f}MB)"
                             display_choices.append((display_name, item.path))
                         
@@ -1879,11 +1885,11 @@ Tests include browser initialization, profile validation, and recording path ver
                             status_msg += " • More available"
                         
                         return gr.update(choices=display_choices, value=latest_recording), latest_recording, status_msg
-                    except FileNotFoundError as e:
-                        error_msg = f"Recording directory not found: {e}"
+                    except FileNotFoundError:
+                        error_msg = "Recording directory not found. Please check the path configuration."
                         return gr.update(choices=[], value=None), None, error_msg
-                    except Exception as e:
-                        error_msg = f"Error loading recordings: {str(e)}"
+                    except Exception:
+                        error_msg = "Error loading recordings. Please check logs for details."
                         return gr.update(choices=[], value=None), None, error_msg
 
                 def update_recordings_list_legacy(recordings_path):
