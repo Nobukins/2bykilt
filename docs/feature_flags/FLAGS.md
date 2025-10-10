@@ -464,3 +464,179 @@ python scripts/flags_cli.py list
 ```
 
 ---
+
+## Recordings 機能関連フラグ (Issue #302 / #306)
+
+### 1. artifacts.recursive_recordings_enabled (Issue #303 / #305)
+
+**目的**: `RECORDING_PATH` 配下の録画ファイルをスキャンする際に、サブディレクトリを再帰的に探索するかを制御します。
+
+- **型**: bool
+- **デフォルト**: false（単一ディレクトリのみスキャン）
+- **有効化効果**:
+  - `RECORDING_PATH` 配下の全サブディレクトリから `.webm` / `.mp4` / `.gif` を検出
+  - Recordings タブで過去の全セッションのアーティファクトを一覧表示可能
+- **無効化効果**:
+  - `RECORDING_PATH` 直下のファイルのみスキャン（高速）
+  - 大量のサブディレクトリがある場合の UI 応答遅延を回避
+- **削除目安**: Manifest v2 (#35) でディレクトリ構造が標準化され、再帰スキャンが不要になったタイミング
+
+**使用例**:
+
+```python
+from src.config.feature_flags import FeatureFlags
+
+if FeatureFlags.is_enabled("artifacts.recursive_recordings_enabled"):
+    # 再帰スキャン
+    recordings = scan_recordings_recursive(recording_path)
+else:
+    # 単一ディレクトリのみ
+    recordings = scan_recordings_flat(recording_path)
+```
+
+**設定例**:
+
+```yaml
+# config/feature_flags.yaml
+artifacts:
+  recursive_recordings_enabled: true
+```
+
+**環境変数オーバーライド**:
+
+```bash
+export BYKILT_FLAG_ARTIFACTS_RECURSIVE_RECORDINGS_ENABLED=true
+# または簡易形式
+export ARTIFACTS_RECURSIVE_RECORDINGS_ENABLED=true
+```
+
+**運用上の注意**:
+
+- **パフォーマンス**: 100+ ファイル/ディレクトリでスキャン時間が増加（推奨: 定期的なアーカイブで対象を削減）
+- **推奨ユースケース**: 過去セッションの一括表示、デモ環境での全履歴参照
+- **非推奨ユースケース**: 本番環境での常時有効化（大量のアーティファクトが蓄積する場合）
+
+---
+
+### 2. artifacts.recordings_gif_fallback_enabled (Issue #306)
+
+**目的**: `ENABLE_LLM=false` の環境で録画ファイル（`.webm` / `.mp4`）から自動的に GIF を生成し、Recordings タブでプレビュー表示を可能にします。
+
+- **型**: bool
+- **デフォルト**: false（LLM無効時は動画ファイルパス表示のみ）
+- **有効化効果**:
+  - `ENABLE_LLM=false` 時に非同期ワーカー (`src/workers/gif_fallback_worker.py`) が起動
+  - 録画ファイルから ffmpeg で GIF を生成（同名 `.gif` ファイル）
+  - Recordings タブで GIF プレビュー表示（LLM 有効時と同等の UX）
+- **無効化効果**:
+  - GIF 生成をスキップ（I/O 削減、ffmpeg 依存なし）
+  - Recordings タブではファイルパス文字列のみ表示
+- **削除目安**: Manifest v2 + Webブラウザベースのプレビュー機能実装後（ブラウザで直接動画プレビュー可能になった場合）
+
+**依存関係**:
+
+- **必須**: ffmpeg がシステムにインストールされている必要があります
+  ```bash
+  # macOS
+  brew install ffmpeg
+  
+  # Ubuntu/Debian
+  sudo apt-get install ffmpeg
+  
+  # Windows
+  # https://ffmpeg.org/download.html からダウンロードし PATH に追加
+  ```
+
+**使用例**:
+
+```python
+from src.config.feature_flags import FeatureFlags
+from src.workers.gif_fallback_worker import get_worker
+
+# Worker 起動チェック
+if FeatureFlags.is_enabled("artifacts.recordings_gif_fallback_enabled") and not enable_llm:
+    worker = get_worker()
+    await worker.start()
+    
+    # 録画ファイルをキューに追加
+    await worker.enqueue(recording_path)
+```
+
+**設定例**:
+
+```yaml
+# config/feature_flags.yaml
+artifacts:
+  recordings_gif_fallback_enabled: true
+```
+
+**環境変数オーバーライド**:
+
+```bash
+export ENABLE_LLM=false
+export BYKILT_FLAG_ARTIFACTS_RECORDINGS_GIF_FALLBACK_ENABLED=true
+# または簡易形式
+export ARTIFACTS_RECORDINGS_GIF_FALLBACK_ENABLED=true
+```
+
+**ワーカー仕様**:
+
+- **変換設定**: 
+  - FPS: 10
+  - Width: 640px（アスペクト比維持）
+  - Palette 最適化: 2-pass conversion（高品質）
+- **リトライ**: 最大 3 回（失敗時は元の動画ファイルパスのみ表示）
+- **キャッシュ戦略**: 同名 `.gif` が存在する場合は再変換スキップ
+- **最大サイズ制限**: 10MB 以下の動画のみ変換（巨大ファイルは変換スキップ）
+
+**運用上の注意**:
+
+- **パフォーマンス**: 動画の長さ・サイズに応じて変換時間が増加（非同期処理のため UI はブロックされない）
+- **ディスク容量**: GIF は元動画の 30-50% 程度のサイズ（定期クリーンアップ推奨）
+- **トラブルシューティング**:
+  - ffmpeg が見つからない場合: ログに `ffmpeg not available` と記録（変換はスキップ）
+  - 変換失敗時: 最大 3 回リトライ後、元の動画ファイルパス表示にフォールバック
+
+---
+
+### Feature Flags 関係マトリクス
+
+| Flag | 目的 | 推奨環境 | 削除目安 | 関連 Issue |
+|------|------|----------|----------|------------|
+| `artifacts.recursive_recordings_enabled` | 録画ファイル再帰スキャン | Development / Demo | Manifest v2 標準化後 | #303 / #305 |
+| `artifacts.recordings_gif_fallback_enabled` | LLM無効時の GIF プレビュー | Development / LLM無効環境 | Webベースプレビュー実装後 | #306 |
+
+**併用パターン**:
+
+```yaml
+# 開発環境: 全録画を再帰表示 + GIF プレビュー
+artifacts:
+  recursive_recordings_enabled: true
+  recordings_gif_fallback_enabled: true
+
+# 本番環境（LLM有効）: 単一ディレクトリのみ + GIF無効
+artifacts:
+  recursive_recordings_enabled: false
+  recordings_gif_fallback_enabled: false
+
+# 本番環境（LLM無効）: 単一ディレクトリ + GIF有効
+artifacts:
+  recursive_recordings_enabled: false
+  recordings_gif_fallback_enabled: true
+```
+
+---
+
+## 改訂履歴（更新）
+
+| Version | Date | Changes | Author |
+|---------|------|---------|--------|
+| 1.0.0 | 2025-08-26 | 初期ドラフト作成 | Copilot Agent |
+| 1.1.0 | 2025-08-29 | 実装ステータス追記 (feature_flags.py / feature_flags.yaml 基盤) | Copilot Agent |
+| 1.2.0 | 2025-09-01 | 新規フラグ `artifacts.screenshot.user_named_copy_enabled` 追加 (#87) | Copilot Agent |
+| 1.3.0 | 2025-09-02 | Recordings 機能関連フラグ追加 (#302 / #306): `recursive_recordings_enabled`, `recordings_gif_fallback_enabled` | Copilot Agent |
+
+---
+
+効果的なフラグ管理により、安全で効率的な機能リリースを実現してください。
+---

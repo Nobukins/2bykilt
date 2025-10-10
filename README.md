@@ -107,6 +107,133 @@ export RECORDING_PATH="./artifacts/batch-task-2"
 python myscript/bin/task2.py
 ```
 
+## 🎥 Recordings 機能
+
+### 概要
+
+**「過去の魔法の記録を探索し、知見を得る力を手に入れよ」**
+
+2bykilt の **Recordings** 機能は、ブラウザ自動化で生成された録画ファイル（`.webm` / `.mp4`）を UI 上で一覧表示・プレビューできる機能です。LLM 機能の有効/無効に応じて、プレビュー方法が自動的に切り替わります。
+
+### 主な機能
+
+#### 1. 再帰的スキャン（Feature Flag: `artifacts.recursive_recordings_enabled`）
+
+- **デフォルト**: `false`（単一ディレクトリのみスキャン）
+- **有効時**: `RECORDING_PATH` 配下を再帰的にスキャンし、すべてのサブディレクトリの録画ファイルを検出
+- **用途**: 大規模なタスク階層や過去のアーティファクトを一括表示したい場合に有効化
+
+```bash
+# Feature Flag 設定例（config/feature_flags.yaml）
+artifacts:
+  recursive_recordings_enabled: true
+```
+
+#### 2. GIF フォールバック（Feature Flag: `artifacts.recordings_gif_fallback_enabled`）
+
+- **デフォルト**: `false`（LLM有効時は動画プレビュー、LLM無効時は動画ファイルのみ表示）
+- **有効時**: `ENABLE_LLM=false` の環境で、録画ファイルから自動的に GIF を生成してプレビュー表示
+- **実装**: 非同期ワーカー（`src/workers/gif_fallback_worker.py`）が ffmpeg を使用して変換
+- **キャッシュ戦略**: 同名の `.gif` ファイルが存在する場合は再変換をスキップ（高速化）
+
+```bash
+# Feature Flag 設定例（config/feature_flags.yaml）
+artifacts:
+  recordings_gif_fallback_enabled: true
+
+# 環境変数設定例
+export ENABLE_LLM=false
+python bykilt.py
+```
+
+#### 3. プレビュー動作の自動切り替え
+
+| 状態 | LLM 有効 | GIF Flag 有効 | 動作 |
+|------|---------|---------------|------|
+| 1 | ✅ Yes | - | 動画プレビュー（Gradio Video） |
+| 2 | ❌ No | ❌ No | ファイルパス表示のみ |
+| 3 | ❌ No | ✅ Yes | GIF 変換 → プレビュー |
+
+### 制約・注意事項
+
+#### パフォーマンス
+
+- **大量ファイル**: `recursive_recordings_enabled=true` で 100+ ファイルをスキャンすると UI 応答が遅延する可能性
+  - **推奨**: 定期的に古いアーティファクトをアーカイブし、スキャン対象を最小限に保つ
+- **GIF 変換**: 動画サイズや長さに応じて変換時間が増加（バックグラウンド処理で UI はブロックされない）
+  - **推奨**: 最大 10MB 以下の録画ファイルで使用（制限: `GIF_MAX_SIZE_MB=10` in worker）
+
+#### 依存関係
+
+- **ffmpeg**: GIF 変換に必須（`recordings_gif_fallback_enabled=true` 時のみ）
+  ```bash
+  # macOS
+  brew install ffmpeg
+  
+  # Ubuntu/Debian
+  sudo apt-get install ffmpeg
+  
+  # Windows
+  # https://ffmpeg.org/download.html からダウンロードし PATH に追加
+  ```
+
+#### ファイル命名規約
+
+- **録画ファイル**: `Tab-<NN>-recording_<NNN>.webm` （例: `Tab-01-recording_001.webm`）
+- **GIF ファイル**: 元の録画ファイルと同じディレクトリに `.gif` 拡張子で保存（例: `Tab-01-recording_001.gif`）
+- **ホワイトリスト**: 拡張子 `.webm`, `.mp4`, `.gif` のみ表示対象
+
+### 設定例
+
+#### .env 設定
+
+```bash
+# Recordings 機能の基本設定
+export RECORDING_PATH="./artifacts"
+export ENABLE_LLM=false
+
+# Feature Flags（config/feature_flags.yaml で設定）
+# artifacts.recursive_recordings_enabled: true
+# artifacts.recordings_gif_fallback_enabled: true
+```
+
+#### UI プロファイル設定
+
+```yaml
+# Browser Settings タブで RECORDING_PATH を設定
+browser_settings:
+  recording_path: "./artifacts/my-session"
+  
+# 再帰スキャンと GIF フォールバックは Feature Flags で制御
+```
+
+### トラブルシューティング
+
+#### 録画ファイルが表示されない
+
+- `RECORDING_PATH` が正しく設定されているか確認
+- `recursive_recordings_enabled=false` の場合、サブディレクトリのファイルは表示されない
+- ファイル拡張子が `.webm`, `.mp4`, `.gif` であることを確認
+
+#### GIF 変換が動作しない
+
+- `ffmpeg` がインストールされているか確認: `ffmpeg -version`
+- `recordings_gif_fallback_enabled=true` かつ `ENABLE_LLM=false` であることを確認
+- ログファイル（`logs/`）で変換エラーの詳細を確認
+
+#### UI が遅い
+
+- `recursive_recordings_enabled=true` で大量のファイルがある場合、`false` に戻して特定ディレクトリのみスキャン
+- 古いアーティファクトを `artifacts/archive/` に移動してスキャン対象を削減
+
+### 関連ドキュメント
+
+- **Feature Flags**: [docs/feature_flags/FLAGS.md](docs/feature_flags/FLAGS.md)
+- **GIF Worker**: `src/workers/gif_fallback_worker.py`
+- **Manifest**: `docs/ARTIFACTS_MANIFEST.md`
+
+---
+
 ## ⚙️ スクリプト実行の基本
 
 業務の冒険者たちよ、もはや複雑な作業に時間を費やす必要はない。**2bykilt**（ツーバイキルト）は、あなたの日々の作業を自動化する伝説の魔法道具だ。ブラウザ操作を簡単に録画し、再生し、共有できる。まるで伝説の魔法書のように。
