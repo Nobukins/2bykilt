@@ -278,6 +278,9 @@ from src.browser.browser_manager import close_global_browser, prepare_recording_
 from src.browser.browser_config import BrowserConfig
 from src.utils.recording_dir_resolver import create_or_get_recording_dir
 
+# Recordings service layer (Issue #304/#305)
+from src.services import list_recordings as list_recordings_service, ListParams
+
 # 常に利用可能なモジュール
 from src.config.standalone_prompt_evaluator import (
     pre_evaluate_prompt_standalone, 
@@ -1162,7 +1165,11 @@ def create_ui(config, theme_name="Ocean"):
                     def initialize_recordings_on_load():
                         try:
                             recordings_path = config.get('save_recording_path', default_recording_path)
-                            return update_recordings_list(recordings_path)
+                            # Use appropriate update function based on flag
+                            if FeatureFlags.is_enabled("artifacts.recursive_recordings_enabled"):
+                                return update_recordings_list_with_service(recordings_path)
+                            else:
+                                return update_recordings_list_legacy(recordings_path)
                         except Exception:
                             return gr.update(choices=[], value=None), None, "Ready to load recordings"
                     
@@ -1844,101 +1851,76 @@ Tests include browser initialization, profile validation, and recording path ver
                 gr.Markdown("### 🎥 Browser Recording Playback")
                 gr.Markdown("Select and play browser automation recordings")
                 
-                # Common recording functions
-                def list_recordings(save_recording_path):
-                    """Enhanced recording list function that searches multiple paths"""
-                    if not save_recording_path:
-                        # Use default unified recording path
-                        try:
-                            save_recording_path = str(create_or_get_recording_dir())
-                        except Exception:
-                            save_recording_path = './tmp/record_videos'
-                    
-                    recordings = []
-                    
-                    # Search in the main recording path
-                    if os.path.exists(save_recording_path):
-                        for ext in ['mp4', 'MP4', 'webm', 'WEBM']:
-                            recordings.extend(Path(save_recording_path).glob(f'*.{ext}'))
-                    
-                    # Also search in validation directory for all types
-                    from src.utils.fs_paths import get_artifacts_base_dir
-                    validation_dir = get_artifacts_base_dir() / "runs" / "validation" / "recordings"
-                    if validation_dir.exists():
-                        for subdir in ["script", "browser_control", "git_script"]:
-                            type_dir = validation_dir / subdir / "videos"
-                            if type_dir.exists():
-                                for ext in ['mp4', 'MP4', 'webm', 'WEBM']:
-                                    recordings.extend(type_dir.glob(f'*.{ext}'))
-                    
-                    # Remove duplicates and sort by modification time (newest first)
-                    recordings = list(set(recordings))
-                    recordings.sort(key=os.path.getmtime, reverse=True)
-                    
-                    return recordings
-
-                def update_recordings_list(recordings_path):
-                    """Enhanced update function that categorizes recordings by type"""
+                # Service-layer integrated recording functions (Issue #304/#305)
+                def update_recordings_list_with_service(recordings_path, limit=50, offset=0):
+                    """Service-layer integrated update function with pagination support."""
                     try:
-                        if recordings_path:
-                            Path(recordings_path).mkdir(parents=True, exist_ok=True)
+                        # Use service layer to fetch recordings
+                        root_path = Path(recordings_path) if recordings_path else None
+                        params = ListParams(root=root_path, limit=limit, offset=offset)
+                        page = list_recordings_service(params)
                         
-                        recordings = list_recordings(recordings_path)
-                        if not recordings:
-                            return gr.update(choices=[], value=None), None, f"No recordings found in: {recordings_path}"
+                        if not page.items:
+                            return gr.update(choices=[], value=None), None, f"No recordings found (limit={limit}, offset={offset})"
                         
-                        # Create display names with timestamps and type information
+                        # Create display names with timestamps and run_id
                         display_choices = []
-                        for recording in recordings:
-                            filename = os.path.basename(recording)
-                            try:
-                                mtime = os.path.getmtime(recording)
-                                timestamp = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
-                                
-                                # Determine recording type based on path
-                                recording_type = "unknown"
-                                if "script" in str(recording):
-                                    recording_type = "script"
-                                elif "browser_control" in str(recording):
-                                    recording_type = "browser-control"
-                                elif "git_script" in str(recording):
-                                    recording_type = "git-script"
-                                elif "validation" in str(recording):
-                                    recording_type = "validation"
-                                
-                                display_name = f"[{recording_type}] {filename} ({timestamp})"
-                            except:
-                                display_name = filename
-                            display_choices.append((display_name, str(recording)))
+                        for item in page.items:
+                            filename = os.path.basename(item.path)
+                            timestamp = datetime.fromtimestamp(item.modified_at).strftime("%Y-%m-%d %H:%M:%S")
+                            run_id_label = f"[{item.run_id}]" if item.run_id else "[unknown]"
+                            size_mb = item.size_bytes / 1024 / 1024
+                            display_name = f"{run_id_label} {filename} ({timestamp}, {size_mb:.1f}MB)"
+                            display_choices.append((display_name, item.path))
+                        
+                        latest_recording = page.items[0].path if page.items else None
+                        status_msg = f"Found {len(page.items)} recording(s) (showing {offset+1}-{offset+len(page.items)})"
+                        if page.has_next:
+                            status_msg += " • More available"
+                        
+                        return gr.update(choices=display_choices, value=latest_recording), latest_recording, status_msg
+                    except FileNotFoundError as e:
+                        error_msg = f"Recording directory not found: {e}"
+                        return gr.update(choices=[], value=None), None, error_msg
+                    except Exception as e:
+                        error_msg = f"Error loading recordings: {str(e)}"
+                        return gr.update(choices=[], value=None), None, error_msg
+
+                def update_recordings_list_legacy(recordings_path):
+                    """Legacy flat directory listing (used when recursive flag is disabled)."""
+                    try:
+                        if not recordings_path:
+                            recordings_path = str(create_or_get_recording_dir())
+                        
+                        if not os.path.exists(recordings_path):
+                            return gr.update(choices=[], value=None), None, f"Directory not found: {recordings_path}"
+                        
+                        recordings = []
+                        for ext in ['mp4', 'MP4', 'webm', 'WEBM', 'ogg', 'OGG']:
+                            recordings.extend(Path(recordings_path).glob(f'*.{ext}'))
+                        
+                        if not recordings:
+                            return gr.update(choices=[], value=None), None, "No recordings found"
+                        
+                        # Sort by modification time (newest first)
+                        recordings.sort(key=os.path.getmtime, reverse=True)
+                        
+                        # Create choices list
+                        display_choices = []
+                        for rec in recordings:
+                            filename = rec.name
+                            mtime = os.path.getmtime(rec)
+                            timestamp = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
+                            display_name = f"{filename} ({timestamp})"
+                            display_choices.append((display_name, str(rec)))
                         
                         latest_recording = str(recordings[0]) if recordings else None
-                        status_msg = f"Found {len(recordings)} recording(s) across all types"
+                        status_msg = f"Found {len(recordings)} recording(s) (flat mode)"
                         
                         return gr.update(choices=display_choices, value=latest_recording), latest_recording, status_msg
                     except Exception as e:
                         error_msg = f"Error loading recordings: {str(e)}"
                         return gr.update(choices=[], value=None), None, error_msg
-
-                def get_recordings_simple():
-                    """Simple recording list function for LLM-disabled mode"""
-                    try:
-                        recordings_path = default_recording_path
-                        if not recordings_path or not os.path.exists(recordings_path):
-                            return gr.update(choices=[]), "Recording directory not found"
-                        
-                        recordings = []
-                        for ext in ['mp4', 'webm', 'MP4', 'WEBM']:
-                            recordings.extend(Path(recordings_path).glob(f'*.{ext}'))
-                        
-                        if not recordings:
-                            return gr.update(choices=[]), "No recordings found"
-                        
-                        # Create choices list with full paths as values
-                        choices = [(p.name, str(p)) for p in recordings]
-                        
-                        return gr.update(choices=choices), f"Found {len(recordings)} recording(s)"
-                    except Exception as e:
-                        return gr.update(choices=[]), f"Error: {str(e)}"
 
                 def on_recording_select_html(selected_path):
                     """HTML-based recording display for LLM-disabled mode"""
@@ -1954,7 +1936,7 @@ Tests include browser initialization, profile validation, and recording path ver
                             <div style="margin-top: 15px;">
                                 <button onclick="navigator.clipboard.writeText('{selected_path}')" 
                                         style="padding: 10px 20px; margin: 5px; font-size: 14px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                                    � Copy Path
+                                    📋 Copy Path
                                 </button>
                                 <p style="margin-top: 10px; font-size: 12px; color: #666;">
                                     💡 Tip: Copy the path and open it in Windows Explorer or your preferred media player
@@ -1970,6 +1952,15 @@ Tests include browser initialization, profile validation, and recording path ver
                     if selected_recording and os.path.exists(selected_recording):
                         return selected_recording
                     return None
+                
+                # Check if recursive recordings feature is enabled
+                recursive_enabled = FeatureFlags.is_enabled("artifacts.recursive_recordings_enabled")
+                
+                # Choose appropriate update function based on flag
+                if recursive_enabled:
+                    update_func = update_recordings_list_with_service
+                else:
+                    update_func = update_recordings_list_legacy
 
                 # Conditional UI based on LLM availability
                 if ENABLE_LLM and LLM_MODULES_AVAILABLE:
@@ -1990,6 +1981,8 @@ Tests include browser initialization, profile validation, and recording path ver
                             gr.Markdown("- Select recording from dropdown")
                             gr.Markdown("- Use video controls to play/pause")
                             gr.Markdown("- Right-click for more options")
+                            if recursive_enabled:
+                                gr.Markdown("🔄 **Recursive scan enabled**")
 
                     # Video Player for LLM-enabled mode
                     try:
@@ -2007,7 +2000,7 @@ Tests include browser initialization, profile validation, and recording path ver
                         )
 
                         refresh_button.click(
-                            fn=update_recordings_list,
+                            fn=update_func,
                             inputs=[save_recording_path],
                             outputs=[recordings_dropdown, video_player, status_display]
                         )
@@ -2026,12 +2019,13 @@ Tests include browser initialization, profile validation, and recording path ver
                         )
 
                         refresh_button.click(
-                            fn=get_recordings_simple,
-                            outputs=[recordings_dropdown, status_display]
+                            fn=update_func,
+                            inputs=[save_recording_path],
+                            outputs=[recordings_dropdown, video_display, status_display]
                         )
                 
                 else:
-                    # LLM無効時: HTML表示方式
+                    # LLM無効時: 動画プレイヤ非表示、HTML表示のみ
                     recordings_dropdown = gr.Dropdown(
                         label="Select Recording", 
                         choices=[], 
@@ -2041,14 +2035,19 @@ Tests include browser initialization, profile validation, and recording path ver
                     refresh_button = gr.Button("🔄 Refresh Recordings")
                     status_display = gr.Textbox(label="Status", value="Click refresh to load recordings", interactive=False)
                     
-                    # HTML-based video display
+                    # HTML-based display (no video player when LLM is disabled)
                     video_display = gr.HTML(value="<p>Select a recording to view</p>")
 
                     # Event handlers for LLM-disabled mode
-                    refresh_button.click(fn=get_recordings_simple, outputs=[recordings_dropdown, status_display])
+                    refresh_button.click(
+                        fn=update_func,
+                        inputs=[save_recording_path],
+                        outputs=[recordings_dropdown, video_display, status_display]
+                    )
                     recordings_dropdown.change(fn=on_recording_select_html, inputs=[recordings_dropdown], outputs=[video_display])
                     
-                    gr.Markdown("📁 **Minimal Mode**: Recording file management (LLM disabled)")
+                    mode_label = "Recursive" if recursive_enabled else "Flat"
+                    gr.Markdown(f"📁 **Minimal Mode** ({mode_label} scan): Recording file management (LLM disabled, video player hidden)")
 
             with gr.TabItem("🧐 Deep Research", id=6):
                 research_task_input = gr.Textbox(label="Research Task", lines=5, value="Compose a report on the use of Reinforcement Learning for training Large Language Models, encompassing its origins, current advancements, and future prospects, substantiated with examples of relevant models and techniques. The report should reflect original insights and analysis, moving beyond mere summarization of existing literature.")
