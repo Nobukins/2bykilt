@@ -1,7 +1,7 @@
 # Recordings 機能 FAQ とトラブルシューティング
 
-最終更新: 2025-09-02  
-関連 Issue: #302, #303, #305, #306
+最終更新: 2025-10-12  
+関連 Issue: #302, #303, #305, #306, #307
 
 ---
 
@@ -27,11 +27,11 @@
    ```
 
 3. **recursive_recordings_enabled フラグの設定**
-   - デフォルト: `false`（`RECORDING_PATH` 直下のみスキャン）
-   - サブディレクトリのファイルを表示したい場合: `config/feature_flags.yaml` で有効化
+   - デフォルト: `true`（サブディレクトリも再帰的にスキャン）
+   - 直下のファイルのみ表示したい場合: `config/feature_flags.yaml` で無効化
    ```yaml
    artifacts:
-     recursive_recordings_enabled: true
+     recursive_recordings_enabled: false
    ```
 
 4. **UI を再起動**
@@ -411,6 +411,94 @@ ERROR: ffmpeg not available, GIF conversion will be skipped
 - [ ] ログファイルでエラーを確認した
 - [ ] ディスク容量が十分にある
 - [ ] 古いアーティファクトをアーカイブした（パフォーマンス問題時）
+
+---
+
+## 📝 ログファイルと実行記録
+
+### browser-control アクションのログ出力
+
+**Issue #307** の対応により、`browser-control` タイプのアクションは実行時に詳細なログファイルを自動生成します。
+
+#### ログディレクトリ構造
+
+```
+logs/browser_runs/
+├── summary/                          # 実行結果の概要ログ
+│   └── YYYYMMDD-HHMMSS-MMMMMM-{action}.log
+└── detail/                           # 完全な実行ログ（全コンソール出力）
+    └── YYYYMMDD-HHMMSS-MMMMMM-{action}.log
+```
+
+#### summary ログの内容
+
+- タイムスタンプ
+- アクション名
+- 実行ステータス（success/failure）
+- 実行結果メッセージ
+
+**例:**
+```log
+timestamp: 2025-10-12T17:48:38.911189
+action: search-nogtips
+action_type: browser-control
+status: success
+```
+
+#### detail ログの内容
+
+実行中のすべての出力を記録：
+- プロンプト評価ログ
+- ブラウザ起動・終了ログ
+- 各コマンドの実行ログ（ナビゲーション、クリック、入力など）
+- スクリーンショット・要素キャプチャログ
+- エラー・警告メッセージ
+
+**使用例:**
+```bash
+# 最新の詳細ログを確認
+cat logs/browser_runs/detail/$(ls -t logs/browser_runs/detail/ | head -1)
+
+# 特定のアクションのログを検索
+grep "search-nogtips" logs/browser_runs/summary/*.log
+
+# エラーが発生した実行のみ抽出
+grep "status: failure" logs/browser_runs/summary/*.log
+```
+
+#### ログファイル名の形式
+
+- タイムスタンプにマイクロ秒を含む（衝突防止）
+- 形式: `YYYYMMDD-HHMMSS-MMMMMM-{sanitized_action_name}.log`
+- アクション名は安全な文字列に変換（`.` → `_`, 連続記号は単一化）
+
+#### ログ出力の技術詳細
+
+- `OutputCapture` クラスによる包括的キャプチャ
+- `stdout`, `stderr`, Python `logging` モジュール出力をすべて記録
+- `TeeOutput` パターンでコンソール表示とファイル保存を両立
+- 実行開始から終了まで全ての出力を漏れなく保存
+
+#### トラブルシューティング時の活用
+
+1. **実行エラーの原因調査**
+   ```bash
+   # 失敗した実行の詳細ログを確認
+   grep -l "status: failure" logs/browser_runs/summary/*.log | \
+   sed 's/summary/detail/' | xargs cat
+   ```
+
+2. **パフォーマンス分析**
+   ```bash
+   # 実行時間の長いステップを特定
+   grep -E "INFO.*Executing:" logs/browser_runs/detail/*.log
+   ```
+
+3. **定期的なログのアーカイブ**
+   ```bash
+   # 30日以上前のログを削除
+   find logs/browser_runs/ -type f -mtime +30 -delete
+   ```
 
 ---
 
