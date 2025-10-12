@@ -1,10 +1,10 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-10-12T03:19:58+00:00
+Generated at (UTC): 2025-10-12T14:23:37+00:00
 
 ## 1. メタサマリー
 
-- Total Issues: 121
+- Total Issues: 130
 - High Risk (declared): 8 → 31, 46, 49, 54, 62, 176, 237, 285
 - Cycle Detected: false (none)
 - Strict Orphans: 30
@@ -13,38 +13,39 @@ Generated at (UTC): 2025-10-12T03:19:58+00:00
 ## 2. 分布 (Distribution)
 
 ### Priority
-- P0: 27 (22.3%)
-- P1: 38 (31.4%)
-- P2: 53 (43.8%)
-- P3: 3 (2.5%)
+- P0: 27 (20.8%)
+- P1: 38 (29.2%)
+- P2: 61 (46.9%)
+- P3: 4 (3.1%)
 
 ### Phase
-- 1: 23 (19.0%)
-- 1-late: 14 (11.6%)
-- 2: 84 (69.4%)
+- 1: 23 (17.7%)
+- 1-late: 14 (10.8%)
+- 2: 90 (69.2%)
+- 3: 3 (2.3%)
 
 ### Area
-- artifacts: 26 (21.5%)
-- automation: 5 (4.1%)
-- batch: 10 (8.3%)
-- config: 11 (9.1%)
-- docs: 11 (9.1%)
+- artifacts: 30 (23.1%)
+- automation: 5 (3.8%)
+- batch: 10 (7.7%)
+- config: 11 (8.5%)
+- docs: 12 (9.2%)
 - flags: 1 (0.8%)
-- logging: 5 (4.1%)
-- observability: 5 (4.1%)
+- logging: 7 (5.4%)
+- observability: 5 (3.8%)
 - plugins: 1 (0.8%)
 - quality: 1 (0.8%)
-- runner: 23 (19.0%)
-- security: 5 (4.1%)
+- runner: 24 (18.5%)
+- security: 5 (3.8%)
 - test: 1 (0.8%)
-- testing: 4 (3.3%)
-- uiux: 12 (9.9%)
+- testing: 4 (3.1%)
+- uiux: 13 (10.0%)
 
 ### Risk
-- high: 8 (6.6%)
-- low: 12 (9.9%)
-- medium: 3 (2.5%)
-- none: 98 (81.0%)
+- high: 8 (6.2%)
+- low: 12 (9.2%)
+- medium: 3 (2.3%)
+- none: 107 (82.3%)
 
 ## 3. リスク詳細 (High / Medium / etc.)
 
@@ -135,7 +136,7 @@ Auto Estimated Path (Longest Distance):
 25 → 50 → 200 → 201 → 196 → 202 → 203
 
 Provided Example (existing IDs only):
-65 → 64 → 63 → 66 → 67
+302 → 303 → 304 → 305
 
 ## 6. Issues Table (sorted)
 
@@ -144,6 +145,7 @@ Sorted By: critical_path_rank
 | ID | Title | Pri | Phase | Area | Risk | CP Rank | LongestDist | Depends | Dependents | PrimaryPR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 287 | Template for new issue and new PR | P3 | 2 | docs |  | 10 | 0 | 0 | 0 |  |
+| 302 | [ui/ux][artifacts] 🎥 Recordings: リカーシブ検出 + LLM無効時GIF代替 (Flag対応) | P2 | 2 | artifacts |  | 6 | 0 | 0 | 5 |  |
 | 219 | [runner][bug] search-linkedin 初期コマンド失敗 (pytest経由引数未解釈) | P0 | 2 | runner |  | 5 | 4 | 2 | 2 | #232 |
 | 32 | Run/Job ID 基盤 | P0 | 1 | runner |  | 5 | 0 | 0 | 10 | #79 |
 | 65 | マルチ環境設定ローダ | P0 | 1 | config |  | 5 | 0 | 0 | 4 |  |
@@ -156,6 +158,7 @@ Sorted By: critical_path_rank
 | 221 | [artifacts][bug] script 以外で録画ファイル未生成 (browser-control/git-script) | P1 | 2 | artifacts |  | 3 | 0 | 2 | 1 |  |
 | 25 | git_script が llms.txt で指定したスクリプトを正しく解決するよう修正 | P0 | 1 | runner |  | 3 | 0 | 0 | 4 | #118 |
 | 30 | 録画タイプ間不整合是正 | P0 | 1 | artifacts |  | 3 | 2 | 1 | 2 | #112 |
+| 303 | [artifacts] 🎥 Recordings: 再帰探索ユーティリティ + テスト (Flag対応) [Sub of #302] | P2 | 2 | artifacts |  | 3 | 1 | 1 | 1 | #308 |
 | 31 | 統一ログ設計 (JSON Lines) | P0 | 1 | logging | high | 3 | 1 | 1 | 1 | #80 |
 | 35 | アーティファクト manifest v2 | P0 | 1 | artifacts |  | 3 | 1 | 1 | 3 | #94 |
 | 46 | Run/Job タイムアウト & キャンセル | P2 | 2 | runner | high | 3 | 1 | 1 | 1 |  |
@@ -163,6 +166,8 @@ Sorted By: critical_path_rank
 | 175 | バッチ行単位成果物キャプチャ基盤 (スクリーンショット/要素値/ログ関連紐付け) | P1 | 2 | artifacts | medium | 2 | 4 | 6 | 1 | #181 |
 | 176 | 宣言的抽出スキーマ (CSV列→コマンド引数/抽出ポリシーマッピング) | P1 | 2 | batch | high | 2 | 3 | 3 | 0 | #181 |
 | 222 | [logging][feat] ログ出力ディレクトリ/カテゴリ標準化 & src/logs/ 廃止 | P1 | 2 | logging |  | 2 | 4 | 2 | 1 |  |
+| 304 | [service] 🎥 Recordings: 一覧取得サービス/API (Flag連携) [Sub of #302] | P2 | 2 | artifacts |  | 2 | 2 | 2 | 1 | #309 |
+| 306 | [worker] 🎥 Recordings: GIF変換ワーカー/キャッシュ + Flag [Sub of #302] | P2 | 2 | artifacts |  | 2 | 1 | 1 | 1 |  |
 | 33 | スクリーンショット取得ユーティリティ | P0 | 1 | artifacts |  | 2 | 1 | 1 | 3 |  |
 | 36 | アーティファクト一覧 API | P1 | 1 | artifacts |  | 2 | 2 | 1 | 1 | #95 |
 | 37 | 動画アーティファクト保持期間 | P1 | 1 | artifacts |  | 2 | 3 | 1 | 1 | #99 |
@@ -171,7 +176,7 @@ Sorted By: critical_path_rank
 | 47 | 並列実行キュー & 制限 | P2 | 2 | runner |  | 2 | 2 | 1 | 1 |  |
 | 53 | cdp-use 追加タイプ調査 | P2 | 2 | runner |  | 2 | 0 | 0 | 1 |  |
 | 56 | 統一 JSON Lines ロギング実装 | P0 | 1 | logging |  | 2 | 2 | 2 | 3 | #83 |
-| 58 | メトリクス計測基盤 | P1 | 2 | observability |  | 2 | 1 | 1 | 1 | #155 |
+| 58 | メトリクス計測基盤 & エクスポータ | P1 | 2 | observability |  | 2 | 1 | 1 | 1 | #156 |
 | 62 | 実行サンドボックス機能制限 | P0 | 2 | security | high | 2 | 1 | 1 | 1 |  |
 | 66 | ドキュメント整備 第1弾 | P2 | 1-late | docs |  | 2 | 3 | 1 | 1 |  |
 | 76 | 依存更新自動化パイプライン (PR 起票時の ISSUE_DEPENDENCIES.yml 自動更新) | P1 | 1-late | automation |  | 2 | 2 | 1 | 0 |  |
@@ -240,6 +245,11 @@ Sorted By: critical_path_rank
 | 279 | Config: Consolidate configuration menus, env files, and defaults | P2 | 2 | config |  | 1 | 0 | 0 | 0 |  |
 | 280 | Browser Settings: Improve Browser Settings menu clarity & enforce behavior across run types | P2 | 2 | uiux |  | 1 | 0 | 0 | 0 |  |
 | 285 | Browser-Use/Web-UIをベースとしてUI周りのリファクタリング | P2 | 2 | uiux | high | 1 | 0 | 0 | 0 |  |
+| 305 | [ui/ux] 🎥 Recordings: タブ統合（ソート/フィルタ/ページング、LLM無効時非表示制御、Flag連携）[Sub of #302] | P2 | 2 | uiux |  | 1 | 2 | 3 | 0 | #310 |
+| 307 | [docs] 🎥 Recordings: 仕様/Flags/運用手順の更新 [Sub of #302] | P2 | 2 | docs |  | 1 | 2 | 5 | 3 | #312 |
+| 313 | [refactor] bykilt.py run_with_stream コード重複解消 (DRY原則適用) | P3 | 3 | runner |  | 1 | 0 | 1 | 0 |  |
+| 314 | [enhancement] OutputCapture スレッドセーフ性改善 (threading.Lock 追加) | P2 | 3 | logging |  | 1 | 0 | 1 | 0 |  |
+| 315 | [bug] try-finally によるリソースクリーンアップ強化 | P2 | 3 | logging |  | 1 | 0 | 1 | 0 |  |
 | 34 | 要素値キャプチャ & エクスポート | P1 | 1 | artifacts |  | 1 | 2 | 2 | 0 | #93 |
 | 38 | 録画統一後回帰テストスイート | P2 | 1-late | artifacts |  | 1 | 4 | 5 | 0 | #103 |
 | 40 | CSV D&D UI 連携 | P2 | 2 | batch |  | 1 | 2 | 1 | 0 | #172 |
@@ -275,6 +285,15 @@ Sorted By: critical_path_rank
 - Depends (0): (none)
 - Dependents (0): (none)
 - Progress: {"state": "open"}
+
+### Issue 302: [ui/ux][artifacts] 🎥 Recordings: リカーシブ検出 + LLM無効時GIF代替 (Flag対応)
+- Priority: P2, Phase: 2, Area: artifacts
+- Risk: (none)
+- CriticalPathRank: 6
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (5): 303, 304, 305, 306, 307
+- Progress: {"state": "in-progress", "note": "4/5 sub-issues done; PR #311, #312 pending merge"}
 
 ### Issue 219: [runner][bug] search-linkedin 初期コマンド失敗 (pytest経由引数未解釈)
 - Priority: P0, Phase: 2, Area: runner
@@ -382,6 +401,15 @@ Sorted By: critical_path_rank
 - Dependents (2): 37, 38
 - Progress: {"state": "done", "primary_pr": 112}
 
+### Issue 303: [artifacts] 🎥 Recordings: 再帰探索ユーティリティ + テスト (Flag対応) [Sub of #302]
+- Priority: P2, Phase: 2, Area: artifacts
+- Risk: (none)
+- CriticalPathRank: 3
+- LongestDistance: 1
+- Depends (1): 302
+- Dependents (1): 305
+- Progress: {"state": "done", "primary_pr": 308}
+
 ### Issue 31: 統一ログ設計 (JSON Lines)
 - Priority: P0, Phase: 1, Area: logging
 - Risk: high
@@ -442,6 +470,24 @@ Sorted By: critical_path_rank
 - Depends (2): 56, 57
 - Dependents (1): 223
 - Progress: {"state": "open"}
+
+### Issue 304: [service] 🎥 Recordings: 一覧取得サービス/API (Flag連携) [Sub of #302]
+- Priority: P2, Phase: 2, Area: artifacts
+- Risk: (none)
+- CriticalPathRank: 2
+- LongestDistance: 2
+- Depends (2): 302, 303
+- Dependents (1): 305
+- Progress: {"state": "done", "primary_pr": 309}
+
+### Issue 306: [worker] 🎥 Recordings: GIF変換ワーカー/キャッシュ + Flag [Sub of #302]
+- Priority: P2, Phase: 2, Area: artifacts
+- Risk: (none)
+- CriticalPathRank: 2
+- LongestDistance: 1
+- Depends (1): 302
+- Dependents (1): 307
+- Progress: {"state": "in-progress", "note": "implementation complete; PR #311 awaiting merge"}
 
 ### Issue 33: スクリーンショット取得ユーティリティ
 - Priority: P0, Phase: 1, Area: artifacts
@@ -512,14 +558,14 @@ Sorted By: critical_path_rank
 - Dependents (3): 57, 60, 41
 - Progress: {"state": "done", "primary_pr": 83}
 
-### Issue 58: メトリクス計測基盤
+### Issue 58: メトリクス計測基盤 & エクスポータ
 - Priority: P1, Phase: 2, Area: observability
 - Risk: (none)
 - CriticalPathRank: 2
 - LongestDistance: 1
 - Depends (1): 32
 - Dependents (1): 59
-- Progress: {"state": "done", "primary_pr": 155}
+- Progress: {"state": "done", "primary_pr": 156}
 
 ### Issue 62: 実行サンドボックス機能制限
 - Priority: P0, Phase: 2, Area: security
@@ -1124,6 +1170,51 @@ Sorted By: critical_path_rank
 - CriticalPathRank: 1
 - LongestDistance: 0
 - Depends (0): (none)
+- Dependents (0): (none)
+- Progress: {"state": "open"}
+
+### Issue 305: [ui/ux] 🎥 Recordings: タブ統合（ソート/フィルタ/ページング、LLM無効時非表示制御、Flag連携）[Sub of #302]
+- Priority: P2, Phase: 2, Area: uiux
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 2
+- Depends (3): 302, 303, 304
+- Dependents (0): (none)
+- Progress: {"state": "done", "primary_pr": 310}
+
+### Issue 307: [docs] 🎥 Recordings: 仕様/Flags/運用手順の更新 [Sub of #302]
+- Priority: P2, Phase: 2, Area: docs
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 2
+- Depends (5): 302, 303, 304, 305, 306
+- Dependents (3): 313, 314, 315
+- Progress: {"state": "done", "primary_pr": 312}
+
+### Issue 313: [refactor] bykilt.py run_with_stream コード重複解消 (DRY原則適用)
+- Priority: P3, Phase: 3, Area: runner
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 0
+- Depends (1): 307
+- Dependents (0): (none)
+- Progress: {"state": "open"}
+
+### Issue 314: [enhancement] OutputCapture スレッドセーフ性改善 (threading.Lock 追加)
+- Priority: P2, Phase: 3, Area: logging
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 0
+- Depends (1): 307
+- Dependents (0): (none)
+- Progress: {"state": "open"}
+
+### Issue 315: [bug] try-finally によるリソースクリーンアップ強化
+- Priority: P2, Phase: 3, Area: logging
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 0
+- Depends (1): 307
 - Dependents (0): (none)
 - Progress: {"state": "open"}
 
