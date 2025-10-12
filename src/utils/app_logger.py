@@ -30,7 +30,13 @@ EMOJI_MAP = {
 }
 
 class OutputCapture:
-    """Capture stdout, stderr, and Python logging to a buffer while still showing output."""
+    """Capture stdout, stderr, and Python logging to a buffer while still showing output.
+    
+    Can be used as a context manager for automatic cleanup:
+        with output_capture:
+            # ... code to capture ...
+        captured = output_capture.stop()
+    """
     
     def __init__(self):
         self.buffer = StringIO()
@@ -71,6 +77,17 @@ class OutputCapture:
         content = self.buffer.getvalue()
         self.buffer = StringIO()  # Reset buffer
         return content
+    
+    def __enter__(self):
+        """Context manager entry: start capturing."""
+        self.start()
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit: ensure capture is stopped even on exception."""
+        if self._capture_active:
+            self.stop()
+        return False  # Don't suppress exceptions
 
 class TeeOutput:
     """Write to both original output and buffer."""
@@ -263,7 +280,8 @@ class AppLogger:
         safe_action = re.sub(r"-+", "-", safe_action).strip("_-")
         if not safe_action:
             safe_action = "unnamed"
-        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        # Include microseconds to prevent collision on rapid executions
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
         log_path = self._summary_log_dir / f"{timestamp}-{safe_action}.log"
 
         header_lines = [
@@ -307,7 +325,8 @@ class AppLogger:
         safe_action = re.sub(r"-+", "-", safe_action).strip("_-")
         if not safe_action:
             safe_action = "unnamed"
-        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        # Include microseconds to prevent collision on rapid executions
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
         log_path = self._detail_log_dir / f"{timestamp}-{safe_action}.log"
 
         header_lines = [
