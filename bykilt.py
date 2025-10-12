@@ -318,6 +318,10 @@ if ENABLE_LLM:
             headless = args[9] if len(args) > 9 else True  # headless is the 10th parameter
             browser_type = args[26] if len(args) > 26 else None  # browser_type is the 27th parameter (last added)
             
+            # Start capturing output before command evaluation for browser-control type
+            # This ensures we capture all logs from the beginning
+            get_app_logger().start_execution_log_capture()
+            
             # Check if this is a pre-registered command
             evaluation_result = pre_evaluate_prompt_standalone(task)
             if evaluation_result and evaluation_result.get('is_command'):
@@ -330,6 +334,8 @@ if ENABLE_LLM:
                     action_type = action_def.get('type', '')
                     
                     if not action_def:
+                        # Stop capture on error
+                        get_app_logger().stop_execution_log_capture()
                         return f"❌ Pre-registered command '{action_name}' not found", "", "", "", "", None, None, None, gr.update(), gr.update()
                     
                     # Handle different action types
@@ -344,12 +350,65 @@ if ENABLE_LLM:
                         
                         result = await execute_direct_browser_control(action_def, **execution_params)
                         
+                        # Stop capturing and retrieve logs (already started at function entry)
+                        captured_output = get_app_logger().stop_execution_log_capture()
+                        
+                        project_dir = os.path.dirname(os.path.abspath(__file__))
                         if result:
-                            return f"✅ Browser control command '{action_name}' executed successfully", "", "", "", "", None, None, None, gr.update(), gr.update()
+                            result_message = f"✅ Browser control command '{action_name}' executed successfully"
+                            logger.info(f"Browser control command '{action_name}' executed successfully")
+                            
+                            # Save summary log
+                            summary_log_path = get_app_logger().persist_action_run_log(
+                                action_name,
+                                result_message,
+                                metadata={"action_type": "browser-control", "status": "success"},
+                            )
+                            
+                            # Save detailed log
+                            detail_log_path = get_app_logger().persist_detailed_action_log(
+                                action_name,
+                                captured_output,
+                                metadata={"action_type": "browser-control", "status": "success"},
+                            )
+                            
+                            relative_summary_path = os.path.relpath(summary_log_path, project_dir)
+                            relative_detail_path = os.path.relpath(detail_log_path, project_dir)
+                            result_message += f"\n\nSummary log: {relative_summary_path}"
+                            result_message += f"\nDetailed log: {relative_detail_path}"
+                            logger.info(f"Summary log saved to: {summary_log_path}")
+                            logger.info(f"Detailed log saved to: {detail_log_path}")
+                            return result_message, "", "", "", "", None, None, None, gr.update(), gr.update()
                         else:
-                            return f"❌ Browser control command '{action_name}' execution failed", "", "", "", "", None, None, None, gr.update(), gr.update()
+                            result_message = f"❌ Browser control command '{action_name}' execution failed"
+                            logger.error(f"Browser control command '{action_name}' execution failed")
+                            
+                            # Save summary log
+                            summary_log_path = get_app_logger().persist_action_run_log(
+                                action_name,
+                                result_message,
+                                metadata={"action_type": "browser-control", "status": "failure"},
+                            )
+                            
+                            # Save detailed log
+                            detail_log_path = get_app_logger().persist_detailed_action_log(
+                                action_name,
+                                captured_output,
+                                metadata={"action_type": "browser-control", "status": "failure"},
+                            )
+                            
+                            relative_summary_path = os.path.relpath(summary_log_path, project_dir)
+                            relative_detail_path = os.path.relpath(detail_log_path, project_dir)
+                            result_message += f"\n\nSummary log: {relative_summary_path}"
+                            result_message += f"\nDetailed log: {relative_detail_path}"
+                            logger.info(f"Summary log saved to: {summary_log_path}")
+                            logger.info(f"Detailed log saved to: {detail_log_path}")
+                            return result_message, "", "", "", "", None, None, None, gr.update(), gr.update()
                     
                     elif action_type == 'script':
+                        # Stop capture for non-browser-control types
+                        get_app_logger().stop_execution_log_capture()
+                        
                         # Handle script execution
                         command_template = action_def.get('command', '')
                         if not command_template:
@@ -365,7 +424,6 @@ if ENABLE_LLM:
                         try:
                             import subprocess
                             import asyncio
-                            import os
                             
                             # Change to the project directory
                             project_dir = os.path.dirname(os.path.abspath(__file__))
@@ -452,6 +510,9 @@ if ENABLE_LLM:
                             return error_msg, "", "", "", "", None, None, None, gr.update(), gr.update()
                     
                     elif action_type in ['action_runner_template', 'git-script']:
+                        # Stop capture for non-browser-control types
+                        get_app_logger().stop_execution_log_capture()
+                        
                         # Use the script_manager for these types
                         try:
                             from src.script.script_manager import run_script
@@ -466,13 +527,19 @@ if ENABLE_LLM:
                             return f"❌ Error executing {action_type} command '{action_name}': {str(e)}", "", "", "", "", None, None, None, gr.update(), gr.update()
                     
                     else:
+                        # Stop capture for unsupported types
+                        get_app_logger().stop_execution_log_capture()
                         return f"❌ Action type '{action_type}' is not supported in minimal mode. Supported types: browser-control, script, action_runner_template, git-script", "", "", "", "", None, None, None, gr.update(), gr.update()
                     
                 except Exception as e:
+                    # Stop capture on exception
+                    get_app_logger().stop_execution_log_capture()
                     import traceback
                     error_detail = traceback.format_exc()
                     return f"❌ Error executing pre-registered command: {str(e)}\n\nDetails:\n{error_detail}", "", "", "", "", None, None, None, gr.update(), gr.update()
             else:
+                # Stop capture if not a command
+                get_app_logger().stop_execution_log_capture()
                 return "LLM機能が無効です。事前登録されたコマンド（@で始まる）のみが利用可能です。", "", "", "", "", None, None, None, gr.update(), gr.update()
 else:
     LLM_MODULES_AVAILABLE = False
@@ -492,6 +559,9 @@ else:
         # Extract task from args (task is the 18th parameter)
         task = args[17] if len(args) > 17 else ""
         
+        # Start capturing output before command evaluation
+        get_app_logger().start_execution_log_capture()
+        
         # Check if this is a pre-registered command
         evaluation_result = pre_evaluate_prompt_standalone(task)
         if evaluation_result and evaluation_result.get('is_command'):
@@ -508,6 +578,7 @@ else:
                 action_type = action_def.get('type', '')
                 
                 if not action_def:
+                    get_app_logger().stop_execution_log_capture()
                     return f"❌ Pre-registered command '{action_name}' not found", "", "", "", "", None, None, None, gr.update(), gr.update()
                 
                 # Handle different action types
@@ -526,12 +597,64 @@ else:
                     
                     result = await execute_direct_browser_control(action_def, **execution_params)
                     
+                    # Stop capturing and retrieve output
+                    captured_output = get_app_logger().stop_execution_log_capture()
+                    
+                    project_dir = os.path.dirname(os.path.abspath(__file__))
                     if result:
-                        return f"✅ Browser control command '{action_name}' executed successfully", "", "", "", "", None, None, None, gr.update(), gr.update()
+                        result_message = f"✅ Browser control command '{action_name}' executed successfully"
+                        logger.info(f"Browser control command '{action_name}' executed successfully")
+                        
+                        # Save summary log
+                        summary_log_path = get_app_logger().persist_action_run_log(
+                            action_name,
+                            result_message,
+                            metadata={"action_type": "browser-control", "status": "success"},
+                        )
+                        
+                        # Save detailed log
+                        detail_log_path = get_app_logger().persist_detailed_action_log(
+                            action_name,
+                            captured_output,
+                            metadata={"action_type": "browser-control", "status": "success"},
+                        )
+                        
+                        relative_summary_path = os.path.relpath(summary_log_path, project_dir)
+                        relative_detail_path = os.path.relpath(detail_log_path, project_dir)
+                        result_message += f"\n\nSummary log: {relative_summary_path}"
+                        result_message += f"\nDetailed log: {relative_detail_path}"
+                        logger.info(f"Summary log saved to: {summary_log_path}")
+                        logger.info(f"Detailed log saved to: {detail_log_path}")
+                        return result_message, "", "", "", "", None, None, None, gr.update(), gr.update()
                     else:
-                        return f"❌ Browser control command '{action_name}' execution failed", "", "", "", "", None, None, None, gr.update(), gr.update()
+                        result_message = f"❌ Browser control command '{action_name}' execution failed"
+                        logger.error(f"Browser control command '{action_name}' execution failed")
+                        
+                        # Save summary log
+                        summary_log_path = get_app_logger().persist_action_run_log(
+                            action_name,
+                            result_message,
+                            metadata={"action_type": "browser-control", "status": "failure"},
+                        )
+                        
+                        # Save detailed log
+                        detail_log_path = get_app_logger().persist_detailed_action_log(
+                            action_name,
+                            captured_output,
+                            metadata={"action_type": "browser-control", "status": "failure"},
+                        )
+                        
+                        relative_summary_path = os.path.relpath(summary_log_path, project_dir)
+                        relative_detail_path = os.path.relpath(detail_log_path, project_dir)
+                        result_message += f"\n\nSummary log: {relative_summary_path}"
+                        result_message += f"\nDetailed log: {relative_detail_path}"
+                        logger.info(f"Summary log saved to: {summary_log_path}")
+                        logger.info(f"Detailed log saved to: {detail_log_path}")
+                        return result_message, "", "", "", "", None, None, None, gr.update(), gr.update()
                 
                 elif action_type == 'script':
+                    # Stop capture for non-browser-control types
+                    get_app_logger().stop_execution_log_capture()
                     # Handle script execution
                     command_template = action_def.get('command', '')
                     if not command_template:
@@ -547,7 +670,6 @@ else:
                     try:
                         import subprocess
                         import asyncio
-                        import os
                         
                         # Change to the project directory
                         project_dir = os.path.dirname(os.path.abspath(__file__))
@@ -636,6 +758,9 @@ else:
                         return error_msg, "", "", "", "", None, None, None, gr.update(), gr.update()
                 
                 elif action_type in ['action_runner_template', 'git-script']:
+                    # Stop capture for non-browser-control types
+                    get_app_logger().stop_execution_log_capture()
+                    
                     # Use the script_manager for these types
                     try:
                         from src.script.script_manager import run_script
@@ -652,13 +777,16 @@ else:
                         return f"❌ Error executing {action_type} command '{action_name}': {str(e)}", "", "", "", "", None, None, None, gr.update(), gr.update()
                 
                 else:
+                    get_app_logger().stop_execution_log_capture()
                     return f"❌ Action type '{action_type}' is not supported in minimal mode. Supported types: browser-control, script, action_runner_template, git-script", "", "", "", "", None, None, None, gr.update(), gr.update()
                 
             except Exception as e:
+                get_app_logger().stop_execution_log_capture()
                 import traceback
                 error_detail = traceback.format_exc()
                 return f"❌ Error executing pre-registered command: {str(e)}\n\nDetails:\n{error_detail}", "", "", "", "", None, None, None, gr.update(), gr.update()
         else:
+            get_app_logger().stop_execution_log_capture()
             return "LLM機能が無効です。事前登録されたコマンド（@で始まる）のみが利用可能です。", "", "", "", "", None, None, None, gr.update(), gr.update()
 
 # ブラウザ自動化関連モジュール（常に利用可能）

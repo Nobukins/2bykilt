@@ -33,6 +33,9 @@ def test_missing_root_returns_empty(tmp_path: Path) -> None:
 
 
 def test_flag_disabled_scans_only_flat_directory(tmp_path: Path) -> None:
+    # Explicitly disable recursive scanning for this test
+    FeatureFlags.set_override(_FLAG, False)
+    
     root = tmp_path / "runs"
     nested = root / "nested"
     nested.mkdir(parents=True)

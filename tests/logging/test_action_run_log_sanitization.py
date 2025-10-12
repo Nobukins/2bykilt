@@ -6,15 +6,15 @@ from src.utils.app_logger import AppLogger
 def _extract_slug(path: Path) -> str:
     """Extract sanitized slug from filename.
 
-    Filename pattern: YYYYMMDD-HHMMSS-<slug>.log
+    Filename pattern: YYYYMMDD-HHMMSS-MMMMMM-<slug>.log
     We remove the leading date-time components and isolate <slug>.
     """
     name = path.name
     stem = name[:-4] if name.endswith('.log') else name
-    # Split into at most 3 parts: date, time, slug
-    parts = stem.split('-', 2)
-    if len(parts) == 3:
-        return parts[2]
+    # Split into at most 4 parts: date, time, microseconds, slug
+    parts = stem.split('-', 3)
+    if len(parts) == 4:
+        return parts[3]
     return stem
 
 

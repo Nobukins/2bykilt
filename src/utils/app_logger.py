@@ -4,9 +4,10 @@ import re
 import sys
 import threading
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, TextIO
 from pathlib import Path
 from logging.handlers import TimedRotatingFileHandler
+from io import StringIO
 
 # new helper
 from src.utils.fs_paths import get_logs_dir
@@ -27,6 +28,80 @@ EMOJI_MAP = {
     "ERROR": "❌",
     "CRITICAL": "🚨"
 }
+
+class OutputCapture:
+    """Capture stdout, stderr, and Python logging to a buffer while still showing output.
+    
+    Can be used as a context manager for automatic cleanup:
+        with output_capture:
+            # ... code to capture ...
+        captured = output_capture.stop()
+    """
+    
+    def __init__(self):
+        self.buffer = StringIO()
+        self._original_stdout: Optional[TextIO] = None
+        self._original_stderr: Optional[TextIO] = None
+        self._capture_active = False
+        self._log_handler: Optional[logging.StreamHandler] = None
+    
+    def start(self):
+        """Start capturing output."""
+        if not self._capture_active:
+            self._original_stdout = sys.stdout
+            self._original_stderr = sys.stderr
+            sys.stdout = TeeOutput(self._original_stdout, self.buffer)
+            sys.stderr = TeeOutput(self._original_stderr, self.buffer)
+            
+            # Add a handler to capture all logging output
+            self._log_handler = logging.StreamHandler(self.buffer)
+            self._log_handler.setLevel(logging.DEBUG)
+            formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+            self._log_handler.setFormatter(formatter)
+            logging.getLogger().addHandler(self._log_handler)
+            
+            self._capture_active = True
+    
+    def stop(self) -> str:
+        """Stop capturing and return captured content."""
+        if self._capture_active:
+            sys.stdout = self._original_stdout
+            sys.stderr = self._original_stderr
+            
+            # Remove the logging handler
+            if self._log_handler:
+                logging.getLogger().removeHandler(self._log_handler)
+                self._log_handler = None
+            
+            self._capture_active = False
+        content = self.buffer.getvalue()
+        self.buffer = StringIO()  # Reset buffer
+        return content
+    
+    def __enter__(self):
+        """Context manager entry: start capturing."""
+        self.start()
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit: ensure capture is stopped even on exception."""
+        if self._capture_active:
+            self.stop()
+        return False  # Don't suppress exceptions
+
+class TeeOutput:
+    """Write to both original output and buffer."""
+    
+    def __init__(self, original: TextIO, buffer: StringIO):
+        self.original = original
+        self.buffer = buffer
+    
+    def write(self, text: str):
+        self.original.write(text)
+        self.buffer.write(text)
+    
+    def flush(self):
+        self.original.flush()
 
 class AppLogger:
     _instance = None
@@ -83,6 +158,16 @@ class AppLogger:
         # Dedicated directory for persisted browser execution logs
         self._execution_log_dir = Path(self._log_dir) / "browser_runs"
         self._execution_log_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Subdirectories for summary and detailed logs
+        self._summary_log_dir = self._execution_log_dir / "summary"
+        self._summary_log_dir.mkdir(parents=True, exist_ok=True)
+        
+        self._detail_log_dir = self._execution_log_dir / "detail"
+        self._detail_log_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Output capture for detailed logs (captures stdout/stderr)
+        self._output_capture = OutputCapture()
     
     def get_gradio_logs(self, max_logs: int = 100, level: Optional[str] = None) -> List[str]:
         with self._lock:
@@ -177,7 +262,7 @@ class AppLogger:
         command: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> Path:
-        """Persist automation execution output to a timestamped log file."""
+        """Persist automation execution summary to a timestamped log file in summary/ directory."""
         # REVIEW NOTE: Following PR #301 review (discussion_r2412687742), we tighten
         # sanitization to avoid leading '.' (hidden files) and sequences of dots which
         # add little semantic value and could confuse users when scanning the logs dir.
@@ -195,8 +280,9 @@ class AppLogger:
         safe_action = re.sub(r"-+", "-", safe_action).strip("_-")
         if not safe_action:
             safe_action = "unnamed"
-        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        log_path = self._execution_log_dir / f"{timestamp}-{safe_action}.log"
+        # Include microseconds to prevent collision on rapid executions
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+        log_path = self._summary_log_dir / f"{timestamp}-{safe_action}.log"
 
         header_lines = [
             f"timestamp: {datetime.now().isoformat()}",
@@ -213,6 +299,51 @@ class AppLogger:
         header_lines.append("")
         header = "\n".join(header_lines)
         body = content if content.endswith("\n") else f"{content}\n"
+
+        log_path.write_text(f"{header}{body}", encoding="utf-8")
+        return log_path
+    
+    def start_execution_log_capture(self):
+        """Start capturing stdout/stderr for detailed execution log."""
+        self._output_capture.start()
+    
+    def stop_execution_log_capture(self) -> str:
+        """Stop capturing and return the captured output."""
+        return self._output_capture.stop()
+    
+    def persist_detailed_action_log(
+        self,
+        action_name: str,
+        captured_output: str,
+        *,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Path:
+        """Persist detailed execution logs to detail/ directory."""
+        raw = action_name or "unnamed"
+        safe_action = re.sub(r"[^A-Za-z0-9_-]+", "_", raw)
+        safe_action = re.sub(r"_+", "_", safe_action)
+        safe_action = re.sub(r"-+", "-", safe_action).strip("_-")
+        if not safe_action:
+            safe_action = "unnamed"
+        # Include microseconds to prevent collision on rapid executions
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+        log_path = self._detail_log_dir / f"{timestamp}-{safe_action}.log"
+
+        header_lines = [
+            f"timestamp: {datetime.now().isoformat()}",
+            f"action: {action_name}",
+        ]
+
+        if metadata:
+            for key, value in metadata.items():
+                header_lines.append(f"{key}: {value}")
+
+        header_lines.append("")
+        header_lines.append("=== Detailed Execution Log ===")
+        header_lines.append("")
+        
+        header = "\n".join(header_lines)
+        body = captured_output if captured_output.endswith("\n") else f"{captured_output}\n"
 
         log_path.write_text(f"{header}{body}", encoding="utf-8")
         return log_path

@@ -43,6 +43,9 @@ def test_limit_upper_bound_validation(tmp_path: Path) -> None:
 
 
 def test_flag_disabled_uses_flat_listing(tmp_path: Path) -> None:
+    # Explicitly disable recursive scanning for this test
+    FeatureFlags.set_override(_FLAG, False)
+    
     root = tmp_path / "runs"
     nested = root / "nested"
     nested.mkdir(parents=True)
@@ -138,6 +141,9 @@ def test_allowed_roots_validation(tmp_path: Path) -> None:
 
 
 def test_permission_error_bubbles(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    # Disable recursive scanning so that _scan_flat is used
+    FeatureFlags.set_override(_FLAG, False)
+    
     root = tmp_path / "runs"
     root.mkdir()
 

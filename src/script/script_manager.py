@@ -94,13 +94,14 @@ async def clone_git_repo(git_url: str, version: str = 'main', target_dir: Option
             shutil.rmtree(target_dir)
         raise RuntimeError(f"Failed to clone repository: {str(e)}")
 
-def generate_browser_script(script_info: Dict[str, Any], params: Dict[str, str]) -> str:
+def generate_browser_script(script_info: Dict[str, Any], params: Dict[str, str], headless: bool = False) -> str:
     """
     Generate a pytest script from a browser control flow
     
     Args:
         script_info: Dictionary containing the script information
         params: Dictionary of parameters to use in the script
+        headless: Boolean indicating if browser should run in headless mode (default: False)
         
     Returns:
         str: The generated script content
@@ -130,88 +131,88 @@ def generate_browser_script(script_info: Dict[str, Any], params: Dict[str, str])
         processed_flow.append(processed_step)
     
     flow = processed_flow
-    script_content = '''
-    import pytest
-    from playwright.sync_api import expect, Page, Browser
-    import json
-    import os
-    import sys
-    from pathlib import Path
-    from datetime import datetime
+    script_content = '''import pytest
+from playwright.sync_api import expect, Page, Browser
+import json
+import os
+import sys
+from pathlib import Path
+from datetime import datetime
 
-    PROJECT_ROOT = Path(__file__).resolve().parents[1]
-    if str(PROJECT_ROOT) not in sys.path:
-        sys.path.insert(0, str(PROJECT_ROOT))
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-    try:
-        from src.runtime.run_context import RunContext
-    except Exception:  # pragma: no cover - optional dependency for artifact routing
-        RunContext = None  # type: ignore[assignment]
+try:
+    from src.runtime.run_context import RunContext
+except Exception:  # pragma: no cover - optional dependency for artifact routing
+    RunContext = None  # type: ignore[assignment]
 
-    OUTPUT_FILE_PARAM = ''' + repr(params.get("output_file")) + '''
-    OUTPUT_MODE_PARAM = ''' + repr(params.get("output_mode")) + '''
+OUTPUT_FILE_PARAM = ''' + repr(params.get("output_file")) + '''
+OUTPUT_MODE_PARAM = ''' + repr(params.get("output_mode")) + '''
 
-    # NOTE:
+# NOTE:
 # pytest-playwright defines core fixtures like `browser` with session scope. If we
 # provide custom overriding fixtures (browser_context_args, browser_type_launch_args)
 # with a narrower (module/function) scope, pytest raises ScopeMismatch when the
 # session-scoped fixture chain attempts to access them. Therefore these MUST be
 # session-scoped. See Issue #220 / PR #235.
 
-    def _resolve_output_path():
-        candidate = OUTPUT_FILE_PARAM.strip() if isinstance(OUTPUT_FILE_PARAM, str) else ""
-        base_dir = None
-        if RunContext is not None:
-            try:
-                base_dir = RunContext.get().artifact_dir("browser_control_get_title", ensure=True)
-            except Exception as run_exc:  # noqa: BLE001
-                print(f"⚠️ Failed to resolve RunContext artifact directory: {run_exc}")
-                base_dir = None
-        if base_dir is None:
-            base_dir = (PROJECT_ROOT / "artifacts" / "runs" / "browser_control_get_title")
-            base_dir.mkdir(parents=True, exist_ok=True)
-
-        if candidate:
-            path = Path(candidate)
-            if not path.is_absolute():
-                path = (base_dir / path).resolve()
-            else:
-                path = path.resolve()
-        else:
-            path = (base_dir / "get_title_output.txt").resolve()
-
-        path.parent.mkdir(parents=True, exist_ok=True)
-        return path
-
-
-    def _determine_output_mode():
-        raw = OUTPUT_MODE_PARAM.lower() if isinstance(OUTPUT_MODE_PARAM, str) else str(OUTPUT_MODE_PARAM or "").lower()
-        return "w" if raw in {"overwrite", "write", "w"} else "a"
-
-
-    OUTPUT_PATH = _resolve_output_path()
-    OUTPUT_MODE = _determine_output_mode()
-
-
-    def _append_content_to_file(payload: dict):
-        if not OUTPUT_PATH:
-            return
-        path = Path(OUTPUT_PATH)
-        mode = OUTPUT_MODE
+def _resolve_output_path():
+    candidate = OUTPUT_FILE_PARAM.strip() if isinstance(OUTPUT_FILE_PARAM, str) else ""
+    base_dir = None
+    if RunContext is not None:
         try:
-            record = {
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "content": payload,
-            }
-            existing_size = path.stat().st_size if path.exists() else 0
-            with open(path, mode, encoding="utf-8") as fh:
-                if mode == "a" and existing_size > 0:
-                    fh.write("\n")
-                json.dump(record, fh, ensure_ascii=False, indent=2)
-                fh.write("\n")
-            print(f"📝 Saved extracted content to {path} (mode={mode})")
-        except Exception as write_exc:  # noqa: BLE001
-            print(f"⚠️ Failed to write output file {path}: {write_exc}")
+            base_dir = RunContext.get().artifact_dir("browser_control_get_title", ensure=True)
+        except Exception as run_exc:  # noqa: BLE001
+            print(f"⚠️ Failed to resolve RunContext artifact directory: {run_exc}")
+            base_dir = None
+    if base_dir is None:
+        base_dir = (PROJECT_ROOT / "artifacts" / "runs" / "browser_control_get_title")
+        base_dir.mkdir(parents=True, exist_ok=True)
+
+    if candidate:
+        path = Path(candidate)
+        if not path.is_absolute():
+            path = (base_dir / path).resolve()
+        else:
+            path = path.resolve()
+    else:
+        path = (base_dir / "get_title_output.txt").resolve()
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def _determine_output_mode():
+    raw = OUTPUT_MODE_PARAM.lower() if isinstance(OUTPUT_MODE_PARAM, str) else str(OUTPUT_MODE_PARAM or "").lower()
+    return "w" if raw in {"overwrite", "write", "w"} else "a"
+
+
+OUTPUT_PATH = _resolve_output_path()
+OUTPUT_MODE = _determine_output_mode()
+
+
+def _append_content_to_file(payload: dict):
+    if not OUTPUT_PATH:
+        return
+    path = Path(OUTPUT_PATH)
+    mode = OUTPUT_MODE
+    try:
+        record = {
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "content": payload,
+        }
+        existing_size = path.stat().st_size if path.exists() else 0
+        with open(path, mode, encoding="utf-8") as fh:
+            if mode == "a" and existing_size > 0:
+                fh.write("\\n")
+            json.dump(record, fh, ensure_ascii=False, indent=2)
+            fh.write("\\n")
+        print(f"📝 Saved extracted content to {path} (mode={mode})")
+    except Exception as write_exc:  # noqa: BLE001
+        print(f"⚠️ Failed to write output file {path}: {write_exc}")
+
 
 @pytest.fixture(scope="session")
 def browser_context_args(browser_context_args):
@@ -235,6 +236,15 @@ def browser_type_launch_args(browser_type_launch_args):
     # Check browser type from environment (with override support)
     browser_type = os.environ.get('BYKILT_OVERRIDE_BROWSER_TYPE') or os.environ.get('BYKILT_BROWSER_TYPE', 'chrome')
     print(f"🔍 Browser type: {browser_type}")
+    
+    # Configure headless mode - explicitly set to False unless BYKILT_HEADLESS=true
+    headless_env = os.environ.get('BYKILT_HEADLESS', 'false').lower()
+    if headless_env == 'true':
+        launch_args["headless"] = True
+        print(f"🔍 Headless mode: ENABLED (via environment variable)")
+    else:
+        launch_args["headless"] = False
+        print(f"🔍 Headless mode: DISABLED (UI will be visible)")
     
     # Check for browser executable path from environment
     browser_executable = None
@@ -461,7 +471,7 @@ def test_browser_control(page: Page):  # noqa: C901
                             content[label] = entry_data
 
                     print("Extracted content:", json.dumps(content, indent=2))
-                        _append_content_to_file(content)
+                    _append_content_to_file(content)
         else:
             print("ℹ️ No automation flow defined, basic test completed")
     except Exception as e:
@@ -588,9 +598,10 @@ async def run_script(
 
                 # Log the parameters being used
                 logger.info(f"Generating browser control script with params: {params}")
+                logger.info(f"🔍 Headless mode setting: {headless}")
 
-                # Generate and save the script
-                script_content = generate_browser_script(script_info, params)
+                # Generate and save the script with headless parameter
+                script_content = generate_browser_script(script_info, params, headless)
                 script_path = os.path.join(script_dir, 'browser_control.py')
 
                 # Create pytest.ini if needed
@@ -631,10 +642,12 @@ markers =
                     except ValueError:
                         logger.warning(f"Invalid slowmo value: {slowmo}, ignoring")
                 
-                # NOTE: Removed headless parameter handling - now controlled via command line options
-                
                 # Set up environment variables including browser configuration
                 env = os.environ.copy()
+                
+                # Set headless mode environment variable for script fixtures
+                env['BYKILT_HEADLESS'] = 'true' if headless else 'false'
+                logger.info(f"🔍 Setting BYKILT_HEADLESS environment variable to: {env['BYKILT_HEADLESS']}")
                 
                 # Get browser configuration from BrowserConfig
                 try:
