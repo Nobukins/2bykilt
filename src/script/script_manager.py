@@ -164,7 +164,7 @@ def _resolve_output_path():
         try:
             base_dir = RunContext.get().artifact_dir("browser_control_get_title", ensure=True)
         except Exception as run_exc:  # noqa: BLE001
-            print(f"⚠️ Failed to resolve RunContext artifact directory: {{run_exc}}")
+            print(f"⚠️ Failed to resolve RunContext artifact directory: {run_exc}")
             base_dir = None
     if base_dir is None:
         base_dir = (PROJECT_ROOT / "artifacts" / "runs" / "browser_control_get_title")
@@ -185,7 +185,7 @@ def _resolve_output_path():
 
 def _determine_output_mode():
     raw = OUTPUT_MODE_PARAM.lower() if isinstance(OUTPUT_MODE_PARAM, str) else str(OUTPUT_MODE_PARAM or "").lower()
-    return "w" if raw in {{"overwrite", "write", "w"}} else "a"
+    return "w" if raw in {"overwrite", "write", "w"} else "a"
 
 
 OUTPUT_PATH = _resolve_output_path()
@@ -198,19 +198,19 @@ def _append_content_to_file(payload: dict):
     path = Path(OUTPUT_PATH)
     mode = OUTPUT_MODE
     try:
-        record = {{
+        record = {
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "content": payload,
-        }}
+        }
         existing_size = path.stat().st_size if path.exists() else 0
         with open(path, mode, encoding="utf-8") as fh:
             if mode == "a" and existing_size > 0:
                 fh.write("\\n")
             json.dump(record, fh, ensure_ascii=False, indent=2)
             fh.write("\\n")
-        print(f"📝 Saved extracted content to {{path}} (mode={{mode}})")
+        print(f"📝 Saved extracted content to {path} (mode={mode})")
     except Exception as write_exc:  # noqa: BLE001
-        print(f"⚠️ Failed to write output file {{path}}: {{write_exc}}")
+        print(f"⚠️ Failed to write output file {path}: {write_exc}")
 
 
 @pytest.fixture(scope="session")
