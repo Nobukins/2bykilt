@@ -212,6 +212,11 @@ assets/fonts/
 # tmp/myscript/browser_control.py
 tmp/test_*
 
+# Dynamically generated browser control scripts
+myscript/browser_control.py
+myscript/browser_control_*.py
+myscript/pytest.ini
+
 
 # test_*
 

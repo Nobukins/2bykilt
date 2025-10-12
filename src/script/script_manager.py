@@ -94,13 +94,14 @@ async def clone_git_repo(git_url: str, version: str = 'main', target_dir: Option
             shutil.rmtree(target_dir)
         raise RuntimeError(f"Failed to clone repository: {str(e)}")
 
-def generate_browser_script(script_info: Dict[str, Any], params: Dict[str, str]) -> str:
+def generate_browser_script(script_info: Dict[str, Any], params: Dict[str, str], headless: bool = False) -> str:
     """
     Generate a pytest script from a browser control flow
     
     Args:
         script_info: Dictionary containing the script information
         params: Dictionary of parameters to use in the script
+        headless: Boolean indicating if browser should run in headless mode (default: False)
         
     Returns:
         str: The generated script content
@@ -235,6 +236,15 @@ def browser_type_launch_args(browser_type_launch_args):
     # Check browser type from environment (with override support)
     browser_type = os.environ.get('BYKILT_OVERRIDE_BROWSER_TYPE') or os.environ.get('BYKILT_BROWSER_TYPE', 'chrome')
     print(f"🔍 Browser type: {browser_type}")
+    
+    # Configure headless mode - explicitly set to False unless BYKILT_HEADLESS=true
+    headless_env = os.environ.get('BYKILT_HEADLESS', 'false').lower()
+    if headless_env == 'true':
+        launch_args["headless"] = True
+        print(f"🔍 Headless mode: ENABLED (via environment variable)")
+    else:
+        launch_args["headless"] = False
+        print(f"🔍 Headless mode: DISABLED (UI will be visible)")
     
     # Check for browser executable path from environment
     browser_executable = None
@@ -588,9 +598,10 @@ async def run_script(
 
                 # Log the parameters being used
                 logger.info(f"Generating browser control script with params: {params}")
+                logger.info(f"🔍 Headless mode setting: {headless}")
 
-                # Generate and save the script
-                script_content = generate_browser_script(script_info, params)
+                # Generate and save the script with headless parameter
+                script_content = generate_browser_script(script_info, params, headless)
                 script_path = os.path.join(script_dir, 'browser_control.py')
 
                 # Create pytest.ini if needed
@@ -631,10 +642,12 @@ markers =
                     except ValueError:
                         logger.warning(f"Invalid slowmo value: {slowmo}, ignoring")
                 
-                # NOTE: Removed headless parameter handling - now controlled via command line options
-                
                 # Set up environment variables including browser configuration
                 env = os.environ.copy()
+                
+                # Set headless mode environment variable for script fixtures
+                env['BYKILT_HEADLESS'] = 'true' if headless else 'false'
+                logger.info(f"🔍 Setting BYKILT_HEADLESS environment variable to: {env['BYKILT_HEADLESS']}")
                 
                 # Get browser configuration from BrowserConfig
                 try:

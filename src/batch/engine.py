@@ -1771,9 +1771,20 @@ class BatchEngine:
             if action_type == 'browser-control':
                 from src.modules.direct_browser_control import execute_direct_browser_control
 
+                # Determine headless mode from job or config, default to False
+                user_headless = job.row_data.get('headless')
+                if user_headless is not None:
+                    # Accept bool or string
+                    if isinstance(user_headless, str):
+                        headless = user_headless.lower() == 'true'
+                    else:
+                        headless = bool(user_headless)
+                else:
+                    headless = self.config.get('headless', False)
+
                 execution_params = {
                     'use_own_browser': False,  # Use shared browser for batch jobs
-                    'headless': True,  # Run headless for batch processing
+                    'headless': headless,      # Default to False unless set
                     **action_params
                 }
 
@@ -1833,11 +1844,23 @@ class BatchEngine:
                         error_msg += f": {process.stderr}"
                     raise Exception(error_msg)
 
+
+
             elif action_type in ['action_runner_template', 'git-script']:
                 # Use the script_manager for these types
                 from src.script.script_manager import run_script
 
-                script_output, script_path = await run_script(action_def, action_params, headless=True)
+                # Determine headless mode from job or config, default to False
+                user_headless = job.row_data.get('headless')
+                if user_headless is not None:
+                    if isinstance(user_headless, str):
+                        headless = user_headless.lower() == 'true'
+                    else:
+                        headless = bool(user_headless)
+                else:
+                    headless = self.config.get('headless', False)
+
+                script_output, script_path = await run_script(action_def, action_params, headless=headless)
 
                 if script_output and "successfully" in script_output.lower():
                     self.logger.info(f"{action_type} command '{action_name}' executed successfully for job {job.job_id}")
