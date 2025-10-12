@@ -425,9 +425,12 @@ issues:
   "304": {title: "[service] 🎥 Recordings: 一覧取得サービス/API (Flag連携) [Sub of #302]", meta: {area: artifacts, type: feat, priority: P2, phase: "2", stability: core}, depends: ["302", "303"], dependents: ["305"], risk: null, progress: {state: done, primary_pr: 309}, critical_path_rank: 2}
   "305": {title: "[ui/ux] 🎥 Recordings: タブ統合（ソート/フィルタ/ページング、LLM無効時非表示制御、Flag連携）[Sub of #302]", meta: {area: uiux, type: feat, priority: P2, phase: "2", stability: core}, depends: ["302", "303", "304"], dependents: [], risk: null, progress: {state: done, primary_pr: 310}, critical_path_rank: 1}
   "306": {title: "[worker] 🎥 Recordings: GIF変換ワーカー/キャッシュ + Flag [Sub of #302]", meta: {area: artifacts, type: feat, priority: P2, phase: "2", stability: core}, depends: ["302"], dependents: ["307"], risk: null, progress: {state: in-progress, note: "implementation complete; PR #311 awaiting merge"}, critical_path_rank: 2}
-  "307": {title: "[docs] 🎥 Recordings: 仕様/Flags/運用手順の更新 [Sub of #302]", meta: {area: docs, type: docs, priority: P2, phase: "2", stability: core}, depends: ["302", "303", "304", "305", "306"], dependents: [], risk: null, progress: {state: done, primary_pr: 312}, critical_path_rank: 1}
+  "307": {title: "[docs] 🎥 Recordings: 仕様/Flags/運用手順の更新 [Sub of #302]", meta: {area: docs, type: docs, priority: P2, phase: "2", stability: core}, depends: ["302", "303", "304", "305", "306"], dependents: ["313", "314", "315"], risk: null, progress: {state: done, primary_pr: 312}, critical_path_rank: 1}
+  "313": {title: "[refactor] bykilt.py run_with_stream コード重複解消 (DRY原則適用)", meta: {area: runner, type: refactor, priority: P3, phase: "3", stability: core}, depends: ["307"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "314": {title: "[enhancement] OutputCapture スレッドセーフ性改善 (threading.Lock 追加)", meta: {area: logging, type: enhancement, priority: P2, phase: "3", stability: core}, depends: ["307"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "315": {title: "[bug] try-finally によるリソースクリーンアップ強化", meta: {area: logging, type: bug, priority: P2, phase: "3", stability: core}, depends: ["307"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
 summary:
-  total_issues: 127
+  total_issues: 130
   high_risk: ["31", "46", "49", "54", "62", "176", "237", "285"]
   longest_chain_example: ["302", "303", "304", "305"]
   data_quality_checks:
@@ -465,8 +468,11 @@ summary:
       - "287"
 
 last_synced:
-  utc: "2025-10-10T01:15:00Z"
+  utc: "2025-10-12T10:30:00Z"
   issues:
+    "315": "OPEN"
+    "314": "OPEN"
+    "313": "OPEN"
     "307": "CLOSED"
     "305": "CLOSED"
     "304": "CLOSED"
