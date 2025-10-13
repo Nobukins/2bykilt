@@ -1,12 +1,9 @@
 ```mermaid
 %% Auto-generated dependency graph
-%% Generated at: 2025-10-13T03:24:23.157139+00:00
+%% Generated at: 2025-10-13T13:49:11.339534+00:00
 %% Edge方向: dependency --> dependent
 graph LR
 
-subgraph R10[Rank 10]
-  287["287 Template for new is…"]
-end
 subgraph R6[Rank 6]
   302["302 [ui/ux][artifacts] …"]
 end
@@ -142,6 +139,7 @@ subgraph R1[Rank 1]
   279["279 Config: Consolidate…"]
   280["280 Browser Settings: I…"]
   285["285 Browser-Use/Web-UIを…"]
+  287["287 Template for new is…"]
   305["305 [ui/ux] 🎥 Recording…"]
   307["307 [docs] 🎥 Recordings…"]
   313["313 [refactor] bykilt.p…"]

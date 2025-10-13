@@ -1,6 +1,6 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-10-13T03:24:23+00:00
+Generated at (UTC): 2025-10-13T13:49:11+00:00
 
 ## 1. メタサマリー
 
@@ -144,7 +144,6 @@ Sorted By: critical_path_rank
 
 | ID | Title | Pri | Phase | Area | Risk | CP Rank | LongestDist | Depends | Dependents | PrimaryPR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 287 | Template for new issue and new PR | P3 | 2 | docs |  | 10 | 0 | 0 | 0 |  |
 | 302 | [ui/ux][artifacts] 🎥 Recordings: リカーシブ検出 + LLM無効時GIF代替 (Flag対応) | P2 | 2 | artifacts |  | 6 | 0 | 0 | 5 |  |
 | 219 | [runner][bug] search-linkedin 初期コマンド失敗 (pytest経由引数未解釈) | P0 | 2 | runner |  | 5 | 4 | 2 | 2 | #232 |
 | 32 | Run/Job ID 基盤 | P0 | 1 | runner |  | 5 | 0 | 0 | 10 | #79 |
@@ -231,20 +230,21 @@ Sorted By: critical_path_rank
 | 255 | git-scriptのURL評価制限緩和 | P2 | 2 | runner |  | 1 | 0 | 0 | 0 |  |
 | 257 | [batch] CSV Batch Job Execution Not Triggered - Browser Automation Missing | P0 | 2 | batch |  | 1 | 3 | 2 | 0 |  |
 | 264 | リファクタ提案: 大きすぎる Python ファイルの分割とモジュール化 | P2 | 2 | docs |  | 1 | 0 | 0 | 0 |  |
-| 265 | 改善提案: 複数フォルダ配下の録画ファイルを再帰的に発見・一覧表示 | P2 | 2 | artifacts |  | 1 | 0 | 0 | 3 |  |
+| 265 | 改善提案: 複数フォルダ配下の録画ファイルを再帰的に発見・一覧表示 | P2 | 2 | artifacts |  | 1 | 0 | 0 | 3 | #317 |
 | 266 | Discovery: 録画ファイル検出ユーティリティ（Discovery） | P2 | 2 | artifacts |  | 1 | 1 | 1 | 0 |  |
 | 267 | API: 録画ファイル検索 API 設計 | P2 | 2 | artifacts |  | 1 | 2 | 2 | 0 |  |
-| 268 | UI: 録画ファイル集約ビューと実装 | P2 | 2 | artifacts |  | 1 | 2 | 3 | 0 |  |
+| 268 | UI: 録画ファイル集約ビューと実装 | P2 | 2 | artifacts |  | 1 | 2 | 3 | 0 | #317 |
 | 269 | 提案: Feature Flag の全面活用とプロファイルベースの機能有効化 | P1 | 1 | config |  | 1 | 0 | 0 | 3 |  |
 | 270 | 設計: Feature Flag 運用設計とメタデータ仕様 | P1 | 1 | config |  | 1 | 1 | 1 | 0 |  |
 | 271 | 実装: Feature Flags コアライブラリと Profile ベースセットアップ | P1 | 1 | config |  | 1 | 2 | 2 | 0 |  |
 | 272 | UI: Admin UI による Feature Flag 管理画面の実装 | P1 | 1 | flags |  | 1 | 1 | 2 | 0 |  |
 | 276 | Batch: Recording file not copied to artifacts runs folder when using CSV batch | P1 | 2 | artifacts |  | 1 | 0 | 0 | 0 |  |
-| 277 | Artifacts UI: Provide UI listing for screenshots, text & element extracts | P2 | 2 | artifacts |  | 1 | 0 | 0 | 0 |  |
+| 277 | Artifacts UI: Provide UI listing for screenshots, text & element extracts | P2 | 2 | artifacts |  | 1 | 0 | 0 | 0 | #317 |
 | 278 | UI: Control tab visibility with Feature Flags (per-tab toggles & presets) | P1 | 2 | uiux |  | 1 | 2 | 1 | 0 |  |
 | 279 | Config: Consolidate configuration menus, env files, and defaults | P2 | 2 | config |  | 1 | 0 | 0 | 0 |  |
 | 280 | Browser Settings: Improve Browser Settings menu clarity & enforce behavior across run types | P2 | 2 | uiux |  | 1 | 0 | 0 | 0 |  |
 | 285 | Browser-Use/Web-UIをベースとしてUI周りのリファクタリング | P2 | 2 | uiux | high | 1 | 0 | 0 | 0 |  |
+| 287 | Template for new issue and new PR | P3 | 2 | docs |  | 1 | 0 | 0 | 0 | #318 |
 | 305 | [ui/ux] 🎥 Recordings: タブ統合（ソート/フィルタ/ページング、LLM無効時非表示制御、Flag連携）[Sub of #302] | P2 | 2 | uiux |  | 1 | 2 | 3 | 0 | #310 |
 | 307 | [docs] 🎥 Recordings: 仕様/Flags/運用手順の更新 [Sub of #302] | P2 | 2 | docs |  | 1 | 2 | 5 | 3 | #312 |
 | 313 | [refactor] bykilt.py run_with_stream コード重複解消 (DRY原則適用) | P3 | 3 | runner |  | 1 | 0 | 1 | 0 |  |
@@ -276,15 +276,6 @@ Sorted By: critical_path_rank
 | 90 | Temp test issue for enrichment | P2 | 2 | test |  |  | 0 | 0 | 0 |  |
 
 ## 7. 依存詳細 (Fan-in / Fan-out)
-
-### Issue 287: Template for new issue and new PR
-- Priority: P3, Phase: 2, Area: docs
-- Risk: (none)
-- CriticalPathRank: 10
-- LongestDistance: 0
-- Depends (0): (none)
-- Dependents (0): (none)
-- Progress: {"state": "open"}
 
 ### Issue 302: [ui/ux][artifacts] 🎥 Recordings: リカーシブ検出 + LLM無効時GIF代替 (Flag対応)
 - Priority: P2, Phase: 2, Area: artifacts
@@ -1054,7 +1045,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 0
 - Depends (0): (none)
 - Dependents (3): 266, 267, 268
-- Progress: {"state": "open"}
+- Progress: {"state": "in-progress", "note": "partial: PR #317 implemented recursive scanning & filtering; multiple roots config pending", "primary_pr": 317}
 
 ### Issue 266: Discovery: 録画ファイル検出ユーティリティ（Discovery）
 - Priority: P2, Phase: 2, Area: artifacts
@@ -1081,7 +1072,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 2
 - Depends (3): 265, 266, 267
 - Dependents (0): (none)
-- Progress: {"state": "open"}
+- Progress: {"state": "done", "primary_pr": 317}
 
 ### Issue 269: 提案: Feature Flag の全面活用とプロファイルベースの機能有効化
 - Priority: P1, Phase: 1, Area: config
@@ -1135,7 +1126,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 0
 - Depends (0): (none)
 - Dependents (0): (none)
-- Progress: {"state": "open"}
+- Progress: {"state": "done", "primary_pr": 317}
 
 ### Issue 278: UI: Control tab visibility with Feature Flags (per-tab toggles & presets)
 - Priority: P1, Phase: 2, Area: uiux
@@ -1172,6 +1163,15 @@ Sorted By: critical_path_rank
 - Depends (0): (none)
 - Dependents (0): (none)
 - Progress: {"state": "open"}
+
+### Issue 287: Template for new issue and new PR
+- Priority: P3, Phase: 2, Area: docs
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+- Progress: {"state": "in-progress", "primary_pr": 318}
 
 ### Issue 305: [ui/ux] 🎥 Recordings: タブ統合（ソート/フィルタ/ページング、LLM無効時非表示制御、Flag連携）[Sub of #302]
 - Priority: P2, Phase: 2, Area: uiux
