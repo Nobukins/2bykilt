@@ -10,11 +10,47 @@ from typing import Dict, Any
 from src.ui.admin.feature_flag_panel import (
     create_feature_flag_admin_panel,
     get_feature_flags_summary,
+    _resolve_flag_name_from_event,
 )
 
 
 class TestFeatureFlagAdminPanel:
     """Test suite for Feature Flag Admin Panel UI."""
+
+    def test_resolve_flag_name_from_event_with_row_index(self):
+        """Selecting any cell in a row should resolve to its flag name."""
+        mock_event = Mock()
+        mock_event.index = (1, 4)
+        mock_event.value = "runtime"  # clicked the source column
+        rows = [
+            ["flag_a", "True", "False", "bool", "file", "desc"],
+            ["flag_b", "False", "False", "bool", "runtime", "desc"],
+        ]
+
+        resolved = _resolve_flag_name_from_event(mock_event, rows)
+
+        assert resolved == "flag_b"
+
+    def test_resolve_flag_name_from_event_with_value_fallback(self):
+        """Fall back to value lookup when row index is missing."""
+        mock_event = Mock()
+        mock_event.index = None
+        mock_event.value = "flag_a"
+        rows = [["flag_a", "True", "False", "bool", "file", "desc"]]
+
+        resolved = _resolve_flag_name_from_event(mock_event, rows)
+
+        assert resolved == "flag_a"
+
+    def test_resolve_flag_name_from_event_no_match(self):
+        """Return None when neither index nor value map to a known flag."""
+        mock_event = Mock()
+        mock_event.index = None
+        mock_event.value = "unknown"
+
+        resolved = _resolve_flag_name_from_event(mock_event, [["flag_a"]])
+
+        assert resolved is None
     
     def test_create_admin_panel_returns_blocks(self):
         """Test that create_feature_flag_admin_panel() returns a Gradio Blocks instance."""
