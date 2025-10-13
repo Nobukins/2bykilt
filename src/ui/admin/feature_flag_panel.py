@@ -29,7 +29,7 @@ def _resolve_flag_name_from_event(evt: gr.SelectData, table_rows: List[List[str]
     # Use row index when available to look up the first column (flag name).
     try:
         row_index, _col_index = evt.index if evt.index else (None, None)
-    except Exception:  # noqa: BLE001 - defensive because Gradio shape may vary
+    except (TypeError, ValueError, IndexError):  # Defensive: Gradio shape may vary
         row_index = None
 
     if row_index is not None and table_rows and 0 <= row_index < len(table_rows):
