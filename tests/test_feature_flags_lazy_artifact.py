@@ -81,6 +81,12 @@ class TestLazyArtifactCreation:
         """Test that undefined flag access does not create artifact when lazy creation is disabled."""
         monkeypatch.chdir(tmp_path)
 
+        # Count existing flags directories before the test
+        artifacts_dir = get_artifacts_base_dir() / "runs"
+        initial_flags_dirs = 0
+        if artifacts_dir.exists():
+            initial_flags_dirs = len([d for d in artifacts_dir.iterdir() if d.is_dir() and d.name.endswith("-flags")])
+
         # Disable lazy artifact creation
         FeatureFlags.set_lazy_artifact_enabled(False)
 
@@ -88,12 +94,10 @@ class TestLazyArtifactCreation:
         result = FeatureFlags.is_enabled("undefined.test.flag.disabled")
         assert result is False
 
-        # Check that no artifact was created
-        artifacts_dir = get_artifacts_base_dir() / "runs"
+        # Check that no NEW artifact was created (count should be the same)
         if artifacts_dir.exists():
-            flags_dirs = [d for d in artifacts_dir.iterdir() if d.is_dir() and d.name.endswith("-flags")]
-            # Should be empty or not exist
-            assert len(flags_dirs) == 0
+            current_flags_dirs = len([d for d in artifacts_dir.iterdir() if d.is_dir() and d.name.endswith("-flags")])
+            assert current_flags_dirs == initial_flags_dirs, f"Expected no new flags directories, but count increased from {initial_flags_dirs} to {current_flags_dirs}"
 
     def test_lazy_artifact_environment_variable_control(self, tmp_path, monkeypatch):
         """Test that lazy artifact creation can be controlled via environment variable."""
@@ -137,6 +141,12 @@ class TestLazyArtifactCreation:
         """Test that multiple undefined flag accesses only create one artifact."""
         monkeypatch.chdir(tmp_path)
 
+        # Count existing flags directories before the test
+        artifacts_dir = get_artifacts_base_dir() / "runs"
+        initial_flags_dirs = 0
+        if artifacts_dir.exists():
+            initial_flags_dirs = len([d for d in artifacts_dir.iterdir() if d.is_dir() and d.name.endswith("-flags")])
+
         FeatureFlags.set_lazy_artifact_enabled(True)
 
         # Access multiple undefined flags
@@ -144,11 +154,10 @@ class TestLazyArtifactCreation:
         FeatureFlags.is_enabled("undefined.flag.2")
         FeatureFlags.get("undefined.flag.3", expected_type=str)
 
-        # Should only have created one flags directory
-        artifacts_dir = get_artifacts_base_dir() / "runs"
+        # Should only have created one additional flags directory
         if artifacts_dir.exists():
-            flags_dirs = [d for d in artifacts_dir.iterdir() if d.is_dir() and d.name.endswith("-flags")]
-            assert len(flags_dirs) <= 1  # At most one flags directory
+            current_flags_dirs = len([d for d in artifacts_dir.iterdir() if d.is_dir() and d.name.endswith("-flags")])
+            assert current_flags_dirs <= initial_flags_dirs + 1, f"Expected at most one new flags directory, but count increased from {initial_flags_dirs} to {current_flags_dirs}"
 
 
 def test_ensure_flags_artifact_helper_integration(tmp_path, monkeypatch):

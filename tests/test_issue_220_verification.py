@@ -5,9 +5,13 @@ Test script to simulate Issue #220 browser-control failure scenario
 import asyncio
 import sys
 import os
+import pytest
 
 # Import using proper package structure
 from src.modules.direct_browser_control import execute_direct_browser_control
+
+# Mark as local_only since this test requires browser and has timing sensitivity
+pytestmark = pytest.mark.local_only
 
 async def test_issue_220_scenario():
     """Test the actual Issue #220 scenario - browser-control execution failure"""
@@ -46,14 +50,16 @@ async def test_error_scenario():
     print("\nTesting error handling scenario...")
 
     # Action with invalid selector that should cause an error
+    # Using short timeout to avoid exceeding pytest's 30s timeout
     action = {
         "name": "error_test",
         "flow": [
             {"action": "command", "url": "https://httpbin.org/html"},
-            {"action": "wait_for", "selector": "non-existent-selector"},
+            {"action": "wait_for", "selector": "non-existent-selector", "timeout": 2000},  # 2 seconds timeout
             {"action": "click", "selector": "also-non-existent"}
         ],
-        "slowmo": 500
+        "slowmo": 500,
+        "timeout": 5000  # Overall 5 second timeout
     }
 
     try:
