@@ -31,6 +31,27 @@ actions:
         selectors:
           - selector: "h1"
 
+  - name: get-yahoo-news
+    type: browser-control
+    slowmo: 1000
+    description: YAHOOニュースの抽出
+    params:
+      - name: output_file
+        required: false
+        type: string
+        description: "抽出結果を書き出すファイルパス (未指定時は自動生成)"
+      - name: output_mode
+        required: false
+        type: string
+        description: "ファイル書き込みモード。append (既定) または overwrite"
+    flow:
+      - action: command
+        url: "https://yahoo.co.jp/"
+        wait_until: "domcontentloaded"
+      - action: extract_content
+        selectors:
+          - selector: "h1"
+
   - name: search-nogtips
     type: browser-control
     slowmo: 1000
