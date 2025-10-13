@@ -190,6 +190,7 @@ def _resolve_artifact_path(path_str: str, manifest_dir: Path, artifacts_root: Pa
     1. Relative to manifest directory
     2. Relative to artifacts root
     3. Absolute path if within artifacts root
+    4. Relative to project root (for paths like "artifacts/runs/...")
     """
     # Try as-is if absolute
     candidate = Path(path_str)
@@ -209,6 +210,13 @@ def _resolve_artifact_path(path_str: str, manifest_dir: Path, artifacts_root: Pa
     # Try relative to runs directory
     runs_dir = artifacts_root / "runs"
     candidate = runs_dir / path_str
+    if candidate.exists():
+        return candidate
+
+    # Try relative to project root (for paths like "artifacts/runs/...")
+    # Get project root (parent of artifacts_root)
+    project_root = artifacts_root.parent
+    candidate = project_root / path_str
     if candidate.exists():
         return candidate
 
