@@ -134,7 +134,19 @@ class LlmsTxtSource(YamlInstructionSource):
                 http_result.fallback_attempted = True
                 return http_result
             # If HTTP also fails, return the HTTP result
-            result = http_result
+            # Combine HTTPS and HTTP error details for debugging
+            combined_error = (
+                f"HTTPS attempt failed: {result.error or 'Unknown error'}; "
+                f"HTTP attempt failed: {http_result.error or 'Unknown error'}"
+            )
+            # Return a DiscoveryResult with combined error info
+            result = DiscoveryResult(
+                success=False,
+                llms_url=http_result.llms_url,
+                error=combined_error,
+                http_status=http_result.http_status,
+                fallback_attempted=True
+            )
         
         logger.warning(f"✗ llms.txt not found at: {target_url}")
         return result
