@@ -431,7 +431,7 @@ issues:
   "315": {title: "[bug] try-finally によるリソースクリーンアップ強化", meta: {area: logging, type: bug, priority: P2, phase: "3", stability: core}, depends: ["307"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
   "287": {title: "Template for new issue and new PR", meta: {area: docs, type: enhancement, priority: P3, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: in-progress, primary_pr: 318}, critical_path_rank: 1}
 summary:
-  total_issues: 131
+  total_issues: 130
   high_risk: ["31", "46", "49", "54", "62", "176", "237", "285"]
   longest_chain_example: ["302", "303", "304", "305"]
   data_quality_checks:
