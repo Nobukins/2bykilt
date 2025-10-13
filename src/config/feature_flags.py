@@ -286,6 +286,76 @@ class FeatureFlags:
                 cls._resolved_cache.clear()
 
     @classmethod
+    def get_all_flags(cls) -> Dict[str, Dict[str, Any]]:
+        """Get all defined flags with their current values and metadata.
+
+        Returns:
+            Dictionary mapping flag names to their full metadata including:
+            - value: current resolved value
+            - default: default value from config
+            - type: flag type (bool/int/str)
+            - description: flag description
+            - source: resolution source (runtime/environment/file)
+            - override_active: whether runtime override is active
+        """
+        cls._ensure_loaded()
+        result = {}
+        
+        with cls._lock:
+            cls._prune_expired()
+            
+            # Collect all defined flags
+            for name, flag_def in cls._defaults.items():
+                # Get current resolved value
+                current_value = cls.get(name, expected_type=None, default=flag_def.default)
+                
+                # Determine source
+                source = cls.get_override_source(name)
+                if source is None:
+                    source = "file"
+                
+                result[name] = {
+                    "value": current_value,
+                    "default": flag_def.default,
+                    "type": flag_def.type,
+                    "description": flag_def.description or "",
+                    "source": source,
+                    "override_active": name in cls._overrides,
+                }
+        
+        return result
+
+    @classmethod
+    def get_flag_metadata(cls, name: str) -> Dict[str, Any] | None:
+        """Get metadata for a specific flag.
+
+        Args:
+            name: Flag name
+
+        Returns:
+            Dictionary with flag metadata, or None if flag not defined
+        """
+        cls._ensure_loaded()
+        
+        with cls._lock:
+            if name not in cls._defaults:
+                return None
+            
+            flag_def = cls._defaults[name]
+            current_value = cls.get(name, expected_type=None, default=flag_def.default)
+            source = cls.get_override_source(name) or "file"
+            
+            return {
+                "name": name,
+                "value": current_value,
+                "default": flag_def.default,
+                "type": flag_def.type,
+                "description": flag_def.description or "",
+                "source": source,
+                "override_active": name in cls._overrides,
+            }
+
+    @classmethod
     def dump_snapshot(cls) -> Path:
         """Write a snapshot artifact of current resolved flags and return path.
 
