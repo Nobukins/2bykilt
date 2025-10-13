@@ -939,8 +939,8 @@ class CustomValidator(SecurityValidator):
 
 - [README.md](../../README.md) - Main project documentation
 - [CONTRIBUTING.md](../../CONTRIBUTING.md) - Development guidelines
-- [Issue #320](https://github.com/your-repo/issues/320) - Original feature request
-- [PR #321](https://github.com/your-repo/pull/321) - Phase 1+2 implementation
+- Issue #320 - Original feature request
+- PR #321 - Phase 1+2 implementation
 - [llms.txt Specification](https://llmstxt.org/) - Official llms.txt convention
 
 ## Version History
