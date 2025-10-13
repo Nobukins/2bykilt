@@ -6,7 +6,7 @@ import sys
 import subprocess
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).parent
+PROJECT_ROOT = Path(__file__).parent.parent
 
 def test_script_generation():
     """Test that browser_control.py is generated correctly"""
