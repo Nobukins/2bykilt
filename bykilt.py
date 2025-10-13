@@ -797,6 +797,7 @@ from src.ui.command_helper import CommandHelper  # Import CommandHelper class
 from src.utils.playwright_codegen import run_playwright_codegen, save_as_action_file
 from src.utils.log_ui import create_log_tab  # Import log UI integration
 from src.modules.yaml_parser import InstructionLoader
+from src.ui.admin.feature_flag_panel import create_feature_flag_admin_panel  # Issue #272: Feature Flag Admin UI
 
 import yaml  # 必要であればインストール: pip install pyyaml
 
@@ -1930,6 +1931,10 @@ Tests include browser initialization, profile validation, and recording path ver
                     inputs=[probe_use_own, probe_headless, selected_browser_for_check],
                     outputs=[probe_result]
                 )
+
+            # Issue #272: Feature Flag Admin UI
+            with gr.TabItem("🎛️ Feature Flags", id="feature_flags_admin"):
+                _ = create_feature_flag_admin_panel()  # Panel is integrated via Gradio context
 
             with gr.TabItem("📊 Results", id=7):
                 with gr.Group():
