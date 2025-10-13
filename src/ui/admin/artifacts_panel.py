@@ -240,13 +240,37 @@ def create_artifacts_panel() -> gr.Blocks:
                 elif item.type == "video":
                     return artifact_path, None, artifact_path, None, download_html
                 elif item.type == "element_capture":
-                    import json
-                    try:
-                        with open(artifact_path, 'r', encoding='utf-8') as f:
-                            data = json.load(f)
-                        return artifact_path, None, None, data, download_html
-                    except Exception:  # noqa: BLE001
-                        return artifact_path, None, None, {"error": "Failed to load JSON"}, download_html
+                    # Check file extension
+                    file_ext = os.path.splitext(artifact_path)[1].lower()
+                    
+                    if file_ext == ".json":
+                        # JSON preview
+                        import json
+                        try:
+                            with open(artifact_path, 'r', encoding='utf-8') as f:
+                                data = json.load(f)
+                            return artifact_path, None, None, data, download_html
+                        except Exception:  # noqa: BLE001
+                            return artifact_path, None, None, {"error": "Failed to load JSON"}, download_html
+                    
+                    elif file_ext in {".txt", ".csv"}:
+                        # Text/CSV preview - read as plain text
+                        try:
+                            with open(artifact_path, 'r', encoding='utf-8') as f:
+                                content = f.read()
+                            
+                            # Wrap in a dictionary for JSON display component
+                            preview_data = {
+                                "file_type": file_ext[1:],
+                                "content": content,
+                                "lines": len(content.splitlines()),
+                            }
+                            return artifact_path, None, None, preview_data, download_html
+                        except Exception as e:  # noqa: BLE001
+                            return artifact_path, None, None, {"error": f"Failed to load {file_ext}: {str(e)}"}, download_html
+                    else:
+                        # Unknown format
+                        return artifact_path, None, None, {"error": f"Unsupported format: {file_ext}"}, download_html
                 else:
                     return artifact_path, None, None, None, download_html
                 

@@ -18,6 +18,7 @@ A new service layer providing artifact management capabilities:
 - **`list_artifacts(params: ListArtifactsParams)`**: Lists artifacts with pagination and filtering
   - Supports filtering by `run_id` and `artifact_type` (screenshot, video, element_capture)
   - **Recursive directory scanning**: Scans `artifacts/runs/` and all subdirectories using `**/*-art/manifest_v2.json` glob pattern
+  - **Unregistered file detection**: Automatically discovers `.txt` and `.csv` files in `elements/` directories not listed in manifest
   - Pagination with `limit` and `offset`
   - Security validation via `allowed_roots` whitelist
   - Returns structured `ArtifactListResult` with total count and items
@@ -60,6 +61,7 @@ A Gradio-based admin panel for artifact management:
   - Images: Direct image display
   - Videos: HTML5 video player
   - JSON/Element Captures: Formatted JSON viewer
+  - **Text/CSV files**: Plain text preview with line count
   - Other: Download link
 
 #### User Interactions
@@ -102,16 +104,22 @@ Comprehensive test coverage (85% on artifacts_service.py):
    - Scan artifacts in nested subdirectories
    - Find manifests at any depth under `artifacts/runs/`
 
-5. **Summary Tests**
+5. **Unregistered File Detection Tests**
+   - Detect `.txt` and `.csv` files not in manifest
+   - Verify files are marked as unregistered
+   - Test filtering by element_capture type
+
+6. **Summary Tests**
    - Get artifact metadata
    - Handle missing files
    - Parse manifest data
 
 #### Test Results
 
-- 12 tests total (was 11, added recursive directory test)
+- 13 tests total (was 12, added txt/csv detection test)
 - All tests passing
-- No regressions in full test suite (682 passed, 38 skipped, 1 xfailed)
+- 82% coverage on artifacts_service.py
+- No regressions in full test suite
 
 ## Architecture Decisions
 

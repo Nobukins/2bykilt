@@ -287,6 +287,69 @@ class TestListArtifacts:
         assert "screenshot" in types
         assert "element_capture" in types
 
+    @patch('src.services.artifacts_service.get_artifacts_base_dir')
+    def test_list_artifacts_includes_unregistered_txt_csv_files(self, mock_get_artifacts_base_dir, tmp_path):
+        """Test that unregistered .txt and .csv files in elements/ are included."""
+        artifacts_root = tmp_path / "runs"
+        artifacts_root.mkdir(parents=True)
+
+        run_id = "20251013120958-bf067d"
+        manifest_dir = artifacts_root / f"{run_id}-art"
+        manifest_dir.mkdir()
+        manifest_path = manifest_dir / "manifest_v2.json"
+
+        # Create elements directory with various files
+        elements_dir = manifest_dir / "elements"
+        elements_dir.mkdir()
+
+        # Create .json file (registered in manifest)
+        json_file = elements_dir / "element_001.json"
+        json_file.write_text('{"test": "data"}')
+
+        # Create .txt files (NOT registered in manifest)
+        txt_file_1 = elements_dir / "h1_capture.txt"
+        txt_file_1.write_text("TEXT[0]: Example heading")
+
+        txt_file_2 = elements_dir / "articles_capture.txt"
+        txt_file_2.write_text("TEXT[0]: Article 1\nTEXT[1]: Article 2")
+
+        # Create .csv file (NOT registered in manifest)
+        csv_file = elements_dir / "data_export.csv"
+        csv_file.write_text("col1,col2\nval1,val2")
+
+        # Manifest only includes the JSON file
+        manifest_data = {
+            "artifacts": [
+                {
+                    "type": "element_capture",
+                    "path": "elements/element_001.json",
+                    "size": len('{"test": "data"}'),
+                    "created_at": "2025-10-13T12:10:33Z",
+                }
+            ]
+        }
+        manifest_path.write_text(json.dumps(manifest_data))
+
+        mock_get_artifacts_base_dir.return_value = tmp_path
+
+        # Test: list all element_capture artifacts
+        result = list_artifacts(ListArtifactsParams(artifact_type="element_capture", limit=100))
+
+        assert isinstance(result, ArtifactsPage)
+        # Should find: 1 json + 2 txt + 1 csv = 4 total
+        assert result.total_count == 4
+        assert len(result.items) == 4
+
+        # Verify all file types are present
+        found_extensions = {Path(item.path).suffix for item in result.items}
+        assert ".json" in found_extensions
+        assert ".txt" in found_extensions
+        assert ".csv" in found_extensions
+
+        # Verify unregistered files have the unregistered flag
+        unregistered_items = [item for item in result.items if item.meta and item.meta.get("unregistered")]
+        assert len(unregistered_items) == 3  # 2 txt + 1 csv
+
 
 class TestGetArtifactSummary:
     """Test suite for get_artifact_summary function."""

@@ -26,6 +26,11 @@ ArtifactType = Literal["video", "screenshot", "element_capture", "all"]
 _MAX_LIMIT = 100
 _MANIFEST_FILENAME = "manifest_v2.json"
 
+# File extensions for element captures (txt and csv files not in manifest)
+_ELEMENT_CAPTURE_EXTENSIONS = {".json", ".txt", ".csv"}
+_VIDEO_EXTENSIONS = {".webm", ".mp4"}
+_SCREENSHOT_EXTENSIONS = {".png", ".jpg", ".jpeg"}
+
 
 @dataclass(frozen=True, slots=True)
 class ArtifactItemDTO:
@@ -135,7 +140,7 @@ def list_artifacts(params: ListArtifactsParams | None = None) -> ArtifactsPage:
 
 
 def _load_artifacts_from_manifest(manifest_path: Path, artifact_type: ArtifactType) -> List[ArtifactItemDTO]:
-    """Load artifacts from a single manifest file."""
+    """Load artifacts from a single manifest file and scan for unregistered files."""
     import json
 
     # Extract run_id from path (format: <run_id>-art/manifest_v2.json)
@@ -148,9 +153,11 @@ def _load_artifacts_from_manifest(manifest_path: Path, artifact_type: ArtifactTy
 
     artifacts = data.get("artifacts", [])
     results: List[ArtifactItemDTO] = []
+    registered_paths: set[str] = set()  # Track registered paths
 
     artifacts_root = get_artifacts_base_dir()
 
+    # First, load artifacts from manifest
     for artifact in artifacts:
         art_type = artifact.get("type", "")
 
@@ -169,6 +176,7 @@ def _load_artifacts_from_manifest(manifest_path: Path, artifact_type: ArtifactTy
         if not artifact_path or not artifact_path.exists():
             continue
 
+        registered_paths.add(str(artifact_path))
         results.append(
             ArtifactItemDTO(
                 run_id=run_id,
@@ -179,6 +187,40 @@ def _load_artifacts_from_manifest(manifest_path: Path, artifact_type: ArtifactTy
                 meta=artifact.get("meta"),
             )
         )
+
+    # Second, scan for unregistered element_capture files (.txt, .csv)
+    # Only scan if artifact_type is "element_capture" or "all"
+    if artifact_type in ("element_capture", "all"):
+        elements_dir = manifest_path.parent / "elements"
+        if elements_dir.exists() and elements_dir.is_dir():
+            for file_path in elements_dir.iterdir():
+                if not file_path.is_file():
+                    continue
+                
+                # Check if it's a txt or csv file
+                if file_path.suffix.lower() not in {".txt", ".csv"}:
+                    continue
+                
+                # Skip if already registered
+                if str(file_path) in registered_paths:
+                    continue
+                
+                # Add as element_capture artifact
+                try:
+                    stat = file_path.stat()
+                    results.append(
+                        ArtifactItemDTO(
+                            run_id=run_id,
+                            type="element_capture",
+                            path=str(file_path),
+                            size=stat.st_size,
+                            created_at=datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                            meta={"format": file_path.suffix[1:], "unregistered": True},
+                        )
+                    )
+                except Exception:  # noqa: BLE001
+                    # Skip files that can't be stat'd
+                    continue
 
     return results
 
