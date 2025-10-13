@@ -11,6 +11,9 @@ pytest -q
 # Focus on batch engine (recently refactored async logic)
 pytest tests/test_batch_engine.py -v
 
+# Run Feature Flag tests (Issue #272 - Admin UI & new API methods)
+pytest tests/unit/ui/admin/ tests/unit/config/test_feature_flags_new_methods.py -v
+
 # Run only non-LLM unit-ish layers (safe in minimal env)
 pytest -m "not integration and not local_only" -q
 ```
@@ -67,6 +70,33 @@ RUN_LOCAL_INTEGRATION=1 pytest tests/integration/test_artifact_capture.py -vv
 
 The suite writes to a temp `ARTIFACTS_BASE_DIR`, so existing local artifacts are untouched. On success you should see one `*-art` run folder per test containing `screenshots/`, `elements/`, and `videos/` entries plus the standard `manifest_v2.json`.
 
+### Feature Flag Admin UI tests (Issue #272)
+
+The Feature Flag admin UI and API enhancement tests verify:
+- **UI Component**: Gradio panel creation, data loading, filtering, and search functionality
+- **API Methods**: `get_all_flags()` and `get_flag_metadata()` with thread-safety, override handling, and consistency checks
+- **Coverage**: 21 tests total (11 UI tests, 10 API tests)
+
+Run these tests with:
+
+```bash
+# All Feature Flag tests
+pytest tests/unit/ui/admin/ tests/unit/config/test_feature_flags_new_methods.py -v
+
+# UI tests only
+pytest tests/unit/ui/admin/test_feature_flag_panel.py -v
+
+# API method tests only
+pytest tests/unit/config/test_feature_flags_new_methods.py -v
+```
+
+These tests use the actual feature_flags.yaml configuration and verify:
+- Metadata structure (value, default, type, description, source, override_active)
+- Runtime override behavior
+- Thread-safe concurrent access
+- Consistency between `get_all_flags()` and `get_flag_metadata()`
+- UI filtering and search capabilities
+
 ## Async Test Conventions
 
 All new async tests should:
@@ -87,9 +117,12 @@ Two cleanup scripts (existing + new) help ensure hermetic test runs:
 # Remove logs, coverage, htmlcov, and residual run dirs (dry run first)
 ./scripts/clean_test_logs.sh --dry-run
 ./scripts/clean_test_logs.sh
+
+# Clean Feature Flag artifacts (if test isolation issues occur)
+rm -rf artifacts/runs/*-flags
 ```
 
-Recommended before large refactors or when investigating flakiness.
+Recommended before large refactors or when investigating flakiness. Note: Feature Flag lazy artifact creation may generate `*-flags` directories during tests; clean these if test isolation issues occur.
 
 ## Common Commands
 
@@ -143,6 +176,7 @@ Current blockers: Mocking `get_git_script_resolver` and side effects of cloning/
 - Issue #263: Event loop teardown/runtime stabilization (addressed by async refactors & ordering rules)
 - Issue #101: Recording stability & generation – baseline stabilized, further refinements future scope
 - Issue #81: Test layering & marker formalization – next structural enhancement
+- Issue #272: Feature Flag Admin UI – Gradio-based management panel with comprehensive test coverage (21 tests)
 
 ## Known Gaps (Post-Work)
 
