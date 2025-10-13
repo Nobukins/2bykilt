@@ -315,10 +315,10 @@ issues:
   "91": {title: "統一録画パス Rollout (flag default 有効化 & legacy 廃止)", meta: {area: artifacts, type: chore, priority: P0, phase: "1-late", stability: core}, depends: ["28"], dependents: [], progress: {state: done, primary_pr: 105}, risk: null, critical_path_rank: 1}
   "173": {title: "[UI][batch][#40 follow-up] CSV Preview & Command Argument Mapping", meta: {area: batch, type: feat, priority: P2, phase: "2", stability: experimental}, depends: ["39", "40", "41", "42"], dependents: [], risk: null, critical_path_rank: 1}
   "264": {title: "リファクタ提案: 大きすぎる Python ファイルの分割とモジュール化", meta: {area: docs, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
-  "265": {title: "改善提案: 複数フォルダ配下の録画ファイルを再帰的に発見・一覧表示", meta: {area: artifacts, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: ["266","267","268"], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "265": {title: "改善提案: 複数フォルダ配下の録画ファイルを再帰的に発見・一覧表示", meta: {area: artifacts, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: ["266","267","268"], risk: null, progress: {state: in-progress, note: "partial: PR #317 implemented recursive scanning & filtering; multiple roots config pending", primary_pr: 317}, critical_path_rank: 1}
   "266": {title: "Discovery: 録画ファイル検出ユーティリティ（Discovery）", meta: {area: artifacts, type: enhancement, priority: P2, phase: "2", stability: core}, depends: ["265"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
   "267": {title: "API: 録画ファイル検索 API 設計", meta: {area: artifacts, type: enhancement, priority: P2, phase: "2", stability: core}, depends: ["265","266"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
-  "268": {title: "UI: 録画ファイル集約ビューと実装", meta: {area: artifacts, type: enhancement, priority: P2, phase: "2", stability: core}, depends: ["265","266","267"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "268": {title: "UI: 録画ファイル集約ビューと実装", meta: {area: artifacts, type: enhancement, priority: P2, phase: "2", stability: core}, depends: ["265","266","267"], dependents: [], risk: null, progress: {state: done, primary_pr: 317}, critical_path_rank: 1}
   "269": {title: "提案: Feature Flag の全面活用とプロファイルベースの機能有効化", meta: {area: config, type: enhancement, priority: P1, phase: "1", stability: core}, depends: [], dependents: ["270","271","272"], risk: null, progress: {state: open}, critical_path_rank: 1}
   "270": {title: "設計: Feature Flag 運用設計とメタデータ仕様", meta: {area: config, type: enhancement, priority: P1, phase: "1", stability: core}, depends: ["269"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
   "271": {title: "実装: Feature Flags コアライブラリと Profile ベースセットアップ", meta: {area: config, type: enhancement, priority: P1, phase: "1", stability: core}, depends: ["269","270"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
@@ -386,7 +386,7 @@ issues:
   "257": {title: "[batch] CSV Batch Job Execution Not Triggered - Browser Automation Missing", meta: {area: batch, type: bug, priority: P0, phase: "2", stability: experimental}, depends: ["39", "198"], dependents: [], risk: null, progress: {state: done}, critical_path_rank: 1}
 
   "276": {title: "Batch: Recording file not copied to artifacts runs folder when using CSV batch", meta: {area: artifacts, type: bug, priority: P1, phase: "2", stability: core}, depends: [], dependents: [], progress: {state: in-progress, note: "partial: run_script artifact move added in PR #286; CSV batch integration verification pending"}, risk: null, critical_path_rank: 1}
-  "277": {title: "Artifacts UI: Provide UI listing for screenshots, text & element extracts", meta: {area: artifacts, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], progress: {state: open}, risk: null, critical_path_rank: 1}
+  "277": {title: "Artifacts UI: Provide UI listing for screenshots, text & element extracts", meta: {area: artifacts, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], progress: {state: done, primary_pr: 317}, risk: null, critical_path_rank: 1}
   "278": {title: "UI: Control tab visibility with Feature Flags (per-tab toggles & presets)", meta: {area: uiux, type: enhancement, priority: P1, phase: "2", stability: core}, depends: ["64"], dependents: [], progress: {state: open}, risk: null, critical_path_rank: 1}
   "279": {title: "Config: Consolidate configuration menus, env files, and defaults", meta: {area: config, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], progress: {state: open}, risk: null, critical_path_rank: 1}
   "280": {title: "Browser Settings: Improve Browser Settings menu clarity & enforce behavior across run types", meta: {area: uiux, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], progress: {state: open}, risk: null, critical_path_rank: 1}
@@ -429,6 +429,7 @@ issues:
   "313": {title: "[refactor] bykilt.py run_with_stream コード重複解消 (DRY原則適用)", meta: {area: runner, type: refactor, priority: P3, phase: "3", stability: core}, depends: ["307"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
   "314": {title: "[enhancement] OutputCapture スレッドセーフ性改善 (threading.Lock 追加)", meta: {area: logging, type: enhancement, priority: P2, phase: "3", stability: core}, depends: ["307"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
   "315": {title: "[bug] try-finally によるリソースクリーンアップ強化", meta: {area: logging, type: bug, priority: P2, phase: "3", stability: core}, depends: ["307"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "287": {title: "Template for new issue and new PR", meta: {area: docs, type: enhancement, priority: P3, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: in-progress, primary_pr: 318}, critical_path_rank: 1}
 summary:
   total_issues: 130
   high_risk: ["31", "46", "49", "54", "62", "176", "237", "285"]
@@ -468,7 +469,7 @@ summary:
       - "287"
 
 last_synced:
-  utc: "2025-10-12T10:30:00Z"
+  utc: "2025-01-24T02:00:00Z"
   issues:
     "315": "OPEN"
     "314": "OPEN"
@@ -479,13 +480,15 @@ last_synced:
     "303": "CLOSED"
     "302": "OPEN"
     "295": "CLOSED"
-    "287": "OPEN"
+    "287": "OPEN"    # Updated: Template creation in progress (PR #318)
     "285": "OPEN"
     "280": "OPEN"
     "279": "OPEN"
-    "277": "OPEN"
+    "277": "CLOSED"  # Updated: Closed by PR #317
     "276": "OPEN"
     "274": "CLOSED"
+    "268": "CLOSED"  # Updated: Closed by PR #317
+    "265": "OPEN"    # Updated: Partially done, in-progress
     "264": "OPEN"
     "263": "CLOSED"
     "257": "CLOSED"
@@ -595,37 +598,6 @@ last_synced:
     "30": "CLOSED"
     "28": "CLOSED"
     "25": "CLOSED"
-    "174": "OPEN"
-    "173": "OPEN"
-    "127": "OPEN"
-    "115": "OPEN"
-    "114": "OPEN"
-    "113": "OPEN"
-    "109": "OPEN"
-    "108": "OPEN"
-    "107": "OPEN"
-    "101": "CLOSED"
-    "263": "CLOSED"
-    "92": "OPEN"
-    "81": "OPEN"
-    "67": "OPEN"
-    "66": "OPEN"
-    "62": "OPEN"
-    "58": "OPEN"
-    "54": "OPEN"
-    "53": "OPEN"
-    "52": "OPEN"
-    "51": "OPEN"
-    "49": "OPEN"
-    "48": "OPEN"
-    "43": "OPEN"
-    "276": "OPEN"
-    "277": "OPEN"
-    "278": "OPEN"
-    "279": "OPEN"
-    "280": "OPEN"
-    "285": "OPEN"
-    "287": "OPEN"
 
 validation_rules:
   - "All blocking dependencies must be completed before starting an issue"
