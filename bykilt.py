@@ -3304,13 +3304,13 @@ def main():
     parser.add_argument(
         "--https-only",
         action="store_true",
-        default=True,
         help="Only allow HTTPS URLs for llms.txt import (default: True)"
     )
     parser.add_argument(
         "--no-https-only",
         dest="https_only",
         action="store_false",
+        default=True,
         help="Allow HTTP URLs for llms.txt import (not recommended)"
     )
     
