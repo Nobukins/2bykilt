@@ -14,8 +14,10 @@ December 2024
 A new service layer providing artifact management capabilities:
 
 #### Key Functions
+
 - **`list_artifacts(params: ListArtifactsParams)`**: Lists artifacts with pagination and filtering
   - Supports filtering by `run_id` and `artifact_type` (screenshot, video, element_capture)
+  - **Recursive directory scanning**: Scans `artifacts/runs/` and all subdirectories using `**/*-art/manifest_v2.json` glob pattern
   - Pagination with `limit` and `offset`
   - Security validation via `allowed_roots` whitelist
   - Returns structured `ArtifactListResult` with total count and items
@@ -80,6 +82,7 @@ Added new "📦 Artifacts" tab in the admin interface:
 Comprehensive test coverage (85% on artifacts_service.py):
 
 #### Test Categories
+
 1. **Validation Tests**
    - Invalid limit (negative, zero)
    - Invalid offset (negative)
@@ -95,13 +98,18 @@ Comprehensive test coverage (85% on artifacts_service.py):
    - Offset handling
    - Empty results
 
-4. **Summary Tests**
+4. **Recursive Directory Tests**
+   - Scan artifacts in nested subdirectories
+   - Find manifests at any depth under `artifacts/runs/`
+
+5. **Summary Tests**
    - Get artifact metadata
    - Handle missing files
    - Parse manifest data
 
 #### Test Results
-- 11 tests total
+
+- 12 tests total (was 11, added recursive directory test)
 - All tests passing
 - No regressions in full test suite (682 passed, 38 skipped, 1 xfailed)
 

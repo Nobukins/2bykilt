@@ -215,6 +215,78 @@ class TestListArtifacts:
         assert len(result.items) == 5
         assert result.has_next is False
 
+    @patch('src.services.artifacts_service.get_artifacts_base_dir')
+    def test_list_artifacts_recursive_directory_structure(self, mock_get_artifacts_base_dir, tmp_path):
+        """Test that artifacts are found recursively in subdirectories."""
+        # Setup: create nested directory structure
+        artifacts_root = tmp_path / "runs"
+        artifacts_root.mkdir(parents=True)
+
+        # Create manifests at different depths
+        run_id_1 = "20251013113914-bebd9d"
+        run_id_2 = "20251013115335-1f1f33"
+
+        # First run at root level
+        manifest_dir_1 = artifacts_root / f"{run_id_1}-art"
+        manifest_dir_1.mkdir()
+        manifest_path_1 = manifest_dir_1 / "manifest_v2.json"
+
+        screenshot_1 = manifest_dir_1 / "screenshots" / "test1.png"
+        screenshot_1.parent.mkdir(parents=True)
+        screenshot_1.write_text("fake image 1")
+
+        manifest_1_data = {
+            "artifacts": [
+                {
+                    "type": "screenshot",
+                    "path": "screenshots/test1.png",
+                    "size": len("fake image 1"),
+                    "created_at": "2025-10-13T11:39:14Z",
+                }
+            ]
+        }
+        manifest_path_1.write_text(json.dumps(manifest_1_data))
+
+        # Second run also at root level
+        manifest_dir_2 = artifacts_root / f"{run_id_2}-art"
+        manifest_dir_2.mkdir()
+        manifest_path_2 = manifest_dir_2 / "manifest_v2.json"
+
+        element_2 = manifest_dir_2 / "elements" / "element.json"
+        element_2.parent.mkdir(parents=True)
+        element_2.write_text('{"test": "data"}')
+
+        manifest_2_data = {
+            "artifacts": [
+                {
+                    "type": "element_capture",
+                    "path": "elements/element.json",
+                    "size": len('{"test": "data"}'),
+                    "created_at": "2025-10-13T11:53:35Z",
+                }
+            ]
+        }
+        manifest_path_2.write_text(json.dumps(manifest_2_data))
+
+        mock_get_artifacts_base_dir.return_value = tmp_path
+
+        # Test: list all artifacts (should find both recursively)
+        result = list_artifacts(ListArtifactsParams(limit=100))
+
+        assert isinstance(result, ArtifactsPage)
+        assert result.total_count == 2
+        assert len(result.items) == 2
+
+        # Verify both runs are found
+        run_ids = {item.run_id for item in result.items}
+        assert run_id_1 in run_ids
+        assert run_id_2 in run_ids
+
+        # Verify types
+        types = {item.type for item in result.items}
+        assert "screenshot" in types
+        assert "element_capture" in types
+
 
 class TestGetArtifactSummary:
     """Test suite for get_artifact_summary function."""

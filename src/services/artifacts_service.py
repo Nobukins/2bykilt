@@ -99,12 +99,12 @@ def list_artifacts(params: ListArtifactsParams | None = None) -> ArtifactsPage:
     # Collect all artifacts from manifests
     all_artifacts: List[ArtifactItemDTO] = []
 
-    # If specific run_id is provided, only scan that manifest
+    # If specific run_id is provided, only scan that manifest (recursively)
     if params.run_id:
-        manifest_paths = list(artifacts_root.glob(f"{params.run_id}*-art/{_MANIFEST_FILENAME}"))
+        manifest_paths = list(artifacts_root.glob(f"**/{params.run_id}*-art/{_MANIFEST_FILENAME}"))
     else:
-        # Scan all manifests
-        manifest_paths = list(artifacts_root.glob(f"*-art/{_MANIFEST_FILENAME}"))
+        # Scan all manifests recursively
+        manifest_paths = list(artifacts_root.glob(f"**/*-art/{_MANIFEST_FILENAME}"))
 
     # Sort by modification time (newest first)
     manifest_paths.sort(key=lambda p: p.stat().st_mtime if p.exists() else 0, reverse=True)
