@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🤔 Discussion / 議論
+    url: https://github.com/Nobukins/2bykilt/discussions
+    about: Ask questions, share ideas, or discuss features
+  - name: 📚 Documentation / ドキュメント
+    url: https://github.com/Nobukins/2bykilt/tree/main/docs
+    about: Read the documentation
+  - name: 🚀 Roadmap / ロードマップ
+    url: https://github.com/Nobukins/2bykilt/blob/main/docs/roadmap/ROADMAP.md
+    about: View the project roadmap
