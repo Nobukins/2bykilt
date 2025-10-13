@@ -132,13 +132,14 @@ python bykilt.py
                 # Format for table display
                 rows = []
                 for name, metadata in sorted(all_flags.items()):
+                    desc = metadata.get("description", "")
                     rows.append([
                         name,
                         str(metadata.get("value", "")),
                         str(metadata.get("default", "")),
                         metadata.get("type", ""),
                         metadata.get("source", ""),
-                        metadata.get("description", "")[:100] + ("..." if len(metadata.get("description", "")) > 100 else ""),
+                        desc[:100] + ("..." if len(desc) > 100 else ""),
                     ])
                 
                 status = f"✅ {len(rows)} 個のフラグが読み込まれました"
