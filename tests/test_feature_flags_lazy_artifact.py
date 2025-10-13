@@ -97,7 +97,10 @@ class TestLazyArtifactCreation:
         # Check that no NEW artifact was created (count should be the same)
         if artifacts_dir.exists():
             current_flags_dirs = len([d for d in artifacts_dir.iterdir() if d.is_dir() and d.name.endswith("-flags")])
-            assert current_flags_dirs == initial_flags_dirs, f"Expected no new flags directories, but count increased from {initial_flags_dirs} to {current_flags_dirs}"
+            assert current_flags_dirs == initial_flags_dirs, (
+                f"Expected no new flags directories, but count increased "
+                f"from {initial_flags_dirs} to {current_flags_dirs}"
+            )
 
     def test_lazy_artifact_environment_variable_control(self, tmp_path, monkeypatch):
         """Test that lazy artifact creation can be controlled via environment variable."""
