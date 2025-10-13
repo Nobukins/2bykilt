@@ -148,7 +148,7 @@ def _load_artifacts_from_manifest(manifest_path: Path, artifact_type: ArtifactTy
 
     try:
         data = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except Exception:  # noqa: BLE001
+    except (json.JSONDecodeError, OSError, UnicodeDecodeError):
         return []
 
     artifacts = data.get("artifacts", [])
