@@ -117,6 +117,49 @@ python myscript/bin/task2.py
 
 ### 主な機能
 
+#### 🌐 llms.txt Auto-Import (NEW!)
+
+リモートの `llms.txt` ファイルから2bykiltブラウザ自動化コマンドを自動検出・取得し、ローカルのllms.txtへ統合する機能です。
+
+**特徴:**
+- 🔍 **自動ディスカバリ**: URLを入力するだけで自動的に llms.txt を発見
+- 🔒 **セキュリティ検証**: 危険なコマンドパターンを自動検出してブロック
+- ⚖️ **競合解決**: 3つの戦略（skip/overwrite/rename）で名前競合を解決
+- 💾 **自動バックアップ**: インポート前に自動的にバックアップを作成
+
+**クイックスタート (UI):**
+1. **"🌐 llms.txt Import"** タブを開く
+2. URL を入力 (例: `https://example.com`)
+3. **"🔍 Discover Actions"** をクリック
+4. セキュリティ検証結果を確認
+5. 競合解決戦略を選択
+6. **"✅ Import Actions"** をクリック
+
+**クイックスタート (CLI):**
+```bash
+# プレビュー（変更なし）
+python bykilt.py --preview-llms https://example.com
+
+# インポート（skip戦略: 既存を保持）
+python bykilt.py --import-llms https://example.com
+
+# インポート（overwrite戦略: 新規で上書き）
+python bykilt.py --import-llms https://example.com --strategy overwrite
+
+# インポート（rename戦略: 新規に連番追加）
+python bykilt.py --import-llms https://example.com --strategy rename
+```
+
+**詳細ドキュメント:**
+- 📖 [docs/features/llms_txt_import.md](docs/features/llms_txt_import.md) - 完全な仕様とAPI リファレンス
+- 🔒 セキュリティ考慮事項、競合解決の詳細、トラブルシューティングを含む
+
+**対応セクション:**
+- `# 2bykilt browser_control` - ブラウザ自動化アクション
+- `# 2bykilt git_script` - Git スクリプトアクション
+
+---
+
 #### 1. 再帰的スキャン（Feature Flag: `artifacts.recursive_recordings_enabled`）
 
 - **デフォルト**: `false`（単一ディレクトリのみスキャン）
