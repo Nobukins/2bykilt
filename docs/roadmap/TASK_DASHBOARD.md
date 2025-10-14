@@ -1,51 +1,51 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-10-13T13:49:11+00:00
+Generated at (UTC): 2025-10-14T00:37:20+00:00
 
 ## 1. メタサマリー
 
-- Total Issues: 130
+- Total Issues: 131
 - High Risk (declared): 8 → 31, 46, 49, 54, 62, 176, 237, 285
 - Cycle Detected: false (none)
 - Strict Orphans: 30
-- Curated Orphan List Count: 30
+- Curated Orphan List Count: 31
 
 ## 2. 分布 (Distribution)
 
 ### Priority
-- P0: 27 (20.8%)
-- P1: 38 (29.2%)
-- P2: 61 (46.9%)
+- P0: 28 (21.4%)
+- P1: 38 (29.0%)
+- P2: 61 (46.6%)
 - P3: 4 (3.1%)
 
 ### Phase
-- 1: 23 (17.7%)
-- 1-late: 14 (10.8%)
-- 2: 90 (69.2%)
+- 1: 23 (17.6%)
+- 1-late: 14 (10.7%)
+- 2: 91 (69.5%)
 - 3: 3 (2.3%)
 
 ### Area
-- artifacts: 30 (23.1%)
+- artifacts: 30 (22.9%)
 - automation: 5 (3.8%)
-- batch: 10 (7.7%)
-- config: 11 (8.5%)
+- batch: 10 (7.6%)
+- config: 12 (9.2%)
 - docs: 12 (9.2%)
 - flags: 1 (0.8%)
-- logging: 7 (5.4%)
+- logging: 7 (5.3%)
 - observability: 5 (3.8%)
 - plugins: 1 (0.8%)
 - quality: 1 (0.8%)
-- runner: 24 (18.5%)
+- runner: 24 (18.3%)
 - security: 5 (3.8%)
 - test: 1 (0.8%)
 - testing: 4 (3.1%)
-- uiux: 13 (10.0%)
+- uiux: 13 (9.9%)
 
 ### Risk
-- high: 8 (6.2%)
+- high: 8 (6.1%)
 - low: 12 (9.2%)
 - medium: 3 (2.3%)
-- none: 107 (82.3%)
+- none: 108 (82.4%)
 
 ## 3. リスク詳細 (High / Medium / etc.)
 
@@ -124,9 +124,10 @@ Curated Orphan List (summary.data_quality_checks.orphan_issues_without_dependent
 - 280: Browser Settings: Improve Browser Settings menu clarity & enforce behavior across run types
 - 285: Browser-Use/Web-UIをベースとしてUI周りのリファクタリング
 - 287: Template for new issue and new PR
+- 320: feat: Auto-discovery and import of browser automation commands from remote llms.txt files
 
 Missing Strict Orphans in curated list: (none)
-Extra non-strict entries in curated list: (none)
+Extra non-strict entries in curated list (WARNING only): 320
 
 ## 5. クリティカルパス推定
 
@@ -235,9 +236,9 @@ Sorted By: critical_path_rank
 | 267 | API: 録画ファイル検索 API 設計 | P2 | 2 | artifacts |  | 1 | 2 | 2 | 0 |  |
 | 268 | UI: 録画ファイル集約ビューと実装 | P2 | 2 | artifacts |  | 1 | 2 | 3 | 0 | #317 |
 | 269 | 提案: Feature Flag の全面活用とプロファイルベースの機能有効化 | P1 | 1 | config |  | 1 | 0 | 0 | 3 |  |
-| 270 | 設計: Feature Flag 運用設計とメタデータ仕様 | P1 | 1 | config |  | 1 | 1 | 1 | 0 |  |
-| 271 | 実装: Feature Flags コアライブラリと Profile ベースセットアップ | P1 | 1 | config |  | 1 | 2 | 2 | 0 |  |
-| 272 | UI: Admin UI による Feature Flag 管理画面の実装 | P1 | 1 | flags |  | 1 | 1 | 2 | 0 |  |
+| 270 | 設計: Feature Flag 運用設計とメタデータ仕様 | P1 | 1 | config |  | 1 | 1 | 1 | 1 |  |
+| 271 | 実装: Feature Flags コアライブラリと Profile ベースセットアップ | P1 | 1 | config |  | 1 | 2 | 2 | 1 |  |
+| 272 | UI: Admin UI による Feature Flag 管理画面の実装 | P1 | 1 | flags |  | 1 | 3 | 2 | 0 | #319 |
 | 276 | Batch: Recording file not copied to artifacts runs folder when using CSV batch | P1 | 2 | artifacts |  | 1 | 0 | 0 | 0 |  |
 | 277 | Artifacts UI: Provide UI listing for screenshots, text & element extracts | P2 | 2 | artifacts |  | 1 | 0 | 0 | 0 | #317 |
 | 278 | UI: Control tab visibility with Feature Flags (per-tab toggles & presets) | P1 | 2 | uiux |  | 1 | 2 | 1 | 0 |  |
@@ -250,6 +251,7 @@ Sorted By: critical_path_rank
 | 313 | [refactor] bykilt.py run_with_stream コード重複解消 (DRY原則適用) | P3 | 3 | runner |  | 1 | 0 | 1 | 0 |  |
 | 314 | [enhancement] OutputCapture スレッドセーフ性改善 (threading.Lock 追加) | P2 | 3 | logging |  | 1 | 0 | 1 | 0 |  |
 | 315 | [bug] try-finally によるリソースクリーンアップ強化 | P2 | 3 | logging |  | 1 | 0 | 1 | 0 |  |
+| 320 | feat: Auto-discovery and import of browser automation commands from remote llms.txt files | P0 | 2 | config |  | 1 | 2 | 1 | 0 | #322 |
 | 34 | 要素値キャプチャ & エクスポート | P1 | 1 | artifacts |  | 1 | 2 | 2 | 0 | #93 |
 | 38 | 録画統一後回帰テストスイート | P2 | 1-late | artifacts |  | 1 | 4 | 5 | 0 | #103 |
 | 40 | CSV D&D UI 連携 | P2 | 2 | batch |  | 1 | 2 | 1 | 0 | #172 |
@@ -1089,7 +1091,7 @@ Sorted By: critical_path_rank
 - CriticalPathRank: 1
 - LongestDistance: 1
 - Depends (1): 269
-- Dependents (0): (none)
+- Dependents (1): 271
 - Progress: {"state": "open"}
 
 ### Issue 271: 実装: Feature Flags コアライブラリと Profile ベースセットアップ
@@ -1098,17 +1100,17 @@ Sorted By: critical_path_rank
 - CriticalPathRank: 1
 - LongestDistance: 2
 - Depends (2): 269, 270
-- Dependents (0): (none)
+- Dependents (1): 272
 - Progress: {"state": "open"}
 
 ### Issue 272: UI: Admin UI による Feature Flag 管理画面の実装
 - Priority: P1, Phase: 1, Area: flags
 - Risk: (none)
 - CriticalPathRank: 1
-- LongestDistance: 1
+- LongestDistance: 3
 - Depends (2): 269, 271
 - Dependents (0): (none)
-- Progress: {"state": "open"}
+- Progress: {"state": "done", "primary_pr": 319}
 
 ### Issue 276: Batch: Recording file not copied to artifacts runs folder when using CSV batch
 - Priority: P1, Phase: 2, Area: artifacts
@@ -1171,7 +1173,7 @@ Sorted By: critical_path_rank
 - LongestDistance: 0
 - Depends (0): (none)
 - Dependents (0): (none)
-- Progress: {"state": "in-progress", "primary_pr": 318}
+- Progress: {"state": "done", "primary_pr": 318}
 
 ### Issue 305: [ui/ux] 🎥 Recordings: タブ統合（ソート/フィルタ/ページング、LLM無効時非表示制御、Flag連携）[Sub of #302]
 - Priority: P2, Phase: 2, Area: uiux
@@ -1217,6 +1219,15 @@ Sorted By: critical_path_rank
 - Depends (1): 307
 - Dependents (0): (none)
 - Progress: {"state": "open"}
+
+### Issue 320: feat: Auto-discovery and import of browser automation commands from remote llms.txt files
+- Priority: P0, Phase: 2, Area: config
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 2
+- Depends (1): 64
+- Dependents (0): (none)
+- Progress: {"state": "in-progress", "note": "Phase 1+2 complete (PR #321 merged); Phase 3+4 in PR #322 (open)", "primary_pr": 322, "related_prs": [321]}
 
 ### Issue 34: 要素値キャプチャ & エクスポート
 - Priority: P1, Phase: 1, Area: artifacts
