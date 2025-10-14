@@ -844,6 +844,173 @@ def save_llms_file(content):
         f.write(content)
     return "✅ llms.txtを保存しました"
 
+
+# ============================================================================
+# llms.txt Import Functions (Issue #320 Phase 3)
+# ============================================================================
+
+def discover_and_preview_llmstxt(url: str, https_only: bool = True) -> tuple:
+    """Discover and preview llms.txt from remote URL.
+    
+    Returns:
+        tuple: (preview_json, status_message, discovered_actions_json)
+    """
+    try:
+        from src.modules.llmstxt_discovery import discover_and_parse
+        from src.security.llmstxt_validator import validate_remote_llmstxt
+        
+        # Auto-discover and parse
+        result = discover_and_parse(url, https_only=https_only)
+        
+        if not result['success']:
+            return (
+                "",
+                f"❌ Discovery failed: {result.get('error', 'Unknown error')}",
+                ""
+            )
+        
+        # Extract discovered actions
+        all_actions = []
+        browser_control = result.get('browser_control', [])
+        git_scripts = result.get('git_scripts', [])
+        
+        all_actions.extend(browser_control)
+        all_actions.extend(git_scripts)
+        
+        if not all_actions:
+            return (
+                "",
+                "ℹ️ No 2bykilt actions found in the discovered llms.txt",
+                ""
+            )
+        
+        # Security validation
+        yaml_content = result.get('raw_content', '')
+        validation_result = validate_remote_llmstxt(
+            url, all_actions, yaml_content, https_only=https_only
+        )
+        
+        if not validation_result.valid:
+            errors = "\n".join(validation_result.errors)
+            return (
+                json.dumps(all_actions, indent=2, ensure_ascii=False),
+                f"⚠️ Security validation failed:\n{errors}",
+                json.dumps(all_actions, indent=2, ensure_ascii=False)
+            )
+        
+        # Success - prepare preview
+        preview_text = f"✅ Discovery successful!\n\n"
+        preview_text += f"Source URL: {url}\n"
+        preview_text += f"Actions found: {len(all_actions)}\n"
+        preview_text += f"  - Browser control: {len(browser_control)}\n"
+        preview_text += f"  - Git scripts: {len(git_scripts)}\n\n"
+        
+        if validation_result.warnings:
+            preview_text += f"⚠️ Warnings:\n"
+            for warning in validation_result.warnings:
+                preview_text += f"  - {warning}\n"
+            preview_text += "\n"
+        
+        preview_text += "Actions to be imported:\n"
+        for action in all_actions:
+            action_name = action.get('name', '<unnamed>')
+            action_type = action.get('type', '<unknown>')
+            preview_text += f"  - {action_name} ({action_type})\n"
+        
+        return (
+            json.dumps(all_actions, indent=2, ensure_ascii=False),
+            preview_text,
+            json.dumps(all_actions, indent=2, ensure_ascii=False)
+        )
+        
+    except Exception as e:
+        return (
+            "",
+            f"❌ Error during discovery: {str(e)}",
+            ""
+        )
+
+
+def import_llmstxt_actions(actions_json: str, strategy: str = "skip") -> str:
+    """Import discovered actions into local llms.txt.
+    
+    Args:
+        actions_json: JSON string of actions to import
+        strategy: Conflict resolution strategy (skip/overwrite/rename)
+    
+    Returns:
+        str: Status message with import result
+    """
+    try:
+        from src.modules.llmstxt_merger import LlmsTxtMerger
+        import json
+        
+        # Parse actions
+        actions = json.loads(actions_json)
+        
+        if not actions:
+            return "❌ No actions to import"
+        
+        # Get llms.txt path
+        llms_txt_path = os.path.join(os.path.dirname(__file__), 'llms.txt')
+        
+        # Create merger and execute
+        merger = LlmsTxtMerger(llms_txt_path, strategy=strategy)
+        result = merger.merge_actions(actions, create_backup=True)
+        
+        if not result.success:
+            return f"❌ Import failed: {result.error_message}"
+        
+        # Format success message
+        summary = result.summary()
+        return f"✅ Import completed!\n\n{summary}"
+        
+    except Exception as e:
+        return f"❌ Error during import: {str(e)}"
+
+
+def preview_merge_llmstxt(actions_json: str, strategy: str = "skip") -> str:
+    """Preview what would happen during merge without modifying files.
+    
+    Args:
+        actions_json: JSON string of actions to preview
+        strategy: Conflict resolution strategy (skip/overwrite/rename)
+    
+    Returns:
+        str: Preview message showing what would happen
+    """
+    try:
+        from src.modules.llmstxt_merger import LlmsTxtMerger
+        import json
+        
+        # Parse actions
+        actions = json.loads(actions_json)
+        
+        if not actions:
+            return "ℹ️ No actions to preview"
+        
+        # Get llms.txt path
+        llms_txt_path = os.path.join(os.path.dirname(__file__), 'llms.txt')
+        
+        # Create merger and preview
+        merger = LlmsTxtMerger(llms_txt_path, strategy=strategy)
+        preview = merger.preview_merge(actions)
+        
+        # Format preview message
+        summary = preview.summary()
+        
+        if preview.has_conflicts:
+            conflict_details = "\n\nConflict Details:\n"
+            for conflict in preview.conflicts:
+                conflict_details += f"  - {conflict['name']}: {conflict['existing_type']} → {conflict['new_type']} ({conflict['resolution']})\n"
+            summary += conflict_details
+        
+        return summary
+        
+    except Exception as e:
+        return f"❌ Error during preview: {str(e)}"
+
+
 # Configure logging
 logger = logging.getLogger(__name__)
 
@@ -1373,6 +1540,94 @@ def create_ui(config, theme_name="Ocean"):
                     status_llms = gr.Markdown()
                     save_btn.click(fn=save_llms_file, inputs=llms_text, outputs=status_llms)
                     reload_btn.click(fn=load_llms_file, inputs=None, outputs=llms_text)
+
+            with gr.TabItem("🌐 llms.txt Import", id=13):
+                gr.Markdown("""
+                ### Remote llms.txt Auto-Import
+                
+                自動的にリモートのllms.txtファイルから2bykiltブラウザ自動化コマンドを検出・取得し、
+                ローカルのllms.txtへ統合します。セキュリティ検証と競合解決機能を搭載しています。
+                
+                **使い方:**
+                1. URLを入力 (llms.txt URLまたはベースURL)
+                2. 🔍 Discoverボタンでアクション検出
+                3. セキュリティ検証結果を確認
+                4. マージプレビューで追加内容を確認
+                5. ✅ Importボタンで取り込み
+                """)
+                
+                # Step 1: Discovery
+                with gr.Accordion("Step 1: 🔍 Discovery", open=True):
+                    with gr.Row():
+                        url_input = gr.Textbox(
+                            label="llms.txt URL または Base URL",
+                            placeholder="https://example.com or https://example.com/llms.txt",
+                            scale=4
+                        )
+                        https_only_checkbox = gr.Checkbox(
+                            label="HTTPS Only",
+                            value=True,
+                            info="HTTPS接続のみ許可",
+                            scale=1
+                        )
+                    
+                    discover_btn = gr.Button("🔍 Discover Actions", variant="primary")
+                    discovery_status = gr.Markdown()
+                    
+                    with gr.Accordion("Discovered Actions (JSON)", open=False):
+                        discovered_actions_json = gr.Code(
+                            label="Discovered Actions",
+                            language="json",
+                            lines=10,
+                            interactive=False
+                        )
+                
+                # Step 2: Security Validation (auto-displayed after discovery)
+                with gr.Accordion("Step 2: 🔒 Security Validation", open=False) as security_accordion:
+                    security_status = gr.Markdown()
+                
+                # Step 3: Preview Merge
+                with gr.Accordion("Step 3: 👁️ Preview Merge", open=False) as preview_accordion:
+                    strategy_selector = gr.Radio(
+                        choices=["skip", "overwrite", "rename"],
+                        label="Conflict Resolution Strategy",
+                        value="skip",
+                        info="skip: 既存を維持 | overwrite: 新規で上書き | rename: 新規に連番追加"
+                    )
+                    preview_btn = gr.Button("👁️ Preview Merge")
+                    preview_output = gr.Markdown()
+                
+                # Step 4: Confirm Import
+                with gr.Accordion("Step 4: ✅ Import", open=False) as import_accordion:
+                    gr.Markdown("""
+                    **注意:**
+                    - インポート前に自動でバックアップが作成されます
+                    - バックアップは `llms.txt.backup.YYYYMMDD_HHMMSS` 形式で保存されます
+                    """)
+                    import_btn = gr.Button("✅ Import Actions", variant="primary")
+                    import_result = gr.Markdown()
+                
+                # Hidden state to pass discovered actions between steps
+                discovered_actions_state = gr.State("")
+                
+                # Event handlers
+                discover_btn.click(
+                    fn=discover_and_preview_llmstxt,
+                    inputs=[url_input, https_only_checkbox],
+                    outputs=[discovered_actions_json, discovery_status, discovered_actions_state]
+                )
+                
+                preview_btn.click(
+                    fn=preview_merge_llmstxt,
+                    inputs=[discovered_actions_state, strategy_selector],
+                    outputs=preview_output
+                )
+                
+                import_btn.click(
+                    fn=import_llmstxt_actions,
+                    inputs=[discovered_actions_state, strategy_selector],
+                    outputs=import_result
+                )
 
             with gr.TabItem("🌐 Browser Settings", id=3):
                 with gr.Row():
@@ -3028,7 +3283,95 @@ def main():
     parser.add_argument("--port", type=int, default=7788, help="Port to listen on")
     parser.add_argument("--theme", type=str, default="Ocean", choices=theme_map.keys(), help="Theme to use for the UI")
     parser.add_argument("--dark-mode", action="store_true", help="Enable dark mode")
+    
+    # llms.txt import CLI arguments (Issue #320 Phase 3)
+    parser.add_argument(
+        "--import-llms",
+        metavar="URL",
+        help="Import actions from remote llms.txt URL into local llms.txt. Performs discovery, security validation, and merge."
+    )
+    parser.add_argument(
+        "--preview-llms",
+        metavar="URL",
+        help="Preview what would be imported from remote llms.txt URL without modifying files."
+    )
+    parser.add_argument(
+        "--strategy",
+        choices=["skip", "overwrite", "rename"],
+        default="skip",
+        help="Conflict resolution strategy for llms.txt import. skip: keep existing (default) | overwrite: replace with new | rename: add with number suffix"
+    )
+    parser.add_argument(
+        "--https-only",
+        action="store_true",
+        help="Only allow HTTPS URLs for llms.txt import (default: True)"
+    )
+    parser.add_argument(
+        "--no-https-only",
+        dest="https_only",
+        action="store_false",
+        default=True,
+        help="Allow HTTP URLs for llms.txt import (not recommended)"
+    )
+    
     args = parser.parse_args()
+    
+    # Handle llms.txt import CLI commands before launching UI
+    if args.preview_llms:
+        print(f"🔍 Previewing llms.txt import from: {args.preview_llms}")
+        print(f"   Strategy: {args.strategy}")
+        print(f"   HTTPS Only: {args.https_only}")
+        print()
+        
+        _, status, actions_json = discover_and_preview_llmstxt(args.preview_llms, args.https_only)
+        print(status)
+        
+        if actions_json:
+            print("\n" + "="*60)
+            print("Merge Preview:")
+            print("="*60)
+            preview_result = preview_merge_llmstxt(actions_json, args.strategy)
+            print(preview_result)
+        
+        sys.exit(0)
+    
+    if args.import_llms:
+        print(f"📥 Importing llms.txt from: {args.import_llms}")
+        print(f"   Strategy: {args.strategy}")
+        print(f"   HTTPS Only: {args.https_only}")
+        print()
+        
+        # Discover and validate
+        _, status, actions_json = discover_and_preview_llmstxt(args.import_llms, args.https_only)
+        print(status)
+        
+        if not actions_json:
+            print("❌ Discovery failed or no actions found. Import aborted.")
+            sys.exit(1)
+        
+        if "Security validation failed" in status:
+            print("❌ Security validation failed. Import aborted.")
+            sys.exit(1)
+        
+        # Preview merge
+        print("\n" + "="*60)
+        print("Merge Preview:")
+        print("="*60)
+        preview_result = preview_merge_llmstxt(actions_json, args.strategy)
+        print(preview_result)
+        
+        # Confirm import
+        print("\n" + "="*60)
+        print("Confirming Import...")
+        print("="*60)
+        import_result = import_llmstxt_actions(actions_json, args.strategy)
+        print(import_result)
+        
+        if "✅ Import completed!" in import_result:
+            sys.exit(0)
+        else:
+            sys.exit(1)
+
 
     # Normalize legacy UI flags/commands so downstream code has a single source of truth
     if getattr(args, "mode", None) == "ui":

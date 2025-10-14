@@ -84,6 +84,92 @@ except SpecificError as e:
     raise ProcessingError(f"Failed to process: {e}") from e
 ```
 
+### 4. llms.txt Import 機能の開発
+
+**アーキテクチャ** (Issue #320実装):
+
+- **Discovery**: `src/modules/llmstxt_discovery.py` - URL discovery and parsing
+- **Security**: `src/security/llmstxt_validator.py` - Validation before import
+- **Merge**: `src/modules/llmstxt_merger.py` - Conflict resolution and backup
+- **UI**: `bykilt.py` (tab id=13) - Gradio interface
+
+**新しいセクションパーサーの追加**:
+
+1. `BykiltSectionParser.SECTION_PATTERNS` にパターン追加
+2. `parse_<section>_section()` メソッド実装
+3. テストを `tests/modules/test_llmstxt_discovery.py` に追加
+
+例:
+```python
+# src/modules/llmstxt_discovery.py
+class BykiltSectionParser:
+    SECTION_PATTERNS = {
+        'browser_control': r'# 2bykilt browser_control',
+        'git_script': r'# 2bykilt git_script',
+        'custom_type': r'# 2bykilt custom_type',  # 新しいセクション
+    }
+    
+    @staticmethod
+    def parse_custom_type_section(content: str) -> list[dict]:
+        """Parse custom_type section from llms.txt content."""
+        # Implementation here
+        pass
+```
+
+**セキュリティ検証の拡張**:
+
+1. `SecurityValidator.INJECTION_PATTERNS` または `DANGEROUS_COMMANDS` にパターン追加
+2. `validate_action_safety()` のロジック更新
+3. テストを `tests/security/test_llmstxt_validator.py` に追加
+
+例:
+```python
+# src/security/llmstxt_validator.py
+class SecurityValidator:
+    DANGEROUS_COMMANDS = [
+        'rm -rf',
+        'dd if=/dev/zero',
+        'your_dangerous_pattern',  # 新しいパターン
+    ]
+    
+    def validate_action_safety(self, action: dict) -> ValidationResult:
+        # Add custom validation logic
+        if self._is_custom_dangerous(action):
+            return ValidationResult(
+                valid=False,
+                errors=['Custom dangerous pattern detected']
+            )
+        return super().validate_action_safety(action)
+```
+
+**マージ戦略のカスタマイズ**:
+
+カスタムマージ戦略を実装する場合:
+
+```python
+# src/modules/llmstxt_merger.py
+class LlmsTxtMerger:
+    STRATEGIES = ['skip', 'overwrite', 'rename', 'custom']  # Add custom
+    
+    def _resolve_conflict(self, existing, new, strategy):
+        if strategy == 'custom':
+            return self._custom_resolution(existing, new)
+        # ... existing logic
+```
+
+**テスト要件**:
+
+- **Discovery**: 新しいセクションタイプは最低5つのテストケース
+- **Security**: 各新パターンに positive/negative テストケース
+- **Merge**: 新戦略は skip/overwrite/rename と同等のカバレッジ
+- **E2E**: 完全なワークフロー（discovery → validation → merge）をテスト
+
+**ドキュメント更新**:
+
+- [docs/features/llms_txt_import.md](../features/llms_txt_import.md) の該当セクション更新
+- README.md のクイックスタートセクションに例を追加
+- セキュリティ考慮事項を必ず記載
+
 ## テスト要件
 
 ### 1. テスト種別

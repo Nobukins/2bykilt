@@ -320,9 +320,9 @@ issues:
   "267": {title: "API: 録画ファイル検索 API 設計", meta: {area: artifacts, type: enhancement, priority: P2, phase: "2", stability: core}, depends: ["265","266"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
   "268": {title: "UI: 録画ファイル集約ビューと実装", meta: {area: artifacts, type: enhancement, priority: P2, phase: "2", stability: core}, depends: ["265","266","267"], dependents: [], risk: null, progress: {state: done, primary_pr: 317}, critical_path_rank: 1}
   "269": {title: "提案: Feature Flag の全面活用とプロファイルベースの機能有効化", meta: {area: config, type: enhancement, priority: P1, phase: "1", stability: core}, depends: [], dependents: ["270","271","272"], risk: null, progress: {state: open}, critical_path_rank: 1}
-  "270": {title: "設計: Feature Flag 運用設計とメタデータ仕様", meta: {area: config, type: enhancement, priority: P1, phase: "1", stability: core}, depends: ["269"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
-  "271": {title: "実装: Feature Flags コアライブラリと Profile ベースセットアップ", meta: {area: config, type: enhancement, priority: P1, phase: "1", stability: core}, depends: ["269","270"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
-  "272": {title: "UI: Admin UI による Feature Flag 管理画面の実装", meta: {area: flags, type: enhancement, priority: P1, phase: "1", stability: core}, depends: ["269","271"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "270": {title: "設計: Feature Flag 運用設計とメタデータ仕様", meta: {area: config, type: enhancement, priority: P1, phase: "1", stability: core}, depends: ["269"], dependents: ["271"], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "271": {title: "実装: Feature Flags コアライブラリと Profile ベースセットアップ", meta: {area: config, type: enhancement, priority: P1, phase: "1", stability: core}, depends: ["269","270"], dependents: ["272"], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "272": {title: "UI: Admin UI による Feature Flag 管理画面の実装", meta: {area: flags, type: enhancement, priority: P1, phase: "1", stability: core}, depends: ["269","271"], dependents: [], risk: null, progress: {state: done, primary_pr: 319}, critical_path_rank: 1}
   "174": {title: "[artifacts][batch] Clarify Artifact Output & Access Flow", meta: {area: artifacts, type: docs, priority: P3, phase: "2", stability: core}, depends: ["28", "30", "33", "35", "39"], dependents: [], risk: low, critical_path_rank: 1}
   "154": {title: "pip-audit stabilization in CI with normalizer + targeted suppressions", meta: {area: security, type: fix, priority: P1, phase: "1", stability: core}, depends: [], dependents: [], risk: null, progress: {state: done, primary_pr: 160}, critical_path_rank: 1}
   "175": {title: "バッチ行単位成果物キャプチャ基盤 (スクリーンショット/要素値/ログ関連紐付け)", meta: {area: artifacts, type: feat, priority: P1, phase: "2", stability: experimental}, depends: ["39", "40", "41", "42", "33", "35"], dependents: ["176"], risk: medium, progress: {state: done, primary_pr: 181}, critical_path_rank: 2}
@@ -429,9 +429,10 @@ issues:
   "313": {title: "[refactor] bykilt.py run_with_stream コード重複解消 (DRY原則適用)", meta: {area: runner, type: refactor, priority: P3, phase: "3", stability: core}, depends: ["307"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
   "314": {title: "[enhancement] OutputCapture スレッドセーフ性改善 (threading.Lock 追加)", meta: {area: logging, type: enhancement, priority: P2, phase: "3", stability: core}, depends: ["307"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
   "315": {title: "[bug] try-finally によるリソースクリーンアップ強化", meta: {area: logging, type: bug, priority: P2, phase: "3", stability: core}, depends: ["307"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
-  "287": {title: "Template for new issue and new PR", meta: {area: docs, type: enhancement, priority: P3, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: in-progress, primary_pr: 318}, critical_path_rank: 1}
+  "287": {title: "Template for new issue and new PR", meta: {area: docs, type: enhancement, priority: P3, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: done, primary_pr: 318}, critical_path_rank: 1}
+  "320": {title: "feat: Auto-discovery and import of browser automation commands from remote llms.txt files", meta: {area: config, type: enhancement, priority: P0, phase: "2", stability: core}, depends: ["64"], dependents: [], risk: null, progress: {state: in-progress, note: "Phase 1+2 complete (PR #321 merged); Phase 3+4 in PR #322 (open)", primary_pr: 322, related_prs: [321]}, critical_path_rank: 1}
 summary:
-  total_issues: 130
+  total_issues: 131
   high_risk: ["31", "46", "49", "54", "62", "176", "237", "285"]
   longest_chain_example: ["302", "303", "304", "305"]
   data_quality_checks:
@@ -467,10 +468,12 @@ summary:
       - "280"
       - "285"
       - "287"
+      - "320"
 
 last_synced:
-  utc: "2025-01-24T02:00:00Z"
+  utc: "2025-10-14T06:00:00Z"
   issues:
+    "320": "OPEN"    # Updated: Phase 3+4 PR #322 created, awaiting review
     "315": "OPEN"
     "314": "OPEN"
     "313": "OPEN"
@@ -480,13 +483,16 @@ last_synced:
     "303": "CLOSED"
     "302": "OPEN"
     "295": "CLOSED"
-    "287": "OPEN"    # Updated: Template creation in progress (PR #318)
+    "287": "CLOSED"  # Updated: Closed by PR #318
     "285": "OPEN"
     "280": "OPEN"
     "279": "OPEN"
     "277": "CLOSED"  # Updated: Closed by PR #317
     "276": "OPEN"
-    "274": "CLOSED"
+    "274": "CLOSED"  # Updated: Closed 2025-09-29
+    "272": "CLOSED"  # Updated: Closed by PR #319
+    "271": "OPEN"
+    "270": "OPEN"
     "268": "CLOSED"  # Updated: Closed by PR #317
     "265": "OPEN"    # Updated: Partially done, in-progress
     "264": "OPEN"
