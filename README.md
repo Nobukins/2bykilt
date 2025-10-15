@@ -160,6 +160,49 @@ python bykilt.py --import-llms https://example.com --strategy rename
 
 ---
 
+### 🔐 Git Script Configuration
+
+#### Allowed Domains
+
+デフォルトでは、git-scriptは **GitHub.com のみ** のURLを許可します。カスタムGitホスティングサービス（GitLab, GitHub Enterpriseなど）を使用する場合は、環境変数 `GIT_SCRIPT_ALLOWED_DOMAINS` で許可ドメインを追加できます。
+
+```bash
+# 複数ドメインを許可（カンマ区切り）
+export GIT_SCRIPT_ALLOWED_DOMAINS="github.com,gitlab.example.com,github.enterprise.local"
+
+# 2bykilt を起動
+python bykilt.py
+```
+
+**設定ファイル**:
+- `config/base/core.yaml` の `git_script.allowed_domains` でデフォルト設定可能
+- 環境変数 `GIT_SCRIPT_ALLOWED_DOMAINS` が設定ファイルを上書き
+
+**セキュリティ注意**:
+- **信頼できるドメインのみ追加**してください
+- github.comは後方互換性のため常に許可されます
+- 詳細は [セキュリティガイド](docs/SECURITY.md) を参照
+
+**使用例**:
+```yaml
+# llms.txt での使用例
+# GitLabからのスクリプト実行
+[tool: "login-automation"]
+type: git-script
+git: https://gitlab.example.com/automation/scripts.git
+script_path: src/login.py
+version: main
+
+# GitHub Enterpriseからのスクリプト実行
+[tool: "deploy-tool"]
+type: git-script
+git: https://github.enterprise.local/devops/deploy.git
+script_path: deploy/run.py
+version: production
+```
+
+---
+
 #### 1. 再帰的スキャン（Feature Flag: `artifacts.recursive_recordings_enabled`）
 
 - **デフォルト**: `false`（単一ディレクトリのみスキャン）

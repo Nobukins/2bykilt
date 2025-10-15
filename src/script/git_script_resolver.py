@@ -49,9 +49,52 @@ class GitScriptResolver:
         self.git_timeout = git_timeout or self.DEFAULT_GIT_TIMEOUT
         self.cache_dir = os.path.join(tempfile.gettempdir(), self.cache_dir_name)
         os.makedirs(self.cache_dir, exist_ok=True)
+        self._config = None  # Lazy-loaded ConfigManager
 
         # Initialize authentication manager
         self.auth_manager = GitAuthenticationManager(run_id=run_id)
+
+    @property
+    def config(self):
+        """Lazy-load config adapter"""
+        if self._config is None:
+            from src.config.config_adapter import get_config_for_environment
+            self._config = get_config_for_environment()
+        return self._config
+
+    def _get_allowed_domains(self) -> set:
+        """
+        Get list of allowed Git domains from config.
+        
+        Priority:
+        1. GIT_SCRIPT_ALLOWED_DOMAINS environment variable
+        2. config/base/core.yaml git_script.allowed_domains
+        3. Default: github.com only
+        
+        Returns:
+            Set of allowed domain names (e.g., {'github.com', 'gitlab.example.com'})
+        """
+        try:
+            # Check environment variable first
+            env_domains = os.environ.get('GIT_SCRIPT_ALLOWED_DOMAINS')
+            if env_domains:
+                domains = {d.strip() for d in env_domains.split(',') if d.strip()}
+                domains.add('github.com')  # Always include github.com
+                logger.debug(f"Allowed git domains (from env): {domains}")
+                return domains
+            
+            # Fall back to config file
+            config = self.config
+            domains_str = config.get('git_script', {}).get('allowed_domains', 'github.com')
+            domains = {d.strip() for d in domains_str.split(',') if d.strip()}
+            domains.add('github.com')  # Always include github.com
+            
+            logger.debug(f"Allowed git domains (from config): {domains}")
+            return domains
+            
+        except Exception as e:
+            logger.warning(f"Failed to load allowed domains, using default: {e}")
+            return {'github.com'}
 
     async def resolve_git_script(self, script_name: str, params: Optional[Dict[str, str]] = None) -> Optional[Dict[str, Any]]:
         """
@@ -294,8 +337,36 @@ class GitScriptResolver:
         if not url or not isinstance(url, str):
             return False
 
-        # Only allow GitHub URLs
-        if not url.startswith(('https://github.com/', 'git@github.com:')):
+        # Get allowed domains
+        allowed_domains = self._get_allowed_domains()
+        
+        # Check HTTPS URLs
+        if url.startswith('https://'):
+            parsed = urlparse(url)
+            if parsed.netloc not in allowed_domains:
+                logger.warning(f"Domain not in allowed list: {parsed.netloc} (allowed: {allowed_domains})")
+                return False
+        # Check SSH URLs (git@domain:user/repo.git)
+        elif url.startswith('git@'):
+            try:
+                # Extract domain from git@domain:path format
+                # Handle cases like git@domain.com:user/repo.git or git@domain.com:22/user/repo.git
+                after_at = url.split('@', 1)[1]
+                if ':' in after_at:
+                    domain_part = after_at.split(':', 1)[0]
+                    # Remove port if present (domain:port format)
+                    domain = domain_part.split(':')[0] if ':' in domain_part else domain_part
+                    if domain not in allowed_domains:
+                        logger.warning(f"Domain not in allowed list: {domain} (allowed: {allowed_domains})")
+                        return False
+                else:
+                    logger.error(f"Malformed SSH URL: {url}")
+                    return False
+            except (IndexError, ValueError) as e:
+                logger.error(f"Failed to parse SSH URL {url}: {e}")
+                return False
+        else:
+            logger.error(f"Unsupported URL protocol: {url}")
             return False
 
         # Basic validation - no shell metacharacters
@@ -394,8 +465,9 @@ class GitScriptResolver:
 
             # Parse repository name from URL
             parsed_url = urlparse(git_url)
-            if 'github.com' not in parsed_url.netloc:
-                logger.error(f"Not a GitHub URL: {git_url}")
+            allowed_domains = self._get_allowed_domains()
+            if parsed_url.netloc not in allowed_domains:
+                logger.error(f"Domain not in allowed list: {git_url} (allowed: {allowed_domains})")
                 return None
 
             repo_name = Path(parsed_url.path).stem
@@ -477,10 +549,11 @@ class GitScriptResolver:
             if not script_path:
                 return False, "Missing 'script_path' field"
 
-            # Validate GitHub URL format
+            # Validate domain against allowed list
             parsed_url = urlparse(git_url)
-            if parsed_url.netloc != 'github.com':
-                return False, f"Not a valid GitHub URL: {git_url}"
+            allowed_domains = self._get_allowed_domains()
+            if parsed_url.netloc not in allowed_domains:
+                return False, f"Domain not in allowed list: {git_url} (allowed: {allowed_domains})"
 
             # Validate script path (comprehensive security check)
             is_safe, error_msg = self._validate_path_safety(script_path, allow_absolute=False)

@@ -36,6 +36,13 @@ storage:
   save_trace_path: "./tmp/traces"
   save_agent_history_path: "./tmp/agent_history"
 
+# Git Script Configuration
+git_script:
+  # Allowed domains for git-script URL validation
+  # Can be overridden by GIT_SCRIPT_ALLOWED_DOMAINS environment variable
+  # Format: comma-separated domain list (e.g., "github.com,gitlab.example.com")
+  allowed_domains: "github.com"
+
 # Development Settings
 development:
   dev_mode: false
