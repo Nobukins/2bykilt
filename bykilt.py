@@ -1,71 +1,63 @@
+"""
+2Bykilt - Enhanced Browser Control with AI
+
+Main UI module providing Gradio interface for browser automation.
+This module orchestrates the web UI, integrating various services including
+browser control, LLM integration, batch processing, and configuration management.
+"""
+
+# Standard library imports
+import asyncio
+import json
 import logging
 import os
-import sys
-import time  # Added for restart logic
-import platform  # Added for cross-platform support
-from pathlib import Path  # Added for cross-platform path handling
-from datetime import datetime  # Added for timestamp formatting
-from dotenv import load_dotenv
-load_dotenv(override=True)  # 既存のシステム環境変数を.envファイルの設定で上書き
+import platform
 import subprocess
-import asyncio
-import json  # Added to fix missing import
+import sys
+import time
+from datetime import datetime
+from pathlib import Path
 
-from src.utils.app_logger import get_app_logger
-# ============================================================================
-# CLI Interface for Batch Execution (Issue #39) - CHECK BEFORE GRADIO IMPORT
-# ============================================================================
-from src.cli.batch_commands import handle_batch_commands
-
-# Check for batch commands BEFORE importing Gradio
-handle_batch_commands()
-
-# Now safe to import Gradio
+# Third-party imports
+from dotenv import load_dotenv
 import gradio as gr
-from gradio.themes import Citrus, Default, Glass, Monochrome, Ocean, Origin, Soft, Base
+from gradio.themes import Base, Citrus, Default, Glass, Monochrome, Ocean, Origin, Soft
 
-# ---------------------------------------------------------------------------
-# Feature Flags (Issue #64) integration
-# We migrate from legacy ENABLE_LLM env var to feature flag 'enable_llm'.
-# Backward compatibility: legacy env ENABLE_LLM still respected via helper.
-# ---------------------------------------------------------------------------
-try:
-    from src.config.feature_flags import FeatureFlags, is_llm_enabled
-except Exception:
-    # Safe fallback if feature flags not yet available (early bootstrap)
-    def is_llm_enabled():
-        return os.getenv("ENABLE_LLM", "false").lower() == "true"
-    class FeatureFlags:  # type: ignore
-        @staticmethod
-        def set_override(name, value, ttl_seconds=None):
-            pass
+# Environment setup
+load_dotenv(override=True)
 
-# Canonical runtime flag (evaluated at import). For dynamic toggling a restart
-# is still required for heavy LLM module imports.
-ENABLE_LLM = is_llm_enabled()
-
+# Application imports - utilities
+from src.utils.app_logger import get_app_logger
 from src.utils import utils
-from src.utils.default_config_settings import default_config, load_config_from_file, save_config_to_file
-from src.utils.default_config_settings import save_current_config, update_ui_from_config
+from src.utils.default_config_settings import (
+    default_config,
+    load_config_from_file,
+    save_config_to_file,
+    save_current_config,
+    update_ui_from_config
+)
 from src.utils.utils import update_model_dropdown, get_latest_files
-
-# 基本的なブラウザ関連モジュール（LLM非依存）
-from src.script.script_manager import run_script
-from src.browser.browser_manager import close_global_browser, prepare_recording_path, initialize_browser
-from src.browser.browser_config import BrowserConfig
 from src.utils.recording_dir_resolver import create_or_get_recording_dir
 
-# Recordings service layer (Issue #304/#305)
-from src.services import list_recordings as list_recordings_service, ListParams
+# Application imports - CLI
+from src.cli.batch_commands import handle_batch_commands
 
-# 常に利用可能なモジュール
+# Application imports - browser
+from src.browser.browser_manager import close_global_browser, prepare_recording_path, initialize_browser
+from src.browser.browser_config import BrowserConfig
+
+# Application imports - services
+from src.services import list_recordings as list_recordings_service, ListParams
+from src.script.script_manager import run_script
+
+# Application imports - configuration
 from src.config.standalone_prompt_evaluator import (
-    pre_evaluate_prompt_standalone, 
-    extract_params_standalone, 
+    pre_evaluate_prompt_standalone,
+    extract_params_standalone,
     resolve_sensitive_env_variables_standalone
 )
 
-# UI helper functions
+# Application imports - UI
 from src.ui.helpers import (
     load_actions_config,
     load_llms_file,
@@ -81,29 +73,92 @@ from src.ui.browser_agent import (
     show_restart_dialog
 )
 
-# 条件付きLLM関連インポート
+# Check for batch commands BEFORE full initialization
+handle_batch_commands()
+
+# Feature flags integration with backward compatibility
+try:
+    from src.config.feature_flags import FeatureFlags, is_llm_enabled
+except Exception:
+    # Fallback for early bootstrap
+    def is_llm_enabled():
+        return os.getenv("ENABLE_LLM", "false").lower() == "true"
+    
+    class FeatureFlags:  # type: ignore
+        @staticmethod
+        def set_override(name, value, ttl_seconds=None):
+            pass
+
+# Runtime LLM flag (evaluated at import time)
+ENABLE_LLM = is_llm_enabled()
+
+# ============================================================================
+# Conditional LLM Module Imports
+# ============================================================================
+# When LLM is enabled, import full AI agent capabilities.
+# Otherwise, use standalone fallbacks for basic browser control.
+
 if ENABLE_LLM:
     try:
-        from src.config.llms_parser import pre_evaluate_prompt, extract_params, resolve_sensitive_env_variables
-        from src.agent.agent_manager import stop_agent, stop_research_agent, run_org_agent, run_custom_agent
-        from src.agent.agent_manager import run_deep_search, get_globals, run_browser_agent
+        # LLM configuration and prompt processing
+        from src.config.llms_parser import (
+            pre_evaluate_prompt,
+            extract_params,
+            resolve_sensitive_env_variables
+        )
+        
+        # AI agent management
+        from src.agent.agent_manager import (
+            stop_agent,
+            stop_research_agent,
+            run_org_agent,
+            run_custom_agent,
+            run_deep_search,
+            get_globals,
+            run_browser_agent
+        )
+        
+        # Stream management for real-time output
         from src.ui.stream_manager import run_with_stream
+        
         LLM_MODULES_AVAILABLE = True
         print("✅ LLM modules loaded successfully")
+        
     except ImportError as e:
         print(f"⚠️ Warning: LLM modules failed to load: {e}")
         LLM_MODULES_AVAILABLE = False
-        # LLM無効時のダミー関数を定義
-        def pre_evaluate_prompt(prompt): return pre_evaluate_prompt_standalone(prompt)
-        def extract_params(prompt, params): return extract_params_standalone(prompt, params)
-        def resolve_sensitive_env_variables(text): return resolve_sensitive_env_variables_standalone(text)
-        def stop_agent(): return "LLM機能が無効です"
-        def stop_research_agent(): return "LLM機能が無効です"
-        async def run_org_agent(*args, **kwargs): return "LLM機能が無効です", "", "", "", None, None
-        async def run_custom_agent(*args, **kwargs): return "LLM機能が無効です", "", "", "", None, None
-        async def run_deep_search(*args, **kwargs): return "LLM機能が無効です", None, gr.update(), gr.update()
-        def get_globals(): return {}
-        async def run_browser_agent(*args, **kwargs): return "LLM機能が無効です"
+        
+        # Define fallback functions for non-LLM mode
+        def pre_evaluate_prompt(prompt):
+            return pre_evaluate_prompt_standalone(prompt)
+        
+        def extract_params(prompt, params):
+            return extract_params_standalone(prompt, params)
+        
+        def resolve_sensitive_env_variables(text):
+            return resolve_sensitive_env_variables_standalone(text)
+        
+        def stop_agent():
+            return "LLM機能が無効です"
+        
+        def stop_research_agent():
+            return "LLM機能が無効です"
+        
+        async def run_org_agent(*args, **kwargs):
+            return "LLM機能が無効です", "", "", "", None, None
+        
+        async def run_custom_agent(*args, **kwargs):
+            return "LLM機能が無効です", "", "", "", None, None
+        
+        async def run_deep_search(*args, **kwargs):
+            return "LLM機能が無効です", None, gr.update(), gr.update()
+        
+        def get_globals():
+            return {}
+        
+        async def run_browser_agent(*args, **kwargs):
+            return "LLM機能が無効です"
+        
         async def run_with_stream(*args, **kwargs): 
             # Extract parameters from args
             task = args[17] if len(args) > 17 else ""  # task is the 18th parameter (0-indexed)
@@ -580,26 +635,39 @@ else:
                 return f"❌ Error executing pre-registered command: {str(e)}\n\nDetails:\n{error_detail}", "", "", "", "", None, None, None, gr.update(), gr.update()
         else:
             get_app_logger().stop_execution_log_capture()
+            get_app_logger().stop_execution_log_capture()
             return "LLM機能が無効です。事前登録されたコマンド（@で始まる）のみが利用可能です。", "", "", "", "", None, None, None, gr.update(), gr.update()
 
-# ブラウザ自動化関連モジュール（常に利用可能）
+# ============================================================================
+# Browser Automation Modules (Always Available)
+# ============================================================================
+# These modules provide browser control independent of LLM functionality
+import yaml
+
 from src.config.action_translator import ActionTranslator
 from src.utils.debug_utils import DebugUtils
 from src.browser.browser_debug_manager import BrowserDebugManager
-from src.ui.command_helper import CommandHelper  # Import CommandHelper class
+from src.ui.command_helper import CommandHelper
 from src.utils.playwright_codegen import run_playwright_codegen, save_as_action_file
-from src.utils.log_ui import create_log_tab  # Import log UI integration
+from src.utils.log_ui import create_log_tab
 from src.modules.yaml_parser import InstructionLoader
-from src.ui.admin.feature_flag_panel import create_feature_flag_admin_panel  # Issue #272: Feature Flag Admin UI
-from src.ui.admin.artifacts_panel import create_artifacts_panel  # Issue #277: Artifacts UI
+from src.ui.admin.feature_flag_panel import create_feature_flag_admin_panel
+from src.ui.admin.artifacts_panel import create_artifacts_panel
 
-import yaml  # 必要であればインストール: pip install pyyaml
+# FastAPI integration
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 
-# load_actions_config関数の定義（LLM非依存）
+# ============================================================================
+# Module Configuration
+# ============================================================================
+
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Define proper mapping for Playwright commands
+# Playwright command mapping for browser automation
 PLAYWRIGHT_COMMANDS = {
     'navigate': 'goto',
     'click': 'click',
@@ -609,24 +677,48 @@ PLAYWRIGHT_COMMANDS = {
     'wait_for_selector': 'wait_for_selector',
     'wait_for_navigation': 'wait_for_load_state',
     'screenshot': 'screenshot',
-    'extract_content': 'query_selector_all'  # For content extraction
+    'extract_content': 'query_selector_all'
 }
 
-# Map theme names to theme objects
+# Gradio theme configuration
 theme_map = {
-    "Default": Default(), "Soft": Soft(), "Monochrome": Monochrome(), "Glass": Glass(),
-    "Origin": Origin(), "Citrus": Citrus(), "Ocean": Ocean(), "Base": Base()
+    "Default": Default(),
+    "Soft": Soft(),
+    "Monochrome": Monochrome(),
+    "Glass": Glass(),
+    "Origin": Origin(),
+    "Citrus": Citrus(),
+    "Ocean": Ocean(),
+    "Base": Base()
 }
 
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
-
+# Browser configuration singleton
 browser_config = BrowserConfig()
 
+# ============================================================================
+# Main UI Function
+# ============================================================================
+# Main UI Function
+# ============================================================================
+
 def create_ui(config, theme_name="Ocean"):
-    """Create the Gradio UI with the specified configuration and theme"""
+    """
+    Create the Gradio UI with the specified configuration and theme.
+    
+    This function constructs the complete web interface including:
+    - Agent settings and LLM configuration
+    - Browser control and automation
+    - Batch processing capabilities
+    - Recording playback and management
+    - Admin panels for feature flags and artifacts
+    
+    Args:
+        config: Configuration dictionary with application settings
+        theme_name: Name of Gradio theme to use (default: "Ocean")
+    
+    Returns:
+        gr.Blocks: Configured Gradio application interface
+    """
     # Load CSS from external file
     css_path = os.path.join(os.path.dirname(__file__), "assets", "css", "styles.css")
     with open(css_path, 'r', encoding='utf-8') as f:
