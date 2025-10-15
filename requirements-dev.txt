@@ -1,0 +1,46 @@
+# Development Dependencies for 2Bykilt
+# Install with: pip install -r requirements-dev.txt
+
+# Code Quality Tools
+# ==================
+pylint>=3.0.0              # Static code analysis
+mypy>=1.7.0                # Static type checker  
+flake8>=6.1.0              # Style guide enforcement
+black>=23.11.0             # Code formatter
+isort>=5.12.0              # Import sorter
+
+# Type Stubs for Third-party Libraries
+# =====================================
+types-PyYAML               # Type hints for PyYAML
+types-aiofiles             # Type hints for aiofiles
+types-requests             # Type hints for requests
+
+# Testing Tools (if not in main requirements)
+# ============================================
+pytest>=8.0.0              # Testing framework
+pytest-asyncio>=0.23.0     # Async test support
+pytest-cov>=4.1.0          # Coverage reporting
+pytest-timeout>=2.2.0      # Test timeout support
+
+# Documentation Tools
+# ===================
+sphinx>=7.2.0              # Documentation generator
+sphinx-rtd-theme>=2.0.0    # Read the Docs theme
+myst-parser>=2.0.0         # Markdown support for Sphinx
+
+# Development Utilities
+# =====================
+ipython>=8.18.0            # Enhanced Python shell
+ipdb>=0.13.13              # IPython debugger
+pre-commit>=3.5.0          # Git hooks framework
+
+# Performance Tools
+# =================
+memory-profiler>=0.61.0    # Memory profiling
+line-profiler>=4.1.0       # Line-by-line profiling
+py-spy>=0.3.14             # Sampling profiler
+
+# Code Metrics
+# ============
+radon>=6.0.1               # Code complexity metrics
+bandit>=1.7.5              # Security issue scanner
