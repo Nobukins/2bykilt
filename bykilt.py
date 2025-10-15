@@ -1,7 +1,5 @@
 import logging
-import argparse
 import os
-import glob
 import sys
 import time  # Added for restart logic
 import platform  # Added for cross-platform support
@@ -1600,16 +1598,6 @@ Tests include browser initialization, profile validation, and recording path ver
                             recording_display, trace_file_path, agent_history_path, stop_button, run_button
                         ],
                     )
-                    # research_button.click(
-                    #     fn=run_deep_search,
-                    #     inputs=[
-                    #         research_task_input, max_search_iteration_input, max_query_per_iter_input,
-                    #         llm_provider, llm_model_name, llm_num_ctx, llm_temperature, llm_base_url, 
-                    #         llm_api_key, use_vision, use_own_browser, headless
-                    #     ],
-                    #     outputs=[markdown_output_display, markdown_download, stop_research_button, research_button]
-                    # )
-                    # stop_research_button.click(fn=stop_research_agent, inputs=[], outputs=[stop_research_button, research_button])
 
             with gr.TabItem("🎥 Recordings", id=8):
                 gr.Markdown("### 🎥 Browser Recording Playback")
