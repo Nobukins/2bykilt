@@ -40,10 +40,6 @@ flags:
     type: bool
     default: true
   artifacts.recordings_gif_fallback_enabled:
-    description: "🎥 Recordings GIF フォールバック (LLM無効時) を有効化 (#306)"
-    type: bool
-    default: false
-  artifacts.recordings_gif_fallback_enabled:
     description: "🎥 Recordings GIF 代替プレビューを有効化 (LLM無効時の動画代替, #302/#306)"
     type: bool
     default: false

@@ -281,6 +281,9 @@ from src.utils.recording_dir_resolver import create_or_get_recording_dir
 # Recordings service layer (Issue #304/#305)
 from src.services import list_recordings as list_recordings_service, ListParams
 
+# GIF fallback worker (Issue #306)
+from src.workers.gif_fallback_worker import get_worker as get_gif_worker
+
 # 常に利用可能なモジュール
 from src.config.standalone_prompt_evaluator import (
     pre_evaluate_prompt_standalone, 
@@ -2322,16 +2325,68 @@ Tests include browser initialization, profile validation, and recording path ver
                         return gr.update(choices=[], value=None), None, error_msg
 
                 def on_recording_select_html(selected_path):
-                    """HTML-based recording display for LLM-disabled mode"""
+                    """HTML-based recording display for LLM-disabled mode with GIF fallback support"""
                     if selected_path and os.path.exists(selected_path):
                         filename = os.path.basename(selected_path)
                         file_size = os.path.getsize(selected_path) / 1024 / 1024
+                        
+                        # Check if GIF fallback is enabled
+                        gif_worker = get_gif_worker()
+                        gif_enabled = gif_worker.is_enabled()
+                        
+                        # Try to get GIF path if feature is enabled
+                        gif_path = None
+                        gif_status = ""
+                        if gif_enabled:
+                            gif_path = gif_worker.get_gif_path(selected_path)
+                            if os.path.exists(gif_path):
+                                gif_status = "✅ GIF preview available"
+                            else:
+                                # Enqueue for conversion (non-blocking)
+                                try:
+                                    # Run async enqueue in background
+                                    loop = asyncio.new_event_loop()
+                                    asyncio.set_event_loop(loop)
+                                    loop.run_until_complete(gif_worker.enqueue(selected_path))
+                                    loop.close()
+                                    gif_status = "🔄 GIF conversion queued... (refresh to see preview)"
+                                except Exception as e:
+                                    gif_status = f"⚠️ GIF conversion failed: {str(e)}"
+                        
+                        # Build HTML with GIF preview if available
+                        gif_preview = ""
+                        if gif_enabled and gif_path and os.path.exists(gif_path):
+                            # Encode GIF as base64 for inline display (secure in Gradio)
+                            import base64
+                            try:
+                                with open(gif_path, 'rb') as gif_file:
+                                    gif_data = base64.b64encode(gif_file.read()).decode('utf-8')
+                                    gif_preview = f"""
+                            <div style="margin: 20px 0;">
+                                <img src="data:image/gif;base64,{gif_data}" alt="Recording Preview" style="max-width: 100%; height: auto; border: 2px solid #007bff; border-radius: 5px;">
+                                <p style="margin-top: 10px; font-size: 14px; color: #28a745;">{gif_status}</p>
+                            </div>
+                            """
+                            except Exception as e:
+                                gif_preview = f"""
+                            <div style="margin: 20px 0; padding: 15px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 5px;">
+                                <p style="margin: 0; font-size: 14px; color: #721c24;">❌ Failed to load GIF: {str(e)}</p>
+                            </div>
+                            """
+                        elif gif_enabled:
+                            gif_preview = f"""
+                            <div style="margin: 20px 0; padding: 15px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 5px;">
+                                <p style="margin: 0; font-size: 14px; color: #856404;">{gif_status}</p>
+                            </div>
+                            """
+                        
                         html_content = f"""
                         <div style="text-align: center; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
                             <h3>📹 Selected Recording: {filename}</h3>
+                            {gif_preview}
                             <p><strong>File Path:</strong> {selected_path}</p>
                             <p><strong>File Size:</strong> {file_size:.2f} MB</p>
-                            <p><em>To view the recording, please download the file and open it in your media player.</em></p>
+                            <p><em>To view the full recording, please download the file and open it in your media player.</em></p>
                             <div style="margin-top: 15px;">
                                 <button onclick="navigator.clipboard.writeText('{selected_path}')" 
                                         style="padding: 10px 20px; margin: 5px; font-size: 14px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
@@ -3411,6 +3466,30 @@ def main():
                 with open(font_path, 'wb') as f:
                     pass
 
+    # Start GIF fallback worker if enabled and LLM is disabled
+    gif_worker = None
+    if not ENABLE_LLM:
+        try:
+            gif_worker = get_gif_worker()
+            if gif_worker.is_enabled():
+                # Start worker in background
+                import threading
+                def start_worker_thread():
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    loop.run_until_complete(gif_worker.start())
+                    loop.run_forever()
+                
+                worker_thread = threading.Thread(target=start_worker_thread, daemon=True)
+                worker_thread.start()
+                print("🎬 GIF fallback worker started successfully")
+            else:
+                print("ℹ️  GIF fallback worker disabled (feature flag off)")
+        except Exception as e:
+            print(f"⚠️  Failed to start GIF fallback worker: {e}")
+            import traceback
+            traceback.print_exc()
+    
     # GradioとFastAPIを統合 - モジュール化版
     app = create_fastapi_app(demo, args)
     run_app(app, args)
