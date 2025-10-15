@@ -154,7 +154,7 @@ class GifFallbackWorker:
             try:
                 await self._worker_task
             except asyncio.CancelledError:
-                raise  # Re-raise for proper cleanup
+                pass  # Expected when cancelling the task
         logger.info("GIF fallback worker stopped")
         await asyncio.sleep(0)  # Yield control to event loop
     
@@ -167,7 +167,7 @@ class GifFallbackWorker:
             except asyncio.TimeoutError:
                 continue
             except asyncio.CancelledError:
-                raise  # Re-raise cancellation
+                break  # Exit loop on cancellation
             
             # Process task
             try:

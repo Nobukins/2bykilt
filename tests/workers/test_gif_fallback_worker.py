@@ -95,6 +95,7 @@ class TestFeatureFlagIntegration:
         assert worker.is_enabled() is False
     
     @mock.patch('src.workers.gif_fallback_worker.FeatureFlags.is_enabled')
+    @pytest.mark.asyncio
     async def test_enqueue_skipped_when_disabled(self, mock_flag, worker, temp_video_file):
         """Test that enqueue is skipped when feature flag is disabled."""
         mock_flag.return_value = False
@@ -102,6 +103,7 @@ class TestFeatureFlagIntegration:
         assert result is False
     
     @mock.patch('src.workers.gif_fallback_worker.FeatureFlags.is_enabled')
+    @pytest.mark.asyncio
     async def test_start_skipped_when_disabled(self, mock_flag, worker):
         """Test that worker start is skipped when disabled."""
         mock_flag.return_value = False
@@ -110,6 +112,7 @@ class TestFeatureFlagIntegration:
         assert worker._worker_task is None
 
 
+@pytest.mark.asyncio
 class TestQueueManagement:
     """Test queue management and deduplication."""
     
@@ -178,6 +181,7 @@ class TestQueueManagement:
         assert worker.queue.qsize() == 0
 
 
+@pytest.mark.asyncio
 class TestRetryLogic:
     """Test retry logic and failure tracking."""
     
@@ -245,6 +249,7 @@ class TestRetryLogic:
         assert worker.queue.qsize() == 0  # Not re-enqueued
 
 
+@pytest.mark.asyncio
 class TestWorkerLifecycle:
     """Test worker start/stop lifecycle."""
     
@@ -285,6 +290,7 @@ class TestWorkerLifecycle:
         assert worker._running is False
 
 
+@pytest.mark.asyncio
 class TestStatusReporting:
     """Test status reporting for monitoring."""
     
@@ -340,6 +346,7 @@ class TestGlobalWorkerInstance:
         assert isinstance(worker, GifFallbackWorker)
 
 
+@pytest.mark.asyncio
 class TestFfmpegConversion:
     """Test ffmpeg conversion logic."""
     
@@ -369,5 +376,4 @@ class TestFfmpegConversion:
         assert result is False
 
 
-# Apply pytest markers for test categorization
-pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
+# No global pytest markers - applied individually per test as needed
