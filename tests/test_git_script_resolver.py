@@ -287,17 +287,28 @@ class TestAllowedDomains:
 
     def test_is_safe_git_url_custom_domain_https(self, resolver, monkeypatch):
         """Test that custom domains can be allowed via environment variable (HTTPS)"""
-        monkeypatch.setenv('GIT_SCRIPT_ALLOWED_DOMAINS', 'github.com,gitlab.example.com')
-        # Reset cached config
-        resolver._config = None
-        assert resolver._is_safe_git_url('https://gitlab.example.com/user/repo.git')
+        with monkeypatch.context() as m:
+            m.setenv('GIT_SCRIPT_ALLOWED_DOMAINS', 'github.com,gitlab.example.com')
+            # Mock _config to avoid actual file reading
+            mock_config = MagicMock(return_value={'git_script': {'allowed_domains': 'github.com'}})
+            with patch.object(resolver, '_config', mock_config):
+                assert resolver._is_safe_git_url('https://gitlab.example.com/user/repo.git')
 
     def test_is_safe_git_url_custom_domain_ssh(self, resolver, monkeypatch):
         """Test that custom domains can be allowed via environment variable (SSH)"""
-        monkeypatch.setenv('GIT_SCRIPT_ALLOWED_DOMAINS', 'github.com,gitlab.example.com')
-        # Reset cached config
-        resolver._config = None
-        assert resolver._is_safe_git_url('git@gitlab.example.com:user/repo.git')
+        with monkeypatch.context() as m:
+            m.setenv('GIT_SCRIPT_ALLOWED_DOMAINS', 'github.com,gitlab.example.com')
+            mock_config = MagicMock(return_value={'git_script': {'allowed_domains': 'github.com'}})
+            with patch.object(resolver, '_config', mock_config):
+                assert resolver._is_safe_git_url('git@gitlab.example.com:user/repo.git')
+
+    def test_is_safe_git_url_ssh_with_port(self, resolver, monkeypatch):
+        """Test SSH URL with port number"""
+        with monkeypatch.context() as m:
+            m.setenv('GIT_SCRIPT_ALLOWED_DOMAINS', 'github.com,gitlab.example.com')
+            mock_config = MagicMock(return_value={'git_script': {'allowed_domains': 'github.com'}})
+            with patch.object(resolver, '_config', mock_config):
+                assert resolver._is_safe_git_url('git@gitlab.example.com:22:user/repo.git')
 
     def test_is_safe_git_url_not_in_allowlist(self, resolver):
         """Test that non-allowed domains are rejected"""
@@ -311,24 +322,28 @@ class TestAllowedDomains:
 
     def test_get_allowed_domains_default(self, resolver):
         """Test that default allowed domains returns github.com only"""
-        domains = resolver._get_allowed_domains()
-        assert 'github.com' in domains
+        mock_config = MagicMock(return_value={'git_script': {'allowed_domains': 'github.com'}})
+        with patch.object(resolver, '_config', mock_config):
+            domains = resolver._get_allowed_domains()
+            assert 'github.com' in domains
 
     def test_get_allowed_domains_with_env(self, resolver, monkeypatch):
         """Test that environment variable can add custom domains"""
-        monkeypatch.setenv('GIT_SCRIPT_ALLOWED_DOMAINS', 'github.com,gitlab.example.com,bitbucket.org')
-        # Reset cached config
-        resolver._config = None
-        domains = resolver._get_allowed_domains()
-        assert 'github.com' in domains
-        assert 'gitlab.example.com' in domains
-        assert 'bitbucket.org' in domains
+        with monkeypatch.context() as m:
+            m.setenv('GIT_SCRIPT_ALLOWED_DOMAINS', 'github.com,gitlab.example.com,bitbucket.org')
+            mock_config = MagicMock(return_value={'git_script': {'allowed_domains': 'github.com'}})
+            with patch.object(resolver, '_config', mock_config):
+                domains = resolver._get_allowed_domains()
+                assert 'github.com' in domains
+                assert 'gitlab.example.com' in domains
+                assert 'bitbucket.org' in domains
 
     def test_get_allowed_domains_always_includes_github(self, resolver, monkeypatch):
         """Test that github.com is always included even if not in config"""
-        monkeypatch.setenv('GIT_SCRIPT_ALLOWED_DOMAINS', 'gitlab.example.com')
-        # Reset cached config
-        resolver._config = None
-        domains = resolver._get_allowed_domains()
-        assert 'github.com' in domains  # Always included
-        assert 'gitlab.example.com' in domains
+        with monkeypatch.context() as m:
+            m.setenv('GIT_SCRIPT_ALLOWED_DOMAINS', 'gitlab.example.com')
+            mock_config = MagicMock(return_value={'git_script': {'allowed_domains': 'github.com'}})
+            with patch.object(resolver, '_config', mock_config):
+                domains = resolver._get_allowed_domains()
+                assert 'github.com' in domains  # Always included
+                assert 'gitlab.example.com' in domains

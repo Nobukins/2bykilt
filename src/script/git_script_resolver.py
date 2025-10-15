@@ -350,12 +350,20 @@ class GitScriptResolver:
         elif url.startswith('git@'):
             try:
                 # Extract domain from git@domain:path format
-                domain = url.split('@')[1].split(':')[0]
-                if domain not in allowed_domains:
-                    logger.warning(f"Domain not in allowed list: {domain} (allowed: {allowed_domains})")
+                # Handle cases like git@domain.com:user/repo.git or git@domain.com:22/user/repo.git
+                after_at = url.split('@', 1)[1]
+                if ':' in after_at:
+                    domain_part = after_at.split(':', 1)[0]
+                    # Remove port if present (domain:port format)
+                    domain = domain_part.split(':')[0] if ':' in domain_part else domain_part
+                    if domain not in allowed_domains:
+                        logger.warning(f"Domain not in allowed list: {domain} (allowed: {allowed_domains})")
+                        return False
+                else:
+                    logger.error(f"Malformed SSH URL: {url}")
                     return False
-            except IndexError:
-                logger.error(f"Malformed SSH URL: {url}")
+            except (IndexError, ValueError) as e:
+                logger.error(f"Failed to parse SSH URL {url}: {e}")
                 return False
         else:
             logger.error(f"Unsupported URL protocol: {url}")

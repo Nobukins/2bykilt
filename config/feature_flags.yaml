@@ -74,7 +74,8 @@ flags:
   ui.realtime_updates:
     description: "UI リアルタイム更新 (WebSocket) を有効化"
     type: bool
-    default: true  git_script.custom_domains_enabled:
+    default: true
+  git_script.custom_domains_enabled:
     description: "git-script カスタムドメイン許可機能を有効化 (#255)"
     type: bool
     default: true
