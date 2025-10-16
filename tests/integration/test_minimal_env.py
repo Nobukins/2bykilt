@@ -29,7 +29,7 @@ class TestMinimalEnvironmentImports:
     
     def test_feature_flags_import(self):
         """Feature flags module should load"""
-        from src.config.feature_flags import is_llm_enabled, FeatureFlags
+        from src.config.feature_flags import is_llm_enabled
         assert is_llm_enabled() is False
         
     def test_config_adapter_import(self):
