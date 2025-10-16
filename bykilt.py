@@ -825,8 +825,7 @@ else:
                 # Ensure capture is always stopped, even if an unhandled exception occurs
                 # This handles edge cases where exceptions are not caught by the except block above
                 # The stop method is idempotent (safe to call multiple times)
-                if get_app_logger()._output_capture and get_app_logger()._output_capture._capture_active:
-                    get_app_logger().stop_execution_log_capture()
+                get_app_logger().stop_execution_log_capture()
         else:
             get_app_logger().stop_execution_log_capture()
             return (
