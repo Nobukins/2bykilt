@@ -501,10 +501,34 @@ class SandboxManager:
     
     def _apply_syscall_filter(self) -> None:
         """システムコールフィルター適用（Linux seccomp）"""
-        # seccomp実装は次のフェーズ（#62b）で実装
-        # 現在はplaceholder
-        logger.debug("Syscall filter: not implemented yet (PoC phase)")
-        pass
+        try:
+            from src.security.syscall_filter import SyscallFilter, SyscallProfile
+            
+            # プロファイル選択
+            if self.config.mode == SandboxMode.STRICT:
+                profile = SyscallProfile.STRICT
+            elif self.config.mode == SandboxMode.MODERATE:
+                profile = SyscallProfile.MODERATE
+            elif self.config.mode == SandboxMode.PERMISSIVE:
+                profile = SyscallProfile.PERMISSIVE
+            else:
+                logger.debug("Syscall filter disabled (DISABLED mode)")
+                return
+            
+            # フィルター適用
+            filter = SyscallFilter(
+                profile=profile,
+                custom_allowed=self.config.allowed_syscalls
+            )
+            filter.apply()
+            
+            logger.debug(f"Syscall filter applied: {profile.value}")
+            
+        except ImportError:
+            logger.debug("syscall_filter module not available")
+        except Exception as e:
+            logger.warning(f"Failed to apply syscall filter: {e}")
+            # seccomp失敗時は継続（リソース制限は有効）
     
     def _get_resource_usage(self, process: subprocess.Popen) -> Dict[str, Any]:
         """プロセスのリソース使用量を取得"""
