@@ -2,8 +2,9 @@
 
 This module contains utility functions used by the Gradio UI.
 """
-import os
 import json
+import logging
+import os
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
@@ -11,13 +12,22 @@ import yaml
 
 from src.utils.path_helpers import get_llms_txt_path
 
+logger = logging.getLogger(__name__)
+
 
 def load_actions_config(config_path: Optional[Path] = None) -> Dict[str, Any]:
-    """Load actions configuration from llms.txt file."""
+    """Load actions configuration from llms.txt file.
+    
+    Args:
+        config_path: Optional custom path to llms.txt file
+        
+    Returns:
+        Dictionary containing parsed YAML configuration, or empty dict on error
+    """
     target_path = Path(config_path or get_llms_txt_path())
     try:
         if not target_path.exists():
-            print(f"⚠️ Actions config file not found at {target_path}")
+            logger.warning("Actions config file not found at %s", target_path)
             return {}
 
         with target_path.open('r', encoding='utf-8') as file:
@@ -26,33 +36,63 @@ def load_actions_config(config_path: Optional[Path] = None) -> Dict[str, Any]:
         try:
             actions_config = yaml.safe_load(content) or {}
         except yaml.YAMLError as exc:
-            print(f"⚠️ YAML parsing error: {exc}")
+            logger.error("YAML parsing error: %s", exc)
             return {}
 
         if isinstance(actions_config, dict) and 'actions' in actions_config:
             return actions_config
 
-        print("⚠️ Invalid actions config structure")
+        logger.warning("Invalid actions config structure in %s", target_path)
         return {}
-    except Exception as error:
-        print(f"⚠️ Error loading actions config: {error}")
+    except (OSError, IOError) as error:
+        logger.error("Failed to load actions config from %s: %s", target_path, error)
+        return {}
+    except Exception as error:  # pragma: no cover - unexpected errors
+        logger.exception("Unexpected error loading actions config: %s", error)
         return {}
 
 
 def load_llms_file(path: Optional[Path] = None) -> str:
-    """Load llms.txt file content for UI editing."""
+    """Load llms.txt file content for UI editing.
+    
+    Args:
+        path: Optional custom path to llms.txt file
+        
+    Returns:
+        File content as string, or empty string if file not found
+    """
     target_path = Path(path or get_llms_txt_path())
     try:
         return target_path.read_text(encoding='utf-8')
     except FileNotFoundError:
+        logger.info("llms.txt file not found at %s, returning empty string", target_path)
+        return ''
+    except (OSError, IOError) as error:
+        logger.error("Failed to read llms.txt from %s: %s", target_path, error)
         return ''
 
 
 def save_llms_file(content: str, path: Optional[Path] = None) -> str:
-    """Save content to llms.txt file."""
+    """Save content to llms.txt file.
+    
+    Args:
+        content: YAML content to write to file
+        path: Optional custom path to llms.txt file
+        
+    Returns:
+        Success message string
+        
+    Raises:
+        IOError: If file write fails
+    """
     target_path = Path(path or get_llms_txt_path())
-    target_path.write_text(content, encoding='utf-8')
-    return "✅ llms.txtを保存しました"
+    try:
+        target_path.write_text(content, encoding='utf-8')
+        logger.info("Successfully saved llms.txt to %s", target_path)
+        return "✅ llms.txtを保存しました"
+    except (OSError, IOError) as error:
+        logger.error("Failed to save llms.txt to %s: %s", target_path, error)
+        raise IOError(f"Failed to save llms.txt: {error}") from error
 
 
 def discover_and_preview_llmstxt(url: str, https_only: bool = True) -> Tuple[str, str, str]:

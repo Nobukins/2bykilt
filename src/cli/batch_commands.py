@@ -4,6 +4,7 @@ This module handles batch execution commands through the CLI.
 """
 import argparse
 import asyncio
+import logging
 import sys
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -11,26 +12,58 @@ from typing import Any, Mapping, Sequence
 from src.batch.engine import BatchEngine, start_batch
 from src.runtime.run_context import RunContext
 
+logger = logging.getLogger(__name__)
+
 
 CSV_SUFFIXES = {".csv", ".txt"}
 
 
 def _resolve_csv_path(csv_path: str) -> Path:
-    """Validate and resolve a CSV path supplied via the CLI."""
+    """Validate and resolve a CSV path supplied via the CLI.
+    
+    Args:
+        csv_path: User-supplied path string
+        
+    Returns:
+        Resolved Path object
+        
+    Raises:
+        FileNotFoundError: If file does not exist
+        ValueError: If path is not a file
+    """
     candidate = Path(csv_path).expanduser()
     try:
         resolved = candidate.resolve(strict=True)
     except FileNotFoundError as error:
+        logger.error("CSV file not found: %s", candidate)
         raise FileNotFoundError(f"CSV file not found: {candidate}") from error
+    
     if not resolved.is_file():
+        logger.error("Path is not a file: %s", resolved)
         raise ValueError(f"Path is not a file: {resolved}")
+    
     if resolved.suffix.lower() not in CSV_SUFFIXES:
+        logger.warning("File %s does not use a typical CSV extension", resolved.name)
         print(f"⚠️ Warning: {resolved.name} does not use a typical CSV extension")
+    
+    logger.debug("Resolved CSV path: %s", resolved)
     return resolved
 
 
 def _run_start_batch(csv_path: Path, run_context: RunContext, execute_immediately: bool):
-    """Execute the async start_batch helper from synchronous CLI code."""
+    """Execute the async start_batch helper from synchronous CLI code.
+    
+    Args:
+        csv_path: Validated CSV file path
+        run_context: Runtime context for artifacts
+        execute_immediately: Whether to execute jobs immediately
+        
+    Returns:
+        Batch manifest object
+        
+    Raises:
+        RuntimeError: If event loop management fails
+    """
 
     async def _invoke():
         return await start_batch(
@@ -40,14 +73,17 @@ def _run_start_batch(csv_path: Path, run_context: RunContext, execute_immediatel
         )
 
     try:
+        logger.debug("Starting batch with asyncio.run")
         return asyncio.run(_invoke())
     except RuntimeError as exc:
         if "asyncio.run() cannot be called from a running event loop" in str(exc):
+            logger.warning("Active event loop detected, creating new loop")
             loop = asyncio.new_event_loop()
             try:
                 return loop.run_until_complete(_invoke())
             finally:
                 loop.close()
+        logger.error("Unexpected RuntimeError during batch start: %s", exc)
         raise
 
 
@@ -103,12 +139,33 @@ def _print_manifest_overview(manifest: Any, header: str = "✅ Batch status:") -
 
 
 def _handle_start_command(args) -> int:
+    """Handle batch start command.
+    
+    Args:
+        args: Parsed command-line arguments
+        
+    Returns:
+        Exit code (0 for success, 1 for failure)
+    """
+    logger.info("Starting batch execution from %s", args.csv_path)
     print(f"🚀 Starting batch execution from {args.csv_path}")
     execute_immediately = not getattr(args, 'no_execute', False)
-    csv_path = _resolve_csv_path(args.csv_path)
+    
+    try:
+        csv_path = _resolve_csv_path(args.csv_path)
+    except (FileNotFoundError, ValueError) as error:
+        logger.error("CSV validation failed: %s", error)
+        print(f"❌ {error}")
+        return 1
 
     run_context = RunContext.get()
-    manifest = _run_start_batch(csv_path, run_context, execute_immediately)
+    
+    try:
+        manifest = _run_start_batch(csv_path, run_context, execute_immediately)
+    except Exception as error:
+        logger.exception("Failed to start batch: %s", error)
+        print(f"❌ Failed to start batch: {error}")
+        return 1
 
     print("✅ Batch created successfully!")
     print(f"   Batch ID: {_get_value(manifest, 'batch_id', 'unknown')}")
@@ -118,7 +175,8 @@ def _handle_start_command(args) -> int:
     try:
         engine = BatchEngine(run_context)
         summary = engine.get_batch_summary(_get_value(manifest, 'batch_id'))
-    except Exception:
+    except Exception as error:
+        logger.warning("Could not fetch batch summary: %s", error)
         summary = None
 
     if summary:
@@ -132,6 +190,7 @@ def _handle_start_command(args) -> int:
     batch_manifest_dir = Path(run_context.artifact_dir('batch'))
     print(f"   Manifest: {batch_manifest_dir / 'batch_manifest.json'}")
 
+    logger.info("Batch %s created successfully", _get_value(manifest, 'batch_id'))
     return 0
 
 

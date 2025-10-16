@@ -21,20 +21,20 @@ def test_load_actions_config_parses_valid_yaml(temp_llms_path):
     assert config["actions"]["test"] == "value"
 
 
-def test_load_actions_config_handles_yaml_error(temp_llms_path, capsys):
+def test_load_actions_config_handles_yaml_error(temp_llms_path, caplog):
+    """Test that YAML parsing errors are logged and return empty dict."""
     temp_llms_path.write_text("invalid: yaml: content: [[[", encoding="utf-8")
     config = helpers.load_actions_config()
     assert config == {}
-    captured = capsys.readouterr()
-    assert "YAML parsing error" in captured.out
+    assert any("YAML parsing error" in record.message for record in caplog.records)
 
 
-def test_load_actions_config_handles_invalid_structure(temp_llms_path, capsys):
+def test_load_actions_config_handles_invalid_structure(temp_llms_path, caplog):
+    """Test that invalid config structure is logged and returns empty dict."""
     temp_llms_path.write_text("not_actions: value\n", encoding="utf-8")
     config = helpers.load_actions_config()
     assert config == {}
-    captured = capsys.readouterr()
-    assert "Invalid actions config structure" in captured.out
+    assert any("Invalid actions config structure" in record.message for record in caplog.records)
 
 
 def test_load_llms_file_returns_contents(temp_llms_path):
