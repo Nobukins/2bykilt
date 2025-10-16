@@ -27,6 +27,19 @@ from ..runtime.run_context import RunContext
 from src.utils.fs_paths import get_artifacts_base_dir
 
 from .summary import BatchSummary
+from .exceptions import (
+    BatchEngineError,
+    ConfigurationError,
+    FileProcessingError,
+    SecurityError,
+)
+from .models import (
+    BatchJob,
+    BatchManifest,
+    BATCH_MANIFEST_FILENAME,
+    JOBS_DIRNAME,
+)
+from .utils import to_portable_relpath
 
 if TYPE_CHECKING:
     from ..extraction.models import ExtractionResult
@@ -45,108 +58,6 @@ DEFAULT_MAX_RETRIES = 3  # Default maximum number of retry attempts
 DEFAULT_RETRY_DELAY = 1.0  # Default initial delay between retries in seconds
 DEFAULT_BACKOFF_FACTOR = 2.0  # Default exponential backoff multiplier
 MAX_RETRY_DELAY = 60.0  # Maximum retry delay in seconds (cap for exponential backoff)
-
-
-class BatchEngineError(Exception):
-    """Base exception for BatchEngine errors."""
-    pass
-
-
-class ConfigurationError(BatchEngineError):
-    """Raised when configuration is invalid."""
-    pass
-
-
-class FileProcessingError(BatchEngineError):
-    """
-    Raised when file processing fails.
-
-    This exception covers errors such as:
-    - CSV parsing errors (malformed rows, missing headers, etc.)
-    - File encoding issues (unsupported or invalid encoding)
-    - File size limits exceeded
-    - File not found or inaccessible
-    - Unsupported file format or MIME type
-    - Permission errors when reading files
-    - Any other errors encountered during file reading or processing
-
-    Catch this exception when handling file input/output operations in the batch engine.
-    """
-    pass
-
-
-class SecurityError(BatchEngineError):
-    """Raised when security violations are detected."""
-    pass
-
-
-# Constants
-BATCH_MANIFEST_FILENAME = "batch_manifest.json"
-JOBS_DIRNAME = "jobs"
-
-
-@dataclass
-class BatchJob:
-    """Represents a single batch job."""
-    job_id: str
-    run_id: str
-    row_data: Dict[str, Any]
-    status: str = "pending"  # pending, running, completed, failed
-    error_message: Optional[str] = None
-    created_at: Optional[str] = None
-    completed_at: Optional[str] = None
-    batch_id: Optional[str] = None  # Add batch_id for better metrics tracking
-    row_index: Optional[int] = None  # Row index in the original CSV
-    # Row-level artifacts (Issue #175 PoC): list of {type, path, created_at, meta?}
-    artifacts: Optional[List[Dict[str, Any]]] = None
-
-    def __post_init__(self):
-        if self.created_at is None:
-            self.created_at = datetime.now(timezone.utc).isoformat()
-        # Normalize artifacts container
-        if self.artifacts is None:
-            self.artifacts = []
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for JSON serialization."""
-        return asdict(self)
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'BatchJob':
-        """Create from dictionary."""
-        return cls(**data)
-
-
-@dataclass
-class BatchManifest:
-    """Manifest for batch execution."""
-    batch_id: str
-    run_id: str
-    csv_path: str
-    total_jobs: int
-    completed_jobs: int = 0
-    failed_jobs: int = 0
-    created_at: Optional[str] = None
-    jobs: Optional[List[BatchJob]] = None
-
-    def __post_init__(self):
-        if self.created_at is None:
-            self.created_at = datetime.now(timezone.utc).isoformat()
-        if self.jobs is None:
-            self.jobs = []
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for JSON serialization."""
-        data = asdict(self)
-        data['jobs'] = [job.to_dict() for job in self.jobs]
-        return data
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'BatchManifest':
-        """Create from dictionary."""
-        jobs_data = data.pop('jobs', [])
-        jobs = [BatchJob.from_dict(job_data) for job_data in jobs_data]
-        return cls(jobs=jobs, **data)
 
 
 class BatchEngine:
@@ -246,19 +157,6 @@ class BatchEngine:
         module_logger = logging.getLogger(__name__)
         module_logger.setLevel(log_level)
 
-    # Reuse artifact manager's portable relpath logic pattern (simplified inline) (#175 helper)
-    @staticmethod
-    def _to_portable_relpath(p: Path) -> str:
-        try:
-            rel = p.relative_to(Path.cwd())
-            return rel.as_posix()
-        except Exception:  # noqa: BLE001
-            try:
-                rel = p.relative_to(get_artifacts_base_dir())
-                return rel.as_posix()
-            except Exception:  # noqa: BLE001
-                return p.name
-
     def _load_config_from_env(self) -> Dict[str, Any]:
         """
         Load configuration values from environment variables.
@@ -341,50 +239,30 @@ class BatchEngine:
         except Exception as e:
             raise ConfigurationError(f"Configuration validation failed: {e}")
 
-    def parse_csv(self, csv_path: str, chunk_size: int = 1000) -> List[Dict[str, Any]]:
+    def _check_security_for_path(self, csv_path_obj: Path, csv_path: str):
         """
-        Parse CSV file and return list of row dictionaries.
-
-        This method handles various CSV formats, encoding issues, and provides
-        memory-efficient processing for large files through chunked reading.
-
+        Perform security checks on file path to prevent unauthorized access.
+        
         Args:
-            csv_path: Path to CSV file (absolute or relative)
-            chunk_size: Number of rows to process at once (for memory efficiency). 
-                       If not provided, uses the configured chunk_size value.
-
-        Returns:
-            List of dictionaries representing CSV rows, where keys are column headers
-
+            csv_path_obj: Resolved Path object
+            csv_path: Original path string for error messages
+            
         Raises:
-            FileNotFoundError: If CSV file doesn't exist
-            ValueError: If CSV parsing fails or file is invalid
-            UnicodeDecodeError: If file encoding is invalid
-            SecurityError: If path traversal is detected (when enabled)
-
-        Example:
-            ```python
-            rows = engine.parse_csv('data.csv')
-            for row in rows:
-                print(f"Name: {row['name']}, Value: {row['value']}")
-            ```
+            SecurityError: If security check fails
         """
-        csv_path_obj = Path(csv_path).resolve()
-
         # Security check: prevent path traversal (configurable)
         if self.config.get('allow_path_traversal', True) is False:
-            if not csv_path_obj.is_relative_to(Path.cwd()):
-                # Allow access to current working directory and subdirectories only
-                cwd = Path.cwd().resolve()
-                try:
-                    csv_path_obj.relative_to(cwd)
-                except ValueError:
-                    self.logger.error(f"Access denied: '{csv_path}' is outside allowed directory. "
-                                      f"Path traversal detected. To allow access to files outside the current "
-                                      f"working directory, set 'allow_path_traversal' to True in configuration.")
-                    raise SecurityError(f"Access denied: '{csv_path}' is outside allowed directory. "
-                                      f"Path traversal detected. To allow access to files outside the current "
-                                      f"working directory, set 'allow_path_traversal' to True in configuration.")
+            # Allow access to current working directory and subdirectories only
+            cwd = Path.cwd().resolve()
+            try:
+                csv_path_obj.relative_to(cwd)
+            except ValueError:
+                self.logger.error(f"Access denied: '{csv_path}' is outside allowed directory. "
+                                  f"Path traversal detected. To allow access to files outside the current "
+                                  f"working directory, set 'allow_path_traversal' to True in configuration.")
+                raise SecurityError(f"Access denied: '{csv_path}' is outside allowed directory. "
+                                  f"Path traversal detected. To allow access to files outside the current "
+                                  f"working directory, set 'allow_path_traversal' to True in configuration.")
 
             # Additional security check: prevent access to sensitive system directories
             resolved_path = csv_path_obj.resolve()
@@ -420,6 +298,21 @@ class BatchEngine:
                     # Path might not exist on this system, continue checking
                     continue
 
+    # ==================== CSV Parsing Helper Methods ====================
+    # These methods handle CSV file validation and parsing
+    
+    def _validate_csv_file_exists_and_size(self, csv_path_obj: Path, csv_path: str):
+        """
+        Validate CSV file existence and size.
+        
+        Args:
+            csv_path_obj: Resolved Path object
+            csv_path: Original path string for error messages
+            
+        Raises:
+            FileNotFoundError: If file doesn't exist
+            FileProcessingError: If file is empty or too large
+        """
         if not csv_path_obj.exists():
             raise FileNotFoundError(f"CSV file not found: '{csv_path}'. Please verify the file path and ensure the file exists.")
 
@@ -438,6 +331,22 @@ class BatchEngine:
         if file_size_mb > 100:  # Warn for files larger than 100MB
             self.logger.warning(f"Large CSV file detected ({file_size_mb:.1f}MB). Consider using streaming processing.")
 
+    def _read_and_parse_csv_content(self, csv_path_obj: Path, csv_path: str, chunk_size: Optional[int]) -> List[Dict[str, Any]]:
+        """
+        Read and parse CSV file content.
+        
+        Args:
+            csv_path_obj: Resolved Path object
+            csv_path: Original path string for error messages
+            chunk_size: Number of rows to process at once. If None, uses configured chunk_size
+            
+        Returns:
+            List of dictionaries representing CSV rows
+            
+        Raises:
+            FileProcessingError: If parsing fails
+            UnicodeDecodeError: If encoding is invalid
+        """
         try:
             with open(csv_path_obj, 'r', encoding=self.config['encoding']) as f:
                 # Check if file has content
@@ -477,7 +386,7 @@ class BatchEngine:
 
                     # Process in chunks to avoid memory issues with very large files
                     # Use the provided chunk_size parameter, fallback to config if not provided
-                    effective_chunk_size = chunk_size if chunk_size != 1000 else self.config['chunk_size']
+                    effective_chunk_size = chunk_size if chunk_size is not None else self.config['chunk_size']
                     if processed_rows % effective_chunk_size == 0:
                         self.logger.debug(f"Processed {processed_rows} rows from {csv_path}")
 
@@ -498,6 +407,45 @@ class BatchEngine:
         except Exception as e:
             raise FileProcessingError(f"Failed to parse CSV file '{csv_path}': {e}. "
                                     f"Please check the file format, encoding, and contents.")
+
+    def parse_csv(self, csv_path: str, chunk_size: Optional[int] = None) -> List[Dict[str, Any]]:
+        """
+        Parse CSV file and return list of row dictionaries.
+
+        This method handles various CSV formats, encoding issues, and provides
+        memory-efficient processing for large files through chunked reading.
+
+        Args:
+            csv_path: Path to CSV file (absolute or relative)
+            chunk_size: Number of rows to process at once (for memory efficiency). 
+                       If not provided (None), uses the configured chunk_size value.
+
+        Returns:
+            List of dictionaries representing CSV rows, where keys are column headers
+
+        Raises:
+            FileNotFoundError: If CSV file doesn't exist
+            ValueError: If CSV parsing fails or file is invalid
+            UnicodeDecodeError: If file encoding is invalid
+            SecurityError: If path traversal is detected (when enabled)
+
+        Example:
+            ```python
+            rows = engine.parse_csv('data.csv')
+            for row in rows:
+                print(f"Name: {row['name']}, Value: {row['value']}")
+            ```
+        """
+        csv_path_obj = Path(csv_path).resolve()
+
+        # Security check: prevent path traversal (configurable)
+        self._check_security_for_path(csv_path_obj, csv_path)
+
+        # Validate file existence and size
+        self._validate_csv_file_exists_and_size(csv_path_obj, csv_path)
+
+        # Read and parse CSV content
+        return self._read_and_parse_csv_content(csv_path_obj, csv_path, chunk_size)
 
     def create_batch_jobs(self, csv_path: str) -> BatchManifest:
         """
@@ -654,6 +602,9 @@ class BatchEngine:
             self.logger.error(error_msg)
             return None
 
+    # ==================== Manifest Management Methods ====================
+    # These methods handle loading, saving, and searching for batch manifests
+    
     def _load_manifest_from_current_context(self, batch_id: str) -> Optional[BatchManifest]:
         """Load batch manifest from current run context."""
         manifest_file = self.run_context.artifact_dir("batch") / BATCH_MANIFEST_FILENAME
@@ -714,6 +665,9 @@ class BatchEngine:
         
         return manifest
 
+    # ==================== Job Status Management Methods ====================
+    # These methods handle job status updates and artifact management
+    
     def update_job_status(self, job_id: str, status: str, error_message: Optional[str] = None):
         """
         Update the status of a specific job.
@@ -830,7 +784,7 @@ class BatchEngine:
 
         # Append artifact ref to job (in-memory) & persist manifest
         try:
-            rel_path = self._to_portable_relpath(fpath)
+            rel_path = to_portable_relpath(fpath)
         except Exception:
             rel_path = fpath.name
 
@@ -1117,6 +1071,9 @@ class BatchEngine:
         # Use default if not specified
         return max_retry_delay if max_retry_delay is not None else MAX_RETRY_DELAY
 
+    # ==================== Retry Management Methods ====================
+    # These methods handle job retry logic with exponential backoff
+    
     def retry_batch_jobs(self, batch_id: str, job_ids: List[str], max_retries: int = DEFAULT_MAX_RETRIES,
                         retry_delay: float = DEFAULT_RETRY_DELAY, backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
                         max_retry_delay: Optional[float] = None) -> Dict[str, Any]:
@@ -1420,6 +1377,9 @@ class BatchEngine:
         except Exception as e:
             self.logger.debug(f"Failed to record batch execution metrics: {e}")
 
+    # ==================== Batch Execution Methods ====================
+    # These methods handle the actual execution of batch jobs
+    
     async def execute_batch_jobs(self, batch_id: str, max_retries: int = DEFAULT_MAX_RETRIES,
                            retry_delay: float = DEFAULT_RETRY_DELAY, backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
                            max_retry_delay: Optional[float] = None, progress_callback: Optional[Callable[[int, int], None]] = None) -> Dict[str, Any]:
