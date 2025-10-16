@@ -81,8 +81,12 @@ class TestSandboxManagerBasics:
     
     def test_disabled_mode(self, disabled_config):
         """無効モード"""
-        manager = SandboxManager(disabled_config)
-        assert manager.config.mode == SandboxMode.DISABLED
+        with patch('src.config.feature_flags.FeatureFlags.get') as mock_get:
+            # Feature Flagsが設定を上書きしないようにする
+            mock_get.return_value = None
+            
+            manager = SandboxManager(disabled_config)
+            assert manager.config.mode == SandboxMode.DISABLED
 
 
 class TestBasicExecution:
