@@ -299,39 +299,18 @@ class BatchEngine:
                     # Path might not exist on this system, continue checking
                     continue
 
-    def parse_csv(self, csv_path: str, chunk_size: int = 1000) -> List[Dict[str, Any]]:
+    def _validate_csv_file_exists_and_size(self, csv_path_obj: Path, csv_path: str):
         """
-        Parse CSV file and return list of row dictionaries.
-
-        This method handles various CSV formats, encoding issues, and provides
-        memory-efficient processing for large files through chunked reading.
-
+        Validate CSV file existence and size.
+        
         Args:
-            csv_path: Path to CSV file (absolute or relative)
-            chunk_size: Number of rows to process at once (for memory efficiency). 
-                       If not provided, uses the configured chunk_size value.
-
-        Returns:
-            List of dictionaries representing CSV rows, where keys are column headers
-
+            csv_path_obj: Resolved Path object
+            csv_path: Original path string for error messages
+            
         Raises:
-            FileNotFoundError: If CSV file doesn't exist
-            ValueError: If CSV parsing fails or file is invalid
-            UnicodeDecodeError: If file encoding is invalid
-            SecurityError: If path traversal is detected (when enabled)
-
-        Example:
-            ```python
-            rows = engine.parse_csv('data.csv')
-            for row in rows:
-                print(f"Name: {row['name']}, Value: {row['value']}")
-            ```
+            FileNotFoundError: If file doesn't exist
+            FileProcessingError: If file is empty or too large
         """
-        csv_path_obj = Path(csv_path).resolve()
-
-        # Security check: prevent path traversal (configurable)
-        self._check_security_for_path(csv_path_obj, csv_path)
-
         if not csv_path_obj.exists():
             raise FileNotFoundError(f"CSV file not found: '{csv_path}'. Please verify the file path and ensure the file exists.")
 
@@ -350,6 +329,22 @@ class BatchEngine:
         if file_size_mb > 100:  # Warn for files larger than 100MB
             self.logger.warning(f"Large CSV file detected ({file_size_mb:.1f}MB). Consider using streaming processing.")
 
+    def _read_and_parse_csv_content(self, csv_path_obj: Path, csv_path: str, chunk_size: int) -> List[Dict[str, Any]]:
+        """
+        Read and parse CSV file content.
+        
+        Args:
+            csv_path_obj: Resolved Path object
+            csv_path: Original path string for error messages
+            chunk_size: Number of rows to process at once
+            
+        Returns:
+            List of dictionaries representing CSV rows
+            
+        Raises:
+            FileProcessingError: If parsing fails
+            UnicodeDecodeError: If encoding is invalid
+        """
         try:
             with open(csv_path_obj, 'r', encoding=self.config['encoding']) as f:
                 # Check if file has content
@@ -410,6 +405,45 @@ class BatchEngine:
         except Exception as e:
             raise FileProcessingError(f"Failed to parse CSV file '{csv_path}': {e}. "
                                     f"Please check the file format, encoding, and contents.")
+
+    def parse_csv(self, csv_path: str, chunk_size: int = 1000) -> List[Dict[str, Any]]:
+        """
+        Parse CSV file and return list of row dictionaries.
+
+        This method handles various CSV formats, encoding issues, and provides
+        memory-efficient processing for large files through chunked reading.
+
+        Args:
+            csv_path: Path to CSV file (absolute or relative)
+            chunk_size: Number of rows to process at once (for memory efficiency). 
+                       If not provided, uses the configured chunk_size value.
+
+        Returns:
+            List of dictionaries representing CSV rows, where keys are column headers
+
+        Raises:
+            FileNotFoundError: If CSV file doesn't exist
+            ValueError: If CSV parsing fails or file is invalid
+            UnicodeDecodeError: If file encoding is invalid
+            SecurityError: If path traversal is detected (when enabled)
+
+        Example:
+            ```python
+            rows = engine.parse_csv('data.csv')
+            for row in rows:
+                print(f"Name: {row['name']}, Value: {row['value']}")
+            ```
+        """
+        csv_path_obj = Path(csv_path).resolve()
+
+        # Security check: prevent path traversal (configurable)
+        self._check_security_for_path(csv_path_obj, csv_path)
+
+        # Validate file existence and size
+        self._validate_csv_file_exists_and_size(csv_path_obj, csv_path)
+
+        # Read and parse CSV content
+        return self._read_and_parse_csv_content(csv_path_obj, csv_path, chunk_size)
 
     def create_batch_jobs(self, csv_path: str) -> BatchManifest:
         """
