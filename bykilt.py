@@ -22,7 +22,16 @@ from typing import Dict, Any, Optional, List, Tuple
 # Third-party imports
 from dotenv import load_dotenv
 import gradio as gr
-from gradio.themes import Base, Citrus, Default, Glass, Monochrome, Ocean, Origin, Soft
+# Gradio 4.x has limited themes: Base, Default, Glass, Monochrome, Soft
+# Gradio 5.x adds: Citrus, Ocean, Origin
+try:
+    from gradio.themes import Base, Citrus, Default, Glass, Monochrome, Ocean, Origin, Soft
+except ImportError:
+    # Gradio 4.x fallbacks
+    from gradio.themes import Base, Default, Glass, Monochrome, Soft
+    Citrus = Default  # Fallback: Citrus → Default
+    Ocean = Glass     # Fallback: Ocean → Glass  
+    Origin = Soft     # Fallback: Origin → Soft
 
 # Environment setup
 load_dotenv(override=True)
