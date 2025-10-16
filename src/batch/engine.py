@@ -239,36 +239,17 @@ class BatchEngine:
         except Exception as e:
             raise ConfigurationError(f"Configuration validation failed: {e}")
 
-    def parse_csv(self, csv_path: str, chunk_size: int = 1000) -> List[Dict[str, Any]]:
+    def _check_security_for_path(self, csv_path_obj: Path, csv_path: str):
         """
-        Parse CSV file and return list of row dictionaries.
-
-        This method handles various CSV formats, encoding issues, and provides
-        memory-efficient processing for large files through chunked reading.
-
+        Perform security checks on file path to prevent unauthorized access.
+        
         Args:
-            csv_path: Path to CSV file (absolute or relative)
-            chunk_size: Number of rows to process at once (for memory efficiency). 
-                       If not provided, uses the configured chunk_size value.
-
-        Returns:
-            List of dictionaries representing CSV rows, where keys are column headers
-
+            csv_path_obj: Resolved Path object
+            csv_path: Original path string for error messages
+            
         Raises:
-            FileNotFoundError: If CSV file doesn't exist
-            ValueError: If CSV parsing fails or file is invalid
-            UnicodeDecodeError: If file encoding is invalid
-            SecurityError: If path traversal is detected (when enabled)
-
-        Example:
-            ```python
-            rows = engine.parse_csv('data.csv')
-            for row in rows:
-                print(f"Name: {row['name']}, Value: {row['value']}")
-            ```
+            SecurityError: If security check fails
         """
-        csv_path_obj = Path(csv_path).resolve()
-
         # Security check: prevent path traversal (configurable)
         if self.config.get('allow_path_traversal', True) is False:
             if not csv_path_obj.is_relative_to(Path.cwd()):
@@ -317,6 +298,39 @@ class BatchEngine:
                 except (OSError, ValueError):
                     # Path might not exist on this system, continue checking
                     continue
+
+    def parse_csv(self, csv_path: str, chunk_size: int = 1000) -> List[Dict[str, Any]]:
+        """
+        Parse CSV file and return list of row dictionaries.
+
+        This method handles various CSV formats, encoding issues, and provides
+        memory-efficient processing for large files through chunked reading.
+
+        Args:
+            csv_path: Path to CSV file (absolute or relative)
+            chunk_size: Number of rows to process at once (for memory efficiency). 
+                       If not provided, uses the configured chunk_size value.
+
+        Returns:
+            List of dictionaries representing CSV rows, where keys are column headers
+
+        Raises:
+            FileNotFoundError: If CSV file doesn't exist
+            ValueError: If CSV parsing fails or file is invalid
+            UnicodeDecodeError: If file encoding is invalid
+            SecurityError: If path traversal is detected (when enabled)
+
+        Example:
+            ```python
+            rows = engine.parse_csv('data.csv')
+            for row in rows:
+                print(f"Name: {row['name']}, Value: {row['value']}")
+            ```
+        """
+        csv_path_obj = Path(csv_path).resolve()
+
+        # Security check: prevent path traversal (configurable)
+        self._check_security_for_path(csv_path_obj, csv_path)
 
         if not csv_path_obj.exists():
             raise FileNotFoundError(f"CSV file not found: '{csv_path}'. Please verify the file path and ensure the file exists.")
