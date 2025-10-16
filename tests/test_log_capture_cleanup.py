@@ -17,49 +17,28 @@ async def test_log_capture_cleanup_on_browser_control_exception():
     if logger._output_capture and logger._output_capture._capture_active:
         logger.stop_execution_log_capture()
     
-    # Mock the execution function to raise an exception
-    with patch('src.modules.direct_browser_control.execute_direct_browser_control', 
-               new_callable=AsyncMock) as mock_execute:
-        mock_execute.side_effect = RuntimeError("Simulated browser error")
-        
-        # Mock pre_evaluate_prompt_standalone to return a browser-control command
-        with patch('bykilt.pre_evaluate_prompt_standalone') as mock_eval:
-            mock_eval.return_value = {
-                "is_command": True,
-                "command_name": "@test-action",
-                "action_def": {
-                    "type": "browser-control",
-                    "name": "test-action"
-                },
-                "params": {}
-            }
-            
-            # Import the module that contains run_with_stream
-            # Note: This is a simplified test - in actual implementation,
-            # we would need to properly set up the Gradio interface context
-            
-            # Instead, we'll test the cleanup logic directly
-            logger = get_app_logger()
+    # The following patches are not used, so we remove them.
 
-            # Simulate the scenario
-            logger.start_execution_log_capture()
-            assert logger._output_capture._capture_active, "Capture should be active"
+    # Instead, we'll test the cleanup logic directly
+    logger = get_app_logger()
 
-            try:
-                # Simulate exception during execution
-                raise RuntimeError("Test exception")
-            except RuntimeError:
-                # In actual bykilt.py, exception is caught in except block
-                pass
-            finally:
-                # This is the pattern we added to bykilt.py
-                if logger._output_capture and logger._output_capture._capture_active:
-                    logger.stop_execution_log_capture()
-            
-            # Verify cleanup
-            assert not logger._output_capture._capture_active, "Capture should be stopped after exception"
+    # Simulate the scenario
+    logger.start_execution_log_capture()
+    assert logger._output_capture._capture_active, "Capture should be active"
 
+    try:
+        # Simulate exception during execution
+        raise RuntimeError("Test exception")
+    except RuntimeError:
+        # In actual bykilt.py, exception is caught in except block
+        pass
+    finally:
+        # This is the pattern we added to bykilt.py
+        if logger._output_capture and logger._output_capture._capture_active:
+            logger.stop_execution_log_capture()
 
+    # Verify cleanup
+    assert not logger._output_capture._capture_active, "Capture should be stopped after exception"
 @pytest.mark.asyncio
 async def test_log_capture_cleanup_idempotent():
     """Test that stop_execution_log_capture is idempotent (safe to call multiple times)."""
