@@ -179,7 +179,7 @@ MODERATE + IPC、高度なメモリ操作:
 |-----------------|------------|------------|-----------|
 | **Linux** | ✅ Full | ✅ seccomp-bpf | Full Support |
 | **macOS** | ⚠️ Partial | ❌ N/A | Resource limits only |
-| **Windows** | ⚠️ Limited | ❌ N/A | Basic execution only |
+| **Windows** | ✅ Job Objects | ❌ N/A | Resource limits via Job Objects |
 
 ### Linux環境
 
@@ -207,13 +207,26 @@ MODERATE + IPC、高度なメモリ操作:
 
 ### Windows環境
 
-**現在の実装**:
-- ⚠️ リソース制限は未実装
-- ⚠️ タイムアウト管理のみ
+**要件**:
+- Windows 7+ (Job Objects サポート)
+- Python pywin32 ライブラリ: `pip install pywin32`
 
-**今後の実装予定** (Issue #62b):
-- Job Objects を使用したリソース制限
-- プロセス分離
+**機能**:
+- ✅ CPU時間制限（Job Objects）
+- ✅ メモリ制限（Job Objects）
+- ✅ プロセス数制限（Job Objects）
+- ✅ タイムアウト管理
+- ✅ プロセス強制終了（Job終了時）
+
+**制限事項**:
+- ❌ システムコール制限不可（seccomp非サポート）
+- ⚠️ ディスクI/O制限は未実装
+
+**実装詳細**:
+- `src/security/windows_job_object.py` - Job Objects ラッパー
+- Job Objectsを使用したリソース制限
+- CREATE_SUSDENDEDフラグでプロセス作成後にJob割り当て
+- JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE で確実な終了
 
 ## 使用方法
 

@@ -344,9 +344,114 @@ class SandboxManager:
         capture_output: bool
     ) -> ExecutionResult:
         """Windows環境でサンドボックス実行（Job Objectsを使用）"""
-        # Windows Job Objectsの実装は今後の課題
-        logger.warning("Windows sandbox not fully implemented, using basic execution")
-        return self._execute_no_sandbox(command, cwd, stdin_data, capture_output)
+        from .windows_job_object import is_job_object_available, create_job_object
+        
+        # Job Objectsが利用可能かチェック
+        if not is_job_object_available():
+            logger.warning("Windows Job Objects not available (pywin32 not installed), using basic execution")
+            return self._execute_no_sandbox(command, cwd, stdin_data, capture_output)
+        
+        # Job Objectを作成
+        job = create_job_object(
+            cpu_time_sec=self.config.cpu_time_sec,
+            memory_mb=self.config.memory_mb,
+            max_processes=self.config.max_processes
+        )
+        
+        if not job:
+            logger.warning("Failed to create Windows Job Object, using basic execution")
+            return self._execute_no_sandbox(command, cwd, stdin_data, capture_output)
+        
+        try:
+            env = os.environ.copy()
+            env.update(self.config.environment_variables)
+            
+            # CREATE_SUSPENDED フラグでプロセスを作成
+            import win32process
+            import win32con
+            
+            process = subprocess.Popen(
+                command,
+                cwd=str(cwd),
+                stdin=subprocess.PIPE if stdin_data else None,
+                stdout=subprocess.PIPE if capture_output else None,
+                stderr=subprocess.PIPE if capture_output else None,
+                env=env,
+                creationflags=win32con.CREATE_SUSPENDED
+            )
+            
+            # Job Objectにプロセスを割り当て
+            import win32api
+            process_handle = win32api.OpenProcess(
+                win32con.PROCESS_ALL_ACCESS,
+                False,
+                process.pid
+            )
+            
+            if not job.assign_process(process_handle):
+                logger.error("Failed to assign process to Job Object")
+                process.terminate()
+                job.close()
+                return ExecutionResult(
+                    success=False,
+                    exit_code=-1,
+                    stdout="",
+                    stderr="Failed to assign process to Job Object",
+                    execution_time=0.0,
+                    killed=True
+                )
+            
+            # プロセスを再開
+            win32process.ResumeThread(win32api.OpenThread(
+                win32con.THREAD_SUSPEND_RESUME,
+                False,
+                process.pid
+            ))
+            
+            # 実行と結果取得
+            try:
+                stdout, stderr = process.communicate(
+                    input=stdin_data.encode() if stdin_data else None,
+                    timeout=self.config.timeout_sec
+                )
+                killed = False
+            except subprocess.TimeoutExpired:
+                logger.warning(f"Process exceeded timeout ({self.config.timeout_sec}s)")
+                process.kill()
+                stdout, stderr = process.communicate()
+                killed = True
+            
+            exit_code = process.returncode
+            
+            stdout_text = stdout.decode('utf-8', errors='replace') if stdout else ""
+            stderr_text = stderr.decode('utf-8', errors='replace') if stderr else ""
+            
+            success = exit_code == 0 and not killed
+            
+            logger.info(f"Windows execution completed: exit_code={exit_code}, killed={killed}")
+            
+            return ExecutionResult(
+                success=success,
+                exit_code=exit_code,
+                stdout=stdout_text,
+                stderr=stderr_text,
+                execution_time=0.0,  # Windows では rusage 取得不可
+                killed=killed,
+                resources_used={}
+            )
+            
+        except Exception as e:
+            logger.error(f"Windows execution failed: {e}")
+            return ExecutionResult(
+                success=False,
+                exit_code=-1,
+                stdout="",
+                stderr=str(e),
+                execution_time=0.0,
+                killed=False
+            )
+        finally:
+            job.close()
     
     def _execute_no_sandbox(
         self,

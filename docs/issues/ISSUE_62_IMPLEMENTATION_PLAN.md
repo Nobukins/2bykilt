@@ -46,11 +46,11 @@
 **Platform Support**:
 - ✅ Linux: Full support (resource limits + seccomp syscall filtering)
 - ✅ macOS: Partial support (resource limits only, syscall N/A)
-- ⚠️ Windows: Basic execution only (timeout only)
+- ✅ Windows: Job Objects support (CPU, memory, process limits)
 
 ### 🔜 Phase 1b: 残タスク
 
-- [ ] Windows Job Objects実装（オプション）
+- [x] Windows Job Objects実装
 - [ ] 本番環境での動作検証
 - [ ] パフォーマンスベンチマーク
 
