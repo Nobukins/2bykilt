@@ -257,7 +257,6 @@ async def execute_git_script_new_method(
                     target_recording_dir = Path(recording_context.recording_path)
                     
                     if local_recording_dir.exists() and target_recording_dir.exists():
-                        import shutil
                         # Copy all recording files from local directory to target directory
                         for recording_file in local_recording_dir.glob("*.webm"):
                             target_file = target_recording_dir / recording_file.name
