@@ -39,6 +39,7 @@ from .models import (
     BATCH_MANIFEST_FILENAME,
     JOBS_DIRNAME,
 )
+from .utils import to_portable_relpath
 
 if TYPE_CHECKING:
     from ..extraction.models import ExtractionResult
@@ -155,19 +156,6 @@ class BatchEngine:
         # Also configure the module-level logger if needed
         module_logger = logging.getLogger(__name__)
         module_logger.setLevel(log_level)
-
-    # Reuse artifact manager's portable relpath logic pattern (simplified inline) (#175 helper)
-    @staticmethod
-    def _to_portable_relpath(p: Path) -> str:
-        try:
-            rel = p.relative_to(Path.cwd())
-            return rel.as_posix()
-        except Exception:  # noqa: BLE001
-            try:
-                rel = p.relative_to(get_artifacts_base_dir())
-                return rel.as_posix()
-            except Exception:  # noqa: BLE001
-                return p.name
 
     def _load_config_from_env(self) -> Dict[str, Any]:
         """
@@ -740,7 +728,7 @@ class BatchEngine:
 
         # Append artifact ref to job (in-memory) & persist manifest
         try:
-            rel_path = self._to_portable_relpath(fpath)
+            rel_path = to_portable_relpath(fpath)
         except Exception:
             rel_path = fpath.name
 

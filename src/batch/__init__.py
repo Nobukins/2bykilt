@@ -22,6 +22,7 @@ from .models import (
     BATCH_MANIFEST_FILENAME,
     JOBS_DIRNAME,
 )
+from .utils import to_portable_relpath
 
 __all__ = [
     "BatchEngine",
@@ -37,4 +38,5 @@ __all__ = [
     "SecurityError",
     "BATCH_MANIFEST_FILENAME",
     "JOBS_DIRNAME",
+    "to_portable_relpath",
 ]
