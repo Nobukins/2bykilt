@@ -7,6 +7,7 @@ descriptions, and configuration sources.
 Note: Currently read-only. Toggle functionality would require
 app restart and is deferred to future enhancement.
 """
+import json
 import logging
 from typing import Dict, Any, List, Optional, Tuple
 import gradio as gr
@@ -119,7 +120,7 @@ python bykilt.py
         # Detailed flag view (modal-like)
         with gr.Accordion("📋 フラグ詳細", open=False):
             selected_flag_name = gr.Textbox(label="選択中のフラグ", interactive=False)
-            selected_flag_details = gr.JSON(label="詳細情報")
+            selected_flag_details = gr.Code(label="詳細情報", language="json", interactive=False)
         
         def load_flags() -> Tuple[List[List[str]], str, List[List[str]]]:
             """Load all feature flags and return formatted data."""
@@ -196,24 +197,24 @@ python bykilt.py
                 logger.error(f"Failed to filter feature flags: {e}", exc_info=True)
                 return [], error_msg, []
         
-        def show_flag_details(evt: gr.SelectData, current_rows: List[List[str]] | None) -> Tuple[str, Dict]:
+        def show_flag_details(evt: gr.SelectData, current_rows: List[List[str]] | None) -> Tuple[str, str]:
             """Show detailed information for selected flag."""
             try:
                 flag_name = _resolve_flag_name_from_event(evt, current_rows)
                 if not flag_name:
-                    return "", {}
+                    return "", "{}"
                 
                 # Get full metadata
                 metadata = FeatureFlags.get_flag_metadata(flag_name)
                 
                 if metadata is None:
-                    return flag_name, {"error": "フラグが見つかりません"}
+                    return flag_name, json.dumps({"error": "フラグが見つかりません"}, indent=2, ensure_ascii=False)
                 
-                return flag_name, metadata
+                return flag_name, json.dumps(metadata, indent=2, ensure_ascii=False)
                 
             except Exception as e:
                 logger.error(f"Failed to show flag details: {e}", exc_info=True)
-                return "", {"error": str(e)}
+                return "", json.dumps({"error": str(e)}, indent=2, ensure_ascii=False)
         
         # Event handlers
         refresh_btn.click(

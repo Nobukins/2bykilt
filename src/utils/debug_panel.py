@@ -15,7 +15,7 @@ class DebugPanel:
                     gr.Markdown("### ブラウザ診断")
                     
                     capture_button = gr.Button("現在のブラウザ状態を診断", variant="primary")
-                    diagnosis_output = gr.JSON(label="診断結果")
+                    diagnosis_output = gr.Code(label="診断結果", language="json", interactive=False)
                     
                     gr.Markdown("### 過去の診断記録")
                     refresh_button = gr.Button("診断履歴を更新")
@@ -24,11 +24,12 @@ class DebugPanel:
                         choices=DebugPanel._get_diagnostic_files(),
                         allow_custom_value=False
                     )
-                    history_viewer = gr.JSON(label="診断履歴データ")
+                    history_viewer = gr.Code(label="診断履歴データ", language="json", interactive=False)
                     
                     # 環境変数の表示
                     gr.Markdown("### 環境変数")
-                    env_output = gr.JSON(DebugPanel._get_browser_env_vars())
+                    env_output = gr.Code(value=json.dumps(DebugPanel._get_browser_env_vars(), indent=2, ensure_ascii=False), 
+                                        label="環境変数", language="json", interactive=False)
             
             # イベントハンドラの設定
             capture_button.click(
@@ -65,22 +66,22 @@ class DebugPanel:
     def _load_diagnostic_file(filename):
         """選択した診断ファイルを読み込む"""
         if not filename:
-            return None
+            return "{}"
         
         full_path = f"logs/browser_diagnostics/{filename}"
         try:
             with open(full_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-            return data
+            return json.dumps(data, indent=2, ensure_ascii=False)
         except Exception as e:
-            return {"error": f"ファイル読み込みエラー: {str(e)}"}
+            return json.dumps({"error": f"ファイル読み込みエラー: {str(e)}"}, indent=2, ensure_ascii=False)
     
     @staticmethod
     def _run_browser_diagnostics():
         """ブラウザ診断を実行"""
         from src.browser.browser_diagnostic import BrowserDiagnostic
         result = BrowserDiagnostic.capture_browser_state("manual_check")
-        return result["diagnostic_data"]
+        return json.dumps(result["diagnostic_data"], indent=2, ensure_ascii=False)
     
     @staticmethod
     def _get_browser_env_vars():

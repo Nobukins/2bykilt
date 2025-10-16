@@ -261,3 +261,9 @@ artifacts/metrics/*.csv
 src/artifacts/**
 
 .gh/**
+
+# GitHub PR/Issue communication files (local only)
+.github/pr-*/
+.github/issues/
+# Test artifacts
+test.png

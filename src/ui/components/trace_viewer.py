@@ -71,9 +71,11 @@ class TraceViewer:
                     type="filepath",
                 )
 
-            metadata_display = gr.JSON(
+            metadata_display = gr.Code(
                 label="トレースメタデータ",
-                value={},
+                value="{}",
+                language="json",
+                interactive=False,
             )
 
             viewer_frame = gr.HTML(
@@ -107,16 +109,17 @@ class TraceViewer:
 
     def _load_trace(
         self, trace_path: Optional[str]
-    ) -> Tuple[Dict[str, Any], str, str]:
+    ) -> Tuple[str, str, str]:
         if not trace_path:
-            return {}, _VIEWER_PLACEHOLDER, ""
+            return "{}", _VIEWER_PLACEHOLDER, ""
 
         try:
             zip_path = Path(trace_path)
             if not zip_path.exists():
                 logger.warning("Trace file not found: %s", trace_path)
+                import json
                 return (
-                    {"error": "ファイルが見つかりません"},
+                    json.dumps({"error": "ファイルが見つかりません"}, indent=2, ensure_ascii=False),
                     _VIEWER_PLACEHOLDER,
                     "",
                 )
@@ -130,7 +133,8 @@ class TraceViewer:
             self._metadata = enriched_metadata
 
             logger.info("Trace loaded: %s", zip_path.name)
-            return enriched_metadata, viewer_html, status
+            import json
+            return json.dumps(enriched_metadata, indent=2, ensure_ascii=False), viewer_html, status
 
         except Exception as exc:  # pragma: no cover - defensive
             logger.error(
@@ -138,8 +142,9 @@ class TraceViewer:
                 exc_info=True,
                 extra={"error": repr(exc)},
             )
+            import json
             return (
-                {"error": f"トレース読み込み失敗: {exc}"},
+                json.dumps({"error": f"トレース読み込み失敗: {exc}"}, indent=2, ensure_ascii=False),
                 _VIEWER_PLACEHOLDER,
                 "",
             )

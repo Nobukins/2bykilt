@@ -103,7 +103,7 @@ def create_artifacts_panel() -> gr.Blocks:
                     video_preview = gr.Video(label="Video Preview")
                 
                 with gr.TabItem("JSONデータ"):
-                    json_preview = gr.JSON(label="Element Capture Data")
+                    json_preview = gr.Code(label="Element Capture Data", language="json", interactive=False)
             
             download_link = gr.HTML(value="<p>アーティファクトを選択してダウンロードリンクを表示</p>")
 
@@ -249,9 +249,9 @@ def create_artifacts_panel() -> gr.Blocks:
                         try:
                             with open(artifact_path, 'r', encoding='utf-8') as f:
                                 data = json.load(f)
-                            return artifact_path, None, None, data, download_html
+                            return artifact_path, None, None, json.dumps(data, indent=2, ensure_ascii=False), download_html
                         except Exception:  # noqa: BLE001
-                            return artifact_path, None, None, {"error": "Failed to load JSON"}, download_html
+                            return artifact_path, None, None, json.dumps({"error": "Failed to load JSON"}, indent=2), download_html
                     
                     elif file_ext in {".txt", ".csv"}:
                         # Text/CSV preview - read as plain text
@@ -265,18 +265,20 @@ def create_artifacts_panel() -> gr.Blocks:
                                 "content": content,
                                 "lines": len(content.splitlines()),
                             }
-                            return artifact_path, None, None, preview_data, download_html
+                            return artifact_path, None, None, json.dumps(preview_data, indent=2, ensure_ascii=False), download_html
                         except Exception as e:  # noqa: BLE001
-                            return artifact_path, None, None, {"error": f"Failed to load {file_ext}: {str(e)}"}, download_html
+                            return artifact_path, None, None, json.dumps({"error": f"Failed to load {file_ext}: {str(e)}"}, indent=2), download_html
                     else:
                         # Unknown format
-                        return artifact_path, None, None, {"error": f"Unsupported format: {file_ext}"}, download_html
+                        import json
+                        return artifact_path, None, None, json.dumps({"error": f"Unsupported format: {file_ext}"}, indent=2), download_html
                 else:
-                    return artifact_path, None, None, None, download_html
+                    return artifact_path, None, None, "{}", download_html
                 
             except Exception as e:
+                import json
                 logger.error(f"Failed to show artifact preview: {e}", exc_info=True)
-                return "", None, None, None, f"<p>❌ エラー: {str(e)}</p>"
+                return "", None, None, json.dumps({"error": str(e)}, indent=2), f"<p>❌ エラー: {str(e)}</p>"
 
         def refresh_summary_only(run_id: str) -> str:
             """Refresh only the summary display."""

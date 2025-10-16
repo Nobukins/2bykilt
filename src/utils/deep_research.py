@@ -27,48 +27,51 @@ if ENABLE_LLM:
         from src.controller.custom_controller import CustomController
         from src.browser.custom_browser import CustomBrowser
         from src.browser.custom_context import BrowserContextConfig, BrowserContext
+        # browser-use imports (LLM-dependent)
+        from browser_use.browser.browser import BrowserConfig, Browser
+        from browser_use.agent.views import ActionResult
+        from browser_use.controller.service import Controller, DoneAction
+        try:
+            from browser_use.browser.context import BrowserContextWindowSize
+        except Exception:
+            # Compatibility shim
+            from dataclasses import dataclass
+            @dataclass
+            class BrowserContextWindowSize:
+                width: int = 1024
+                height: int = 768
+        
         LLM_RESEARCH_AVAILABLE = True
         print("✅ LLM research modules loaded successfully")
     except ImportError as e:
         print(f"⚠️ Warning: LLM research modules failed to load: {e}")
         LLM_RESEARCH_AVAILABLE = False
+        # Stub classes for type checking when LLM is disabled
+        class BrowserConfig: pass  # type: ignore
+        class Browser: pass  # type: ignore
+        class ActionResult: pass  # type: ignore
+        class BrowserContext: pass  # type: ignore
+        class Controller: pass  # type: ignore
+        class DoneAction: pass  # type: ignore
+        class BrowserContextWindowSize: pass  # type: ignore
+        class BrowserContextConfig: pass  # type: ignore
 else:
     LLM_RESEARCH_AVAILABLE = False
     print("ℹ️ LLM research functionality is disabled (ENABLE_LLM=false)")
+    # Stub classes for type checking when LLM is disabled
+    class BrowserConfig: pass  # type: ignore
+    class Browser: pass  # type: ignore
+    class ActionResult: pass  # type: ignore
+    class BrowserContext: pass  # type: ignore
+    class Controller: pass  # type: ignore
+    class DoneAction: pass  # type: ignore
+    class BrowserContextWindowSize: pass  # type: ignore
+    class BrowserContextConfig: pass  # type: ignore
 
 import json
 import re
-from browser_use.browser.browser import BrowserConfig, Browser
-from browser_use.agent.views import ActionResult
-from browser_use.browser.context import BrowserContext
-from browser_use.controller.service import Controller, DoneAction
 from main_content_extractor import MainContentExtractor
 from json_repair import repair_json
-try:
-    from browser_use.browser.context import (
-        BrowserContextConfig,
-        BrowserContextWindowSize,
-    )
-except Exception:
-    # Compatibility shim: provide a minimal fallback if the installed
-    # browser_use package doesn't expose BrowserContextWindowSize.
-    from dataclasses import dataclass
-
-    @dataclass
-    class BrowserContextWindowSize:
-        width: int = 1024
-        height: int = 768
-
-    # Try to import BrowserContextConfig separately; if not available,
-    # fall back to a simple placeholder to avoid import-time failures.
-    try:
-        from browser_use.browser.context import BrowserContextConfig
-    except Exception:
-        class BrowserContextConfig:  # type: ignore
-            def __init__(self, *args, **kwargs):
-                # Placeholder fallback used only to avoid import-time errors
-                # during tests when browser_use doesn't provide the class.
-                return None
 
 logger = logging.getLogger(__name__)
 

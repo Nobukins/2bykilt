@@ -5,7 +5,21 @@ from typing import Dict, Any, List, Optional, Union, Callable, Awaitable
 
 import gradio as gr
 
-from src.agent.agent_manager import get_globals, run_browser_agent
+# Conditional import for LLM agent functionality
+try:
+    from src.agent.agent_manager import get_globals, run_browser_agent
+    _LLM_AVAILABLE = True
+except ImportError:
+    _LLM_AVAILABLE = False
+    # Stub functions when LLM is disabled
+    def get_globals():
+        """Stub: Agent functionality not available when ENABLE_LLM=false"""
+        return {"agent_state": type('obj', (object,), {'clear_stop': lambda: None})()}
+    
+    async def run_browser_agent(*args, **kwargs):
+        """Stub: Agent functionality not available when ENABLE_LLM=false"""
+        raise RuntimeError("Agent functionality is disabled (ENABLE_LLM=false)")
+
 from src.utils.utils import capture_screenshot
 
 # Configure logging

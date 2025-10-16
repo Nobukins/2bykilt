@@ -26,13 +26,21 @@ from typing import Any, Dict, List, Tuple
 
 import gradio as gr
 
-from src.agent.agent_manager import stop_agent
 from src.config.feature_flags import FeatureFlags, is_llm_enabled
 from src.ui.command_helper import CommandHelper
 from src.ui.services.feature_flag_service import FeatureFlagState, get_feature_flag_service
 from src.ui.stream_manager import run_with_stream
 from src.utils.default_config_settings import default_config
 from src.utils import utils
+
+# Conditional import for LLM agent functionality
+try:
+    from src.agent.agent_manager import stop_agent
+except ImportError:
+    # Stub function when LLM is disabled
+    def stop_agent():
+        """Stub: Agent functionality not available when ENABLE_LLM=false"""
+        return "Agent functionality is disabled (ENABLE_LLM=false)", gr.update(), gr.update()
 
 logger = logging.getLogger(__name__)
 

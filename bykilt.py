@@ -22,7 +22,16 @@ from typing import Dict, Any, Optional, List, Tuple
 # Third-party imports
 from dotenv import load_dotenv
 import gradio as gr
-from gradio.themes import Base, Citrus, Default, Glass, Monochrome, Ocean, Origin, Soft
+# Gradio 4.x has limited themes: Base, Default, Glass, Monochrome, Soft
+# Gradio 5.x adds: Citrus, Ocean, Origin
+try:
+    from gradio.themes import Base, Citrus, Default, Glass, Monochrome, Ocean, Origin, Soft
+except ImportError:
+    # Gradio 4.x fallbacks
+    from gradio.themes import Base, Default, Glass, Monochrome, Soft
+    Citrus = Default  # Fallback: Citrus → Default
+    Ocean = Glass     # Fallback: Ocean → Glass  
+    Origin = Soft     # Fallback: Origin → Soft
 
 # Environment setup
 load_dotenv(override=True)
@@ -1721,7 +1730,7 @@ URLを入力してPlaywright codegenを起動し、ブラウザ操作を記録�
                         save_format = gr.Dropdown(choices=["json", "csv"], value="json", label="保存形式")
                         save_button = gr.Button("データを保存", variant="secondary")
                     with gr.Column(scale=2):
-                        extraction_result = gr.JSON(label="抽出結果")
+                        extraction_result = gr.Code(label="抽出結果", language="json", interactive=False)
                         extraction_status = gr.Markdown(label="ステータス")
                 # Toggle between simple and advanced selectors
                 selector_type.change(
@@ -1735,8 +1744,9 @@ URLを入力してPlaywright codegenを起動し、ブラウザ操作を記録�
                     url, selector_type, simple_s, advanced_s, use_own, headless, maintain_sess, tab_strategy
                 ):
                     if not url:
-                        return None, "URLを入力してください"
+                        return "{}", "URLを入力してください"
                     try:
+                        import json
                         from src.modules.execution_debug_engine import ExecutionDebugEngine
 
                         engine = ExecutionDebugEngine()
@@ -1749,18 +1759,22 @@ URLを入力してPlaywright codegenを起動し、ブラウザ操作を記録�
                             tab_selection_strategy=tab_strategy,
                         )
                         if result.get("error"):
-                            return None, f"❌ エラー: {result['error']}"
-                        return result, "✅ 抽出完了"
+                            return json.dumps({"error": result["error"]}, indent=2, ensure_ascii=False), f"❌ エラー: {result['error']}"
+                        return json.dumps(result, indent=2, ensure_ascii=False), "✅ 抽出完了"
                     except Exception as e:
-                        return None, f"❌ 抽出中に例外: {e}"
+                        import json
+                        return json.dumps({"error": str(e)}, indent=2, ensure_ascii=False), f"❌ 抽出中に例外: {e}"
 
-                async def save_extracted_data(data, path, fmt):
-                    if not data:
+                async def save_extracted_data(data_json, path, fmt):
+                    if not data_json or data_json == "{}":
                         return "❌ 保存するデータがありません"
                     try:
+                        import json
                         from src.modules.execution_debug_engine import ExecutionDebugEngine
 
                         engine = ExecutionDebugEngine()
+                        # JSON文字列を辞書に戻す
+                        data = json.loads(data_json)
                         engine.last_extracted_content = data
                         save_result = await engine.save_extracted_content(file_path=path or None, format_type=fmt)
                         return "✅ 保存完了" if save_result.get("success") else f"❌ {save_result.get('message')}"
