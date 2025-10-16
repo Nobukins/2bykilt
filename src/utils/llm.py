@@ -1,3 +1,33 @@
+"""
+LLM utility functions and custom ChatOpenAI implementations.
+
+This module provides LLM-related functionality and requires:
+- ENABLE_LLM=true environment variable or feature flag
+- Full requirements.txt installation (not requirements-minimal.txt)
+
+When ENABLE_LLM=false, this module cannot be imported and will raise ImportError.
+This ensures complete isolation of LLM dependencies for AI governance compliance.
+"""
+
+# Import guard: Block import when LLM functionality is disabled
+# This ensures zero LLM dependencies in minimal mode
+try:
+    from src.config.feature_flags import is_llm_enabled
+    _ENABLE_LLM = is_llm_enabled()
+except Exception:
+    import os
+    _ENABLE_LLM = os.getenv("ENABLE_LLM", "false").lower() == "true"
+
+if not _ENABLE_LLM:
+    raise ImportError(
+        "LLM functionality is disabled (ENABLE_LLM=false). "
+        "This module requires full requirements.txt installation and ENABLE_LLM=true. "
+        "To use LLM features: "
+        "1. Install full requirements: pip install -r requirements.txt "
+        "2. Enable LLM: export ENABLE_LLM=true or set in .env file"
+    )
+
+# LLM imports (only executed when ENABLE_LLM=true)
 from openai import OpenAI
 import pdb
 from langchain_openai import ChatOpenAI
