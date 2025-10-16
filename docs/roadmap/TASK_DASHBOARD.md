@@ -1,51 +1,51 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-10-16T03:21:30+00:00
+Generated at (UTC): 2025-10-16T10:04:42+00:00
 
 ## 1. メタサマリー
 
-- Total Issues: 131
+- Total Issues: 132
 - High Risk (declared): 8 → 31, 46, 49, 54, 62, 176, 237, 285
 - Cycle Detected: false (none)
-- Strict Orphans: 30
+- Strict Orphans: 29
 - Curated Orphan List Count: 31
 
 ## 2. 分布 (Distribution)
 
 ### Priority
-- P0: 28 (21.4%)
-- P1: 38 (29.0%)
-- P2: 61 (46.6%)
-- P3: 4 (3.1%)
+- P0: 28 (21.2%)
+- P1: 39 (29.5%)
+- P2: 61 (46.2%)
+- P3: 4 (3.0%)
 
 ### Phase
-- 1: 23 (17.6%)
-- 1-late: 14 (10.7%)
-- 2: 91 (69.5%)
+- 1: 23 (17.4%)
+- 1-late: 14 (10.6%)
+- 2: 92 (69.7%)
 - 3: 3 (2.3%)
 
 ### Area
-- artifacts: 30 (22.9%)
+- artifacts: 30 (22.7%)
 - automation: 5 (3.8%)
 - batch: 10 (7.6%)
-- config: 12 (9.2%)
-- docs: 12 (9.2%)
+- config: 12 (9.1%)
+- docs: 12 (9.1%)
 - flags: 1 (0.8%)
 - logging: 7 (5.3%)
 - observability: 5 (3.8%)
 - plugins: 1 (0.8%)
 - quality: 1 (0.8%)
-- runner: 24 (18.3%)
+- runner: 25 (18.9%)
 - security: 5 (3.8%)
 - test: 1 (0.8%)
-- testing: 4 (3.1%)
-- uiux: 13 (9.9%)
+- testing: 4 (3.0%)
+- uiux: 13 (9.8%)
 
 ### Risk
 - high: 8 (6.1%)
-- low: 12 (9.2%)
+- low: 12 (9.1%)
 - medium: 3 (2.3%)
-- none: 108 (82.4%)
+- none: 109 (82.6%)
 
 ## 3. リスク詳細 (High / Medium / etc.)
 
@@ -85,7 +85,6 @@ Strict Orphans (自動抽出 = 依存なし & 参照されず):
 - 241: P0: Fix Unlock-Future type browser automation - Operations hang without execution
 - 244: [docs][feat] action_runner_template 利用方法ドキュメント整備 & 実装サンプル追加
 - 255: git-scriptのURL評価制限緩和
-- 264: リファクタ提案: 大きすぎる Python ファイルの分割とモジュール化
 - 276: Batch: Recording file not copied to artifacts runs folder when using CSV batch
 - 277: Artifacts UI: Provide UI listing for screenshots, text & element extracts
 - 279: Config: Consolidate configuration menus, env files, and defaults
@@ -127,7 +126,7 @@ Curated Orphan List (summary.data_quality_checks.orphan_issues_without_dependent
 - 320: feat: Auto-discovery and import of browser automation commands from remote llms.txt files
 
 Missing Strict Orphans in curated list: (none)
-Extra non-strict entries in curated list (WARNING only): 320
+Extra non-strict entries in curated list (WARNING only): 264, 320
 
 ## 5. クリティカルパス推定
 
@@ -168,6 +167,7 @@ Sorted By: critical_path_rank
 | 222 | [logging][feat] ログ出力ディレクトリ/カテゴリ標準化 & src/logs/ 廃止 | P1 | 2 | logging |  | 2 | 4 | 2 | 1 |  |
 | 304 | [service] 🎥 Recordings: 一覧取得サービス/API (Flag連携) [Sub of #302] | P2 | 2 | artifacts |  | 2 | 2 | 2 | 1 | #309 |
 | 306 | [worker] 🎥 Recordings: GIF変換ワーカー/キャッシュ + Flag [Sub of #302] | P2 | 2 | artifacts |  | 2 | 1 | 1 | 1 |  |
+| 329 | Split script/script_manager.py into executor modules | P1 | 2 | runner |  | 2 | 1 | 1 | 0 | #334 |
 | 33 | スクリーンショット取得ユーティリティ | P0 | 1 | artifacts |  | 2 | 1 | 1 | 3 |  |
 | 36 | アーティファクト一覧 API | P1 | 1 | artifacts |  | 2 | 2 | 1 | 1 | #95 |
 | 37 | 動画アーティファクト保持期間 | P1 | 1 | artifacts |  | 2 | 3 | 1 | 1 | #99 |
@@ -230,7 +230,7 @@ Sorted By: critical_path_rank
 | 251 | Phase2-14 Config Conflicts | P0 | 2 | config |  | 1 | 0 | 1 | 0 |  |
 | 255 | git-scriptのURL評価制限緩和 | P2 | 2 | runner |  | 1 | 0 | 0 | 0 |  |
 | 257 | [batch] CSV Batch Job Execution Not Triggered - Browser Automation Missing | P0 | 2 | batch |  | 1 | 3 | 2 | 0 |  |
-| 264 | リファクタ提案: 大きすぎる Python ファイルの分割とモジュール化 | P2 | 2 | docs |  | 1 | 0 | 0 | 0 |  |
+| 264 | リファクタ提案: 大きすぎる Python ファイルの分割とモジュール化 | P2 | 2 | docs |  | 1 | 0 | 0 | 1 |  |
 | 265 | 改善提案: 複数フォルダ配下の録画ファイルを再帰的に発見・一覧表示 | P2 | 2 | artifacts |  | 1 | 0 | 0 | 3 | #317 |
 | 266 | Discovery: 録画ファイル検出ユーティリティ（Discovery） | P2 | 2 | artifacts |  | 1 | 1 | 1 | 0 |  |
 | 267 | API: 録画ファイル検索 API 設計 | P2 | 2 | artifacts |  | 1 | 2 | 2 | 0 |  |
@@ -481,6 +481,15 @@ Sorted By: critical_path_rank
 - Depends (1): 302
 - Dependents (1): 307
 - Progress: {"state": "in-progress", "note": "implementation complete; PR #311 awaiting merge"}
+
+### Issue 329: Split script/script_manager.py into executor modules
+- Priority: P1, Phase: 2, Area: runner
+- Risk: (none)
+- CriticalPathRank: 2
+- LongestDistance: 1
+- Depends (1): 264
+- Dependents (0): (none)
+- Progress: {"state": "in-progress", "note": "Phase 4 done (PR #332 merged: git_operations, artifact_management); Phase 2 in PR #334 (open: browser_control_executor, process_helpers)", "primary_pr": 334, "related_prs": [332]}
 
 ### Issue 33: スクリーンショット取得ユーティリティ
 - Priority: P0, Phase: 1, Area: artifacts
@@ -1037,7 +1046,7 @@ Sorted By: critical_path_rank
 - CriticalPathRank: 1
 - LongestDistance: 0
 - Depends (0): (none)
-- Dependents (0): (none)
+- Dependents (1): 329
 - Progress: {"state": "open"}
 
 ### Issue 265: 改善提案: 複数フォルダ配下の録画ファイルを再帰的に発見・一覧表示
