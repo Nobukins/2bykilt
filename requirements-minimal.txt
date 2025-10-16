@@ -14,7 +14,7 @@ python-multipart==0.0.20
 # Note: Avoid using gr.JSON component as it causes JSON schema bugs
 # Use gr.Code(language="json") instead for JSON display
 gradio>=5.10.0
-gradio_client>=1.5.3
+gradio_client==1.13.3
 
 # Browser Automation (Core)
 playwright==1.51.0
