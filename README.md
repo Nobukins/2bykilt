@@ -369,6 +369,165 @@ export ENABLE_LLM=false
 python bykilt.py
 ```
 
+---
+
+## 📋 ENABLE_LLM と Feature Flags の使い分け
+
+2bykiltでは、**ENABLE_LLM環境変数**と**Feature Flags**という2つの設定システムがあり、それぞれ異なる目的で使用されます。
+
+### 🎯 基本的な違い
+
+| 項目 | ENABLE_LLM | Feature Flags |
+|------|-----------|---------------|
+| **目的** | LLM機能全体のON/OFF | 個別機能の細かい制御 |
+| **スコープ** | アプリケーション全体 | 機能単位 |
+| **設定方法** | 環境変数 | YAMLファイル |
+| **変更タイミング** | 起動時のみ | ランタイム変更可能 |
+| **影響範囲** | 依存関係・インポート | 機能の動作 |
+
+### 🔧 ENABLE_LLM（環境変数）
+
+**役割**: LLM関連の依存関係とモジュールの読み込みを制御
+
+```bash
+# LLM機能を無効化（軽量モード）
+export ENABLE_LLM=false
+python bykilt.py
+
+# LLM機能を有効化（フル機能モード）
+export ENABLE_LLM=true
+python bykilt.py
+```
+
+**制御する内容**:
+- ✅ LLMライブラリ（langchain, openai等）のインポート
+- ✅ Agent関連モジュールの読み込み
+- ✅ LLM依存機能の初期化
+- ✅ CI/CDでのテスト実行制御
+
+**使用シーン**:
+- 🚀 **本番環境**: ブラウザ自動化のみ使用 → `ENABLE_LLM=false`
+- 🧪 **開発環境**: AI機能も含めてテスト → `ENABLE_LLM=true`
+- ⚡ **軽量起動**: 依存関係を最小限に → `ENABLE_LLM=false`
+- 🔒 **セキュリティ**: LLM APIキーなし環境 → `ENABLE_LLM=false`
+
+### 🎛️ Feature Flags（機能フラグ）
+
+**役割**: 個別機能の動作を細かく制御
+
+```yaml
+# config/feature_flags.yaml
+artifacts:
+  recursive_recordings_enabled: true    # 録画の再帰的スキャン
+  recordings_gif_fallback_enabled: true # GIFフォールバック生成
+
+ui:
+  trace_viewer_enabled: true            # トレースビューアの表示
+  artifacts_panel_enabled: true         # アーティファクトパネル
+
+security:
+  allow_pickle_config: false            # Pickle設定ファイルの許可
+```
+
+**制御する内容**:
+- ✅ UI要素の表示/非表示
+- ✅ 録画機能の動作モード
+- ✅ アーティファクト処理方法
+- ✅ セキュリティポリシー
+- ✅ 実験的機能のON/OFF
+
+**使用シーン**:
+- 🎨 **UI カスタマイズ**: 不要なパネルを非表示
+- 🔬 **機能テスト**: 新機能を段階的にロールアウト
+- 🎭 **環境別設定**: dev/staging/prodで異なる動作
+- 🐛 **デバッグ**: 問題のある機能を一時的に無効化
+
+### 🤝 組み合わせパターン
+
+#### パターン1: 軽量本番環境
+```bash
+# 環境変数
+export ENABLE_LLM=false
+
+# Feature Flags (config/prod/feature_flags.yaml)
+ui:
+  trace_viewer_enabled: false      # トレース機能不要
+  artifacts_panel_enabled: true    # アーティファクトのみ使用
+artifacts:
+  recursive_recordings_enabled: true
+  recordings_gif_fallback_enabled: true  # 動画プレビュー代替
+```
+**用途**: LLM不要、録画とアーティファクトのみ使用
+
+#### パターン2: フル機能開発環境
+```bash
+# 環境変数
+export ENABLE_LLM=true
+
+# Feature Flags (config/dev/feature_flags.yaml)
+ui:
+  trace_viewer_enabled: true       # 全機能有効
+  artifacts_panel_enabled: true
+artifacts:
+  recursive_recordings_enabled: true
+  recordings_gif_fallback_enabled: false  # 動画を直接プレビュー
+```
+**用途**: 開発時の全機能テスト
+
+#### パターン3: CI/CD環境
+```bash
+# 環境変数
+export ENABLE_LLM=false  # LLM APIキー不要
+
+# Feature Flags (テスト時のみ有効)
+ui:
+  trace_viewer_enabled: false
+  artifacts_panel_enabled: false
+```
+**用途**: 自動テスト実行、最小限の機能のみ
+
+### 🎓 実践的な使い分けガイド
+
+**Q: ブラウザ自動化だけ使いたい**
+```bash
+export ENABLE_LLM=false  # ← これだけでOK
+python bykilt.py
+```
+
+**Q: 録画機能の動作を変更したい**
+```yaml
+# config/feature_flags.yaml で調整
+artifacts:
+  recursive_recordings_enabled: true  # ← これを変更
+```
+
+**Q: UI のパネルを非表示にしたい**
+```yaml
+# config/feature_flags.yaml で調整
+ui:
+  trace_viewer_enabled: false  # ← これを変更
+```
+
+**Q: LLM機能を試したい**
+```bash
+# 1. 依存関係をインストール
+pip install -r requirements.txt
+
+# 2. LLM有効化
+export ENABLE_LLM=true
+
+# 3. 起動
+python bykilt.py
+```
+
+### 📚 詳細ドキュメント
+
+- **Feature Flags 一覧**: [docs/feature_flags/FLAGS.md](docs/feature_flags/FLAGS.md)
+- **設定ファイル構造**: [config/README.md](config/README.md)
+- **ENABLE_LLM の実装**: [docs/ENABLE_LLM.md](docs/ENABLE_LLM.md) (存在する場合)
+
+---
+
 ### 🧙‍♂️ フル機能インストール
 LLM機能も含めた全機能を利用：
 
