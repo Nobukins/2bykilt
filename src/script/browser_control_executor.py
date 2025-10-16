@@ -198,7 +198,7 @@ markers =
     except Exception as e:
         logger.warning(f"⚠️ Could not load browser configuration: {e}")
         logger.info("Using default Playwright browser settings")
-        # フォールバック: 環境変数から直接設定
+        # Fallback: Set directly from environment variable
         if browser_type:
             env['BYKILT_BROWSER_TYPE'] = browser_type
             command.extend(['--browser-type', 'chromium'])
