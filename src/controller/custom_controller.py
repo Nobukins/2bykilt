@@ -27,7 +27,6 @@ if not _ENABLE_LLM:
         "2. Enable LLM: export ENABLE_LLM=true or set in .env file"
     )
 
-import pdb
 
 import pyperclip
 from typing import Optional, Type
