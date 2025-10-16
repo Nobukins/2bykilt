@@ -6,11 +6,8 @@ exceptions occur during command execution.
 """
 
 import pytest
-import sys
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import patch, AsyncMock
 from src.utils.app_logger import get_app_logger
-
-
 @pytest.mark.asyncio
 async def test_log_capture_cleanup_on_browser_control_exception():
     """Test that log capture is stopped when browser-control execution raises exception."""
