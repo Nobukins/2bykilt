@@ -10,11 +10,11 @@ uvicorn==0.34.3
 starlette==0.46.2
 python-multipart==0.0.20
 
-# UI Framework (Gradio 4.26.0 - JSON schema互換性確保)
-# Note: Gradio 4.44.1+ and 5.x have JSON schema bug (TypeError: argument of type 'bool' is not iterable)
-# when accessing HTTP endpoints. Use 4.26.0 for stable operation.
-gradio==4.26.0
-gradio_client==0.15.1
+# UI Framework (Latest stable version)
+# Note: Avoid using gr.JSON component as it causes JSON schema bugs
+# Use gr.Code(language="json") instead for JSON display
+gradio>=5.10.0
+gradio_client>=1.5.3
 
 # Browser Automation (Core)
 playwright==1.51.0
