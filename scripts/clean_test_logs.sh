@@ -23,7 +23,12 @@ cd "$PROJECT_ROOT"
 TARGETS=(
   "logs/*"
   "artifacts/runs/*/logs"
+  "artifacts/runs/*/logs/*"
   "artifacts/runs/*/videos/*.log"
+  "artifacts/logs/*"
+  "src/artifacts/runs/*/logs"
+  "src/artifacts/runs/*/logs/*"
+  "src/artifacts/logs/*"
   "htmlcov"
   ".coverage"
   "coverage.xml"
@@ -38,6 +43,9 @@ TARGETS=(
 TARGETS+=(
   "artifacts/runs/TEST*-art"
   "artifacts/runs/*-art/tmp"
+  "src/artifacts/runs/TEST*-art"
+  "src/artifacts/runs/*-art/tmp"
+  "src/artifacts/runs/*-art/logs"
 )
 
 remove_path() {
