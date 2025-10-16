@@ -299,6 +299,9 @@ class BatchEngine:
                     # Path might not exist on this system, continue checking
                     continue
 
+    # ==================== CSV Parsing Helper Methods ====================
+    # These methods handle CSV file validation and parsing
+    
     def _validate_csv_file_exists_and_size(self, csv_path_obj: Path, csv_path: str):
         """
         Validate CSV file existence and size.
@@ -600,6 +603,9 @@ class BatchEngine:
             self.logger.error(error_msg)
             return None
 
+    # ==================== Manifest Management Methods ====================
+    # These methods handle loading, saving, and searching for batch manifests
+    
     def _load_manifest_from_current_context(self, batch_id: str) -> Optional[BatchManifest]:
         """Load batch manifest from current run context."""
         manifest_file = self.run_context.artifact_dir("batch") / BATCH_MANIFEST_FILENAME
@@ -660,6 +666,9 @@ class BatchEngine:
         
         return manifest
 
+    # ==================== Job Status Management Methods ====================
+    # These methods handle job status updates and artifact management
+    
     def update_job_status(self, job_id: str, status: str, error_message: Optional[str] = None):
         """
         Update the status of a specific job.
@@ -1063,6 +1072,9 @@ class BatchEngine:
         # Use default if not specified
         return max_retry_delay if max_retry_delay is not None else MAX_RETRY_DELAY
 
+    # ==================== Retry Management Methods ====================
+    # These methods handle job retry logic with exponential backoff
+    
     def retry_batch_jobs(self, batch_id: str, job_ids: List[str], max_retries: int = DEFAULT_MAX_RETRIES,
                         retry_delay: float = DEFAULT_RETRY_DELAY, backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
                         max_retry_delay: Optional[float] = None) -> Dict[str, Any]:
@@ -1366,6 +1378,9 @@ class BatchEngine:
         except Exception as e:
             self.logger.debug(f"Failed to record batch execution metrics: {e}")
 
+    # ==================== Batch Execution Methods ====================
+    # These methods handle the actual execution of batch jobs
+    
     async def execute_batch_jobs(self, batch_id: str, max_retries: int = DEFAULT_MAX_RETRIES,
                            retry_delay: float = DEFAULT_RETRY_DELAY, backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
                            max_retry_delay: Optional[float] = None, progress_callback: Optional[Callable[[int, int], None]] = None) -> Dict[str, Any]:
