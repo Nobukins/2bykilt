@@ -79,7 +79,9 @@ class TestBatchCLIIntegration:
         assert "✅ Batch status:" in status_output
         assert f"Batch ID: {batch_id}" in status_output
         assert "Run ID:" in status_output
-        assert "CSV Path: tests/batch/test.csv" in status_output
+        # CSV path is resolved to absolute path, so just check it ends with the expected path
+        assert "CSV Path:" in status_output
+        assert "tests/batch/test.csv" in status_output
         assert "Total jobs: 4" in status_output
         assert "Completed: 0" in status_output
         assert "Failed: 0" in status_output
