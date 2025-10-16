@@ -314,7 +314,7 @@ issues:
     dependents: []
   "91": {title: "統一録画パス Rollout (flag default 有効化 & legacy 廃止)", meta: {area: artifacts, type: chore, priority: P0, phase: "1-late", stability: core}, depends: ["28"], dependents: [], progress: {state: done, primary_pr: 105}, risk: null, critical_path_rank: 1}
   "173": {title: "[UI][batch][#40 follow-up] CSV Preview & Command Argument Mapping", meta: {area: batch, type: feat, priority: P2, phase: "2", stability: experimental}, depends: ["39", "40", "41", "42"], dependents: [], risk: null, critical_path_rank: 1}
-  "264": {title: "リファクタ提案: 大きすぎる Python ファイルの分割とモジュール化", meta: {area: docs, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "264": {title: "リファクタ提案: 大きすぎる Python ファイルの分割とモジュール化", meta: {area: docs, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: ["329"], risk: null, progress: {state: open}, critical_path_rank: 1}
   "265": {title: "改善提案: 複数フォルダ配下の録画ファイルを再帰的に発見・一覧表示", meta: {area: artifacts, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: ["266","267","268"], risk: null, progress: {state: in-progress, note: "partial: PR #317 implemented recursive scanning & filtering; multiple roots config pending", primary_pr: 317}, critical_path_rank: 1}
   "266": {title: "Discovery: 録画ファイル検出ユーティリティ（Discovery）", meta: {area: artifacts, type: enhancement, priority: P2, phase: "2", stability: core}, depends: ["265"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
   "267": {title: "API: 録画ファイル検索 API 設計", meta: {area: artifacts, type: enhancement, priority: P2, phase: "2", stability: core}, depends: ["265","266"], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
@@ -323,6 +323,7 @@ issues:
   "270": {title: "設計: Feature Flag 運用設計とメタデータ仕様", meta: {area: config, type: enhancement, priority: P1, phase: "1", stability: core}, depends: ["269"], dependents: ["271"], risk: null, progress: {state: open}, critical_path_rank: 1}
   "271": {title: "実装: Feature Flags コアライブラリと Profile ベースセットアップ", meta: {area: config, type: enhancement, priority: P1, phase: "1", stability: core}, depends: ["269","270"], dependents: ["272"], risk: null, progress: {state: open}, critical_path_rank: 1}
   "272": {title: "UI: Admin UI による Feature Flag 管理画面の実装", meta: {area: flags, type: enhancement, priority: P1, phase: "1", stability: core}, depends: ["269","271"], dependents: [], risk: null, progress: {state: done, primary_pr: 319}, critical_path_rank: 1}
+  "329": {title: "Split script/script_manager.py into executor modules", meta: {area: runner, type: refactor, priority: P1, phase: "2", stability: core}, depends: ["264"], dependents: [], risk: null, progress: {state: in-progress, note: "Phase 4 done (PR #332 merged: git_operations, artifact_management); Phase 2 in PR #334 (open: browser_control_executor, process_helpers)", primary_pr: 334, related_prs: [332]}, critical_path_rank: 2}
   "174": {title: "[artifacts][batch] Clarify Artifact Output & Access Flow", meta: {area: artifacts, type: docs, priority: P3, phase: "2", stability: core}, depends: ["28", "30", "33", "35", "39"], dependents: [], risk: low, critical_path_rank: 1}
   "154": {title: "pip-audit stabilization in CI with normalizer + targeted suppressions", meta: {area: security, type: fix, priority: P1, phase: "1", stability: core}, depends: [], dependents: [], risk: null, progress: {state: done, primary_pr: 160}, critical_path_rank: 1}
   "175": {title: "バッチ行単位成果物キャプチャ基盤 (スクリーンショット/要素値/ログ関連紐付け)", meta: {area: artifacts, type: feat, priority: P1, phase: "2", stability: experimental}, depends: ["39", "40", "41", "42", "33", "35"], dependents: ["176"], risk: medium, progress: {state: done, primary_pr: 181}, critical_path_rank: 2}
@@ -432,7 +433,7 @@ issues:
   "287": {title: "Template for new issue and new PR", meta: {area: docs, type: enhancement, priority: P3, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: done, primary_pr: 318}, critical_path_rank: 1}
   "320": {title: "feat: Auto-discovery and import of browser automation commands from remote llms.txt files", meta: {area: config, type: enhancement, priority: P0, phase: "2", stability: core}, depends: ["64"], dependents: [], risk: null, progress: {state: in-progress, note: "Phase 1+2 complete (PR #321 merged); Phase 3+4 in PR #322 (open)", primary_pr: 322, related_prs: [321]}, critical_path_rank: 1}
 summary:
-  total_issues: 131
+  total_issues: 132
   high_risk: ["31", "46", "49", "54", "62", "176", "237", "285"]
   longest_chain_example: ["302", "303", "304", "305"]
   data_quality_checks:
@@ -471,8 +472,9 @@ summary:
       - "320"
 
 last_synced:
-  utc: "2025-10-14T06:00:00Z"
+  utc: "2025-10-16T06:00:00Z"
   issues:
+    "329": "OPEN"    # Updated: Phase 2 PR #334 created, Phase 4 PR #332 merged
     "320": "OPEN"    # Updated: Phase 3+4 PR #322 created, awaiting review
     "315": "OPEN"
     "314": "OPEN"
