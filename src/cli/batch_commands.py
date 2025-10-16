@@ -50,7 +50,7 @@ def _resolve_csv_path(csv_path: str) -> Path:
     return resolved
 
 
-def _run_start_batch(csv_path: Path, run_context: RunContext, execute_immediately: bool):
+def _run_start_batch(csv_path: Path, run_context: RunContext, execute_immediately: bool) -> Any:
     """Execute the async start_batch helper from synchronous CLI code.
     
     Args:
