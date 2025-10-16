@@ -27,6 +27,18 @@ from ..runtime.run_context import RunContext
 from src.utils.fs_paths import get_artifacts_base_dir
 
 from .summary import BatchSummary
+from .exceptions import (
+    BatchEngineError,
+    ConfigurationError,
+    FileProcessingError,
+    SecurityError,
+)
+from .models import (
+    BatchJob,
+    BatchManifest,
+    BATCH_MANIFEST_FILENAME,
+    JOBS_DIRNAME,
+)
 
 if TYPE_CHECKING:
     from ..extraction.models import ExtractionResult
@@ -45,108 +57,6 @@ DEFAULT_MAX_RETRIES = 3  # Default maximum number of retry attempts
 DEFAULT_RETRY_DELAY = 1.0  # Default initial delay between retries in seconds
 DEFAULT_BACKOFF_FACTOR = 2.0  # Default exponential backoff multiplier
 MAX_RETRY_DELAY = 60.0  # Maximum retry delay in seconds (cap for exponential backoff)
-
-
-class BatchEngineError(Exception):
-    """Base exception for BatchEngine errors."""
-    pass
-
-
-class ConfigurationError(BatchEngineError):
-    """Raised when configuration is invalid."""
-    pass
-
-
-class FileProcessingError(BatchEngineError):
-    """
-    Raised when file processing fails.
-
-    This exception covers errors such as:
-    - CSV parsing errors (malformed rows, missing headers, etc.)
-    - File encoding issues (unsupported or invalid encoding)
-    - File size limits exceeded
-    - File not found or inaccessible
-    - Unsupported file format or MIME type
-    - Permission errors when reading files
-    - Any other errors encountered during file reading or processing
-
-    Catch this exception when handling file input/output operations in the batch engine.
-    """
-    pass
-
-
-class SecurityError(BatchEngineError):
-    """Raised when security violations are detected."""
-    pass
-
-
-# Constants
-BATCH_MANIFEST_FILENAME = "batch_manifest.json"
-JOBS_DIRNAME = "jobs"
-
-
-@dataclass
-class BatchJob:
-    """Represents a single batch job."""
-    job_id: str
-    run_id: str
-    row_data: Dict[str, Any]
-    status: str = "pending"  # pending, running, completed, failed
-    error_message: Optional[str] = None
-    created_at: Optional[str] = None
-    completed_at: Optional[str] = None
-    batch_id: Optional[str] = None  # Add batch_id for better metrics tracking
-    row_index: Optional[int] = None  # Row index in the original CSV
-    # Row-level artifacts (Issue #175 PoC): list of {type, path, created_at, meta?}
-    artifacts: Optional[List[Dict[str, Any]]] = None
-
-    def __post_init__(self):
-        if self.created_at is None:
-            self.created_at = datetime.now(timezone.utc).isoformat()
-        # Normalize artifacts container
-        if self.artifacts is None:
-            self.artifacts = []
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for JSON serialization."""
-        return asdict(self)
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'BatchJob':
-        """Create from dictionary."""
-        return cls(**data)
-
-
-@dataclass
-class BatchManifest:
-    """Manifest for batch execution."""
-    batch_id: str
-    run_id: str
-    csv_path: str
-    total_jobs: int
-    completed_jobs: int = 0
-    failed_jobs: int = 0
-    created_at: Optional[str] = None
-    jobs: Optional[List[BatchJob]] = None
-
-    def __post_init__(self):
-        if self.created_at is None:
-            self.created_at = datetime.now(timezone.utc).isoformat()
-        if self.jobs is None:
-            self.jobs = []
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for JSON serialization."""
-        data = asdict(self)
-        data['jobs'] = [job.to_dict() for job in self.jobs]
-        return data
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'BatchManifest':
-        """Create from dictionary."""
-        jobs_data = data.pop('jobs', [])
-        jobs = [BatchJob.from_dict(job_data) for job_data in jobs_data]
-        return cls(jobs=jobs, **data)
 
 
 class BatchEngine:

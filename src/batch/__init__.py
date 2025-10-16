@@ -8,8 +8,20 @@ tasks based on CSV input files, with job tracking and manifest management.
 
 __version__ = "0.1.0"
 
-from .engine import BatchEngine, BatchManifest, BatchJob, start_batch
+from .engine import BatchEngine, start_batch
 from .summary import BatchSummary, BatchSummaryGenerator, generate_batch_summary
+from .exceptions import (
+    BatchEngineError,
+    ConfigurationError,
+    FileProcessingError,
+    SecurityError,
+)
+from .models import (
+    BatchJob,
+    BatchManifest,
+    BATCH_MANIFEST_FILENAME,
+    JOBS_DIRNAME,
+)
 
 __all__ = [
     "BatchEngine",
@@ -18,5 +30,11 @@ __all__ = [
     "BatchSummary",
     "BatchSummaryGenerator",
     "start_batch",
-    "generate_batch_summary"
+    "generate_batch_summary",
+    "BatchEngineError",
+    "ConfigurationError",
+    "FileProcessingError",
+    "SecurityError",
+    "BATCH_MANIFEST_FILENAME",
+    "JOBS_DIRNAME",
 ]
