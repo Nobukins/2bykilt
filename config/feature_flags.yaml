@@ -79,3 +79,18 @@ flags:
     description: "git-script カスタムドメイン許可機能を有効化 (#255)"
     type: bool
     default: true
+  security.sandbox_enabled:
+    description: "実行サンドボックス機能を有効化 (#62)"
+    type: bool
+    default: true
+  security.sandbox_mode:
+    description: "サンドボックスモード (strict/moderate/permissive/disabled, #62)"
+    type: str
+    default: moderate
+  security.sandbox_resource_limits:
+    description: "サンドボックスリソース制限設定 (#62)"
+    type: dict
+    default:
+      cpu_time_sec: 300
+      memory_mb: 512
+      disk_mb: 100
