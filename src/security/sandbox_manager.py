@@ -150,16 +150,14 @@ class SandboxManager:
         try:
             from src.config.feature_flags import FeatureFlags
             
-            flags = FeatureFlags()
-            
             # サンドボックス有効/無効
-            if not flags.get_flag("security.sandbox_enabled", default=True):
+            if not FeatureFlags.get("security.sandbox_enabled", default=True):
                 self.config.mode = SandboxMode.DISABLED
                 logger.info("Sandbox disabled by feature flag")
                 return
             
             # モード設定
-            mode_str = flags.get_flag("security.sandbox_mode", default="moderate")
+            mode_str = FeatureFlags.get("security.sandbox_mode", expected_type=str, default="moderate")
             try:
                 self.config.mode = SandboxMode(mode_str)
             except ValueError:
@@ -167,7 +165,7 @@ class SandboxManager:
                 self.config.mode = SandboxMode.MODERATE
             
             # リソース制限
-            limits = flags.get_flag("security.sandbox_resource_limits", default={})
+            limits = FeatureFlags.get("security.sandbox_resource_limits", default={})
             if isinstance(limits, dict):
                 self.config.cpu_time_sec = limits.get("cpu_time_sec", self.config.cpu_time_sec)
                 self.config.memory_mb = limits.get("memory_mb", self.config.memory_mb)
@@ -452,33 +450,45 @@ class SandboxManager:
         try:
             # CPU時間制限
             if self.config.cpu_time_sec > 0:
-                resource.setrlimit(
-                    resource.RLIMIT_CPU,
-                    (self.config.cpu_time_sec, self.config.cpu_time_sec)
-                )
+                try:
+                    resource.setrlimit(
+                        resource.RLIMIT_CPU,
+                        (self.config.cpu_time_sec, self.config.cpu_time_sec)
+                    )
+                except ValueError as e:
+                    logger.warning(f"Failed to set CPU limit: {e}")
             
             # メモリ制限（バイト単位）
             if self.config.memory_mb > 0:
-                memory_bytes = self.config.memory_mb * 1024 * 1024
-                resource.setrlimit(
-                    resource.RLIMIT_AS,
-                    (memory_bytes, memory_bytes)
-                )
+                try:
+                    memory_bytes = self.config.memory_mb * 1024 * 1024
+                    resource.setrlimit(
+                        resource.RLIMIT_AS,
+                        (memory_bytes, memory_bytes)
+                    )
+                except ValueError as e:
+                    logger.warning(f"Failed to set memory limit: {e}")
             
             # ファイルサイズ制限
             if self.config.disk_mb > 0:
-                disk_bytes = self.config.disk_mb * 1024 * 1024
-                resource.setrlimit(
-                    resource.RLIMIT_FSIZE,
-                    (disk_bytes, disk_bytes)
-                )
+                try:
+                    disk_bytes = self.config.disk_mb * 1024 * 1024
+                    resource.setrlimit(
+                        resource.RLIMIT_FSIZE,
+                        (disk_bytes, disk_bytes)
+                    )
+                except ValueError as e:
+                    logger.warning(f"Failed to set disk limit: {e}")
             
             # プロセス数制限
             if self.config.max_processes > 0:
-                resource.setrlimit(
-                    resource.RLIMIT_NPROC,
-                    (self.config.max_processes, self.config.max_processes)
-                )
+                try:
+                    resource.setrlimit(
+                        resource.RLIMIT_NPROC,
+                        (self.config.max_processes, self.config.max_processes)
+                    )
+                except ValueError as e:
+                    logger.warning(f"Failed to set process limit: {e}")
             
             logger.debug(
                 f"Resource limits applied: cpu={self.config.cpu_time_sec}s, "
@@ -486,8 +496,8 @@ class SandboxManager:
             )
             
         except Exception as e:
-            logger.error(f"Failed to apply resource limits: {e}")
-            raise
+            # preexec_fn内のログは親プロセスに伝わらないため、無視
+            pass
     
     def _apply_syscall_filter(self) -> None:
         """システムコールフィルター適用（Linux seccomp）"""

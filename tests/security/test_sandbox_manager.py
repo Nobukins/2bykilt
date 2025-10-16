@@ -68,8 +68,12 @@ class TestSandboxManagerBasics:
         assert manager.config.cpu_time_sec == 300
         assert manager.config.memory_mb == 512
     
-    def test_initialization_custom_config(self, default_config):
+    @patch('src.config.feature_flags.FeatureFlags.get')
+    def test_initialization_custom_config(self, mock_get, default_config):
         """カスタム設定での初期化"""
+        # Feature Flagsを無効化してカスタム設定のみを使用
+        mock_get.side_effect = lambda key, **kwargs: kwargs.get('default')
+        
         manager = SandboxManager(default_config)
         assert manager.config.mode == SandboxMode.MODERATE
         assert manager.config.cpu_time_sec == 10
@@ -225,36 +229,31 @@ class TestResourceLimits:
 class TestFeatureFlagsIntegration:
     """Feature Flags統合テスト"""
     
-    @patch('src.security.sandbox_manager.FeatureFlags')
-    def test_feature_flag_disabled(self, mock_flags):
+    @patch('src.config.feature_flags.FeatureFlags.get')
+    def test_feature_flag_disabled(self, mock_get):
         """Feature Flagでサンドボックス無効化"""
-        mock_instance = MagicMock()
-        mock_instance.get_flag.side_effect = lambda key, default=None: {
+        mock_get.side_effect = lambda key, **kwargs: {
             "security.sandbox_enabled": False
-        }.get(key, default)
-        mock_flags.return_value = mock_instance
+        }.get(key, kwargs.get('default'))
         
         manager = SandboxManager()
         assert manager.config.mode == SandboxMode.DISABLED
     
-    @patch('src.security.sandbox_manager.FeatureFlags')
-    def test_feature_flag_strict_mode(self, mock_flags):
+    @patch('src.config.feature_flags.FeatureFlags.get')
+    def test_feature_flag_strict_mode(self, mock_get):
         """Feature FlagでSTRICTモード設定"""
-        mock_instance = MagicMock()
-        mock_instance.get_flag.side_effect = lambda key, default=None: {
+        mock_get.side_effect = lambda key, **kwargs: {
             "security.sandbox_enabled": True,
             "security.sandbox_mode": "strict"
-        }.get(key, default)
-        mock_flags.return_value = mock_instance
+        }.get(key, kwargs.get('default'))
         
         manager = SandboxManager()
         assert manager.config.mode == SandboxMode.STRICT
     
-    @patch('src.security.sandbox_manager.FeatureFlags')
-    def test_feature_flag_custom_limits(self, mock_flags):
+    @patch('src.config.feature_flags.FeatureFlags.get')
+    def test_feature_flag_custom_limits(self, mock_get):
         """Feature Flagでカスタムリソース制限"""
-        mock_instance = MagicMock()
-        mock_instance.get_flag.side_effect = lambda key, default=None: {
+        mock_get.side_effect = lambda key, **kwargs: {
             "security.sandbox_enabled": True,
             "security.sandbox_mode": "moderate",
             "security.sandbox_resource_limits": {
@@ -262,8 +261,7 @@ class TestFeatureFlagsIntegration:
                 "memory_mb": 256,
                 "disk_mb": 50
             }
-        }.get(key, default)
-        mock_flags.return_value = mock_instance
+        }.get(key, kwargs.get('default'))
         
         manager = SandboxManager()
         assert manager.config.cpu_time_sec == 60
