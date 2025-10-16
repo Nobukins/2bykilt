@@ -54,6 +54,7 @@ if ENABLE_LLM:
         class Controller: pass  # type: ignore
         class DoneAction: pass  # type: ignore
         class BrowserContextWindowSize: pass  # type: ignore
+        class BrowserContextConfig: pass  # type: ignore
 else:
     LLM_RESEARCH_AVAILABLE = False
     print("ℹ️ LLM research functionality is disabled (ENABLE_LLM=false)")
