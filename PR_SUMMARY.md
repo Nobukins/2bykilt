@@ -12,7 +12,9 @@ This PR implements **complete LLM dependency isolation** for 2Bykilt, enabling z
 ✅ **Import Guards**: 12 LLM modules blocked at import time  
 ✅ **Verification Suite**: 39 tests (18 static + 21 integration) - 100% passing  
 ✅ **Enterprise Documentation**: Complete deployment guide for AI governance compliance  
-✅ **Backward Compatible**: Full edition continues to work with `ENABLE_LLM=true`
+✅ **Backward Compatible**: Full edition continues to work with `ENABLE_LLM=true`  
+✅ **Gradio Compatibility**: Latest Gradio 5.49.1 working without JSON schema bugs  
+✅ **HTTP Access Verified**: All UI endpoints functional with curl testing
 
 ## 📊 Changes Overview
 
@@ -129,6 +131,42 @@ ENABLE_LLM=false RUN_LOCAL_INTEGRATION=1 pytest tests/integration/test_minimal_e
 - Security verification procedures
 - FAQ for enterprise IT teams
 - Audit logging examples
+
+### 6. Gradio UI Compatibility Fix (Additional)
+
+**Issue**: HTTP 500 errors when accessing Gradio UI endpoints
+
+**Root Cause**: 
+- `gr.JSON` component generates `additionalProperties: true` as `bool` in JSON schema
+- Gradio's `json_schema_to_python_type()` fails with `TypeError: argument of type 'bool' is not iterable`
+- Affects `/info` endpoint and prevents UI button events from working
+
+**Solution**:
+- Replaced all `gr.JSON` components with `gr.Code(language="json", interactive=False)`
+- Updated 5 files to return JSON strings instead of dicts:
+  - `bykilt.py`: extraction results
+  - `src/utils/debug_panel.py`: diagnosis outputs
+  - `src/ui/admin/feature_flag_panel.py`: flag details
+  - `src/ui/admin/artifacts_panel.py`: artifact previews
+  - `src/ui/components/trace_viewer.py`: trace metadata
+- Upgraded to Gradio 5.49.1 (latest stable)
+- Updated `requirements-minimal.txt`: `gradio>=5.10.0`
+
+**Verification**:
+```bash
+# HTTP access test (mandatory user requirement)
+curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" http://127.0.0.1:7796/
+# Result: HTTP Status: 200 ✅
+```
+
+### 7. Documentation Enhancement
+
+**Added**: `README.md` - ENABLE_LLM vs Feature Flags explanation
+- Comparison table showing differences
+- Detailed explanation of each system
+- 3 practical combination patterns
+- Q&A guide for common scenarios
+- Links to related documentation
 
 ## 🧪 Testing
 
