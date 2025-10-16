@@ -22,6 +22,17 @@ from src.script.git_operations import (
 from src.script.artifact_management import (
     move_script_files_to_artifacts,
 )
+# Import browser control executor from new module (Issue #329 Phase 2)
+from src.script.browser_control_executor import (
+    execute_browser_control,
+)
+
+# Import process helpers from new module (Issue #329 Phase 2)  
+from src.script.process_helpers import (
+    log_subprocess_output,
+    process_execution,
+)
+
 
 # Initialize directory migration on module import
 try:
@@ -39,6 +50,10 @@ except ImportError:
 except Exception as e:
     logger.error(f"❌ Migration initialization failed: {e}")
 
+
+# NOTE (Issue #329 Phase 2): generate_browser_script, log_subprocess_output, and process_execution
+# are now available from dedicated modules (see imports above).
+# The local definitions below are kept temporarily for backward compatibility.
 
 def generate_browser_script(script_info: Dict[str, Any], params: Dict[str, str], headless: bool = False) -> str:
     """
@@ -538,172 +553,14 @@ async def run_script(
             script_type = script_info['type']
             
             if script_type == 'browser-control':
-                # Ensure scripts directory exists in myscript (not artifacts)
-                script_dir = 'myscript'
-                os.makedirs(script_dir, exist_ok=True)
-
-                # Log the parameters being used
-                logger.info(f"Generating browser control script with params: {params}")
-                logger.info(f"🔍 Headless mode setting: {headless}")
-
-                # Generate and save the script with headless parameter
-                script_content = generate_browser_script(script_info, params, headless)
-                script_path = os.path.join(script_dir, 'browser_control.py')
-
-                # Create pytest.ini if needed
-                pytest_ini_path = os.path.join(script_dir, 'pytest.ini')
-                if not os.path.exists(pytest_ini_path):
-                    with open(pytest_ini_path, 'w', encoding='utf-8') as f:
-                        f.write('''[pytest]
-asyncio_mode = auto
-asyncio_default_fixture_loop_scope = function
-addopts = --verbose --capture=no
-markers =
-    browser_control: mark tests as browser control automation
-''')
-
-                # Save the generated script
-                with open(script_path, 'w', encoding='utf-8') as f:
-                    f.write(script_content)
-
-                logger.info(f"Generated browser control script at: {script_path}")
-                
-                # Build pytest command with appropriate parameters
-                # Use pytest to ensure fixtures work properly for recording
-                import sys as _sys
-                # Use relative path since we're running pytest from within the script_dir
-                relative_script_path = os.path.basename(script_path)
-                # Use pytest to run the test function with fixtures
-                command = [_sys.executable, "-m", "pytest", relative_script_path + "::test_browser_control", "-v", "--tb=short"]
-                
-                logger.info(f"🔧 Final command: {' '.join(command)}")
-                
-                # Add slowmo parameter if specified
-                slowmo = script_info.get('slowmo')
-                if slowmo is not None:
-                    try:
-                        slowmo_ms = int(slowmo)
-                        command.extend(['--slowmo', str(slowmo_ms)])
-                        logger.info(f"Slow motion enabled with {slowmo_ms}ms delay")
-                    except ValueError:
-                        logger.warning(f"Invalid slowmo value: {slowmo}, ignoring")
-                
-                # Set up environment variables including browser configuration
-                env = os.environ.copy()
-                
-                # Set headless mode environment variable for script fixtures
-                env['BYKILT_HEADLESS'] = 'true' if headless else 'false'
-                logger.info(f"🔍 Setting BYKILT_HEADLESS environment variable to: {env['BYKILT_HEADLESS']}")
-                
-                # Get browser configuration from BrowserConfig
-                try:
-                    from src.browser.browser_config import browser_config
-                    
-                    # Check for browser type override from environment (browser-control)
-                    override_browser = os.environ.get('BYKILT_OVERRIDE_BROWSER_TYPE')
-                    if browser_type:
-                        current_browser = browser_type
-                        env['BYKILT_OVERRIDE_BROWSER_TYPE'] = browser_type
-                        logger.info(f"🎯 Using browser type from parameter: {browser_type}")
-                    elif override_browser:
-                        current_browser = override_browser
-                        logger.info(f"🎯 Using override browser type: {override_browser}")
-                    else:
-                        current_browser = browser_config.get_current_browser()
-                        logger.info(f"🔍 Using current browser from config: {current_browser}")
-                    
-                    browser_settings = browser_config.get_browser_settings(current_browser)
-                    
-                    # Set browser-specific environment variables for Playwright
-                    env['BYKILT_BROWSER_TYPE'] = current_browser
-                    logger.info(f"🎯 Browser type set to: {current_browser}")
-                    
-                    # Set browser executable path if available for Chrome/Edge
-                    browser_path = browser_settings.get("path")
-                    if current_browser == "chrome" and browser_path and os.path.exists(browser_path):
-                        env['PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'] = browser_path
-                        logger.info(f"🎯 Chrome executable path set to: {browser_path}")
-                        command.extend(['--browser-type', 'chrome'])
-                        logger.info(f"🔍 Using Chrome browser at {browser_path}")
-                    elif current_browser == "edge" and browser_path and os.path.exists(browser_path):
-                        env['PLAYWRIGHT_EDGE_EXECUTABLE_PATH'] = browser_path
-                        logger.info(f"🎯 Edge executable path set to: {browser_path}")
-                        command.extend(['--browser-type', 'msedge'])
-                        logger.info(f"🔍 Using Edge browser at {browser_path}")
-                    elif current_browser in ["chrome", "edge", "chromium"]:
-                        if current_browser == "chrome":
-                            command.extend(['--browser-type', 'chrome'])
-                        elif current_browser == "edge":
-                            command.extend(['--browser-type', 'msedge'])
-                        else:
-                            command.extend(['--browser-type', 'chromium'])
-                        logger.info(f"🔍 Using default {current_browser} browser")
-                    elif current_browser in ["firefox", "webkit"]:
-                        command.extend(['--browser-type', current_browser])
-                        logger.info(f"🔍 Using {current_browser} browser")
-                        
-                except Exception as e:
-                    logger.warning(f"⚠️ Could not load browser configuration: {e}")
-                    logger.info("Using default Playwright browser settings")
-                    # フォールバック: 環境変数から直接設定
-                    if browser_type:
-                        env['BYKILT_BROWSER_TYPE'] = browser_type
-                        command.extend(['--browser-type', 'chromium'])
-                        logger.info(f"🔍 Using chromium browser type for better compatibility")
-                
-                # Add recording configuration if enabled
-                if save_recording_path:
-                    # Use unified recording directory resolver
-                    from src.utils.recording_dir_resolver import create_or_get_recording_dir
-                    unified_recording_path = str(create_or_get_recording_dir(save_recording_path))
-                    env['RECORDING_PATH'] = unified_recording_path
-                    logger.info(f"Recording enabled, saving to: {unified_recording_path}")
-                
-                # Headless mode is configured via env/fixtures in generated script; avoid pytest CLI flags
-                if headless:
-                    logger.info("🔍 Headless mode requested (handled via script fixtures)")
-                
-                # Execute the pytest command
-                process = await asyncio.create_subprocess_exec(
-                    *command,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                    env=env,
-                    cwd=script_dir
+                # Delegate to browser_control_executor (Issue #329 Phase 2)
+                return await execute_browser_control(
+                    script_info=script_info,
+                    params=params,
+                    headless=headless,
+                    save_recording_path=save_recording_path,
+                    browser_type=browser_type,
                 )
-                
-                stdout, stderr = await process.communicate()
-                
-                # Process output
-                output_lines = []
-                if stdout:
-                    for line in stdout.decode('utf-8').splitlines():
-                        if line.strip():
-                            logger.info(f"PYTEST: {line.strip()}")
-                            output_lines.append(line.strip())
-                
-                if stderr:
-                    for line in stderr.decode('utf-8').splitlines():
-                        if line.strip():
-                            logger.error(f"PYTEST ERROR: {line.strip()}")
-                
-                # Check return code and return results
-                if process.returncode != 0:
-                    error_msg = f"Browser control script execution failed with exit code {process.returncode}"
-                    logger.error(error_msg)
-                    return error_msg, script_path
-                else:
-                    success_msg = "Script executed successfully"
-                    logger.info(success_msg)
-                    
-                    # Move generated files from myscript to artifacts directory
-                    try:
-                        await move_script_files_to_artifacts(script_info, script_path, 'browser-control')
-                        logger.info("✅ Browser control files archived to artifacts directory")
-                    except Exception as e:
-                        logger.warning(f"⚠️ Failed to move browser control files to artifacts: {e}")
-                    
-                    return success_msg, script_path
             elif script_type == 'git-script':
                 # Handle git-script type with NEW 2024+ METHOD
                 logger.info(f"🔍 Processing git-script: {script_info.get('name', 'unknown')}")

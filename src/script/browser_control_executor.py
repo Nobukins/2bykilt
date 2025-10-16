@@ -57,7 +57,9 @@ def generate_browser_script(script_info: Dict[str, Any], params: Dict[str, str],
     }
     
     # Load template and render
-    template_dir = Path(__file__).parent.parent / "templates"
+    # Template directory is at project root level (not src/templates)
+    project_root = Path(__file__).parent.parent.parent
+    template_dir = project_root / "templates"
     env = Environment(
         loader=FileSystemLoader(str(template_dir)),
         autoescape=select_autoescape(['html', 'xml'])
