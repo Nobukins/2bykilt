@@ -19,6 +19,13 @@ except ImportError:
     def create_or_get_recording_dir():
         return Path("./tmp/record_videos").resolve()
 
+# Check LLM availability (Issue #43)
+try:
+    from .feature_flags import is_llm_enabled
+    _LLM_ENABLED = is_llm_enabled()
+except Exception:
+    _LLM_ENABLED = os.getenv("ENABLE_LLM", "false").lower() == "true"
+
 
 class ConfigAdapter:
     """Adapter to bridge new and legacy configuration systems"""
@@ -68,6 +75,25 @@ class ConfigAdapter:
         development = config.get('development', {})
         task = config.get('task', {})
         
+        # Conditionally load LLM settings (Issue #43)
+        # When ENABLE_LLM=false, provide safe defaults that won't be used
+        if _LLM_ENABLED:
+            llm_provider = llm.get('provider', 'openai')
+            llm_model_name = llm.get('model_name', 'gpt-4o')
+            llm_num_ctx = llm.get('num_ctx', 32000)
+            llm_temperature = llm.get('temperature', 1.0)
+            llm_base_url = llm.get('base_url', '')
+            llm_api_key = llm.get('api_key', '')
+        else:
+            # Minimal mode: provide placeholder values
+            # These won't be used since LLM modules are not loaded
+            llm_provider = 'disabled'
+            llm_model_name = 'none'
+            llm_num_ctx = 0
+            llm_temperature = 0.0
+            llm_base_url = ''
+            llm_api_key = ''
+        
         # Map to legacy keys
         legacy_config = {
             # Agent settings
@@ -77,13 +103,13 @@ class ConfigAdapter:
             "use_vision": agent.get('use_vision', True),
             "tool_calling_method": agent.get('tool_calling_method', 'auto'),
             
-            # LLM settings
-            "llm_provider": llm.get('provider', 'openai'),
-            "llm_model_name": llm.get('model_name', 'gpt-4o'),
-            "llm_num_ctx": llm.get('num_ctx', 32000),
-            "llm_temperature": llm.get('temperature', 1.0),
-            "llm_base_url": llm.get('base_url', ''),
-            "llm_api_key": llm.get('api_key', ''),
+            # LLM settings (conditionally loaded)
+            "llm_provider": llm_provider,
+            "llm_model_name": llm_model_name,
+            "llm_num_ctx": llm_num_ctx,
+            "llm_temperature": llm_temperature,
+            "llm_base_url": llm_base_url,
+            "llm_api_key": llm_api_key,
             
             # Browser settings
             "use_own_browser": browser.get('use_own_browser', False),

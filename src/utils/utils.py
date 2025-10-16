@@ -294,3 +294,49 @@ async def capture_screenshot(browser_context):
         return b64
     except Exception:
         return None
+
+
+# ============================================================================
+# LLM Availability Helper Functions (Issue #43)
+# ============================================================================
+
+def is_llm_available() -> bool:
+    """
+    Check if LLM functionality is available.
+    
+    Returns:
+        bool: True if ENABLE_LLM is true and LLM packages are loaded, False otherwise
+        
+    Usage:
+        if is_llm_available():
+            # Use LLM features
+            model = get_llm_model("openai", ...)
+        else:
+            # Fallback to non-LLM mode
+            print("Running in minimal mode")
+    """
+    return ENABLE_LLM and LLM_AVAILABLE
+
+
+def require_llm(func):
+    """
+    Decorator to mark functions that require LLM functionality.
+    
+    Raises gr.Error if LLM is not available when the decorated function is called.
+    
+    Usage:
+        @require_llm
+        def process_with_llm(text: str):
+            model = get_llm_model("openai")
+            return model.invoke(text)
+    """
+    def wrapper(*args, **kwargs):
+        if not is_llm_available():
+            raise gr.Error(
+                "💥 LLM functionality is disabled. "
+                "This feature requires ENABLE_LLM=true and full requirements.txt installation."
+            )
+        return func(*args, **kwargs)
+    wrapper.__name__ = func.__name__
+    wrapper.__doc__ = func.__doc__
+    return wrapper
