@@ -13,10 +13,6 @@ from unittest.mock import patch
 from src.utils.git_script_automator import GitScriptAutomator
 
 
-# pytestマーカー: 統合テストとしてマーク
-pytestmark = pytest.mark.integration
-
-
 class TestGitScriptSandboxIntegration:
     """git-script実行のサンドボックス統合テスト"""
     
@@ -46,8 +42,10 @@ sys.exit(0)
         command = f"python {script_path} arg1 arg2"
         
         result = await automator.execute_git_script_workflow(
+            workspace_dir=str(temp_workspace),
+            script_path=str(script_path),
             command=command,
-            workspace_dir=str(temp_workspace)
+            params={}
         )
         
         # 成功の確認
