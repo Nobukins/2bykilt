@@ -252,18 +252,17 @@ class BatchEngine:
         """
         # Security check: prevent path traversal (configurable)
         if self.config.get('allow_path_traversal', True) is False:
-            if not csv_path_obj.is_relative_to(Path.cwd()):
-                # Allow access to current working directory and subdirectories only
-                cwd = Path.cwd().resolve()
-                try:
-                    csv_path_obj.relative_to(cwd)
-                except ValueError:
-                    self.logger.error(f"Access denied: '{csv_path}' is outside allowed directory. "
-                                      f"Path traversal detected. To allow access to files outside the current "
-                                      f"working directory, set 'allow_path_traversal' to True in configuration.")
-                    raise SecurityError(f"Access denied: '{csv_path}' is outside allowed directory. "
-                                      f"Path traversal detected. To allow access to files outside the current "
-                                      f"working directory, set 'allow_path_traversal' to True in configuration.")
+            # Allow access to current working directory and subdirectories only
+            cwd = Path.cwd().resolve()
+            try:
+                csv_path_obj.relative_to(cwd)
+            except ValueError:
+                self.logger.error(f"Access denied: '{csv_path}' is outside allowed directory. "
+                                  f"Path traversal detected. To allow access to files outside the current "
+                                  f"working directory, set 'allow_path_traversal' to True in configuration.")
+                raise SecurityError(f"Access denied: '{csv_path}' is outside allowed directory. "
+                                  f"Path traversal detected. To allow access to files outside the current "
+                                  f"working directory, set 'allow_path_traversal' to True in configuration.")
 
             # Additional security check: prevent access to sensitive system directories
             resolved_path = csv_path_obj.resolve()
@@ -332,14 +331,14 @@ class BatchEngine:
         if file_size_mb > 100:  # Warn for files larger than 100MB
             self.logger.warning(f"Large CSV file detected ({file_size_mb:.1f}MB). Consider using streaming processing.")
 
-    def _read_and_parse_csv_content(self, csv_path_obj: Path, csv_path: str, chunk_size: int) -> List[Dict[str, Any]]:
+    def _read_and_parse_csv_content(self, csv_path_obj: Path, csv_path: str, chunk_size: Optional[int]) -> List[Dict[str, Any]]:
         """
         Read and parse CSV file content.
         
         Args:
             csv_path_obj: Resolved Path object
             csv_path: Original path string for error messages
-            chunk_size: Number of rows to process at once
+            chunk_size: Number of rows to process at once. If None, uses configured chunk_size
             
         Returns:
             List of dictionaries representing CSV rows
@@ -387,7 +386,7 @@ class BatchEngine:
 
                     # Process in chunks to avoid memory issues with very large files
                     # Use the provided chunk_size parameter, fallback to config if not provided
-                    effective_chunk_size = chunk_size if chunk_size != 1000 else self.config['chunk_size']
+                    effective_chunk_size = chunk_size if chunk_size is not None else self.config['chunk_size']
                     if processed_rows % effective_chunk_size == 0:
                         self.logger.debug(f"Processed {processed_rows} rows from {csv_path}")
 
@@ -409,7 +408,7 @@ class BatchEngine:
             raise FileProcessingError(f"Failed to parse CSV file '{csv_path}': {e}. "
                                     f"Please check the file format, encoding, and contents.")
 
-    def parse_csv(self, csv_path: str, chunk_size: int = 1000) -> List[Dict[str, Any]]:
+    def parse_csv(self, csv_path: str, chunk_size: Optional[int] = None) -> List[Dict[str, Any]]:
         """
         Parse CSV file and return list of row dictionaries.
 
@@ -419,7 +418,7 @@ class BatchEngine:
         Args:
             csv_path: Path to CSV file (absolute or relative)
             chunk_size: Number of rows to process at once (for memory efficiency). 
-                       If not provided, uses the configured chunk_size value.
+                       If not provided (None), uses the configured chunk_size value.
 
         Returns:
             List of dictionaries representing CSV rows, where keys are column headers
