@@ -29,7 +29,6 @@ if not _ENABLE_LLM:
 
 # LLM imports (only executed when ENABLE_LLM=true)
 from openai import OpenAI
-import pdb
 from langchain_openai import ChatOpenAI
 from langchain_core.globals import get_llm_cache
 from langchain_core.language_models.base import (
