@@ -1,3 +1,4 @@
+from __future__ import annotations
 
 """
 Agent message management and history tracking
@@ -26,8 +27,6 @@ if not _ENABLE_LLM:
         "1. Install full requirements: pip install -r requirements.txt "
         "2. Enable LLM: export ENABLE_LLM=true or set in .env file"
     )
-
-from __future__ import annotations
 
 import logging
 import os
