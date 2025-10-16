@@ -178,9 +178,9 @@ def chrome_restart_dialog():
                 
             def set_no():
                 return "no"
-            
+
             yes_button.click(fn=set_yes, outputs=result)
-            no_button.click(fn=set_no(), outputs=result)
+            no_button.click(fn=set_no, outputs=result)
     
     return dialog
 

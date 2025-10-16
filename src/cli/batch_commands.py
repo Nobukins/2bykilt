@@ -3,9 +3,173 @@
 This module handles batch execution commands through the CLI.
 """
 import argparse
-import os
-import sys
 import asyncio
+import sys
+from pathlib import Path
+from typing import Any, Mapping, Sequence
+
+from src.batch.engine import BatchEngine, start_batch
+from src.runtime.run_context import RunContext
+
+
+CSV_SUFFIXES = {".csv", ".txt"}
+
+
+def _resolve_csv_path(csv_path: str) -> Path:
+    """Validate and resolve a CSV path supplied via the CLI."""
+    candidate = Path(csv_path).expanduser()
+    try:
+        resolved = candidate.resolve(strict=True)
+    except FileNotFoundError as error:
+        raise FileNotFoundError(f"CSV file not found: {candidate}") from error
+    if not resolved.is_file():
+        raise ValueError(f"Path is not a file: {resolved}")
+    if resolved.suffix.lower() not in CSV_SUFFIXES:
+        print(f"⚠️ Warning: {resolved.name} does not use a typical CSV extension")
+    return resolved
+
+
+def _run_start_batch(csv_path: Path, run_context: RunContext, execute_immediately: bool):
+    """Execute the async start_batch helper from synchronous CLI code."""
+
+    async def _invoke():
+        return await start_batch(
+            str(csv_path),
+            run_context,
+            execute_immediately=execute_immediately,
+        )
+
+    try:
+        return asyncio.run(_invoke())
+    except RuntimeError as exc:
+        if "asyncio.run() cannot be called from a running event loop" in str(exc):
+            loop = asyncio.new_event_loop()
+            try:
+                return loop.run_until_complete(_invoke())
+            finally:
+                loop.close()
+        raise
+
+
+def _get_value(obj: Any, key: str, default: Any = None) -> Any:
+    if isinstance(obj, Mapping):
+        return obj.get(key, default)
+    return getattr(obj, key, default)
+
+
+def _iter_jobs(manifest: Any) -> Sequence[Any]:
+    jobs = _get_value(manifest, "jobs", [])
+    if jobs is None:
+        return []
+    if isinstance(jobs, (list, tuple)):
+        return jobs
+    return list(jobs)
+
+
+def _print_job_details(manifest: Any) -> None:
+    jobs = _iter_jobs(manifest)
+    if not jobs:
+        return
+
+    print("\n📋 Job details:")
+    for job in jobs:
+        status = _get_value(job, "status", "unknown")
+        job_id = _get_value(job, "job_id", "unknown")
+        error_message = _get_value(job, "error_message") or _get_value(job, "error")
+
+        if status == "completed":
+            status_icon = "✅"
+        elif status == "failed":
+            status_icon = "❌"
+        else:
+            status_icon = "⏳"
+
+        print(f"   {status_icon} {job_id}: {status}")
+        if error_message:
+            print(f"      Error: {error_message}")
+
+
+def _print_manifest_overview(manifest: Any, header: str = "✅ Batch status:") -> None:
+    print(header)
+    print(f"   Batch ID: {_get_value(manifest, 'batch_id', 'unknown')}")
+    print(f"   Run ID: {_get_value(manifest, 'run_id', 'unknown')}")
+    print(f"   CSV Path: {_get_value(manifest, 'csv_path', 'unknown')}")
+    print(f"   Total jobs: {_get_value(manifest, 'total_jobs', 0)}")
+    print(f"   Completed: {_get_value(manifest, 'completed_jobs', 0)}")
+    print(f"   Failed: {_get_value(manifest, 'failed_jobs', 0)}")
+    created_at = _get_value(manifest, 'created_at', '-')
+    if created_at:
+        print(f"   Created: {created_at}")
+
+
+def _handle_start_command(args) -> int:
+    print(f"🚀 Starting batch execution from {args.csv_path}")
+    execute_immediately = not getattr(args, 'no_execute', False)
+    csv_path = _resolve_csv_path(args.csv_path)
+
+    run_context = RunContext.get()
+    manifest = _run_start_batch(csv_path, run_context, execute_immediately)
+
+    print("✅ Batch created successfully!")
+    print(f"   Batch ID: {_get_value(manifest, 'batch_id', 'unknown')}")
+    print(f"   Run ID: {_get_value(manifest, 'run_id', 'unknown')}")
+
+    summary = None
+    try:
+        engine = BatchEngine(run_context)
+        summary = engine.get_batch_summary(_get_value(manifest, 'batch_id'))
+    except Exception:
+        summary = None
+
+    if summary:
+        print(f"   Total jobs: {_get_value(summary, 'total_jobs', _get_value(manifest, 'total_jobs', 0))}")
+        print(f"   Completed: {_get_value(summary, 'completed_jobs', 0)}")
+        print(f"   Failed: {_get_value(summary, 'failed_jobs', 0)}")
+    else:
+        print(f"   Total jobs: {_get_value(manifest, 'total_jobs', 0)}")
+
+    print(f"   Jobs directory: {run_context.artifact_dir('jobs')}")
+    batch_manifest_dir = Path(run_context.artifact_dir('batch'))
+    print(f"   Manifest: {batch_manifest_dir / 'batch_manifest.json'}")
+
+    return 0
+
+
+def _handle_status_command(args) -> int:
+    print(f"📊 Getting status for batch {args.batch_id}")
+    run_context = RunContext.get()
+    engine = BatchEngine(run_context)
+
+    manifest = engine.get_batch_summary(args.batch_id)
+    if manifest is None:
+        print(f"❌ Batch {args.batch_id} not found")
+        return 1
+
+    _print_manifest_overview(manifest)
+    _print_job_details(manifest)
+    return 0
+
+
+def _handle_update_job_command(args) -> int:
+    print(f"🔄 Updating job {args.job_id} to {args.status}")
+    run_context = RunContext.get()
+    engine = BatchEngine(run_context)
+    engine.update_job_status(args.job_id, args.status, args.error)
+    print("✅ Job status updated successfully!")
+    return 0
+
+
+def _handle_execute_command(args) -> int:
+    print(f"🚀 Executing all jobs in batch {args.batch_id}")
+    run_context = RunContext.get()
+    engine = BatchEngine(run_context)
+    result = engine.execute_batch_jobs(args.batch_id)
+
+    print("✅ Batch execution completed!")
+    print(f"   Jobs executed: {result.get('executed_jobs', 0)}")
+    print(f"   Successful: {result.get('successful_jobs', 0)}")
+    print(f"   Failed: {result.get('failed_jobs', 0)}")
+    return 0
 
 
 def create_batch_parser():
@@ -55,111 +219,25 @@ Examples:
     return parser
 
 
-def handle_batch_command(args):
+def handle_batch_command(args) -> int:
     """Handle batch-related CLI commands."""
+    command = getattr(args, 'batch_command', None)
     try:
-        from src.batch.engine import BatchEngine, start_batch
-        from src.runtime.run_context import RunContext
-
-        if hasattr(args, 'batch_command') and args.batch_command == 'start':
-            print(f"🚀 Starting batch execution from {args.csv_path}")
-
-            # Determine execution mode
-            execute_immediately = not getattr(args, 'no_execute', False)
-
-            # Create run context
-            run_context = RunContext.get()
-
-            # Start batch
-            manifest = start_batch(args.csv_path, run_context, execute_immediately=execute_immediately)
-            # If start_batch returned a coroutine (async implementation), run it to completion.
-            if asyncio.iscoroutine(manifest):
-                manifest = asyncio.run(manifest)
-
-            print("✅ Batch created successfully!")
-            print(f"   Batch ID: {manifest.batch_id}")
-            print(f"   Run ID: {manifest.run_id}")
-            # If jobs were executed immediately, try to reload the manifest/summary
-            # so we can display updated completed/failed counts.
-            try:
-                engine = BatchEngine(run_context)
-                summary = engine.get_batch_summary(manifest.batch_id)
-                if summary:
-                    print(f"   Total jobs: {summary.total_jobs}")
-                    print(f"   Completed: {summary.completed_jobs}")
-                    print(f"   Failed: {summary.failed_jobs}")
-                else:
-                    print(f"   Total jobs: {manifest.total_jobs}")
-            except Exception:
-                print(f"   Total jobs: {manifest.total_jobs}")
-            print(f"   Jobs directory: {run_context.artifact_dir('jobs')}")
-            print(f"   Manifest: {os.path.join(run_context.artifact_dir('batch'), 'batch_manifest.json')}")
-
-            return 0
-
-        elif hasattr(args, 'batch_command') and args.batch_command == 'status':
-            print(f"📊 Getting status for batch {args.batch_id}")
-
-            # Create run context and engine
-            run_context = RunContext.get()
-            engine = BatchEngine(run_context)
-
-            # Get batch status
-            manifest = engine.get_batch_summary(args.batch_id)
-
-            if manifest is None:
-                print(f"❌ Batch {args.batch_id} not found")
-                return 1
-
-            print("✅ Batch status:")
-            print(f"   Batch ID: {manifest.batch_id}")
-            print(f"   Run ID: {manifest.run_id}")
-            print(f"   CSV Path: {manifest.csv_path}")
-            print(f"   Total jobs: {manifest.total_jobs}")
-            print(f"   Completed: {manifest.completed_jobs}")
-            print(f"   Failed: {manifest.failed_jobs}")
-            print(f"   Created: {manifest.created_at}")
-
-            print("\n📋 Job details:")
-            for job in manifest.jobs:
-                status_icon = "✅" if job['status'] == "completed" else "❌" if job['status'] == "failed" else "⏳"
-                print(f"   {status_icon} {job['job_id']}: {job['status']}")
-                if job.get('error_message'):
-                    print(f"      Error: {job['error_message']}")
-
-            return 0
-
-        elif hasattr(args, 'batch_command') and args.batch_command == 'update-job':
-            print(f"🔄 Updating job {args.job_id} to {args.status}")
-
-            # Create run context and engine
-            run_context = RunContext.get()
-            engine = BatchEngine(run_context)
-
-            # Update job status
-            engine.update_job_status(args.job_id, args.status, args.error)
-
-            print("✅ Job status updated successfully!")
-            return 0
-
-        elif hasattr(args, 'batch_command') and args.batch_command == 'execute':
-            print(f"🚀 Executing all jobs in batch {args.batch_id}")
-
-            # Create run context and engine
-            run_context = RunContext.get()
-            engine = BatchEngine(run_context)
-
-            # Execute batch jobs
-            result = engine.execute_batch_jobs(args.batch_id)
-
-            print("✅ Batch execution completed!")
-            print(f"   Jobs executed: {result.get('executed_jobs', 0)}")
-            print(f"   Successful: {result.get('successful_jobs', 0)}")
-            print(f"   Failed: {result.get('failed_jobs', 0)}")
-            return 0
-
-    except Exception as e:
-        print(f"❌ Error: {e}")
+        if command == 'start':
+            return _handle_start_command(args)
+        if command == 'status':
+            return _handle_status_command(args)
+        if command == 'update-job':
+            return _handle_update_job_command(args)
+        if command == 'execute':
+            return _handle_execute_command(args)
+        print(f"❌ Unknown batch command: {command}")
+        return 1
+    except (FileNotFoundError, PermissionError, ValueError) as error:
+        print(f"❌ {error}")
+        return 1
+    except Exception as exc:  # pragma: no cover - unexpected failure path
+        print(f"❌ Error: {exc}")
         import traceback
         traceback.print_exc()
         return 1

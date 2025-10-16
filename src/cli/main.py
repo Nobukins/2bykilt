@@ -7,7 +7,6 @@ import argparse
 import os
 import sys
 import traceback
-from pathlib import Path
 
 from src.utils.default_config_settings import default_config
 from src.ui.helpers import (
@@ -16,6 +15,26 @@ from src.ui.helpers import (
     import_llmstxt_actions,
 )
 from src.api.app import create_fastapi_app, run_app
+from src.utils.path_helpers import get_assets_dir
+
+
+def _ensure_asset_directories() -> None:
+    """Create placeholder asset directories required by the UI."""
+    assets_dir = get_assets_dir()
+    css_dir = assets_dir / "css"
+    js_dir = assets_dir / "js"
+    fonts_dir = assets_dir / "fonts"
+
+    for directory in (css_dir, js_dir, fonts_dir):
+        directory.mkdir(parents=True, exist_ok=True)
+
+    for family in ["ui-sans-serif", "system-ui"]:
+        family_dir = fonts_dir / family
+        family_dir.mkdir(parents=True, exist_ok=True)
+
+        for weight in ["Regular", "Bold"]:
+            font_path = family_dir / f"{family}-{weight}.woff2"
+            font_path.touch(exist_ok=True)
 
 
 def main():
@@ -48,7 +67,7 @@ def main():
         )
         
         # Initialize global timeout manager
-        timeout_manager = get_timeout_manager(timeout_config)
+        get_timeout_manager(timeout_config)
         print("⏱️  Timeout manager initialized successfully")
         print(f"   Job timeout: {timeout_config.job_timeout}s")
         print(f"   Operation timeout: {timeout_config.operation_timeout}s")
@@ -183,28 +202,7 @@ def main():
     config_dict = default_config()
     demo = create_ui(config_dict, theme_name=args.theme)
 
-    # Create the asset directories if they don't exist
-    assets_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "assets")
-    css_dir = os.path.join(assets_dir, "css")
-    js_dir = os.path.join(assets_dir, "js")
-    fonts_dir = os.path.join(assets_dir, "fonts")
-
-    os.makedirs(css_dir, exist_ok=True)
-    os.makedirs(js_dir, exist_ok=True)
-    os.makedirs(fonts_dir, exist_ok=True)
-
-    # Create font family directories
-    for family in ["ui-sans-serif", "system-ui"]:
-        family_dir = os.path.join(fonts_dir, family)
-        os.makedirs(family_dir, exist_ok=True)
-
-        # Create placeholder font files if they don't exist
-        for weight in ["Regular", "Bold"]:
-            font_path = os.path.join(family_dir, f"{family}-{weight}.woff2")
-            if not os.path.exists(font_path):
-                # Create an empty file as placeholder
-                with open(font_path, 'wb') as f:
-                    pass
+    _ensure_asset_directories()
 
     # GradioとFastAPIを統合 - モジュール化版
     app = create_fastapi_app(demo, args)
