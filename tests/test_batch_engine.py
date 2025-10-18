@@ -2100,23 +2100,27 @@ class TestBatchRetry:
         with pytest.raises(ValueError, match="has no 'task' or 'command' field"):
             await engine._simulate_job_execution(job, max_random_delay=0, success_rate=1.0)
 
-    def test_to_portable_relpath_success(self, engine, temp_dir):
-        """Test _to_portable_relpath method."""
+    def test_to_portable_relpath_success(self, temp_dir):
+        """Test to_portable_relpath utility function."""
+        from src.batch.utils import to_portable_relpath
+        
         test_file = temp_dir / "test.txt"
         test_file.write_text("test")
 
-        rel_path = engine._to_portable_relpath(test_file)
+        rel_path = to_portable_relpath(test_file)
         assert isinstance(rel_path, str)
         assert rel_path.endswith("test.txt")
 
-    def test_to_portable_relpath_fallback(self, engine, temp_dir):
-        """Test _to_portable_relpath fallback logic."""
+    def test_to_portable_relpath_fallback(self, temp_dir):
+        """Test to_portable_relpath fallback logic."""
+        from src.batch.utils import to_portable_relpath
+        
         test_file = temp_dir / "test.txt"
         test_file.write_text("test")
 
         # Mock relative_to to fail
         with patch.object(Path, 'relative_to', side_effect=ValueError):
-            rel_path = engine._to_portable_relpath(test_file)
+            rel_path = to_portable_relpath(test_file)
             assert rel_path == "test.txt"
 
     def test_configure_logging_success(self, engine):
