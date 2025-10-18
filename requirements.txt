@@ -173,6 +173,12 @@ annotated-types==0.7.0
 pydantic==2.10.6
 pydantic_core==2.27.2
 
+# Security & Sandboxing (Issue #62)
+# Linux: seccomp for syscall filtering
+seccomp; sys_platform == 'linux'
+# Windows: pywin32 for Job Objects
+pywin32; sys_platform == 'win32'
+
 # ============================================================================
 # Installation Instructions:
 # ============================================================================

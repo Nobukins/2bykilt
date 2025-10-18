@@ -14,6 +14,7 @@ from playwright.async_api import BrowserContext
 from .profile_manager import ProfileManager, EdgeProfileManager, ChromeProfileManager
 from .browser_launcher import BrowserLauncher, EdgeLauncher, ChromeLauncher
 from .git_script_path import GitScriptPathValidator, validate_git_script_path, GitScriptPathNotFound, GitScriptPathDenied
+from ..security.sandbox_manager import create_sandbox_from_feature_flags
 
 logger = logging.getLogger(__name__)
 
@@ -252,36 +253,35 @@ class GitScriptAutomator:
             env = os.environ.copy()
             env['PYTHONPATH'] = workspace_dir
             
-            # 非同期でサブプロセスを実行
-            process = await asyncio.create_subprocess_exec(
-                *command_parts,
+            # サンドボックスで実行（セキュリティ制限適用）
+            logger.info("Executing git-script in sandbox...")
+            sandbox_manager = create_sandbox_from_feature_flags()
+            
+            # asyncio.to_thread で同期的なサンドボックス実行を非同期ラップ
+            sandbox_result = await asyncio.to_thread(
+                sandbox_manager.execute,
+                command=command_parts,
                 cwd=cwd,
-                env=env,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                capture_output=True,
+                environment_variables=env
             )
             
-            # 出力の取得
-            stdout, stderr = await process.communicate()
+            # サンドボックス実行結果を取得
+            stdout_text = sandbox_result.stdout or ""
+            stderr_text = sandbox_result.stderr or ""
             
-            # エンコーディングの処理
-            def safe_decode(data):
-                if not data:
-                    return ""
-                encodings = ['utf-8', 'cp932', 'shift_jis', 'latin1']
-                for encoding in encodings:
-                    try:
-                        return data.decode(encoding)
-                    except UnicodeDecodeError:
-                        continue
-                return data.decode('utf-8', errors='replace')
+            # リソース使用状況をログ出力
+            if sandbox_result.resources_used:
+                logger.info(f"Resources used: {sandbox_result.resources_used}")
             
-            stdout_text = safe_decode(stdout)
-            stderr_text = safe_decode(stderr)
-            
-            result["exit_code"] = process.returncode
+            result["exit_code"] = sandbox_result.exit_code
             result["stdout"] = stdout_text
             result["stderr"] = stderr_text
+            
+            # サンドボックスでプロセスがキルされた場合の警告
+            if sandbox_result.killed:
+                logger.warning("⚠️ git-script was forcibly terminated (timeout or resource limit exceeded)")
+                result["error"] = "Process was killed by sandbox (timeout or resource limit)"
             
             # ログ出力
             logger.info("git_script: start")
@@ -292,11 +292,11 @@ class GitScriptAutomator:
             logger.info("git_script: end")
             
             # 成功判定
-            if process.returncode == 0:
+            if sandbox_result.success:
                 result["success"] = True
                 logger.info("🎉 Git-script workflow completed successfully")
             else:
-                result["error"] = f"Script execution failed with exit code {process.returncode}"
+                result["error"] = f"Script execution failed with exit code {sandbox_result.exit_code}"
                 logger.error(f"❌ Git-script workflow failed: {result['error']}")
             
         except Exception as e:
