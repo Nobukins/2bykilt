@@ -16,8 +16,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from src.utils.git_script_automator import GitScriptAutomator
 
 
-async @pytest.mark.local_only
-def test_chromium_vs_chrome():
+@pytest.mark.local_only
+async def test_chromium_vs_chrome():
     """ChromiumとChromeの動作の違いをテスト"""
     print("🔍 Chromium vs Chrome テストを開始...")
     
