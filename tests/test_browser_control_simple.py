@@ -3,6 +3,7 @@
 Simple test script to verify browser-control execution works
 """
 import asyncio
+import pytest
 import os
 import sys
 import threading
@@ -30,6 +31,7 @@ def _run_async(coro_fn):
     return result.get("value")
 
 
+@pytest.mark.local_only
 def test_simple_browser_control():
     """Test simple browser-control execution"""
     print("Testing browser-control execution...")

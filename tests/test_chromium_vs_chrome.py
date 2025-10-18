@@ -4,6 +4,7 @@ Chromium vs Chrome テストスクリプト
 プロファイル使用の違いを検証
 """
 import asyncio
+import pytest
 import os
 import sys
 import tempfile
@@ -15,7 +16,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from src.utils.git_script_automator import GitScriptAutomator
 
 
-async def test_chromium_vs_chrome():
+async @pytest.mark.local_only
+def test_chromium_vs_chrome():
     """ChromiumとChromeの動作の違いをテスト"""
     print("🔍 Chromium vs Chrome テストを開始...")
     

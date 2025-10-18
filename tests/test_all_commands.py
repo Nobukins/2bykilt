@@ -3,6 +3,7 @@
 All command types testing script for debugging UI execution issues
 """
 import asyncio
+import pytest
 import logging
 import os
 import sys
@@ -135,6 +136,7 @@ async def _run_browser_control():
         return False
 
 
+@pytest.mark.local_only
 def test_browser_control():
     assert _run_async(_run_browser_control)
 
