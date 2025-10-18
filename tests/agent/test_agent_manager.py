@@ -22,6 +22,8 @@ from src.agent.agent_manager import (
     evaluate_prompt_unified,
     extract_params_unified,
     resolve_env_variables_unified,
+    stop_agent,
+    stop_research_agent
 )
 
 
@@ -228,3 +230,121 @@ class TestResolveEnvVariablesUnified:
             
             assert result == "https://user:pass@example.com/path"
             mock_standalone.assert_called_once()
+
+
+class TestStopAgent:
+    """Tests for stop_agent function"""
+    
+    @pytest.mark.asyncio
+    async def test_stop_agent_success(self):
+        """Test successful agent stop"""
+        mock_agent = MagicMock()
+        mock_agent.stop = MagicMock()
+        
+        with patch('src.agent.agent_manager._global_agent', mock_agent), \
+             patch('gradio.update') as mock_gr_update:
+            
+            mock_gr_update.return_value = MagicMock()
+            
+            result = await stop_agent()
+            
+            # Should call stop on agent
+            mock_agent.stop.assert_called_once()
+            
+            # Should return message and UI updates
+            assert len(result) == 3
+            assert "Stop requested" in result[0]
+    
+    @pytest.mark.asyncio
+    async def test_stop_agent_exception(self):
+        """Test agent stop with exception"""
+        mock_agent = MagicMock()
+        mock_agent.stop = MagicMock(side_effect=Exception("Agent not running"))
+        
+        with patch('src.agent.agent_manager._global_agent', mock_agent), \
+             patch('gradio.update') as mock_gr_update:
+            
+            mock_gr_update.return_value = MagicMock()
+            
+            result = await stop_agent()
+            
+            # Should return error message
+            assert len(result) == 3
+            assert "Error during stop" in result[0]
+    
+    @pytest.mark.asyncio
+    async def test_stop_agent_ui_updates(self):
+        """Test stop_agent returns correct UI updates"""
+        mock_agent = MagicMock()
+        mock_agent.stop = MagicMock()
+        
+        with patch('src.agent.agent_manager._global_agent', mock_agent), \
+             patch('gradio.update') as mock_gr_update:
+            
+            mock_update_obj = MagicMock()
+            mock_gr_update.return_value = mock_update_obj
+            
+            result = await stop_agent()
+            
+            # Should call gr.update for UI elements
+            assert mock_gr_update.call_count >= 2
+            assert result[1] == mock_update_obj
+            assert result[2] == mock_update_obj
+
+
+class TestStopResearchAgent:
+    """Tests for stop_research_agent function"""
+    
+    @pytest.mark.asyncio
+    async def test_stop_research_agent_success(self):
+        """Test successful research agent stop"""
+        mock_state = MagicMock()
+        mock_state.request_stop = MagicMock()
+        
+        with patch('src.agent.agent_manager._global_agent_state', mock_state), \
+             patch('gradio.update') as mock_gr_update:
+            
+            mock_gr_update.return_value = MagicMock()
+            
+            result = await stop_research_agent()
+            
+            # Should call request_stop on state
+            mock_state.request_stop.assert_called_once()
+            
+            # Should return UI updates
+            assert len(result) == 2
+    
+    @pytest.mark.asyncio
+    async def test_stop_research_agent_exception(self):
+        """Test research agent stop with exception"""
+        mock_state = MagicMock()
+        mock_state.request_stop = MagicMock(side_effect=Exception("State error"))
+        
+        with patch('src.agent.agent_manager._global_agent_state', mock_state), \
+             patch('gradio.update') as mock_gr_update:
+            
+            mock_gr_update.return_value = MagicMock()
+            
+            result = await stop_research_agent()
+            
+            # Should return UI updates with error state
+            assert len(result) == 2
+    
+    @pytest.mark.asyncio
+    async def test_stop_research_agent_ui_updates(self):
+        """Test stop_research_agent returns correct UI updates"""
+        mock_state = MagicMock()
+        mock_state.request_stop = MagicMock()
+        
+        with patch('src.agent.agent_manager._global_agent_state', mock_state), \
+             patch('gradio.update') as mock_gr_update:
+            
+            mock_update_obj = MagicMock()
+            mock_gr_update.return_value = mock_update_obj
+            
+            result = await stop_research_agent()
+            
+            # Should call gr.update for UI elements
+            assert mock_gr_update.call_count >= 2
+            assert result[0] == mock_update_obj
+            assert result[1] == mock_update_obj
