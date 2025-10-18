@@ -31,7 +31,7 @@ def _run_async(coro_fn):
     return result.get("value")
 
 
-@pytest.mark.local_only
+@pytest.mark.playwright_required
 def test_simple_browser_control():
     """Test simple browser-control execution"""
     print("Testing browser-control execution...")

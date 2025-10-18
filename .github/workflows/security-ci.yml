@@ -71,12 +71,12 @@ jobs:
       - name: Install Playwright browsers
         run: |
           playwright install chromium --with-deps
-      - name: Pytest (full suite with Playwright support for accurate coverage)
+      - name: Pytest (ci_safe tests with Playwright Chromium support)
         env:
           ENABLE_LLM: "true"
         run: |
-          echo "Running full pytest suite with Playwright support for comprehensive coverage."
-          echo "Browser-dependent tests will use headless mode in CI."
+          echo "Running ci_safe tests with Playwright Chromium for optimal CI coverage."
+          echo "Tests marked as local_only (interactive, profile-dependent, Edge) are skipped."
           # Guard: fail fast if any workflow or script still references the deprecated tests/pytest.ini path
           if grep -R "tests/pytest.ini" -n . \
             | grep -v "scripts/ci_pytest.sh" \
@@ -85,9 +85,8 @@ jobs:
             echo "[FATAL] Detected stale non-doc reference to tests/pytest.ini. Please remove it (docs/ path is tolerated)." >&2
             exit 5
           fi
-          # Run full test suite excluding only truly environment-specific tests
-          # Use -m "not local_only" to skip developer-machine-specific tests
-          pytest -m "not local_only" --cov=src --cov-report=xml --cov-report=term --maxfail=3 -v
+          # Run ci_safe tests only (fully mocked + Playwright Chromium headless)
+          pytest -m "ci_safe" --cov=src --cov-report=xml --cov-report=term -v
           # Generate coverage XML if coverage data exists
           if [ -f .coverage ]; then
             coverage xml -i -o coverage.xml

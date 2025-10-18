@@ -136,7 +136,7 @@ async def _run_browser_control():
         return False
 
 
-@pytest.mark.local_only
+@pytest.mark.playwright_required
 def test_browser_control():
     assert _run_async(_run_browser_control)
 

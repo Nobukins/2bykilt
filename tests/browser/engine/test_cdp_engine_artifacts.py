@@ -20,7 +20,7 @@ from src.browser.engine.browser_engine import (
 )
 
 
-@pytest.mark.local_only
+@pytest.mark.ci_safe
 class TestCDPEngineCaptureArtifacts:
     """Test CDPEngine artifact capture"""
     
@@ -126,7 +126,7 @@ class TestCDPEngineCaptureArtifacts:
             await engine.capture_artifacts(["screenshot"])
 
 
-@pytest.mark.local_only
+@pytest.mark.ci_safe
 class TestCDPEngineShutdown:
     """Test CDPEngine shutdown"""
     

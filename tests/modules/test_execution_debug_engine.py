@@ -46,7 +46,7 @@ def mock_page():
     return page
 
 
-@pytest.mark.local_only
+@pytest.mark.ci_safe
 class TestExecutionDebugEngineInit:
     """Tests for ExecutionDebugEngine initialization"""
     
@@ -56,7 +56,7 @@ class TestExecutionDebugEngineInit:
         assert engine.browser_manager is not None
 
 
-@pytest.mark.local_only
+@pytest.mark.ci_safe
 class TestExecuteCommands:
     """Tests for execute_commands method"""
     
@@ -207,7 +207,7 @@ class TestExecuteCommands:
         mock_browser_manager.initialize_custom_browser.assert_called_once()
 
 
-@pytest.mark.local_only
+@pytest.mark.ci_safe
 class TestExecuteJsonCommands:
     """Tests for execute_json_commands method"""
     
