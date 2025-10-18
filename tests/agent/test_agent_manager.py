@@ -27,6 +27,7 @@ from src.agent.agent_manager import (
 )
 
 
+@pytest.mark.ci_safe
 class TestEvaluatePromptUnified:
     """Test evaluate_prompt_unified function"""
     
@@ -98,6 +99,7 @@ class TestEvaluatePromptUnified:
             assert result is None
 
 
+@pytest.mark.ci_safe
 class TestExtractParamsUnified:
     """Test extract_params_unified function"""
     
@@ -164,6 +166,7 @@ class TestExtractParamsUnified:
             assert "timeout" not in result or result["timeout"] is None
 
 
+@pytest.mark.ci_safe
 class TestResolveEnvVariablesUnified:
     """Test resolve_env_variables_unified function"""
     
@@ -232,6 +235,7 @@ class TestResolveEnvVariablesUnified:
             mock_standalone.assert_called_once()
 
 
+@pytest.mark.ci_safe
 class TestStopAgent:
     """Tests for stop_agent function"""
     
@@ -292,6 +296,7 @@ class TestStopAgent:
             assert result[2] == mock_update_obj
 
 
+@pytest.mark.ci_safe
 class TestStopResearchAgent:
     """Tests for stop_research_agent function"""
     

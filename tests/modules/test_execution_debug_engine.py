@@ -1,5 +1,10 @@
 """
 Tests for ExecutionDebugEngine module (Issue #340 Phase 3)
+
+NOTE: These tests are marked as local_only because:
+- ExecutionDebugEngine uses BrowserDebugManager which launches real browsers
+- Tests require Playwright browser automation (headless or headed)
+- CI environment would need full Playwright setup for these tests
 """
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch, call
@@ -41,6 +46,7 @@ def mock_page():
     return page
 
 
+@pytest.mark.local_only
 class TestExecutionDebugEngineInit:
     """Tests for ExecutionDebugEngine initialization"""
     
@@ -50,6 +56,7 @@ class TestExecutionDebugEngineInit:
         assert engine.browser_manager is not None
 
 
+@pytest.mark.local_only
 class TestExecuteCommands:
     """Tests for execute_commands method"""
     
@@ -200,6 +207,7 @@ class TestExecuteCommands:
         mock_browser_manager.initialize_custom_browser.assert_called_once()
 
 
+@pytest.mark.local_only
 class TestExecuteJsonCommands:
     """Tests for execute_json_commands method"""
     

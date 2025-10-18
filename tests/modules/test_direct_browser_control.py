@@ -25,6 +25,7 @@ from src.modules.direct_browser_control import (
 from src.utils.timeout_manager import TimeoutManager
 
 
+@pytest.mark.ci_safe
 class TestBuildExtractEntry:
     """Test _build_extract_entry function"""
     
@@ -69,6 +70,7 @@ class TestBuildExtractEntry:
         }
 
 
+@pytest.mark.ci_safe
 class TestNormalizeFromList:
     """Test _normalize_from_list function"""
     
@@ -116,6 +118,7 @@ class TestNormalizeFromList:
         assert result[2]["selector"] == "p.text"
 
 
+@pytest.mark.ci_safe
 class TestNormalizeFromDict:
     """Test _normalize_from_dict function"""
     
@@ -153,6 +156,7 @@ class TestNormalizeFromDict:
         assert result == []
 
 
+@pytest.mark.ci_safe
 class TestNormalizeExtractEntries:
     """Test _normalize_extract_entries function"""
     
@@ -201,6 +205,7 @@ class TestNormalizeExtractEntries:
         assert result[0]["selector"] == "h1"
 
 
+@pytest.mark.ci_safe
 class TestRegisterVideoArtifact:
     """Test _register_video_artifact function"""
     
@@ -240,6 +245,7 @@ class TestRegisterVideoArtifact:
         mock_manager.register_video_file.assert_not_called()
 
 
+@pytest.mark.ci_safe
 class TestCancelled:
     """Test _cancelled function"""
     
@@ -268,6 +274,7 @@ class TestCancelled:
         assert "navigation" in str(mock_logger.warning.call_args)
 
 
+@pytest.mark.ci_safe
 class TestMaybeSlowMoIntegration:
     """Test _maybe_sleep_with_cancel integration"""
     

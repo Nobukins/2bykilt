@@ -19,6 +19,7 @@ from src.browser.browser_manager import (
 )
 
 
+@pytest.mark.ci_safe
 class TestCloseGlobalBrowser:
     """Tests for close_global_browser function."""
     
@@ -67,6 +68,7 @@ class TestCloseGlobalBrowser:
             mock_context.close.assert_called_once()
 
 
+@pytest.mark.ci_safe
 class TestGetBrowserConfigs:
     """Tests for get_browser_configs function."""
     
@@ -169,6 +171,7 @@ class TestGetBrowserConfigs:
             assert "--no-first-run" in config["extra_chromium_args"]
 
 
+@pytest.mark.ci_safe
 class TestFindBrowserPathWindows:
     """Tests for _find_browser_path_windows function."""
     
@@ -206,6 +209,7 @@ class TestFindBrowserPathWindows:
         assert path is None
 
 
+@pytest.mark.ci_safe
 class TestInitializeBrowser:
     """Tests for initialize_browser function."""
     
@@ -317,6 +321,7 @@ class TestInitializeBrowser:
                 assert isinstance(result, dict)
 
 
+@pytest.mark.ci_safe
 class TestPrepareRecordingPath:
     """Tests for prepare_recording_path function."""
     
@@ -389,6 +394,7 @@ class TestPrepareRecordingPath:
                 assert path == "/tmp"
 
 
+@pytest.mark.ci_safe
 class TestBrowserManagerIntegration:
     """Integration tests for browser manager functions."""
     

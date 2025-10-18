@@ -26,6 +26,7 @@ from src.browser.engine.browser_engine import (
 )
 
 
+@pytest.mark.local_only
 class TestCDPEngineInit:
     """Test CDPEngine initialization"""
     
@@ -45,6 +46,7 @@ class TestCDPEngineInit:
         assert engine.engine_type == EngineType.CDP
 
 
+@pytest.mark.local_only
 class TestCDPEngineLaunch:
     """Test CDPEngine launch functionality"""
     
@@ -124,6 +126,7 @@ class TestCDPEngineLaunch:
                 await engine.launch(context)
 
 
+@pytest.mark.local_only
 class TestCDPEngineNavigate:
     """Test CDPEngine navigation"""
     
@@ -173,6 +176,7 @@ class TestCDPEngineNavigate:
             await engine.navigate("https://example.com")
 
 
+@pytest.mark.local_only
 class TestCDPEngineDispatch:
     """Test CDPEngine action dispatch"""
     
@@ -248,6 +252,7 @@ class TestCDPEngineDispatch:
             await engine.dispatch(action)
 
 
+@pytest.mark.local_only
 class TestCDPEngineSupportsAction:
     """Test CDPEngine action support checks"""
     
