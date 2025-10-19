@@ -191,7 +191,7 @@ class TestBrowserDiagnosticsCollectBrowserInfo:
         def capture_json_dump(data, file, **kwargs):
             captured_data.update(data)
         
-        with patch('json.dump', side_effect=capture_json_dump):
+        with patch('src.utils.diagnostics.json.dump', side_effect=capture_json_dump):
             BrowserDiagnostics.collect_browser_info()
         
         assert 'timestamp' in captured_data
