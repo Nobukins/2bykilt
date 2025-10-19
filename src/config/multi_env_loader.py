@@ -50,7 +50,7 @@ _ENV_ALIASES = {
     "development": "dev",
     "production": "prod",
 }
-_VALID_ENVS = {"dev", "staging", "prod"}
+_VALID_ENVS = {"base", "dev", "staging", "prod"}  # Added "base" for default config
 _SECRET_KEY_SUBSTRINGS = ["api_key", "token", "secret", "password", "key"]
 
 
@@ -75,7 +75,15 @@ class MultiEnvConfigLoader:
         self.warnings.clear()
         self.files_loaded.clear()
 
-        env_raw = (requested_env or os.getenv("BYKILT_ENV") or "dev").strip().lower()
+        # When neither requested_env nor BYKILT_ENV is set, use "base" to load only base config
+        # This prevents defaulting to dev environment in CI and tests
+        env_var = os.getenv("BYKILT_ENV")
+        if requested_env:
+            env_raw = requested_env.strip().lower()
+        elif env_var:
+            env_raw = env_var.strip().lower()
+        else:
+            env_raw = "base"  # Use base config when no environment specified
         self.logical_env = self._normalize_env(env_raw)
 
         base_dir = self.root / "base"
@@ -431,12 +439,14 @@ class ConfigLoader:
           config_dir/staging.yml
         """
         # Determine internal env (dev/staging/prod)
-        env_token = internal_env or (os.getenv("BYKILT_ENV", "dev").lower())
-        if env_token in ("development",):
+        # When BYKILT_ENV is not set (internal_env is None), use base config only
+        env_from_var = os.getenv("BYKILT_ENV", "").lower()
+        env_token = internal_env or (env_from_var if env_from_var else None)
+        if env_token == "development":
             env_token = "dev"
-        if env_token in ("production",):
+        if env_token == "production":
             env_token = "prod"
-        self._loader.logical_env = env_token  # keep state consistent for metadata mapping
+        self._loader.logical_env = env_token or "base"  # keep state consistent for metadata mapping
 
         def _read_yaml(path: Path) -> Dict[str, Any]:
             if not path.exists():
