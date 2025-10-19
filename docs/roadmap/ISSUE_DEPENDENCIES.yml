@@ -356,6 +356,7 @@ issues:
 
   "237": {title: "Bug: Recording file generation not working for any run type", meta: {area: artifacts, type: bug, priority: P0, phase: "2", stability: core}, depends: ["221"], dependents: [], risk: high, progress: {state: done, primary_pr: 239}, critical_path_rank: 4}
   "218": {title: "テストカバレッジ率の向上", meta: {area: testing, type: enhancement, priority: P2, phase: "2", stability: experimental}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
+  "340": {title: "Test Coverage Improvement to 70% - Phase 2 (Quick Wins & Browser/Config Testing)", meta: {area: testing, type: enhancement, priority: P1, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: in-progress, note: "PR #341: Test coverage improved from 20% → 65%; 12 tests fixed, 982 ci_safe tests passing, comprehensive test verification completed", primary_pr: 341}, critical_path_rank: 2}
   "197": {title: "[dashboard] UI graphs and preset expansion", meta: {area: observability, type: feat, priority: P2, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
   "194": {title: "[artifacts] Tab index manifest for multi-tab recordings", meta: {area: artifacts, type: enhancement, priority: P2, phase: "2", stability: core}, depends: [], dependents: ["246", "247"], risk: null, progress: {state: open}, critical_path_rank: 1}
   "192": {title: "[security][follow-up] Issue #154 pip-audit stabilization - monthly security monitoring schedule", meta: {area: security, type: chore, priority: P1, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: open}, critical_path_rank: 1}
@@ -433,7 +434,7 @@ issues:
   "287": {title: "Template for new issue and new PR", meta: {area: docs, type: enhancement, priority: P3, phase: "2", stability: core}, depends: [], dependents: [], risk: null, progress: {state: done, primary_pr: 318}, critical_path_rank: 1}
   "320": {title: "feat: Auto-discovery and import of browser automation commands from remote llms.txt files", meta: {area: config, type: enhancement, priority: P0, phase: "2", stability: core}, depends: ["64"], dependents: [], risk: null, progress: {state: in-progress, note: "Phase 1+2 complete (PR #321 merged); Phase 3+4 in PR #322 (open)", primary_pr: 322, related_prs: [321]}, critical_path_rank: 1}
 summary:
-  total_issues: 132
+  total_issues: 133
   high_risk: ["31", "46", "49", "54", "62", "176", "237", "285"]
   longest_chain_example: ["302", "303", "304", "305"]
   data_quality_checks:
@@ -472,8 +473,9 @@ summary:
       - "320"
 
 last_synced:
-  utc: "2025-10-16T06:00:00Z"
+  utc: "2025-10-16T11:00:00Z"
   issues:
+    "340": "OPEN"    # NEW: PR #341 - Test Coverage Improvement (12 tests fixed, 20%→65% coverage)
     "329": "OPEN"    # Updated: Phase 2 PR #334 created, Phase 4 PR #332 merged
     "320": "OPEN"    # Updated: Phase 3+4 PR #322 created, awaiting review
     "315": "OPEN"
