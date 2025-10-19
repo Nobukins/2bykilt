@@ -1079,4 +1079,67 @@ RUN_LOCAL_FINAL_VERIFICATION=1  # final verification (local_only) 実行
 ./scripts/clean_test_logs.sh               # 実行
 ```
 
+## 📌 Version Management
+
+The version management system provides semantic versioning support for releases.
+
+### Quick Start
+
+```bash
+# Display current version
+python bykilt.py version show
+
+# Bump version
+python bykilt.py version bump --type minor
+
+# Create Git tag
+python bykilt.py version tag
+
+# List version tags
+python bykilt.py version tags
+```
+
+### Semantic Versioning
+
+Versions follow [Semantic Versioning 2.0.0](https://semver.org/) format: `MAJOR.MINOR.PATCH[-PRERELEASE][+METADATA]`
+
+Examples:
+
+- `1.0.0` - Release version
+- `1.0.0-alpha.1` - Prerelease version
+- `1.0.0+build.1` - Version with metadata
+
+### Version File
+
+The version is stored in the `VERSION` file at project root:
+
+```text
+PROJECT_ROOT/
+├── VERSION              # Current version (e.g., "0.0.1\n")
+└── ...
+```
+
+### Documentation
+
+For detailed information, see:
+
+- [Version Management Guide](./docs/version-management.md) - Complete API and usage documentation
+- [Release Process Guide](./docs/release-process.md) - Recommended release workflow
+
+### Common Operations
+
+```bash
+# Set specific version
+python bykilt.py version set 1.5.0
+
+# Bump major (breaking changes): 1.2.3 → 2.0.0
+python bykilt.py version bump --type major
+
+# Bump minor (features): 1.2.3 → 1.3.0
+python bykilt.py version bump --type minor
+
+# Bump patch (fixes): 1.2.3 → 1.2.4
+python bykilt.py version bump --type patch
+```
+
 詳細な手順・将来のマーカー設計(#81)はガイド参照。
