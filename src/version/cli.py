@@ -5,8 +5,6 @@ Provides command-line interface for version management operations.
 """
 
 import argparse
-import sys
-from typing import Optional
 
 from .version_manager import VersionManager
 
@@ -61,7 +59,7 @@ def _handle_version_tags(manager: VersionManager) -> int:
 def version_command(args: argparse.Namespace) -> int:
     """
     Handle version command.
-    
+
     Subcommands:
         show: Display current version
         set <version>: Set specific version
@@ -70,7 +68,7 @@ def version_command(args: argparse.Namespace) -> int:
         tags: List all version tags
     """
     manager = VersionManager()
-    
+
     try:
         handlers = {
             'show': lambda: _handle_version_show(manager),
@@ -79,14 +77,14 @@ def version_command(args: argparse.Namespace) -> int:
             'tag': lambda: _handle_version_tag(manager),
             'tags': lambda: _handle_version_tags(manager),
         }
-        
+
         handler = handlers.get(args.version_subcommand)
         if handler:
             return handler()
-        
+
         print(f"Unknown version subcommand: {args.version_subcommand}")
         return 1
-    
+
     except Exception as e:
         print(f"Error: {e}")
         return 1
@@ -98,20 +96,20 @@ def create_version_parser(subparsers) -> argparse.ArgumentParser:
         'version',
         help='Manage project version'
     )
-    
+
     version_subparsers = parser.add_subparsers(
         dest='version_subcommand',
         help='Version management commands'
     )
-    
+
     # show subcommand
     version_subparsers.add_parser('show', help='Show current version')
-    
+
     # set subcommand
     set_parser = version_subparsers.add_parser('set', help='Set version')
     set_parser.add_argument('--version', required=False, help='Version string (e.g., 1.2.3)')
     set_parser.add_argument('version_arg', nargs='?', help='Version string')
-    
+
     # bump subcommand
     bump_parser = version_subparsers.add_parser('bump', help='Bump version')
     bump_parser.add_argument(
@@ -120,12 +118,12 @@ def create_version_parser(subparsers) -> argparse.ArgumentParser:
         choices=['major', 'minor', 'patch'],
         help='Type of version bump'
     )
-    
+
     # tag subcommand
     version_subparsers.add_parser('tag', help='Create Git tag for current version')
-    
+
     # tags subcommand
     version_subparsers.add_parser('tags', help='List all version tags')
-    
+
     parser.set_defaults(func=version_command)
     return parser
