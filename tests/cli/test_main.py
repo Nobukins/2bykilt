@@ -156,3 +156,66 @@ def test_main_import_llms_fails_on_security_validation(monkeypatch, mock_gradio_
         main.main()
     
     assert exc_info.value.code == 1
+
+
+@pytest.mark.ci_safe
+def test_main_version_show_command(monkeypatch, mock_gradio_deps, capsys):
+    """Test version show command integration in main CLI."""
+    monkeypatch.setattr('sys.argv', ['main.py', 'version', 'show'])
+    
+    # Mock metrics and timeout manager initialization
+    mock_initialize_metrics = mock.MagicMock()
+    monkeypatch.setattr('src.metrics.initialize_metrics', mock_initialize_metrics, raising=False)
+    mock_get_timeout_manager = mock.MagicMock()
+    monkeypatch.setattr('src.utils.timeout_manager.get_timeout_manager', mock_get_timeout_manager, raising=False)
+    monkeypatch.setattr('src.utils.timeout_manager.reset_timeout_manager', mock.MagicMock(), raising=False)
+    
+    # version_command should return 0 for success
+    result = main.main()
+    assert result == 0
+    
+    # Check that version was printed
+    captured = capsys.readouterr()
+    assert "2bykilt version:" in captured.out
+
+
+@pytest.mark.ci_safe
+def test_main_version_set_command(monkeypatch, mock_gradio_deps, capsys):
+    """Test version set command integration in main CLI."""
+    monkeypatch.setattr('sys.argv', ['main.py', 'version', 'set', '2.0.0'])
+    
+    # Mock metrics and timeout manager initialization
+    mock_initialize_metrics = mock.MagicMock()
+    monkeypatch.setattr('src.metrics.initialize_metrics', mock_initialize_metrics, raising=False)
+    mock_get_timeout_manager = mock.MagicMock()
+    monkeypatch.setattr('src.utils.timeout_manager.get_timeout_manager', mock_get_timeout_manager, raising=False)
+    monkeypatch.setattr('src.utils.timeout_manager.reset_timeout_manager', mock.MagicMock(), raising=False)
+    
+    # version_command should return 0 for success
+    result = main.main()
+    assert result == 0
+    
+    # Check that version was set
+    captured = capsys.readouterr()
+    assert "Version set to 2.0.0" in captured.out
+
+
+@pytest.mark.ci_safe
+def test_main_version_bump_command(monkeypatch, mock_gradio_deps, capsys):
+    """Test version bump command integration in main CLI."""
+    monkeypatch.setattr('sys.argv', ['main.py', 'version', 'bump', '--type', 'minor'])
+    
+    # Mock metrics and timeout manager initialization
+    mock_initialize_metrics = mock.MagicMock()
+    monkeypatch.setattr('src.metrics.initialize_metrics', mock_initialize_metrics, raising=False)
+    mock_get_timeout_manager = mock.MagicMock()
+    monkeypatch.setattr('src.utils.timeout_manager.get_timeout_manager', mock_get_timeout_manager, raising=False)
+    monkeypatch.setattr('src.utils.timeout_manager.reset_timeout_manager', mock.MagicMock(), raising=False)
+    
+    # version_command should return 0 for success
+    result = main.main()
+    assert result == 0
+    
+    # Check that version was bumped
+    captured = capsys.readouterr()
+    assert "Version bumped to" in captured.out
