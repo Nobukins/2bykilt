@@ -50,13 +50,16 @@ class TestSafeWriteJson:
         assert output["message"] == "こんにちは"
         assert output["emoji"] == "🎉"
     
-    @patch('sys.stdout')
-    def test_safe_write_json_broken_pipe(self, mock_stdout):
+    def test_safe_write_json_broken_pipe(self):
         """Test handling of BrokenPipeError."""
-        mock_stdout.write.side_effect = BrokenPipeError()
-        
-        data = {"test": "value"}
-        result = _safe_write_json(data)
+        class BrokenPipeStdout:
+            def write(self, *args, **kwargs):
+                raise BrokenPipeError()
+            def flush(self):
+                pass
+        with patch('sys.stdout', new=BrokenPipeStdout()):
+            data = {"test": "value"}
+            result = _safe_write_json(data)
         
         # Should return 0 (success) despite broken pipe
         assert result == 0
