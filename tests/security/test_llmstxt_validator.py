@@ -17,6 +17,7 @@ from src.security.llmstxt_validator import (
 )
 
 
+@pytest.mark.local_only
 class TestSecurityValidator:
     """Test SecurityValidator class initialization and configuration."""
 
@@ -38,6 +39,7 @@ class TestSecurityValidator:
         assert validator.allowed_domains == domains
 
 
+@pytest.mark.local_only
 class TestURLValidation:
     """Test URL security validation."""
 
@@ -118,6 +120,7 @@ class TestURLValidation:
         assert result.valid is False
 
 
+@pytest.mark.local_only
 class TestActionSafetyValidation:
     """Test action safety validation."""
 
@@ -242,6 +245,7 @@ class TestActionSafetyValidation:
         assert result.valid is False
 
 
+@pytest.mark.local_only
 class TestYAMLContentValidation:
     """Test YAML content validation."""
 
@@ -289,6 +293,7 @@ actions:
         assert result.valid is False
 
 
+@pytest.mark.local_only
 class TestIntegrationValidation:
     """Test validate_remote_llmstxt integration function."""
 
@@ -370,6 +375,7 @@ actions:
         assert result.valid is True
 
 
+@pytest.mark.local_only
 class TestEdgeCases:
     """Test edge cases and error handling."""
 

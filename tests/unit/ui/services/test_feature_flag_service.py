@@ -21,6 +21,7 @@ from src.ui.services.feature_flag_service import (
 )
 
 
+@pytest.mark.ci_safe
 class TestFeatureFlagService:
     """FeatureFlagService ユニットテスト。"""
 

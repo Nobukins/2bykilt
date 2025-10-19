@@ -23,6 +23,7 @@ from src.config.llms_parser import (
 from src.config.llms_schema_validator import LLMSSchemaValidationError
 
 
+@pytest.mark.ci_safe
 class TestFetchLlmsTxt:
     """Tests for fetch_llms_txt function."""
     
@@ -91,6 +92,7 @@ class TestFetchLlmsTxt:
         assert result == "content"
 
 
+@pytest.mark.ci_safe
 class TestParseLlmsTxt:
     """Tests for parse_llms_txt function."""
     
@@ -168,6 +170,7 @@ class TestParseLlmsTxt:
         assert result == []
 
 
+@pytest.mark.ci_safe
 class TestPreEvaluatePrompt:
     """Tests for pre_evaluate_prompt function."""
     
@@ -247,6 +250,7 @@ class TestPreEvaluatePrompt:
         assert result["priority"] == 1
 
 
+@pytest.mark.ci_safe
 class TestExtractParams:
     """Tests for extract_params function."""
     
@@ -330,6 +334,7 @@ class TestExtractParams:
         assert "url" in result
 
 
+@pytest.mark.ci_safe
 class TestResolveSensitiveEnvVariables:
     """Tests for resolve_sensitive_env_variables function."""
     
@@ -395,6 +400,7 @@ class TestResolveSensitiveEnvVariables:
         assert result == "Token: token_value"
 
 
+@pytest.mark.ci_safe
 class TestLoadActionsConfig:
     """Tests for load_actions_config function."""
     

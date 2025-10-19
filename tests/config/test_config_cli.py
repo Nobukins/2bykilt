@@ -23,6 +23,7 @@ from src.config.config_cli import (
 )
 
 
+@pytest.mark.ci_safe
 class TestSafeWriteJson:
     """Tests for _safe_write_json function."""
     
@@ -61,6 +62,7 @@ class TestSafeWriteJson:
         assert result == 0
 
 
+@pytest.mark.ci_safe
 class TestCmdShow:
     """Tests for _cmd_show function."""
     
@@ -150,6 +152,7 @@ class TestCmdShow:
         assert "WARNING: no configuration files loaded" in stderr_output
 
 
+@pytest.mark.ci_safe
 class TestCmdDiff:
     """Tests for _cmd_diff function."""
     
@@ -247,6 +250,7 @@ class TestCmdDiff:
         assert result == 0
 
 
+@pytest.mark.ci_safe
 class TestCmdVersion:
     """Tests for _cmd_version function."""
     
@@ -285,6 +289,7 @@ class TestCmdVersion:
         assert call_args["version"] == "unknown"
 
 
+@pytest.mark.ci_safe
 class TestBuildParser:
     """Tests for build_parser function."""
     
@@ -353,6 +358,7 @@ class TestBuildParser:
             parser.parse_args([])
 
 
+@pytest.mark.ci_safe
 class TestMain:
     """Tests for main function."""
     

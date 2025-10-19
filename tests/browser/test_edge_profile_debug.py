@@ -4,9 +4,11 @@ Edge プロファイルコピーの動作を確認するためのデバッグス
 """
 
 import os
+import pytest
 import shutil
 from pathlib import Path
 
+@pytest.mark.local_only
 def test_edge_profile_copy():
     print("🔍 Edge プロファイル存在確認...")
     

@@ -1,4 +1,5 @@
 import re
+import pytest
 from pathlib import Path
 from src.utils.app_logger import AppLogger
 
@@ -18,6 +19,7 @@ def _extract_slug(path: Path) -> str:
     return stem
 
 
+@pytest.mark.ci_safe
 def test_persist_action_run_log_sanitization(tmp_path, monkeypatch):
     # Force logger to use temp dir
     AppLogger._instance = None  # reset singleton

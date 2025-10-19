@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from tests.batch.test_csv_normalization import normalize_csv_input
 
 
+@pytest.mark.ci_safe
 class TestBatchCLIIntegration:
     """Integration tests for batch CLI commands."""
 
@@ -160,6 +161,7 @@ class TestBatchCLIIntegration:
         assert "❌ Batch invalid-batch-id-12345 not found" in output
 
 
+@pytest.mark.ci_safe
 class TestCSVInputNormalizationIntegration:
     """Integration tests for CSV input normalization with CLI."""
 
@@ -219,6 +221,7 @@ class TestCSVInputNormalizationIntegration:
             normalize_csv_input(12345)
 
 
+@pytest.mark.ci_safe
 class TestBatchWorkflowEndToEnd:
     """End-to-end tests for complete batch processing workflow."""
 

@@ -4,12 +4,14 @@ Simple test to run Edge with pipe-delimited arguments to verify Playwright argum
 """
 
 import os
+import pytest
 import tempfile
 import subprocess
 import sys
 
 from src.utils.memory_monitor import memory_monitor
 
+@pytest.mark.local_only
 def test_edge_with_pipe_args():
     """Test Edge execution with pipe-delimited arguments"""
     print("🔧 Testing Edge execution with pipe-delimited browser arguments...")

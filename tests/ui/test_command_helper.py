@@ -11,6 +11,7 @@ import pytest
 from src.ui.command_helper import CommandHelper
 
 
+@pytest.mark.ci_safe
 class TestCommandHelperInit:
     """Tests for CommandHelper initialization."""
     
@@ -40,6 +41,7 @@ class TestCommandHelperInit:
         assert any(cmd['name'] == 'search' for cmd in helper.commands)
 
 
+@pytest.mark.ci_safe
 class TestExtractCommandsFromConfig:
     """Tests for _extract_commands_from_config method."""
     
@@ -156,6 +158,7 @@ class TestExtractCommandsFromConfig:
         assert any(cmd['name'] == 'search' for cmd in helper.commands)
 
 
+@pytest.mark.ci_safe
 class TestGetCommandsForDisplay:
     """Tests for get_commands_for_display method."""
     
@@ -191,6 +194,7 @@ class TestGetCommandsForDisplay:
         assert result[0][2] == "help"  # Uses name as fallback
 
 
+@pytest.mark.ci_safe
 class TestGetCommandByName:
     """Tests for get_command_by_name method."""
     
@@ -224,6 +228,7 @@ class TestGetCommandByName:
         assert result is None
 
 
+@pytest.mark.ci_safe
 class TestGenerateCommandTemplate:
     """Tests for generate_command_template method."""
     
@@ -291,6 +296,7 @@ class TestGenerateCommandTemplate:
         assert result == "nonexistent"
 
 
+@pytest.mark.ci_safe
 class TestGetAllCommands:
     """Tests for get_all_commands method."""
     
@@ -338,6 +344,7 @@ class TestGetAllCommands:
         assert len(result) >= 2
 
 
+@pytest.mark.ci_safe
 class TestCommandHelperIntegration:
     """Integration tests for CommandHelper."""
     

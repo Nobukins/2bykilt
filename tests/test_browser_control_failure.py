@@ -33,6 +33,7 @@ def _run_async(coro_fn):
     return result.get("value")
 
 
+@pytest.mark.ci_safe
 class TestBrowserControlFailure:
     """Test cases to reproduce and fix browser-control execution failures"""
 

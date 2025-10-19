@@ -4,6 +4,7 @@
 """
 
 import os
+import pytest
 import sys
 from dotenv import load_dotenv
 
@@ -13,6 +14,7 @@ load_dotenv(override=True)
 
 from src.browser.browser_config import BrowserConfig
 
+@pytest.mark.ci_safe
 def test_browser_automation():
     print("=== ブラウザ自動化テスト開始 ===")
     

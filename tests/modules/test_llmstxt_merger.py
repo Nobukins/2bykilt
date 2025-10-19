@@ -89,6 +89,7 @@ def conflicting_actions():
     ]
 
 
+@pytest.mark.local_only
 class TestLlmsTxtMergerInit:
     """Test LlmsTxtMerger initialization."""
 
@@ -118,6 +119,7 @@ class TestLlmsTxtMergerInit:
         assert merger.llms_txt_path == llms_path
 
 
+@pytest.mark.local_only
 class TestMergeActionsSkipStrategy:
     """Test merge operations with 'skip' strategy."""
 
@@ -182,6 +184,7 @@ class TestMergeActionsSkipStrategy:
         assert 'new-action-2' in action_names
 
 
+@pytest.mark.local_only
 class TestMergeActionsOverwriteStrategy:
     """Test merge operations with 'overwrite' strategy."""
 
@@ -217,6 +220,7 @@ class TestMergeActionsOverwriteStrategy:
         assert merged_action['flow'] == conflicting_actions[0]['flow']
 
 
+@pytest.mark.local_only
 class TestMergeActionsRenameStrategy:
     """Test merge operations with 'rename' strategy."""
 
@@ -264,6 +268,7 @@ class TestMergeActionsRenameStrategy:
         assert 'existing-action-1_3' in result.added
 
 
+@pytest.mark.local_only
 class TestPreviewMerge:
     """Test merge preview functionality."""
 
@@ -335,6 +340,7 @@ class TestPreviewMerge:
         assert conflict['resolution'] == 'skip'
 
 
+@pytest.mark.local_only
 class TestEmptyAndNewFiles:
     """Test merge with empty or non-existent files."""
 
@@ -367,6 +373,7 @@ class TestEmptyAndNewFiles:
         assert result.backup_path is None  # No file to backup
 
 
+@pytest.mark.local_only
 class TestEdgeCases:
     """Test edge cases and error handling."""
 
@@ -428,6 +435,7 @@ class TestEdgeCases:
             assert Path(result.backup_path).parent == backup_dir
 
 
+@pytest.mark.local_only
 class TestConvenienceFunction:
     """Test convenience function merge_remote_actions."""
 

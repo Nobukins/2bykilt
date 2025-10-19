@@ -22,6 +22,7 @@ from tests.batch import (
 )
 
 
+@pytest.mark.ci_safe
 class TestRetryBatchJobs:
     """Tests for retry_batch_jobs() method."""
 
@@ -170,6 +171,7 @@ class TestRetryBatchJobs:
             engine.retry_batch_jobs("batch1", ["job1"], max_retry_delay=-1)
 
 
+@pytest.mark.ci_safe
 class TestExecuteJobWithRetry:
     """Tests for execute_job_with_retry() method."""
 
@@ -259,6 +261,7 @@ class TestExecuteJobWithRetry:
         _run_async(_inner)
 
 
+@pytest.mark.ci_safe
 class TestExponentialBackoff:
     """Tests for exponential backoff logic."""
 
@@ -313,6 +316,7 @@ class TestExponentialBackoff:
         _run_async(_inner)
 
 
+@pytest.mark.ci_safe
 class TestJobExecutionValidation:
     """Tests for job execution validation."""
 
@@ -352,6 +356,7 @@ class TestJobExecutionValidation:
         _run_async(_inner)
 
 
+@pytest.mark.ci_safe
 class TestRetrySecurityAndLogging:
     """Tests for security and logging in retry functionality."""
 
@@ -386,6 +391,7 @@ class TestRetrySecurityAndLogging:
         _run_async(_inner)
 
 
+@pytest.mark.ci_safe
 class TestManifestHelpers:
     """Tests for manifest helper methods."""
 

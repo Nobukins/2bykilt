@@ -46,6 +46,7 @@ def reset_feature_flags():
 
 
 
+@pytest.mark.local_only
 class TestSettingsPanel:
     """SettingsPanel コンポーネントテスト。"""
 
@@ -72,6 +73,7 @@ class TestSettingsPanel:
         assert "LLM=ON" in summary
 
 
+@pytest.mark.local_only
 class TestTraceViewer:
     """TraceViewer コンポーネントテスト。"""
 
@@ -132,6 +134,7 @@ class TestTraceViewer:
         assert viewer._is_visible() is False
 
 
+@pytest.mark.local_only
 class TestRunHistory:
     """RunHistory コンポーネントテスト。"""
 
@@ -236,6 +239,7 @@ class TestRunHistory:
             Path(tmp.name).unlink()
 
 
+@pytest.mark.local_only
 class TestRunAgentPanel:
     """RunAgentPanel コンポーネントテスト。"""
 
@@ -300,6 +304,7 @@ class TestRunAgentPanel:
         assert "CDP" in text
 
 
+@pytest.mark.local_only
 class TestCommandHelper:
     def test_generate_command_template_without_params(self):
         with patch.object(CommandHelper, "_extract_commands_from_config", return_value=[{"name": "noop", "description": ""}]):

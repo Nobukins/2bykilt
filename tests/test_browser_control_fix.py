@@ -3,11 +3,13 @@
 Test script to verify browser-control generation fix
 """
 import sys
+import pytest
 import subprocess
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent
 
+@pytest.mark.ci_safe
 def test_script_generation():
     """Test that browser_control.py is generated correctly"""
     print("🧪 Test 1: Script generation")
@@ -33,6 +35,7 @@ def test_script_generation():
     print("  ✅ Script generation produces correct syntax")
     return True
 
+@pytest.mark.ci_safe
 def test_syntax_validation():
     """Test that generated script has valid Python syntax"""
     print("🧪 Test 2: Syntax validation")
@@ -61,6 +64,7 @@ def test_syntax_validation():
     print("  ✅ Syntax validation passed")
     return True
 
+@pytest.mark.ci_safe
 def test_pytest_collection():
     """Test that pytest can collect the test"""
     print("🧪 Test 3: Pytest collection")

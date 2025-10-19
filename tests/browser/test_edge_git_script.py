@@ -4,6 +4,7 @@ Test Edge git-script execution with improved error handling
 """
 
 import os
+import pytest
 import sys
 import subprocess
 import tempfile
@@ -14,6 +15,7 @@ sys.path.append('/Users/nobuaki/Documents/Github/copilot-ports/magic-trainings/2
 from src.utils.memory_monitor import memory_monitor
 from src.utils.app_logger import logger
 
+@pytest.mark.local_only
 def test_edge_git_script():
     """Test Edge git-script with debug output"""
     

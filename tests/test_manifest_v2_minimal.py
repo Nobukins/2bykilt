@@ -1,4 +1,5 @@
 import json
+import pytest
 from pathlib import Path
 from src.utils.fs_paths import get_artifacts_base_dir
 
@@ -12,6 +13,7 @@ def _read_manifest_text(mgr) -> str:
     return mp.read_text(encoding="utf-8") if mp.exists() else ""
 
 
+@pytest.mark.ci_safe
 def test_manifest_flag_off(tmp_path, monkeypatch):
     # Fresh context
     monkeypatch.setenv("BYKILT_RUN_ID", "MFLAGOFF1")
@@ -50,6 +52,7 @@ def test_manifest_flag_off(tmp_path, monkeypatch):
         assert not any(is_offcase_png_path(a) for a in after_artifacts)
 
 
+@pytest.mark.ci_safe
 def test_manifest_basic_entries_increment(tmp_path, monkeypatch):
     monkeypatch.setenv("BYKILT_RUN_ID", "MFLAGON1")
     RunContext.reset()
@@ -70,6 +73,7 @@ def test_manifest_basic_entries_increment(tmp_path, monkeypatch):
     assert len(screenshots) - pre == 2
 
 
+@pytest.mark.ci_safe
 def test_element_capture_entry(monkeypatch):
     monkeypatch.setenv("BYKILT_RUN_ID", "MFLAGON2")
     RunContext.reset()
@@ -91,6 +95,7 @@ def test_element_capture_entry(monkeypatch):
     assert any(e["meta"].get("selector") == "#login" for e in ec)
 
 
+@pytest.mark.ci_safe
 def test_video_entry_when_enabled(monkeypatch, tmp_path):
     monkeypatch.setenv("BYKILT_RUN_ID", "MFLAGON3")
     RunContext.reset()

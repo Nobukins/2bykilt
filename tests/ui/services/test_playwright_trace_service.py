@@ -21,6 +21,7 @@ from src.ui.services.playwright_trace_service import (
 )
 
 
+@pytest.mark.ci_safe
 class TestTraceViewerSession:
     """Tests for TraceViewerSession dataclass."""
     
@@ -57,6 +58,7 @@ class TestTraceViewerSession:
         assert "_cb=1234567890" in url
 
 
+@pytest.mark.ci_safe
 class TestPlaywrightTraceServiceInit:
     """Tests for PlaywrightTraceService initialization."""
     
@@ -86,6 +88,7 @@ class TestPlaywrightTraceServiceInit:
         assert session_root.exists()
 
 
+@pytest.mark.ci_safe
 class TestPlaywrightTraceServiceEnsureAssets:
     """Tests for ensure_assets method."""
     
@@ -161,6 +164,7 @@ class TestPlaywrightTraceServiceEnsureAssets:
             service.ensure_assets()
 
 
+@pytest.mark.ci_safe
 class TestPlaywrightTraceServicePrepareSession:
     """Tests for prepare_session method."""
     
@@ -223,6 +227,7 @@ class TestPlaywrightTraceServicePrepareSession:
         assert session2.trace_path.exists()
 
 
+@pytest.mark.ci_safe
 class TestPlaywrightTraceServiceGetSession:
     """Tests for get_session method."""
     
@@ -279,6 +284,7 @@ class TestPlaywrightTraceServiceGetSession:
         assert result is None
 
 
+@pytest.mark.ci_safe
 class TestPlaywrightTraceServicePruneSessions:
     """Tests for session pruning."""
     
@@ -334,6 +340,7 @@ class TestPlaywrightTraceServicePruneSessions:
         assert service.get_session(session.session_id) is not None
 
 
+@pytest.mark.ci_safe
 class TestGlobalFunctions:
     """Tests for global module-level functions."""
     
@@ -378,6 +385,7 @@ class TestGlobalFunctions:
         mock_service.prune_sessions.assert_called_once()
 
 
+@pytest.mark.ci_safe
 class TestPlaywrightTraceServiceIntegration:
     """Integration tests for PlaywrightTraceService."""
     

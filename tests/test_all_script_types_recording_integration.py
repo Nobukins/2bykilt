@@ -13,6 +13,7 @@ from src.script.script_manager import run_script
 from src.utils.recording_dir_resolver import create_or_get_recording_dir
 
 
+@pytest.mark.ci_safe
 class TestAllScriptTypesRecordingIntegration:
     """Integration test for all script types recording functionality"""
 
@@ -40,6 +41,7 @@ import pytest
 from playwright.sync_api import Page
 import os
 
+@pytest.mark.ci_safe
 @pytest.mark.integration_test
 def test_script_integration(page: Page):
     recording_path = os.environ.get('RECORDING_PATH')
@@ -55,6 +57,7 @@ import pytest
 from playwright.sync_api import Page
 import os
 
+@pytest.mark.ci_safe
 @pytest.mark.browser_control
 def test_browser_control_integration(page: Page):
     recording_path = os.environ.get('RECORDING_PATH')
@@ -72,6 +75,7 @@ import pytest
 from playwright.sync_api import Page
 import os
 
+@pytest.mark.ci_safe
 @pytest.mark.git_script_test
 def test_git_script_integration(page: Page):
     recording_path = os.environ.get('RECORDING_PATH')
@@ -87,6 +91,7 @@ import pytest
 from playwright.sync_api import Page
 import os
 
+@pytest.mark.ci_safe
 @pytest.mark.action_test
 def test_action_integration(page: Page):
     recording_path = os.environ.get('RECORDING_PATH')

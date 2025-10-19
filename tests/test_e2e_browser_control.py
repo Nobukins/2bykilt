@@ -4,12 +4,14 @@ End-to-end test for browser-control fix
 Simulates the actual Gradio UI workflow
 """
 import sys
+import pytest
 import os
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+@pytest.mark.ci_safe
 def test_e2e_browser_control():
     """
     End-to-end test simulating the Gradio UI workflow:

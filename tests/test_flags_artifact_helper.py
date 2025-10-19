@@ -6,6 +6,7 @@ from src.config.feature_flags import FeatureFlags
 from src.runtime.run_context import RunContext
 
 
+@pytest.mark.ci_safe
 def test_flags_dump_snapshot_creates_artifact(tmp_path, monkeypatch):
     # Force artifacts to tmp dir by changing CWD (RunContext uses relative paths)
     monkeypatch.chdir(tmp_path)
@@ -30,6 +31,7 @@ def test_flags_dump_snapshot_creates_artifact(tmp_path, monkeypatch):
     assert isinstance(data["overrides_active"], list)
 
 
+@pytest.mark.ci_safe
 def test_flags_dump_snapshot_with_overrides(tmp_path, monkeypatch):
     """Test dump_snapshot with active overrides."""
     monkeypatch.chdir(tmp_path)
@@ -51,6 +53,7 @@ def test_flags_dump_snapshot_with_overrides(tmp_path, monkeypatch):
     assert data["resolved"].get("test_flag") is True
 
 
+@pytest.mark.ci_safe
 def test_flags_dump_snapshot_multiple_calls(tmp_path, monkeypatch):
     """Test that multiple calls to dump_snapshot work correctly."""
     monkeypatch.chdir(tmp_path)
@@ -74,6 +77,7 @@ def test_flags_dump_snapshot_multiple_calls(tmp_path, monkeypatch):
         assert "resolved" in data
 
 
+@pytest.mark.ci_safe
 def test_flags_dump_snapshot_fallback_behavior(tmp_path, monkeypatch):
     """Test fallback behavior when RunContext is not available."""
     monkeypatch.chdir(tmp_path)
@@ -101,6 +105,7 @@ def test_flags_dump_snapshot_fallback_behavior(tmp_path, monkeypatch):
         pass
 
 
+@pytest.mark.ci_safe
 def test_flags_dump_snapshot_error_handling(tmp_path, monkeypatch):
     """Test error handling in dump_snapshot."""
     monkeypatch.chdir(tmp_path)

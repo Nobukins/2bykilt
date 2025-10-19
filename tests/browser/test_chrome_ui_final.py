@@ -5,6 +5,7 @@ Tests the complete NEW METHOD with Chrome browser for real automation
 """
 
 import asyncio
+import pytest
 import os
 import sys
 import tempfile
@@ -14,6 +15,7 @@ import shutil
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
+@pytest.mark.local_only
 async def test_chrome_ui_automation():
     """Test complete UI automation with Chrome browser"""
     

@@ -50,6 +50,7 @@ def temp_video_with_gif(tmp_path):
     return str(video_path), str(gif_path)
 
 
+@pytest.mark.local_only
 class TestGifPathNaming:
     """Test GIF path naming convention."""
     
@@ -78,6 +79,7 @@ class TestGifPathNaming:
         assert worker.get_gif_path(video_path) == expected_gif
 
 
+@pytest.mark.local_only
 class TestFeatureFlagIntegration:
     """Test feature flag integration."""
     
@@ -110,6 +112,7 @@ class TestFeatureFlagIntegration:
         assert worker._worker_task is None
 
 
+@pytest.mark.local_only
 class TestQueueManagement:
     """Test queue management and deduplication."""
     
@@ -178,6 +181,7 @@ class TestQueueManagement:
         assert worker.queue.qsize() == 0
 
 
+@pytest.mark.local_only
 class TestRetryLogic:
     """Test retry logic and failure tracking."""
     
@@ -245,6 +249,7 @@ class TestRetryLogic:
         assert worker.queue.qsize() == 0  # Not re-enqueued
 
 
+@pytest.mark.local_only
 class TestWorkerLifecycle:
     """Test worker start/stop lifecycle."""
     
@@ -285,6 +290,7 @@ class TestWorkerLifecycle:
         assert worker._running is False
 
 
+@pytest.mark.local_only
 class TestStatusReporting:
     """Test status reporting for monitoring."""
     
@@ -325,6 +331,7 @@ class TestStatusReporting:
         assert status["failed_count"] == 1
 
 
+@pytest.mark.local_only
 class TestGlobalWorkerInstance:
     """Test global worker instance singleton pattern."""
     
@@ -340,6 +347,7 @@ class TestGlobalWorkerInstance:
         assert isinstance(worker, GifFallbackWorker)
 
 
+@pytest.mark.local_only
 class TestFfmpegConversion:
     """Test ffmpeg conversion logic."""
     

@@ -10,10 +10,12 @@ def temp_llms_path(tmp_path, monkeypatch):
     return target
 
 
+@pytest.mark.local_only
 def test_load_actions_config_missing_file_returns_empty_dict(temp_llms_path):
     assert helpers.load_actions_config() == {}
 
 
+@pytest.mark.local_only
 def test_load_actions_config_parses_valid_yaml(temp_llms_path):
     temp_llms_path.write_text("actions:\n  test: value\n", encoding="utf-8")
     config = helpers.load_actions_config()
@@ -21,6 +23,7 @@ def test_load_actions_config_parses_valid_yaml(temp_llms_path):
     assert config["actions"]["test"] == "value"
 
 
+@pytest.mark.local_only
 def test_load_actions_config_handles_yaml_error(temp_llms_path, caplog):
     """Test that YAML parsing errors are logged and return empty dict."""
     temp_llms_path.write_text("invalid: yaml: content: [[[", encoding="utf-8")
@@ -29,6 +32,7 @@ def test_load_actions_config_handles_yaml_error(temp_llms_path, caplog):
     assert any("YAML parsing error" in record.message for record in caplog.records)
 
 
+@pytest.mark.local_only
 def test_load_actions_config_handles_invalid_structure(temp_llms_path, caplog):
     """Test that invalid config structure is logged and returns empty dict."""
     temp_llms_path.write_text("not_actions: value\n", encoding="utf-8")
@@ -37,22 +41,26 @@ def test_load_actions_config_handles_invalid_structure(temp_llms_path, caplog):
     assert any("Invalid actions config structure" in record.message for record in caplog.records)
 
 
+@pytest.mark.local_only
 def test_load_llms_file_returns_contents(temp_llms_path):
     expected = "sample content"
     temp_llms_path.write_text(expected, encoding="utf-8")
     assert helpers.load_llms_file() == expected
 
 
+@pytest.mark.local_only
 def test_load_llms_file_returns_empty_on_missing_file(temp_llms_path):
     assert helpers.load_llms_file() == ""
 
 
+@pytest.mark.local_only
 def test_save_llms_file_writes_content(temp_llms_path):
     result = helpers.save_llms_file("new content")
     assert temp_llms_path.read_text(encoding="utf-8") == "new content"
     assert "保存しました" in result
 
 
+@pytest.mark.local_only
 def test_discover_and_preview_llmstxt_success(monkeypatch):
     """Test successful llms.txt discovery."""
     mock_discover = {
@@ -78,6 +86,7 @@ def test_discover_and_preview_llmstxt_success(monkeypatch):
     assert actions_json
 
 
+@pytest.mark.local_only
 def test_discover_and_preview_llmstxt_discovery_failure(monkeypatch):
     """Test llms.txt discovery failure."""
     mock_discover = {
@@ -94,6 +103,7 @@ def test_discover_and_preview_llmstxt_discovery_failure(monkeypatch):
     assert not actions_json
 
 
+@pytest.mark.local_only
 def test_discover_and_preview_llmstxt_no_actions(monkeypatch):
     """Test discovery when no actions found."""
     mock_discover = {
@@ -111,6 +121,7 @@ def test_discover_and_preview_llmstxt_no_actions(monkeypatch):
     assert not actions_json
 
 
+@pytest.mark.local_only
 def test_discover_and_preview_llmstxt_security_validation_failure(monkeypatch):
     """Test security validation failure."""
     mock_discover = {
@@ -135,6 +146,7 @@ def test_discover_and_preview_llmstxt_security_validation_failure(monkeypatch):
     assert "Malicious pattern detected" in status
 
 
+@pytest.mark.local_only
 def test_import_llmstxt_actions_success(monkeypatch, tmp_path):
     """Test successful action import."""
     actions_json = '[{"name": "test_action", "type": "browser_control"}]'
@@ -158,12 +170,14 @@ def test_import_llmstxt_actions_success(monkeypatch, tmp_path):
     assert "1 action added" in result
 
 
+@pytest.mark.local_only
 def test_import_llmstxt_actions_no_actions():
     """Test import with no actions."""
     result = helpers.import_llmstxt_actions('[]')
     assert "❌ No actions to import" in result
 
 
+@pytest.mark.local_only
 def test_import_llmstxt_actions_merge_failure(monkeypatch, tmp_path):
     """Test import when merge fails."""
     actions_json = '[{"name": "test"}]'
@@ -186,6 +200,7 @@ def test_import_llmstxt_actions_merge_failure(monkeypatch, tmp_path):
     assert "File permission denied" in result
 
 
+@pytest.mark.local_only
 def test_preview_merge_llmstxt_success(monkeypatch, tmp_path):
     """Test successful merge preview."""
     actions_json = '[{"name": "new_action", "type": "browser_control"}]'
@@ -208,6 +223,7 @@ def test_preview_merge_llmstxt_success(monkeypatch, tmp_path):
     assert "1 new action" in result
 
 
+@pytest.mark.local_only
 def test_preview_merge_llmstxt_with_conflicts(monkeypatch, tmp_path):
     """Test merge preview with conflicts."""
     actions_json = '[{"name": "action", "type": "git_script"}]'
@@ -232,12 +248,14 @@ def test_preview_merge_llmstxt_with_conflicts(monkeypatch, tmp_path):
     assert "action" in result
 
 
+@pytest.mark.local_only
 def test_preview_merge_llmstxt_no_actions():
     """Test preview with no actions."""
     result = helpers.preview_merge_llmstxt('[]')
     assert "ℹ️ No actions to preview" in result
 
 
+@pytest.mark.local_only
 def test_load_env_browser_settings_file_success(monkeypatch, tmp_path):
     """Test loading browser settings from .env file."""
     env_file = tmp_path / ".env"
@@ -256,6 +274,7 @@ def test_load_env_browser_settings_file_success(monkeypatch, tmp_path):
     assert "✅ Env settings loaded" in status
 
 
+@pytest.mark.local_only
 def test_load_env_browser_settings_file_no_file():
     """Test loading browser settings with no file."""
     _, _, status = helpers.load_env_browser_settings_file(None)

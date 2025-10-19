@@ -79,6 +79,7 @@ async def _run_action_runner_template():
         return False
 
 
+@pytest.mark.local_only
 def test_action_runner_template():
     assert _run_async(_run_action_runner_template)
 
@@ -136,6 +137,7 @@ async def _run_browser_control():
         return False
 
 
+@pytest.mark.local_only
 @pytest.mark.playwright_required
 def test_browser_control():
     assert _run_async(_run_browser_control)
@@ -178,6 +180,7 @@ async def _run_git_script():
         return False
 
 
+@pytest.mark.local_only
 def test_git_script():
     assert _run_async(_run_git_script)
 

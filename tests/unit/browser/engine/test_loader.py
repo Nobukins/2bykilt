@@ -15,6 +15,7 @@ from src.browser.engine.loader import EngineLoader
 from src.browser.engine.browser_engine import BrowserEngine, EngineType
 
 
+@pytest.mark.ci_safe
 class TestEngineLoader:
     """EngineLoader テスト"""
     

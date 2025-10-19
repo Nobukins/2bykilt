@@ -26,12 +26,14 @@ def _touch(path: Path, *, mtime: float) -> None:
     os.utime(path, (mtime, mtime))
 
 
+@pytest.mark.ci_safe
 def test_missing_root_returns_empty(tmp_path: Path) -> None:
     missing = tmp_path / "runs" / "missing"
     result = list(scan_recordings(missing))
     assert result == []
 
 
+@pytest.mark.ci_safe
 def test_flag_disabled_scans_only_flat_directory(tmp_path: Path) -> None:
     # Explicitly disable recursive scanning for this test
     FeatureFlags.set_override(_FLAG, False)
@@ -49,6 +51,7 @@ def test_flag_disabled_scans_only_flat_directory(tmp_path: Path) -> None:
     assert [item.path for item in result] == [top_file]
 
 
+@pytest.mark.ci_safe
 def test_flag_enabled_returns_newest_first(tmp_path: Path) -> None:
     FeatureFlags.set_override(_FLAG, True)
 
@@ -67,6 +70,7 @@ def test_flag_enabled_returns_newest_first(tmp_path: Path) -> None:
     assert [item.path for item in result] == [new_file, old_file]
 
 
+@pytest.mark.ci_safe
 def test_limit_and_offset_window(tmp_path: Path) -> None:
     FeatureFlags.set_override(_FLAG, True)
 
@@ -87,6 +91,7 @@ def test_limit_and_offset_window(tmp_path: Path) -> None:
     assert [item.path for item in result] == expected
 
 
+@pytest.mark.ci_safe
 def test_allowed_roots_guard(tmp_path: Path) -> None:
     FeatureFlags.set_override(_FLAG, True)
 
@@ -99,6 +104,7 @@ def test_allowed_roots_guard(tmp_path: Path) -> None:
         list(scan_recordings(root, allowed_roots=[allowed]))
 
 
+@pytest.mark.ci_safe
 def test_invalid_pagination_parameters(tmp_path: Path) -> None:
     root = tmp_path / "runs"
     root.mkdir()
@@ -109,6 +115,7 @@ def test_invalid_pagination_parameters(tmp_path: Path) -> None:
         list(scan_recordings(root, offset=-5))
 
 
+@pytest.mark.ci_safe
 def test_extension_filtering_case_insensitive(tmp_path: Path) -> None:
     FeatureFlags.set_override(_FLAG, True)
 
@@ -126,6 +133,7 @@ def test_extension_filtering_case_insensitive(tmp_path: Path) -> None:
     assert {f.lower() for f in DEFAULT_EXTENSIONS} >= {".webm", ".mp4", ".ogg"}
 
 
+@pytest.mark.ci_safe
 def test_zero_limit_returns_no_items(tmp_path: Path) -> None:
     FeatureFlags.set_override(_FLAG, True)
 
@@ -139,6 +147,7 @@ def test_zero_limit_returns_no_items(tmp_path: Path) -> None:
     assert result == []
 
 
+@pytest.mark.ci_safe
 def test_root_must_be_directory(tmp_path: Path) -> None:
     file_root = tmp_path / "runs.log"
     file_root.write_text("noop", encoding="utf-8")
@@ -147,6 +156,7 @@ def test_root_must_be_directory(tmp_path: Path) -> None:
         list(scan_recordings(file_root))
 
 
+@pytest.mark.ci_safe
 def test_custom_extension_normalisation(tmp_path: Path) -> None:
     FeatureFlags.set_override(_FLAG, True)
 

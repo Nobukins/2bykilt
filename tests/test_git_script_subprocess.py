@@ -18,6 +18,7 @@ sys.path.insert(0, parent_dir)
 from src.utils.git_script_automator import GitScriptAutomator
 
 
+@pytest.mark.local_only
 class TestGitScriptAutomatorSubprocess:
     """GitScriptAutomator の subprocess 実行とパラメータ置換のテスト"""
 

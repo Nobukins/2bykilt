@@ -4,10 +4,12 @@ Final NEW_METHOD Integration Test
 Tests all automation types with the new modular architecture
 """
 import asyncio
+import pytest
 import json
 import os
 from src.script.script_manager import run_script
 
+@pytest.mark.ci_safe
 async def test_new_method_integration():
     """Test all automation types with NEW_METHOD"""
     print("🚀 Final NEW_METHOD Integration Test")

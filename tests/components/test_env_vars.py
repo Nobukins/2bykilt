@@ -5,8 +5,10 @@ bykilt.pyと同様に.envファイルを読み込んで環境変数を確認
 """
 
 import os
+import pytest
 from dotenv import load_dotenv
 
+@pytest.mark.ci_safe
 def test_env_vars():
     print("=== 環境変数テスト開始 ===")
     

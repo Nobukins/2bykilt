@@ -3,6 +3,7 @@ import pytest
 from src.utils.timeout_manager import TimeoutManager, TimeoutScope, TimeoutError, CancellationError
 
 
+@pytest.mark.ci_safe
 @pytest.mark.asyncio
 async def test_timeout_scope_success():
     """Test that timeout_scope works correctly for operations that complete within timeout"""
@@ -18,6 +19,7 @@ async def test_timeout_scope_success():
     assert result == "success"
 
 
+@pytest.mark.ci_safe
 @pytest.mark.asyncio
 async def test_timeout_scope_timeout():
     """Test that timeout_scope raises TimeoutError for operations that exceed timeout"""
@@ -32,6 +34,7 @@ async def test_timeout_scope_timeout():
             await slow_operation()
 
 
+@pytest.mark.ci_safe
 @pytest.mark.asyncio
 async def test_timeout_scope_cancellation():
     """Test that timeout_scope handles cancellation correctly"""

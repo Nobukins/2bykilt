@@ -4,6 +4,7 @@
 Chrome/Edgeで不正な引数による警告が表示されないことを確認
 """
 import asyncio
+import pytest
 import os
 import sys
 import tempfile
@@ -17,6 +18,7 @@ from src.utils.browser_launcher import BrowserLauncher, ChromeLauncher, EdgeLaun
 from src.utils.git_script_automator import GitScriptAutomator
 
 
+@pytest.mark.local_only
 async def test_browser_arguments_validation():
     """ブラウザ引数の検証テスト"""
     print("🔍 ブラウザ引数の検証テストを開始...")

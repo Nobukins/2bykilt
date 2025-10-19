@@ -3,6 +3,7 @@
 Ultra minimal test to isolate the Gradio schema issue
 """
 import os
+import pytest
 import gradio as gr
 
 # Set ENABLE_LLM to false

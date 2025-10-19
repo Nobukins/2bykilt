@@ -4,6 +4,7 @@ Mac互換性検証テストスイート - Windows対応のPRの検証
 """
 
 import os
+import pytest
 import sys
 import asyncio
 import subprocess
@@ -120,6 +121,7 @@ except Exception as e:
 import asyncio
 from playwright.async_api import async_playwright
 
+@pytest.mark.ci_safe
 async def test_browser():
     try:
         async with async_playwright() as p:

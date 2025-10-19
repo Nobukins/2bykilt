@@ -12,6 +12,7 @@ from unittest.mock import Mock
 from src.batch.summary import BatchSummary, BatchSummaryGenerator, generate_batch_summary
 
 
+@pytest.mark.ci_safe
 class TestBatchSummary:
     """Test BatchSummary dataclass."""
 
@@ -54,6 +55,7 @@ class TestBatchSummary:
         assert summary.success_rate == 80.0
 
 
+@pytest.mark.ci_safe
 class TestBatchSummaryGenerator:
     """Test BatchSummaryGenerator class."""
 
@@ -198,6 +200,7 @@ class TestBatchSummaryGenerator:
         assert loaded is None
 
 
+@pytest.mark.ci_safe
 class TestGenerateBatchSummary:
     """Test generate_batch_summary function."""
 

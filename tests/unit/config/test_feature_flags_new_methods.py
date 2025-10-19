@@ -9,6 +9,7 @@ import yaml
 from src.config.feature_flags import FeatureFlags
 
 
+@pytest.mark.ci_safe
 class TestFeatureFlagsNewMethods:
     """Test suite for new FeatureFlags API methods."""
     
@@ -176,6 +177,7 @@ class TestFeatureFlagsNewMethods:
         FeatureFlags.clear_override(test_flag_name)
 
 
+@pytest.mark.ci_safe
 class TestFeatureFlagsMetadataAccuracy:
     """Test metadata accuracy and consistency."""
     

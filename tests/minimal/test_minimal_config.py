@@ -5,6 +5,7 @@ venv312環境でのLLM関連モジュールなしでの動作確認
 """
 
 import os
+import pytest
 import sys
 import asyncio
 import subprocess
@@ -231,6 +232,7 @@ os.environ["ENABLE_LLM"] = "false"
 from playwright.async_api import async_playwright
 from src.browser.browser_config import BrowserConfig
 
+@pytest.mark.ci_safe
 async def test_minimal_browser():
     try:
         print("Testing minimal browser functionality...")

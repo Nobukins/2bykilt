@@ -14,6 +14,7 @@ from src.utils.recording_dir_resolver import create_or_get_recording_dir
 
 
 @pytest.mark.integration
+@pytest.mark.ci_safe
 class TestActionRunnerTemplateTypeRecording:
     """Test recording functionality for action_runner_template type"""
 
@@ -32,6 +33,7 @@ import pytest
 from playwright.sync_api import Page
 import os
 
+@pytest.mark.ci_safe
 @pytest.mark.action_test
 def test_action_runner_recording(page: Page):
     """Test action runner that should generate recording"""

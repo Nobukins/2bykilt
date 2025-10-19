@@ -13,6 +13,7 @@ import pytest
 from src.ui.components.run_history import RunHistory
 
 
+@pytest.mark.ci_safe
 class TestRunHistoryInit:
     """Tests for RunHistory initialization."""
     
@@ -38,6 +39,7 @@ class TestRunHistoryInit:
         assert len(run_history._history_data) == 1
 
 
+@pytest.mark.ci_safe
 class TestRunHistoryLoadHistory:
     """Tests for _load_history method."""
     
@@ -83,6 +85,7 @@ class TestRunHistoryLoadHistory:
         assert run_history._history_data == []
 
 
+@pytest.mark.ci_safe
 class TestRunHistoryFormatHistoryData:
     """Tests for _format_history_data method."""
     
@@ -137,6 +140,7 @@ class TestRunHistoryFormatHistoryData:
         assert rows[2][2] == "cmd3"
 
 
+@pytest.mark.ci_safe
 class TestRunHistoryApplyFilter:
     """Tests for _apply_filter method."""
     
@@ -198,6 +202,7 @@ class TestRunHistoryApplyFilter:
         assert filtered == []
 
 
+@pytest.mark.ci_safe
 class TestRunHistoryGetStatsummary:
     """Tests for _get_stats_summary method."""
     
@@ -262,6 +267,7 @@ class TestRunHistoryGetStatsummary:
         assert "平均実行時間: 1.50 秒" in stats
 
 
+@pytest.mark.ci_safe
 class TestRunHistoryAddEntry:
     """Tests for add_entry method."""
     
@@ -318,6 +324,7 @@ class TestRunHistoryAddEntry:
         assert saved_data[0]["command_summary"] == "persisted command"
 
 
+@pytest.mark.ci_safe
 class TestRunHistoryRender:
     """Tests for render method."""
     
@@ -369,6 +376,7 @@ class TestRunHistoryRender:
         assert mock_gr.Dataframe.called
 
 
+@pytest.mark.ci_safe
 class TestRunHistoryIntegration:
     """Integration tests for RunHistory component."""
     

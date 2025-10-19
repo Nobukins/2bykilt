@@ -44,6 +44,7 @@ def setup_test():
     _clear_legacy_warning_flag()
 
 
+@pytest.mark.ci_safe
 def test_resolve_recording_dir_explicit_path(setup_test):
     """Test explicit path takes precedence."""
     explicit = "/tmp/custom/recordings"
@@ -53,6 +54,7 @@ def test_resolve_recording_dir_explicit_path(setup_test):
     assert result == expected
 
 
+@pytest.mark.ci_safe
 def test_resolve_recording_dir_flag_enabled(setup_test):
     """Test unified path when flag is enabled (default)."""
     with patch('src.runtime.run_context.RunContext.get') as mock_rc:
@@ -65,6 +67,7 @@ def test_resolve_recording_dir_flag_enabled(setup_test):
             assert result == expected
 
 
+@pytest.mark.ci_safe
 def test_resolve_recording_dir_legacy_no_override(setup_test, caplog):
     """Test legacy path when flag is false but not explicitly overridden."""
     # Set flag to false via file default (not override)
@@ -77,6 +80,7 @@ def test_resolve_recording_dir_legacy_no_override(setup_test, caplog):
                 assert len(caplog.records) == 0
 
 
+@pytest.mark.ci_safe
 def test_resolve_recording_dir_legacy_runtime_override(setup_test, caplog):
     """Test legacy path with runtime override triggers warning."""
     FeatureFlags.set_override("artifacts.unified_recording_path", False)
@@ -93,6 +97,7 @@ def test_resolve_recording_dir_legacy_runtime_override(setup_test, caplog):
         assert "runtime" in str(record.__dict__.get('override_source', ''))
 
 
+@pytest.mark.ci_safe
 def test_resolve_recording_dir_legacy_env_override(setup_test, caplog, monkeypatch):
     """Test legacy path with environment override triggers warning."""
     monkeypatch.setenv("BYKILT_FLAG_ARTIFACTS_UNIFIED_RECORDING_PATH", "false")
@@ -110,6 +115,7 @@ def test_resolve_recording_dir_legacy_env_override(setup_test, caplog, monkeypat
         assert "environment" in str(record.__dict__.get('override_source', ''))
 
 
+@pytest.mark.ci_safe
 def test_resolve_recording_dir_warning_once_per_process(setup_test, caplog):
     """Test warning is emitted only once per process."""
     FeatureFlags.set_override("artifacts.unified_recording_path", False)

@@ -13,6 +13,7 @@ from src.modules.direct_browser_control import execute_direct_browser_control
 # Mark as local_only since this test requires browser and has timing sensitivity
 pytestmark = pytest.mark.local_only
 
+@pytest.mark.ci_safe
 async def test_issue_220_scenario():
     """Test the actual Issue #220 scenario - browser-control execution failure"""
     print("Testing Issue #220 scenario: browser-control execution failure...")
@@ -45,6 +46,7 @@ async def test_issue_220_scenario():
         traceback.print_exc()
         return False
 
+@pytest.mark.ci_safe
 async def test_error_scenario():
     """Test error handling scenario"""
     print("\nTesting error handling scenario...")

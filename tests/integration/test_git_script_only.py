@@ -17,6 +17,7 @@ from src.script.script_manager import run_script
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+@pytest.mark.local_only
 async def test_git_script():
     """Test git-script execution"""
     logger.info("\n=== Testing git-script ===")

@@ -1,9 +1,11 @@
 import os
+import pytest
 from pathlib import Path
 from src.core.artifact_manager import get_artifact_manager
 from src.config.feature_flags import FeatureFlags
 
 
+@pytest.mark.ci_safe
 def test_register_video_artifact(tmp_path, monkeypatch):
     # Enable manifest v2
     FeatureFlags.set_override("artifacts.enable_manifest_v2", True)

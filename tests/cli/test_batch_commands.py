@@ -16,6 +16,7 @@ def fake_run_context(tmp_path):
     return SimpleNamespace(artifact_dir=artifact_dir)
 
 
+@pytest.mark.ci_safe
 def test_handle_start_command_success(monkeypatch, tmp_path, fake_run_context, capsys):
     csv_file = tmp_path / "jobs.csv"
     csv_file.write_text("url,action\nhttps://example.com,navigate\n", encoding="utf-8")
@@ -39,6 +40,7 @@ def test_handle_start_command_success(monkeypatch, tmp_path, fake_run_context, c
     assert "Total jobs: 1" in captured.out
 
 
+@pytest.mark.ci_safe
 def test_handle_start_command_missing_file(monkeypatch, tmp_path, fake_run_context, capsys):
     missing_csv = tmp_path / "missing.csv"
 
@@ -53,6 +55,7 @@ def test_handle_start_command_missing_file(monkeypatch, tmp_path, fake_run_conte
     assert "CSV file not found" in captured.out
 
 
+@pytest.mark.ci_safe
 def test_handle_status_command_prints_jobs(monkeypatch, fake_run_context, capsys):
     jobs = [
         {"job_id": "job-1", "status": "completed"},
@@ -83,6 +86,7 @@ def test_handle_status_command_prints_jobs(monkeypatch, fake_run_context, capsys
     assert "Error: boom" in captured.out
 
 
+@pytest.mark.ci_safe
 def test_handle_update_job_command(monkeypatch, fake_run_context, capsys):
     updates = {}
 
@@ -106,6 +110,7 @@ def test_handle_update_job_command(monkeypatch, fake_run_context, capsys):
     assert "Job status updated" in captured.out
 
 
+@pytest.mark.ci_safe
 def test_handle_execute_command(monkeypatch, fake_run_context, capsys):
     monkeypatch.setattr(batch_commands.RunContext, "get", lambda: fake_run_context)
     monkeypatch.setattr(
@@ -123,6 +128,7 @@ def test_handle_execute_command(monkeypatch, fake_run_context, capsys):
     assert "Jobs executed: 2" in captured.out
 
 
+@pytest.mark.ci_safe
 def test_handle_unknown_command_returns_error(capsys):
     args = SimpleNamespace(batch_command="unknown")
     exit_code = batch_commands.handle_batch_command(args)
@@ -132,6 +138,7 @@ def test_handle_unknown_command_returns_error(capsys):
     assert "Unknown batch command" in captured.out
 
 
+@pytest.mark.ci_safe
 def test_resolve_csv_path_validates_and_warns(tmp_path, capsys):
     csv_file = tmp_path / "jobs.log"
     csv_file.write_text("id\n1\n", encoding="utf-8")
@@ -144,6 +151,7 @@ def test_resolve_csv_path_validates_and_warns(tmp_path, capsys):
     assert "does not use a typical CSV extension" in captured.out
 
 
+@pytest.mark.ci_safe
 def test_resolve_csv_path_rejects_having_directory(tmp_path):
     directory = tmp_path / "data"
     directory.mkdir()
@@ -152,6 +160,7 @@ def test_resolve_csv_path_rejects_having_directory(tmp_path):
         batch_commands._resolve_csv_path(str(directory))
 
 
+@pytest.mark.ci_safe
 def test_run_start_batch_falls_back_to_new_event_loop(monkeypatch, tmp_path):
     csv_path = tmp_path / "jobs.csv"
     csv_path.write_text("url\nhttps://example.com\n", encoding="utf-8")
@@ -190,12 +199,14 @@ def test_run_start_batch_falls_back_to_new_event_loop(monkeypatch, tmp_path):
     assert loop_state["closed"]
 
 
+@pytest.mark.ci_safe
 def test_resolve_csv_path_raises_on_missing_file(tmp_path):
     missing = tmp_path / "nonexistent.csv"
     with pytest.raises(FileNotFoundError, match="CSV file not found"):
         batch_commands._resolve_csv_path(str(missing))
 
 
+@pytest.mark.ci_safe
 def test_handle_start_command_with_permission_error(monkeypatch, tmp_path, fake_run_context, capsys):
     csv_file = tmp_path / "jobs.csv"
     csv_file.write_text("url\nhttps://example.com\n", encoding="utf-8")
@@ -214,12 +225,14 @@ def test_handle_start_command_with_permission_error(monkeypatch, tmp_path, fake_
     assert "Access denied" in captured.out
 
 
+@pytest.mark.ci_safe
 def test_print_job_details_handles_empty_jobs():
     manifest = SimpleNamespace(jobs=None)
     # Should not raise
     batch_commands._print_job_details(manifest)
 
 
+@pytest.mark.ci_safe
 def test_get_value_handles_dict_and_object():
     dict_obj = {"key": "value"}
     obj = SimpleNamespace(key="value")

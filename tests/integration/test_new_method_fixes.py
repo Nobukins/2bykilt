@@ -4,6 +4,7 @@ NEW_METHOD Final Verification Test
 Tests all automation types with fixes applied
 """
 import sys
+import pytest
 import os
 import asyncio
 from pathlib import Path
@@ -14,6 +15,7 @@ sys.path.insert(0, str(project_root))
 
 from src.script.script_manager import run_script
 
+@pytest.mark.ci_safe
 async def test_new_method_final_verification():
     """Test all automation types with NEW_METHOD fixes"""
     

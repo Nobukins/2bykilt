@@ -9,6 +9,7 @@ This script tests the timeout manager implementation to ensure:
 """
 
 import asyncio
+import pytest
 import time
 import logging
 from src.utils.timeout_manager import (
@@ -24,6 +25,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.local_only
 async def test_basic_timeout():
     """Test basic timeout functionality"""
     print("🧪 Testing basic timeout functionality...")
@@ -68,6 +70,7 @@ async def test_basic_timeout():
     print("✅ Basic timeout functionality test completed")
 
 
+@pytest.mark.local_only
 async def test_cancellation():
     """Test cancellation functionality"""
     print("🧪 Testing cancellation functionality...")
@@ -119,6 +122,7 @@ async def test_cancellation():
     print("✅ Cancellation functionality test completed")
 
 
+@pytest.mark.local_only
 async def test_nested_timeouts():
     """Test nested timeout scopes"""
     print("🧪 Testing nested timeout scopes...")
@@ -162,6 +166,7 @@ async def test_nested_timeouts():
     print("✅ Nested timeout scopes test completed")
 
 
+@pytest.mark.local_only
 async def test_graceful_shutdown():
     """Test graceful shutdown functionality"""
     print("🧪 Testing graceful shutdown...")

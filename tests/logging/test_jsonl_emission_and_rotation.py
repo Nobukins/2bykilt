@@ -7,6 +7,7 @@ from src.logging.jsonl_logger import JsonlLogger
 from src.runtime.run_context import RunContext
 
 
+@pytest.mark.ci_safe
 def test_basic_emission(tmp_path, monkeypatch):
     # Direct artifacts into tmp by changing CWD (RunContext uses relative path)
     monkeypatch.chdir(tmp_path)
@@ -27,6 +28,7 @@ def test_basic_emission(tmp_path, monkeypatch):
     assert rec["seq"] == 1
 
 
+@pytest.mark.ci_safe
 def test_rotation_and_retention(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("BYKILT_RUN_ID", "runrotate")
@@ -55,6 +57,7 @@ def test_rotation_and_retention(tmp_path, monkeypatch):
             assert r.stat().st_size <= 400  # some slack
 
 
+@pytest.mark.ci_safe
 def test_log_level_filtering(tmp_path, monkeypatch):
     """Test that LOG_LEVEL environment variable filters log messages correctly."""
     monkeypatch.chdir(tmp_path)
@@ -86,6 +89,7 @@ def test_log_level_filtering(tmp_path, monkeypatch):
     assert "critical message" in messages
 
 
+@pytest.mark.ci_safe
 def test_log_level_debug(tmp_path, monkeypatch):
     """Test that LOG_LEVEL=DEBUG allows all messages through."""
     monkeypatch.chdir(tmp_path)
@@ -111,6 +115,7 @@ def test_log_level_debug(tmp_path, monkeypatch):
     assert "warning message" in messages
 
 
+@pytest.mark.ci_safe
 def test_log_level_error(tmp_path, monkeypatch):
     """Test that LOG_LEVEL=ERROR filters out WARNING and below."""
     monkeypatch.chdir(tmp_path)
@@ -140,6 +145,7 @@ def test_log_level_error(tmp_path, monkeypatch):
     assert "critical message" in messages
 
 
+@pytest.mark.ci_safe
 def test_log_level_invalid_defaults_to_info(tmp_path, monkeypatch):
     """Test that invalid LOG_LEVEL defaults to INFO."""
     monkeypatch.chdir(tmp_path)
@@ -165,6 +171,7 @@ def test_log_level_invalid_defaults_to_info(tmp_path, monkeypatch):
     assert "warning message" in messages
 
 
+@pytest.mark.ci_safe
 def test_log_base_dir_custom_path(tmp_path, monkeypatch):
     """Test LOG_BASE_DIR environment variable sets custom log directory."""
     monkeypatch.chdir(tmp_path)
@@ -189,6 +196,7 @@ def test_log_base_dir_custom_path(tmp_path, monkeypatch):
     assert rec["component"] == "custom_test"
 
 
+@pytest.mark.ci_safe
 def test_log_base_dir_default_fallback(tmp_path, monkeypatch):
     """Test that unset LOG_BASE_DIR defaults to ./logs."""
     monkeypatch.chdir(tmp_path)
@@ -211,6 +219,7 @@ def test_log_base_dir_default_fallback(tmp_path, monkeypatch):
     assert rec["component"] == "default_test"
 
 
+@pytest.mark.ci_safe
 def test_log_base_dir_src_guard(tmp_path, monkeypatch):
     """Test that LOG_BASE_DIR cannot point to src/ directory."""
     monkeypatch.chdir(tmp_path)
@@ -230,6 +239,7 @@ def test_log_base_dir_src_guard(tmp_path, monkeypatch):
         JsonlLogger.get("guard_test")
 
 
+@pytest.mark.ci_safe
 def test_log_base_dir_src_subdirectory_guard(tmp_path, monkeypatch):
     """Test that LOG_BASE_DIR cannot point to src/ subdirectories."""
     monkeypatch.chdir(tmp_path)
@@ -249,6 +259,7 @@ def test_log_base_dir_src_subdirectory_guard(tmp_path, monkeypatch):
         JsonlLogger.get("subguard_test")
 
 
+@pytest.mark.ci_safe
 def test_category_based_directory_structure(tmp_path, monkeypatch):
     """Test that logs are organized by category in separate directories."""
     monkeypatch.chdir(tmp_path)
@@ -286,6 +297,7 @@ def test_category_based_directory_structure(tmp_path, monkeypatch):
     assert browser_content["msg"] == "browser event"
 
 
+@pytest.mark.ci_safe
 def test_single_path_output_verification(tmp_path, monkeypatch):
     """Test that all logs go to single base directory (no scattered outputs)."""
     monkeypatch.chdir(tmp_path)

@@ -7,6 +7,7 @@ the batch processing system.
 """
 
 import sys
+import pytest
 import os
 import time
 from pathlib import Path
@@ -14,6 +15,7 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
+@pytest.mark.ci_safe
 def test_metrics_initialization():
     """Test metrics system initialization."""
     print("🧪 Testing metrics system initialization...")
@@ -41,6 +43,7 @@ def test_metrics_initialization():
         traceback.print_exc()
         return False
 
+@pytest.mark.ci_safe
 def test_batch_metrics_integration():
     """Test batch processing with metrics collection."""
     print("\n🧪 Testing batch processing with metrics integration...")
@@ -95,6 +98,7 @@ Test Job 3,300,pending"""
         traceback.print_exc()
         return False
 
+@pytest.mark.ci_safe
 def test_metrics_export():
     """Test metrics data export."""
     print("\n🧪 Testing metrics data export...")

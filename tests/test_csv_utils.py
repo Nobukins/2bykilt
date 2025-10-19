@@ -12,6 +12,7 @@ if ROOT not in sys.path:
 from src.batch.csv_utils import parse_csv_preview
 
 
+@pytest.mark.ci_safe
 def test_parse_csv_preview_basic():
     csv_bytes = b"id,name,email\n1,Alice,alice@example.com\n2,Bob,bob@example.com\n"
     headers, rows = parse_csv_preview(csv_bytes, max_rows=5)
@@ -23,6 +24,7 @@ def test_parse_csv_preview_basic():
     assert rows[1]["name"] == "Bob"
 
 
+@pytest.mark.ci_safe
 def test_parse_csv_preview_unicode_and_empty_fields():
     csv_bytes = "id,name,notes\n1,太郎,ご挨拶\n2,花子,\n".encode("utf-8")
     headers, rows = parse_csv_preview(csv_bytes, max_rows=10)

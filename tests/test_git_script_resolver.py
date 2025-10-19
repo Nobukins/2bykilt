@@ -20,6 +20,7 @@ from pathlib import Path
 from src.script.git_script_resolver import GitScriptResolver, GitScriptCandidate, get_git_script_resolver
 
 
+@pytest.mark.ci_safe
 class TestGitScriptResolver:
     """Test cases for GitScriptResolver class"""
 
@@ -272,6 +273,7 @@ class TestGitScriptResolver:
 
         assert result is None
 
+@pytest.mark.ci_safe
 class TestAllowedDomains:
     """Test cases for allowed domains functionality (#255)"""
 

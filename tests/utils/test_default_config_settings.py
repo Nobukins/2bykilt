@@ -28,6 +28,7 @@ from src.utils.default_config_settings import (
 )
 
 
+@pytest.mark.ci_safe
 class TestDefaultConfig:
     """Tests for default_config function."""
     
@@ -89,6 +90,7 @@ class TestDefaultConfig:
         assert config["save_recording_path"] == "/custom/recording/path"
 
 
+@pytest.mark.ci_safe
 class TestLoadConfigFromFile:
     """Tests for load_config_from_file function."""
     
@@ -122,6 +124,7 @@ class TestLoadConfigFromFile:
         assert "Error loading configuration" in result
 
 
+@pytest.mark.ci_safe
 class TestLoadConfigFromJson:
     """Tests for load_config_from_json function."""
     
@@ -174,6 +177,7 @@ class TestLoadConfigFromJson:
         assert "Error validating configuration" in result
 
 
+@pytest.mark.ci_safe
 class TestSaveConfigToFile:
     """Tests for save_config_to_file function."""
     
@@ -207,6 +211,7 @@ class TestSaveConfigToFile:
             assert "Configuration saved to" in result
 
 
+@pytest.mark.ci_safe
 class TestSaveConfigToJson:
     """Tests for save_config_to_json function."""
     
@@ -246,6 +251,7 @@ class TestSaveConfigToJson:
             assert "Configuration saved to" in result
 
 
+@pytest.mark.ci_safe
 class TestSaveCurrentConfig:
     """Tests for save_current_config function."""
     
@@ -293,6 +299,7 @@ class TestSaveCurrentConfig:
         assert saved_config["task"] == "test task"
 
 
+@pytest.mark.ci_safe
 class TestUpdateUIFromConfig:
     """Tests for update_ui_from_config function."""
     
@@ -380,6 +387,7 @@ class TestUpdateUIFromConfig:
         assert "Error: Only .json files are supported" in result[-1]
 
 
+@pytest.mark.ci_safe
 class TestConfigSchema:
     """Tests for CONFIG_SCHEMA validation."""
     

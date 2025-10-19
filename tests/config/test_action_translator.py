@@ -16,6 +16,7 @@ import pytest
 from src.config.action_translator import ActionTranslator
 
 
+@pytest.mark.local_only
 class TestActionTranslatorInitialization:
     """Tests for ActionTranslator initialization."""
     
@@ -47,6 +48,7 @@ class TestActionTranslatorInitialization:
             mock_makedirs.assert_called_once_with("./tmp/json_commands", exist_ok=True)
 
 
+@pytest.mark.local_only
 class TestActionTranslatorTranslateToJson:
     """Tests for translate_to_json method."""
     
@@ -354,6 +356,7 @@ class TestActionTranslatorTranslateToJson:
         assert result["commands"][1]["args"][1] == "日本語テスト"
 
 
+@pytest.mark.local_only
 class TestActionTranslatorEdgeCases:
     """Tests for edge cases and error handling."""
     

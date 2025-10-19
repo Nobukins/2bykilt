@@ -1,4 +1,5 @@
 import os
+import pytest
 import re
 import asyncio
 import threading
@@ -30,6 +31,7 @@ def _read_generated_script(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+@pytest.mark.ci_safe
 def test_generate_browser_control_script_session_scope(tmp_path, monkeypatch):
     """Regression test for Issue #220.
 

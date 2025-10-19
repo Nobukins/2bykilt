@@ -5,7 +5,9 @@ import sys
 import subprocess
 import tempfile
 import shutil
+import pytest
 
+@pytest.mark.ci_safe
 def test_git_script_chrome():
     """Test that git-script uses Chrome when PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH is set"""
     
@@ -41,6 +43,7 @@ from playwright.async_api import async_playwright
 import asyncio
 import os
 
+@pytest.mark.ci_safe
 @pytest.mark.asyncio
 async def test_chrome_executable() -> None:
     async with async_playwright() as p:

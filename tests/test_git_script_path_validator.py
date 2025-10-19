@@ -16,6 +16,7 @@ sys.path.insert(0, parent_dir)
 from src.utils.git_script_path import GitScriptPathValidator, GitScriptPathValidationResult
 
 
+@pytest.mark.ci_safe
 class TestGitScriptPathValidator:
     """GitScriptPathValidator の単体テスト"""
 

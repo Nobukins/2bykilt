@@ -4,6 +4,7 @@
 引数修正後の安定性と警告メッセージがないことを確認
 """
 import asyncio
+import pytest
 import os
 import sys
 import tempfile
@@ -15,6 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from src.utils.git_script_automator import GitScriptAutomator
 
 
+@pytest.mark.local_only
 async def test_final_ui_automation():
     """最終的なUI自動化テスト"""
     print("🚀 最終的なChrome/Edge UI自動化テストを開始...")

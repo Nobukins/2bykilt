@@ -21,6 +21,7 @@ def normalize_csv_input(csv_input):
         raise ValueError(f"Unsupported CSV input type: {type(csv_input)}")
 
 
+@pytest.mark.ci_safe
 class TestCSVInputNormalization:
     """Test CSV input normalization function."""
 

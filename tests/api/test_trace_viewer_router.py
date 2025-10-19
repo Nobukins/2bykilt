@@ -15,6 +15,7 @@ from fastapi.testclient import TestClient
 from src.api.trace_viewer_router import router, serve_playwright_trace
 
 
+@pytest.mark.ci_safe
 class TestServePlaywrightTrace:
     """Tests for serve_playwright_trace endpoint."""
     
@@ -99,6 +100,7 @@ class TestServePlaywrightTrace:
         assert isinstance(result3, FileResponse)
 
 
+@pytest.mark.ci_safe
 class TestTraceViewerRouterIntegration:
     """Integration tests for trace viewer router."""
     

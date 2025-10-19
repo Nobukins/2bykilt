@@ -39,6 +39,7 @@ def _run_async(coro_fn):
     return result.get("value")
 
 
+@pytest.mark.ci_safe
 class TestBatchJob:
     """Test BatchJob dataclass."""
 
@@ -84,6 +85,7 @@ class TestBatchJob:
         assert job.status == "completed"
 
 
+@pytest.mark.ci_safe
 class TestBatchManifest:
     """Test BatchManifest dataclass."""
 
@@ -128,6 +130,7 @@ class TestBatchManifest:
         assert len(restored.jobs) == 1
 
 
+@pytest.mark.ci_safe
 class TestBatchEngine:
     """Test BatchEngine functionality."""
 
@@ -799,6 +802,7 @@ class TestBatchEngine:
         # Method should complete without error even without metrics collector
 
 
+@pytest.mark.ci_safe
 class TestBatchEngineLogging:
     """Test BatchEngine logging functionality."""
 
@@ -983,6 +987,7 @@ class TestBatchEngineLogging:
         # Check that security exception was logged
         assert any("Access denied" in record.message for record in caplog.records)
 
+@pytest.mark.ci_safe
 class TestStartBatch:
     """Test start_batch function."""
 
@@ -1077,6 +1082,7 @@ class TestStartBatch:
             mock_engine.create_batch_jobs.assert_called_once_with(str(csv_file))
 
 
+@pytest.mark.ci_safe
 class TestBatchRetry:
     """Test batch retry functionality."""
 
@@ -2156,6 +2162,7 @@ for _name, _func in list(vars(TestBatchRetry).items()):
         setattr(TestBatchRetry, _name, _threaded_async_method(_func))
 
 
+@pytest.mark.ci_safe
 class TestExecuteBatchJobs:
     """Test execute_batch_jobs functionality."""
 

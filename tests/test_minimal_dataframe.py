@@ -3,9 +3,11 @@
 Minimal test for Gradio DataFrame issue
 """
 import os
+import pytest
 import gradio as gr
 from src.ui.command_helper import CommandHelper
 
+@pytest.mark.local_only
 def test_dataframe():
     """Test DataFrame component that's causing the schema issue"""
     print("Testing DataFrame component...")

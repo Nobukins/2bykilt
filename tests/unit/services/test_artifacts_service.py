@@ -16,6 +16,7 @@ from src.services.artifacts_service import (
 )
 
 
+@pytest.mark.ci_safe
 class TestListArtifacts:
     """Test suite for list_artifacts function."""
 
@@ -351,6 +352,7 @@ class TestListArtifacts:
         assert len(unregistered_items) == 3  # 2 txt + 1 csv
 
 
+@pytest.mark.ci_safe
 class TestGetArtifactSummary:
     """Test suite for get_artifact_summary function."""
 

@@ -27,6 +27,7 @@ class DummyProcess:
         return self._stdout, self._stderr
 
 
+@pytest.mark.ci_safe
 class TestBrowserControlTypeRecording:
     """Validate recording path behavior for browser-control scripts."""
 

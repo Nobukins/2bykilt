@@ -54,6 +54,7 @@ def patch_gradio(monkeypatch):
     browser_agent.gr.reset_mock()
 
 
+@pytest.mark.local_only
 def test_chrome_restart_dialog_wires_callable_callbacks(patch_gradio):
     buttons = patch_gradio
 
@@ -71,6 +72,7 @@ def test_chrome_restart_dialog_wires_callable_callbacks(patch_gradio):
     assert no_click["fn"]() == "no"
 
 
+@pytest.mark.local_only
 class TestRunBrowserAgent:
     """Test run_browser_agent function."""
 
@@ -224,6 +226,7 @@ class TestRunBrowserAgent:
         pass
 
 
+@pytest.mark.local_only
 class TestShowRestartDialog:
     """Test show_restart_dialog function."""
 

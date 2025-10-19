@@ -4,11 +4,13 @@ Test git-script execution with Edge browser and new JSON argument serialization
 """
 
 import sys
+import pytest
 sys.path.append('/Users/nobuaki/Documents/Github/copilot-ports/magic-trainings/2bykilt')
 
 import asyncio
 from src.script.script_manager import execute_git_script
 
+@pytest.mark.local_only
 async def test_git_script_with_edge():
     """Test git-script execution with Edge browser"""
     print("🔧 Testing git-script with Edge browser and JSON argument serialization...")

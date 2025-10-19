@@ -4,6 +4,7 @@
 """
 
 import os
+import pytest
 import sys
 import asyncio
 import subprocess
@@ -55,6 +56,7 @@ os.environ["ENABLE_LLM"] = "false"
 
 from src.browser.browser_manager import initialize_browser, close_global_browser
 
+@pytest.mark.ci_safe
 async def test_browser_manager():
     try:
         # initialize_browser returns a dict-like result

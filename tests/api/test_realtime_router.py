@@ -21,6 +21,7 @@ from src.api.realtime_router import (
 )
 
 
+@pytest.mark.ci_safe
 class TestLoadHistoryEntries:
     """Tests for _load_history_entries function."""
     
@@ -79,6 +80,7 @@ class TestLoadHistoryEntries:
         assert result == []
 
 
+@pytest.mark.ci_safe
 class TestComputeStats:
     """Tests for _compute_stats function."""
     
@@ -148,6 +150,7 @@ class TestComputeStats:
         assert result["avg_duration"] == pytest.approx(10.0)  # (10 + 0 + 20) / 3
 
 
+@pytest.mark.ci_safe
 class TestBuildRunHistoryPayload:
     """Tests for _build_run_history_payload function."""
     
@@ -192,6 +195,7 @@ class TestBuildRunHistoryPayload:
         assert "テスト" in json.dumps(payload, ensure_ascii=False)
 
 
+@pytest.mark.ci_safe
 class TestRunHistoryWebSocket:
     """Tests for run_history_stream WebSocket endpoint."""
     
@@ -279,6 +283,7 @@ class TestRunHistoryWebSocket:
         await run_history_stream(mock_ws)
 
 
+@pytest.mark.ci_safe
 class TestRealtimeRouterIntegration:
     """Integration tests for realtime router."""
     

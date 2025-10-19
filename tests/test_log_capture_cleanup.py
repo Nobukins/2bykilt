@@ -8,6 +8,7 @@ exceptions occur during command execution.
 import pytest
 from unittest.mock import patch, AsyncMock
 from src.utils.app_logger import get_app_logger
+@pytest.mark.ci_safe
 @pytest.mark.asyncio
 async def test_log_capture_cleanup_on_browser_control_exception():
     """Test that log capture is stopped when browser-control execution raises exception."""
@@ -39,6 +40,7 @@ async def test_log_capture_cleanup_on_browser_control_exception():
 
     # Verify cleanup
     assert not logger._output_capture._capture_active, "Capture should be stopped after exception"
+@pytest.mark.ci_safe
 @pytest.mark.asyncio
 async def test_log_capture_cleanup_idempotent():
     """Test that stop_execution_log_capture is idempotent (safe to call multiple times)."""
@@ -60,6 +62,7 @@ async def test_log_capture_cleanup_idempotent():
     # Verify stdout is properly restored
 
 
+@pytest.mark.ci_safe
 @pytest.mark.asyncio
 async def test_log_capture_cleanup_on_script_exception():
     """Test that log capture is stopped when script execution raises exception."""
@@ -89,6 +92,7 @@ async def test_log_capture_cleanup_on_script_exception():
     assert not logger._output_capture._capture_active, "Capture should be stopped"
 
 
+@pytest.mark.ci_safe
 def test_log_capture_active_check():
     """Test that _capture_active flag correctly reflects capture state."""
     
@@ -107,6 +111,7 @@ def test_log_capture_active_check():
     assert not logger._output_capture._capture_active, "Capture should not be active after stop"
 
 
+@pytest.mark.ci_safe
 @pytest.mark.asyncio
 async def test_log_capture_cleanup_on_unhandled_exception():
     """Test that finally block handles unhandled exceptions."""
@@ -133,6 +138,7 @@ async def test_log_capture_cleanup_on_unhandled_exception():
     assert not logger._output_capture._capture_active, "Capture should be stopped after unhandled exception"
 
 
+@pytest.mark.ci_safe
 @pytest.mark.asyncio  
 async def test_log_capture_no_double_cleanup():
     """Test that calling stop in both except and finally blocks is safe."""

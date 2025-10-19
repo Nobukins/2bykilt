@@ -5,6 +5,7 @@ Focus: resolution precedence, type coercion, runtime overrides, TTL expiry,
 and undefined flag behavior.
 """
 import os
+import pytest
 import time
 import unittest
 from pathlib import Path
@@ -12,6 +13,7 @@ from pathlib import Path
 from src.config.feature_flags import FeatureFlags
 
 
+@pytest.mark.local_only
 class TestFeatureFlags(unittest.TestCase):
     def setUp(self):  # noqa: D401
         # Ensure clean state each test

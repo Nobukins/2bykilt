@@ -24,6 +24,7 @@ from src.llm.service_gateway import (
 )
 
 
+@pytest.mark.ci_safe
 class TestLLMServiceGatewayStub:
     """Test cases for LLMServiceGatewayStub"""
 
@@ -139,6 +140,7 @@ class TestLLMServiceGatewayStub:
         assert "text" in result
 
 
+@pytest.mark.ci_safe
 class TestDockerLLMServiceGateway:
     """Test cases for DockerLLMServiceGateway"""
 
@@ -186,6 +188,7 @@ class TestDockerLLMServiceGateway:
             await docker_gateway_enabled.initialize()
 
 
+@pytest.mark.ci_safe
 class TestGetLLMGateway:
     """Test cases for get_llm_gateway singleton function"""
 
@@ -224,6 +227,7 @@ class TestGetLLMGateway:
             assert gateway1 is not gateway2
 
 
+@pytest.mark.ci_safe
 class TestLLMServiceError:
     """Test cases for LLMServiceError exception"""
 
@@ -243,6 +247,7 @@ class TestLLMServiceError:
             raise LLMServiceError("Test error")
 
 
+@pytest.mark.ci_safe
 class TestEnvironmentVariableHandling:
     """Test environment variable handling"""
 
@@ -269,6 +274,7 @@ class TestEnvironmentVariableHandling:
             assert stub.is_enabled() is False
 
 
+@pytest.mark.ci_safe
 class TestConcurrentAccess:
     """Test concurrent access to gateway"""
 

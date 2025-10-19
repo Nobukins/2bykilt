@@ -7,6 +7,7 @@ This script performs basic validation of the new admin panel:
 3. Verifies FeatureFlags API methods work correctly
 """
 import sys
+import pytest
 from pathlib import Path
 
 # Add project root to path
@@ -14,6 +15,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 
+@pytest.mark.ci_safe
 def test_imports():
     """Test that all required modules can be imported."""
     print("🔍 Testing imports...")
@@ -28,6 +30,7 @@ def test_imports():
         return False
 
 
+@pytest.mark.ci_safe
 def test_feature_flags_api():
     """Test FeatureFlags class API methods."""
     print("\n🔍 Testing FeatureFlags API...")
@@ -76,6 +79,7 @@ def test_feature_flags_api():
         return False
 
 
+@pytest.mark.ci_safe
 def test_panel_creation():
     """Test admin panel creation without launching UI."""
     print("\n🔍 Testing admin panel creation...")

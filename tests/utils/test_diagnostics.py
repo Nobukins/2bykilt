@@ -17,6 +17,7 @@ import psutil
 from src.utils.diagnostics import BrowserDiagnostics
 
 
+@pytest.mark.local_only
 class TestBrowserDiagnosticsCollectBrowserInfo:
     """Tests for BrowserDiagnostics.collect_browser_info method."""
     
@@ -198,6 +199,7 @@ class TestBrowserDiagnosticsCollectBrowserInfo:
         datetime.fromisoformat(captured_data['timestamp'])
 
 
+@pytest.mark.local_only
 class TestBrowserDiagnosticsDiagnoseOnError:
     """Tests for BrowserDiagnostics.diagnose_on_error method."""
     
@@ -232,6 +234,7 @@ class TestBrowserDiagnosticsDiagnoseOnError:
             mock_logger.error.assert_called()
 
 
+@pytest.mark.local_only
 class TestBrowserDiagnosticsIntegration:
     """Integration tests for BrowserDiagnostics."""
     
