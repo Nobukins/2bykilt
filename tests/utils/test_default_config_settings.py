@@ -34,11 +34,11 @@ class TestDefaultConfig:
     
     def test_default_config_legacy(self):
         """Test legacy default configuration."""
-        # Patch both MULTI_ENV_AVAILABLE and get_config_for_environment to ensure
-        # we're testing the legacy path even when multi-env config files exist
+        # Patch MULTI_ENV_AVAILABLE to ensure we're testing the legacy path
+        # even when multi-env config files exist
         with patch('src.utils.default_config_settings.MULTI_ENV_AVAILABLE', False):
             config = default_config()
-        
+            
             assert isinstance(config, dict)
             assert config["agent_type"] == "custom"
             assert config["max_steps"] == 100
