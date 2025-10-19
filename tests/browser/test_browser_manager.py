@@ -344,8 +344,7 @@ class TestPrepareRecordingPath:
             )
             
             assert path == test_path
-            # Called with test_path
-            assert mock_create.called
+            mock_create.assert_called_with(test_path)
     
     def test_recording_with_default_path(self):
         """Test recording with default path."""
