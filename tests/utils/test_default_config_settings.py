@@ -47,7 +47,6 @@ class TestDefaultConfig:
         assert config["headless"] is False
         assert config["dev_mode"] is False
     
-    @patch('src.utils.default_config_settings.MULTI_ENV_AVAILABLE', True)
     @patch('src.utils.default_config_settings.get_config_for_environment')
     def test_default_config_multi_env(self, mock_get_config):
         """Test multi-environment configuration."""
@@ -79,24 +78,27 @@ class TestDefaultConfig:
         }
         mock_get_config.return_value = mock_config
         
-        config = default_config()
+        # Patch MULTI_ENV_AVAILABLE within the function's module namespace
+        with patch('src.utils.default_config_settings.MULTI_ENV_AVAILABLE', True):
+            config = default_config()
         
-        assert config == mock_config
-        assert config["agent_type"] == "multi-env"
-        assert config["max_steps"] == 50
-        mock_get_config.assert_called_once()
+            assert config == mock_config
+            assert config["agent_type"] == "multi-env"
+            assert config["max_steps"] == 50
+            mock_get_config.assert_called_once()
     
-    @patch('src.utils.default_config_settings.MULTI_ENV_AVAILABLE', True)
     @patch('src.utils.default_config_settings.get_config_for_environment')
     def test_default_config_multi_env_fallback(self, mock_get_config):
         """Test fallback when multi-env config fails."""
         mock_get_config.side_effect = Exception("Config error")
         
-        config = default_config()
+        # Patch MULTI_ENV_AVAILABLE within the function's module namespace
+        with patch('src.utils.default_config_settings.MULTI_ENV_AVAILABLE', True):
+            config = default_config()
         
-        # Should fallback to legacy config
-        assert config["agent_type"] == "custom"
-        assert config["max_steps"] == 100
+            # Should fallback to legacy config
+            assert config["agent_type"] == "custom"
+            assert config["max_steps"] == 100
     
     @patch.dict(os.environ, {'CHROME_PERSISTENT_SESSION': 'true'})
     @patch('src.utils.default_config_settings.MULTI_ENV_AVAILABLE', False)
