@@ -6,6 +6,7 @@ from src.batch.engine import BatchEngine, BatchJob
 from src.runtime.run_context import RunContext
 
 
+@pytest.mark.ci_safe
 @pytest.mark.asyncio
 async def test_batch_engine_runs_registered_llms_jobs(monkeypatch, tmp_path):
     run_context = Mock(spec=RunContext)

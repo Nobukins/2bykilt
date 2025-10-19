@@ -6,8 +6,10 @@ focusing on creation, serialization, and deserialization.
 """
 
 from tests.batch import BatchJob, BatchManifest
+import pytest
 
 
+@pytest.mark.ci_safe
 class TestBatchJob:
     """Test BatchJob dataclass."""
 
@@ -53,6 +55,7 @@ class TestBatchJob:
         assert job.status == "completed"
 
 
+@pytest.mark.ci_safe
 class TestBatchManifest:
     """Test BatchManifest dataclass."""
 

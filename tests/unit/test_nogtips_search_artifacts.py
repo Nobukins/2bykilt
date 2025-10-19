@@ -25,6 +25,7 @@ class _DummyPage:
         await asyncio.sleep(0)
 
 
+@pytest.mark.ci_safe
 @pytest.mark.asyncio
 async def test_capture_search_artifacts_invokes_helpers(monkeypatch):
     screenshot_mock = AsyncMock(return_value=(Path("/tmp/screenshot.png"), None))

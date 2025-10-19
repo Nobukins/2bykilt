@@ -15,6 +15,7 @@ from src.utils.fs_paths import get_artifacts_base_dir
 from src.config.feature_flags import FeatureFlags
 
 
+@pytest.mark.ci_safe
 class TestLazyArtifactCreation:
     """Test suite for lazy artifact creation control."""
 
@@ -163,6 +164,7 @@ class TestLazyArtifactCreation:
             assert current_flags_dirs <= initial_flags_dirs + 1, f"Expected at most one new flags directory, but count increased from {initial_flags_dirs} to {current_flags_dirs}"
 
 
+@pytest.mark.ci_safe
 def test_ensure_flags_artifact_helper_integration(tmp_path, monkeypatch):
     """Test integration with ensure_flags_artifact_helper."""
     from tests.fixtures.feature_flags_fixtures import ensure_flags_artifact_helper
@@ -181,6 +183,7 @@ def test_ensure_flags_artifact_helper_integration(tmp_path, monkeypatch):
     assert "resolved" in data
 
 
+@pytest.mark.ci_safe
 def test_ensure_flags_artifact_with_overrides_helper(tmp_path, monkeypatch):
     """Test ensure_flags_artifact_with_overrides_helper functionality."""
     from tests.fixtures.feature_flags_fixtures import ensure_flags_artifact_with_overrides_helper

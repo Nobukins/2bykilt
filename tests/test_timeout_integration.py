@@ -6,6 +6,7 @@ into the main bykilt modules (automation_manager, direct_browser_control)
 """
 
 import asyncio
+import pytest
 import sys
 import os
 
@@ -16,6 +17,7 @@ from src.utils.timeout_manager import get_timeout_manager, TimeoutConfig, Timeou
 from src.modules.automation_manager import BrowserAutomationManager
 
 
+@pytest.mark.ci_safe
 async def test_automation_manager_timeout():
     """Test that automation manager properly handles timeouts"""
     print("🧪 Testing automation manager timeout integration...")
@@ -59,6 +61,7 @@ async def test_automation_manager_timeout():
     print("✅ Automation manager timeout integration test completed")
 
 
+@pytest.mark.ci_safe
 async def test_timeout_manager_integration():
     """Test timeout manager integration with existing modules"""
     print("🧪 Testing timeout manager integration...")

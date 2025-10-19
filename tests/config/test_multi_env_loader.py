@@ -1,4 +1,5 @@
 import os
+import pytest
 import json
 from pathlib import Path
 from src.config.multi_env_loader import MultiEnvConfigLoader, diff_envs
@@ -38,6 +39,7 @@ secrets:
   api_key: PRODKEY
 """, encoding="utf-8")
 
+@pytest.mark.ci_safe
 def test_dev_merge(tmp_path, monkeypatch):
     _make_sample(tmp_path)
     monkeypatch.chdir(tmp_path)
@@ -48,6 +50,7 @@ def test_dev_merge(tmp_path, monkeypatch):
     assert cfg["services"]["api"]["timeout"] == 5
     assert cfg["workers"] == ["dev-only"]
 
+@pytest.mark.ci_safe
 def test_secret_mask_artifact(tmp_path, monkeypatch):
     _make_sample(tmp_path)
     monkeypatch.chdir(tmp_path)
@@ -62,6 +65,7 @@ def test_secret_mask_artifact(tmp_path, monkeypatch):
     assert data["config"]["secrets"]["api_key"] == "***"
     assert "secrets.api_key" in data["masked_hashes"]
 
+@pytest.mark.ci_safe
 def test_diff(tmp_path, monkeypatch):
     _make_sample(tmp_path)
     monkeypatch.chdir(tmp_path)

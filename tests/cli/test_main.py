@@ -32,6 +32,7 @@ def mock_gradio_deps(monkeypatch):
     yield mock_bykilt, mock_app_module
 
 
+@pytest.mark.ci_safe
 def test_ensure_asset_directories_creates_structure(tmp_path, monkeypatch):
     """Test that _ensure_asset_directories creates required folders."""
     monkeypatch.setattr('src.cli.main.get_assets_dir', lambda: tmp_path)
@@ -51,6 +52,7 @@ def test_ensure_asset_directories_creates_structure(tmp_path, monkeypatch):
     assert (tmp_path / "fonts" / "system-ui" / "system-ui-Bold.woff2").exists()
 
 
+@pytest.mark.ci_safe
 def test_ensure_asset_directories_idempotent(tmp_path, monkeypatch):
     """Test that _ensure_asset_directories can be called multiple times safely."""
     monkeypatch.setattr('src.cli.main.get_assets_dir', lambda: tmp_path)
@@ -61,6 +63,7 @@ def test_ensure_asset_directories_idempotent(tmp_path, monkeypatch):
     assert (tmp_path / "css").exists()
 
 
+@pytest.mark.ci_safe
 def test_main_preview_llms_exits_successfully(monkeypatch, mock_gradio_deps, capsys):
     """Test --preview-llms flag exits without launching UI."""
     monkeypatch.setattr('sys.argv', ['main.py', '--preview-llms', 'https://example.com/llms.txt'])
@@ -84,6 +87,7 @@ def test_main_preview_llms_exits_successfully(monkeypatch, mock_gradio_deps, cap
     mock_discover.assert_called_once()
 
 
+@pytest.mark.ci_safe
 def test_main_import_llms_success(monkeypatch, mock_gradio_deps, capsys):
     """Test --import-llms flag with successful import."""
     monkeypatch.setattr('sys.argv', ['main.py', '--import-llms', 'https://example.com/llms.txt'])
@@ -111,6 +115,7 @@ def test_main_import_llms_success(monkeypatch, mock_gradio_deps, capsys):
     mock_import.assert_called_once()
 
 
+@pytest.mark.ci_safe
 def test_main_import_llms_fails_on_discovery_error(monkeypatch, mock_gradio_deps):
     """Test --import-llms aborts when discovery fails."""
     monkeypatch.setattr('sys.argv', ['main.py', '--import-llms', 'https://example.com/llms.txt'])
@@ -131,6 +136,7 @@ def test_main_import_llms_fails_on_discovery_error(monkeypatch, mock_gradio_deps
     assert exc_info.value.code == 1
 
 
+@pytest.mark.ci_safe
 def test_main_import_llms_fails_on_security_validation(monkeypatch, mock_gradio_deps):
     """Test --import-llms aborts when security validation fails."""
     monkeypatch.setattr('sys.argv', ['main.py', '--import-llms', 'https://example.com/llms.txt'])

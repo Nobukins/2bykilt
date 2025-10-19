@@ -7,6 +7,7 @@ the batch processing system.
 """
 
 import sys
+import pytest
 import os
 import time
 from pathlib import Path
@@ -14,6 +15,7 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
+@pytest.mark.ci_safe
 def test_metrics_initialization():
     """Test metrics system initialization."""
     print("🧪 Testing metrics system initialization...")
@@ -31,7 +33,7 @@ def test_metrics_initialization():
             print("✅ Metrics collector retrieved successfully")
         else:
             print("❌ Failed to get metrics collector")
-            return False
+            assert False, "Failed to get metrics collector"
 
         return True
 
@@ -39,8 +41,9 @@ def test_metrics_initialization():
         print(f"❌ Metrics initialization failed: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        assert False, f"Metrics initialization failed: {e}"
 
+@pytest.mark.ci_safe
 def test_batch_metrics_integration():
     """Test batch processing with metrics collection."""
     print("\n🧪 Testing batch processing with metrics integration...")
@@ -93,8 +96,9 @@ Test Job 3,300,pending"""
         print(f"❌ Batch metrics integration test failed: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        assert False, f"Batch metrics integration test failed: {e}"
 
+@pytest.mark.ci_safe
 def test_metrics_export():
     """Test metrics data export."""
     print("\n🧪 Testing metrics data export...")
@@ -105,7 +109,7 @@ def test_metrics_export():
         collector = get_metrics_collector()
         if collector is None:
             print("❌ No metrics collector available")
-            return False
+            assert False, "No metrics collector available"
 
         # Export metrics to JSON
         json_data = collector.export_to_json()
@@ -114,7 +118,7 @@ def test_metrics_export():
             print(f"📊 JSON data length: {len(json_data)} characters")
         else:
             print("❌ Failed to export metrics to JSON")
-            return False
+            assert False, "Failed to export metrics to JSON"
 
         # Export metrics to CSV
         csv_data = collector.export_to_csv()
@@ -123,7 +127,7 @@ def test_metrics_export():
             print(f"📊 CSV data length: {len(csv_data)} characters")
         else:
             print("❌ Failed to export metrics to CSV")
-            return False
+            assert False, "Failed to export metrics to CSV"
 
         return True
 
@@ -131,7 +135,7 @@ def test_metrics_export():
         print(f"❌ Metrics export test failed: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        assert False, f"Metrics export test failed: {e}"
 
 def main():
     """Run all tests."""

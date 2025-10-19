@@ -111,6 +111,7 @@ class TestGitScriptAutomator:
         assert selenium_profile1 == selenium_profile2
         assert not marker_file.exists()  # 上書きされたので消失
     
+    @pytest.mark.local_only
     @pytest.mark.asyncio
     async def test_launch_browser_with_profile_mock(self, mock_edge_profile, temp_workspace):
         """モックを使用したブラウザ起動テスト"""

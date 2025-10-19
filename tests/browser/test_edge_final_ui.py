@@ -13,6 +13,7 @@ Note: Edge automation is stable only in headful mode as of 2024+
 """
 
 import os
+import pytest
 import sys
 import tempfile
 import asyncio
@@ -25,6 +26,7 @@ sys.path.insert(0, str(project_root))
 from src.utils.git_script_automator import EdgeAutomator
 from src.utils.app_logger import logger
 
+@pytest.mark.local_only
 async def test_edge_final_ui_automation():
     """
     Complete Edge UI automation test using NEW METHOD (2024+)

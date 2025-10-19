@@ -169,9 +169,14 @@ def get_config_for_environment(environment: str = None) -> Dict[str, Any]:
     return config_adapter.get_effective_config(environment)
 
 
-def get_current_environment() -> str:
-    """Get current environment from BYKILT_ENV or default"""
-    env = os.getenv('BYKILT_ENV', 'dev')
+def get_current_environment() -> str | None:
+    """Get current environment from BYKILT_ENV or None for base config"""
+    env = os.getenv('BYKILT_ENV')
+    if not env:
+        # When BYKILT_ENV is not set (e.g., in tests, CI), use base config
+        # This prevents loading dev environment config which has dev_mode: true
+        return None
+    
     if env == 'dev':
         return 'development'
     elif env == 'staging':

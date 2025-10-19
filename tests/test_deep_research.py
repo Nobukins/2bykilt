@@ -9,6 +9,7 @@ import sys
 sys.path.append(".")
 
 @pytest.mark.skipif(os.getenv("ENABLE_LLM", "false").lower() != "true", reason="LLM disabled (ENABLE_LLM!=true)")
+@pytest.mark.local_only
 async def test_deep_research():
     from src.utils.deep_research import deep_research
     from src.utils import utils

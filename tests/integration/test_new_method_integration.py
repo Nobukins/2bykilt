@@ -2,6 +2,7 @@
 Test the complete NEW METHOD integration
 """
 import asyncio
+import pytest
 import os
 import sys
 from pathlib import Path
@@ -9,6 +10,7 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
+@pytest.mark.local_only
 async def test_new_method_integration():
     """Test the complete NEW METHOD integration"""
     

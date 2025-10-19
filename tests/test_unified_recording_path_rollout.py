@@ -1,4 +1,5 @@
 from src.core.artifact_manager import ArtifactManager, reset_artifact_manager_singleton
+import pytest
 from src.config.feature_flags import FeatureFlags, _reset_feature_flags_for_tests
 from src.runtime.run_context import RunContext
 
@@ -7,6 +8,7 @@ def _legacy_msgs(caplog):
     return [r.message for r in caplog.records if "Legacy recording path" in r.message]
 
 
+@pytest.mark.ci_safe
 def test_unified_recording_path_default_enabled(monkeypatch):
     monkeypatch.setenv("BYKILT_RUN_ID", "ROLL91A")
     # Reset singletons & flags (split per PEP8 for readability)
@@ -20,6 +22,7 @@ def test_unified_recording_path_default_enabled(monkeypatch):
     assert "art" in d.parent.name or d.parent.name.endswith("-art")
 
 
+@pytest.mark.ci_safe
 def test_unified_recording_path_legacy_warning(monkeypatch, caplog):
     monkeypatch.setenv("BYKILT_RUN_ID", "ROLL91B")
     RunContext.reset()

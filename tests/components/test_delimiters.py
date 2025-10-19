@@ -2,7 +2,9 @@
 """
 Test different delimiter options for browser arguments
 """
+import pytest
 
+@pytest.mark.ci_safe
 def test_delimiters():
     """Test various delimiter options"""
     

@@ -24,6 +24,7 @@ def enforce_minimal_mode():
     yield
 
 
+@pytest.mark.ci_safe
 class TestMinimalEnvironmentImports:
     """Test core modules can be imported in minimal mode"""
     
@@ -58,6 +59,7 @@ class TestMinimalEnvironmentImports:
         assert capture_page_screenshot is not None
 
 
+@pytest.mark.ci_safe
 class TestMinimalEnvironmentLLMBlocking:
     """Test LLM modules are properly blocked"""
     
@@ -87,6 +89,7 @@ class TestMinimalEnvironmentLLMBlocking:
             from src.llm import docker_sandbox
 
 
+@pytest.mark.ci_safe
 class TestMinimalEnvironmentNoForbiddenPackages:
     """Test no forbidden LLM packages are loaded"""
     
@@ -155,6 +158,7 @@ class TestMinimalEnvironmentNoForbiddenPackages:
         )
 
 
+@pytest.mark.ci_safe
 class TestMinimalEnvironmentHelperFunctions:
     """Test helper functions work correctly in minimal mode"""
     
@@ -191,6 +195,7 @@ class TestMinimalEnvironmentHelperFunctions:
         )
 
 
+@pytest.mark.ci_safe
 class TestMinimalEnvironmentRequirements:
     """Test requirements-minimal.txt integrity"""
     

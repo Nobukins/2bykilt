@@ -174,6 +174,7 @@ class TestBrowserLauncher:
         assert launcher.validate_selenium_profile_path("/nonexistent/path") == False
         assert launcher.validate_selenium_profile_path("/tmp") == False  # SeleniumProfileディレクトリではない
     
+    @pytest.mark.local_only
     def test_get_launch_options_edge(self, mock_selenium_profile):
         """Edge用の起動オプション生成"""
         launcher = BrowserLauncher("edge")

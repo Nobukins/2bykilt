@@ -23,6 +23,7 @@ class DummyBrowserManager:
         await asyncio.sleep(0)
 
 
+@pytest.mark.ci_safe
 def test_execute_json_commands_handles_browser_init_error(monkeypatch):
     async def _run() -> object | None:
         engine = ExecutionDebugEngine()

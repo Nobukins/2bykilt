@@ -19,6 +19,7 @@ sys.path.insert(0, parent_dir)
 from src.utils.git_script_automator import GitScriptAutomator, EdgeAutomator, ChromeAutomator
 
 
+@pytest.mark.local_only
 class TestGitScriptAutomatorCoverage:
     """Additional tests to improve coverage for GitScriptAutomator"""
 

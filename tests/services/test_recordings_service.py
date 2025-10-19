@@ -27,6 +27,7 @@ def _touch(path: Path, *, mtime: float) -> None:
     os.utime(path, (mtime, mtime))
 
 
+@pytest.mark.ci_safe
 def test_missing_root_raises_file_not_found(tmp_path: Path) -> None:
     missing = tmp_path / "runs" / "missing"
     params = ListParams(root=missing)
@@ -34,6 +35,7 @@ def test_missing_root_raises_file_not_found(tmp_path: Path) -> None:
         list_recordings(params)
 
 
+@pytest.mark.ci_safe
 def test_limit_upper_bound_validation(tmp_path: Path) -> None:
     root = tmp_path / "runs"
     root.mkdir()
@@ -42,6 +44,7 @@ def test_limit_upper_bound_validation(tmp_path: Path) -> None:
         list_recordings(params)
 
 
+@pytest.mark.ci_safe
 def test_flag_disabled_uses_flat_listing(tmp_path: Path) -> None:
     # Explicitly disable recursive scanning for this test
     FeatureFlags.set_override(_FLAG, False)
@@ -62,6 +65,7 @@ def test_flag_disabled_uses_flat_listing(tmp_path: Path) -> None:
     assert not page.has_next
 
 
+@pytest.mark.ci_safe
 def test_flag_enabled_lists_recursive(tmp_path: Path) -> None:
     FeatureFlags.set_override(_FLAG, True)
 
@@ -81,6 +85,7 @@ def test_flag_enabled_lists_recursive(tmp_path: Path) -> None:
     assert not page.has_next
 
 
+@pytest.mark.ci_safe
 def test_pagination_reports_more_items(tmp_path: Path) -> None:
     root = tmp_path / "runs"
     root.mkdir()
@@ -98,6 +103,7 @@ def test_pagination_reports_more_items(tmp_path: Path) -> None:
     assert page.has_next
 
 
+@pytest.mark.ci_safe
 def test_zero_limit_returns_no_items_but_indicates_more(tmp_path: Path) -> None:
     root = tmp_path / "runs"
     root.mkdir()
@@ -111,6 +117,7 @@ def test_zero_limit_returns_no_items_but_indicates_more(tmp_path: Path) -> None:
     assert page.has_next
 
 
+@pytest.mark.ci_safe
 def test_extension_filtering(tmp_path: Path) -> None:
     FeatureFlags.set_override(_FLAG, True)
 
@@ -128,6 +135,7 @@ def test_extension_filtering(tmp_path: Path) -> None:
     assert [Path(item.path) for item in page.items] == [keep]
 
 
+@pytest.mark.ci_safe
 def test_allowed_roots_validation(tmp_path: Path) -> None:
     root = tmp_path / "runs"
     root.mkdir()
@@ -140,6 +148,7 @@ def test_allowed_roots_validation(tmp_path: Path) -> None:
         list_recordings(params)
 
 
+@pytest.mark.ci_safe
 def test_permission_error_bubbles(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     # Disable recursive scanning so that _scan_flat is used
     FeatureFlags.set_override(_FLAG, False)
@@ -156,6 +165,7 @@ def test_permission_error_bubbles(monkeypatch: pytest.MonkeyPatch, tmp_path: Pat
         list_recordings(ListParams(root=root, limit=1))
 
 
+@pytest.mark.ci_safe
 def test_run_id_inference(tmp_path: Path) -> None:
     FeatureFlags.set_override(_FLAG, True)
 

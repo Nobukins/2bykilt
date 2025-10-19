@@ -13,6 +13,7 @@ from unittest.mock import patch, MagicMock, AsyncMock
 from src.script.script_manager import run_script
 
 
+@pytest.mark.ci_safe
 class TestGitScriptIntegration:
     """Integration tests for git-script resolution and execution"""
 

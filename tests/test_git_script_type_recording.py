@@ -13,6 +13,7 @@ from src.script.script_manager import run_script
 from src.utils.recording_dir_resolver import create_or_get_recording_dir
 
 
+@pytest.mark.ci_safe
 class TestGitScriptTypeRecording:
     """Test recording functionality for git-script type"""
 
@@ -33,6 +34,7 @@ import pytest
 from playwright.sync_api import Page
 import os
 
+@pytest.mark.ci_safe
 @pytest.mark.git_script_test
 def test_git_script_recording(page: Page):
     """Test git script that should generate recording"""

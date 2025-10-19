@@ -7,7 +7,9 @@ The function name matches pytest's pattern but it's intentional - it's meant to 
 executed as a standalone script, not by pytest.
 """
 import os
+import pytest
 
+@pytest.mark.ci_safe
 def test_recording_verification():
     """Simple test that verifies recording path is set"""
     recording_path = os.environ.get('RECORDING_PATH')

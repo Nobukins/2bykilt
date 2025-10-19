@@ -120,12 +120,14 @@ def _run_async(coro):
     return result_container.get("value")
 
 
+@pytest.mark.local_only
 def test_llms_actions_types_available():
     by_type = _load_actions()
     for needed in ("script", "action_runner_template", "browser-control", "git-script"):
         assert needed in by_type and len(by_type[needed]) > 0, f"Missing actions for type: {needed}"
 
 
+@pytest.mark.local_only
 def test_recording_path_creation(fake_chrome_env):
     explicit = Path(fake_chrome_env["recordings"]) / "explicit"
     resolved = prepare_recording_path(True, str(explicit))
@@ -135,6 +137,7 @@ def test_recording_path_creation(fake_chrome_env):
     assert resolved2 is not None and Path(resolved2).exists()
 
 
+@pytest.mark.local_only
 def test_profile_args_in_get_browser_configs(fake_chrome_env):
     cfg = get_browser_configs(use_own_browser=True, window_w=1280, window_h=720, browser_type="chrome")
     assert cfg["browser_path"] == fake_chrome_env["bin"]
@@ -143,6 +146,7 @@ def test_profile_args_in_get_browser_configs(fake_chrome_env):
     assert f"--user-data-dir={fake_chrome_env['user_data']}" in args
 
 
+@pytest.mark.local_only
 def test_initialize_browser_calls_new_tab(fake_chrome_env, monkeypatch):
     called = {}
 
@@ -169,6 +173,7 @@ def test_initialize_browser_calls_new_tab(fake_chrome_env, monkeypatch):
     assert called.get("tab_selection_strategy") == "new_tab"
 
 
+@pytest.mark.local_only
 def test_execute_script_action_safe_path(monkeypatch):
     m = BrowserAutomationManager(local_path="llms.txt")
     assert m.initialize() is True
@@ -178,6 +183,7 @@ def test_execute_script_action_safe_path(monkeypatch):
     assert ok is True
 
 
+@pytest.mark.local_only
 def test_execute_git_script_action_mocked(monkeypatch, tmp_path):
     m = BrowserAutomationManager(local_path="llms.txt")
     assert m.initialize() is True
@@ -198,6 +204,7 @@ def test_execute_git_script_action_mocked(monkeypatch, tmp_path):
     assert ok is True
 
 
+@pytest.mark.local_only
 def test_action_runner_template_structure():
     by_type = _load_actions()
     arts = by_type["action_runner_template"]

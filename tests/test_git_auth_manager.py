@@ -15,6 +15,7 @@ from unittest.mock import patch, MagicMock
 from src.utils.git_auth_manager import GitAuthenticationManager
 
 
+@pytest.mark.ci_safe
 class TestGitAuthenticationManager:
     """Test cases for GitAuthenticationManager"""
 

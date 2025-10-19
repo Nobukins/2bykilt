@@ -1,5 +1,6 @@
 """Environment variable precedence tests for recording path (#28)."""
 from src.core.artifact_manager import ArtifactManager, reset_artifact_manager_singleton
+import pytest
 from src.utils.recording_dir_resolver import create_or_get_recording_dir
 from src.config.feature_flags import FeatureFlags, _reset_feature_flags_for_tests
 from src.runtime.run_context import RunContext
@@ -11,6 +12,7 @@ def _reset_all():
     _reset_feature_flags_for_tests()
 
 
+@pytest.mark.ci_safe
 def test_recording_path_env_precedence(monkeypatch, tmp_path):
     monkeypatch.setenv("BYKILT_RUN_ID", "ENVOVR1")
     _reset_all()
@@ -24,6 +26,7 @@ def test_recording_path_env_precedence(monkeypatch, tmp_path):
     assert "videos" not in str(p)
 
 
+@pytest.mark.ci_safe
 def test_recording_path_env_ignored_when_empty(monkeypatch):
     monkeypatch.setenv("BYKILT_RUN_ID", "ENVOVR2")
     _reset_all()

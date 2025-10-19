@@ -14,6 +14,7 @@ from src.ui.admin.feature_flag_panel import (
 )
 
 
+@pytest.mark.ci_safe
 class TestFeatureFlagAdminPanel:
     """Test suite for Feature Flag Admin Panel UI."""
 
@@ -133,6 +134,7 @@ class TestFeatureFlagAdminPanel:
         assert metadata is None
 
 
+@pytest.mark.ci_safe
 class TestFeatureFlagsSummary:
     """Test suite for get_feature_flags_summary() helper function."""
     
@@ -181,6 +183,7 @@ class TestFeatureFlagsSummary:
         assert summary["total"] == 0
 
 
+@pytest.mark.ci_safe
 class TestFeatureFlagsDataFormatting:
     """Test data formatting for UI display."""
     

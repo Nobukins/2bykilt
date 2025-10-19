@@ -1,8 +1,10 @@
 import os
+import pytest
 from pathlib import Path
 from src.utils.app_logger import AppLogger
 
 
+@pytest.mark.ci_safe
 def test_app_logger_prefers_repo_root(monkeypatch, tmp_path):
     # Simulate running from repo root: ensure a pyproject.toml exists in repo root
     repo_root = tmp_path / "repo"
@@ -27,6 +29,7 @@ def test_app_logger_prefers_repo_root(monkeypatch, tmp_path):
     assert Path(al._log_dir).parent.resolve() == repo_root.resolve()
 
 
+@pytest.mark.ci_safe
 def test_app_logger_falls_back_to_package_dir(monkeypatch, tmp_path):
     # No repo markers; AppLogger should fall back to package's parent logs dir
     # Change CWD to tmp_path so no project markers are found in parents.

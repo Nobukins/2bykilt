@@ -4,6 +4,7 @@
 """
 
 import os
+import pytest
 import sys
 import asyncio
 import subprocess
@@ -55,6 +56,7 @@ os.environ["ENABLE_LLM"] = "false"
 
 from src.browser.browser_manager import initialize_browser, close_global_browser
 
+@pytest.mark.ci_safe
 async def test_browser_manager():
     try:
         # initialize_browser returns a dict-like result
@@ -157,11 +159,11 @@ from src.utils.default_config_settings import default_config, load_config_from_f
 config = default_config()
 print(f"Default config keys: {list(config.keys())}")
 
-# Test save and load config
+# Test save and load config (now JSON-only for security)
 # Use provided API: save_config_to_file returns a message with path; parse it.
 msg = save_config_to_file(config, './tmp/webui_settings_test')
 import re
-match = re.search(r"Configuration saved to (.+\.pkl)", msg)
+match = re.search(r"Configuration saved to (.+\.json)", msg)
 if not match:
     print("ERROR: Could not parse saved config path")
     exit(1)

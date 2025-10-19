@@ -24,6 +24,7 @@ from unittest.mock import patch, MagicMock
 from src.ui.main_ui import create_modern_ui
 
 
+@pytest.mark.local_only
 class TestModernUIIntegration:
     """ModernUI 統合テスト。"""
 
@@ -92,6 +93,7 @@ class TestModernUIIntegration:
         )
 
 
+@pytest.mark.local_only
 class TestComponentIntegration:
     """コンポーネント間連携テスト。"""
 
@@ -115,6 +117,7 @@ class TestComponentIntegration:
         assert ui._run_history._history_data is not None
 
 
+@pytest.mark.local_only
 class TestUIVisibilityControl:
     """フィーチャーフラグによる表示制御テスト。"""
 
@@ -140,6 +143,7 @@ class TestUIVisibilityControl:
         assert ui._run_history._is_visible() is True
 
 
+@pytest.mark.local_only
 class TestErrorHandling:
     """エラーハンドリングテスト。"""
 

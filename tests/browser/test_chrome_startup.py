@@ -4,6 +4,7 @@
 """
 
 import os
+import pytest
 import sys
 import asyncio
 from dotenv import load_dotenv
@@ -16,6 +17,7 @@ load_dotenv(override=True)
 from src.browser.browser_debug_manager import BrowserDebugManager
 from src.browser.browser_config import BrowserConfig
 
+@pytest.mark.ci_safe
 async def test_browser_startup():
     print("=== ブラウザ起動テスト開始 ===")
     

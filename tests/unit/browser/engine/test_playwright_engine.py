@@ -44,6 +44,7 @@ def engine():
     return PlaywrightEngine()
 
 
+@pytest.mark.ci_safe
 class TestPlaywrightEngineLaunch:
     """エンジン起動テスト"""
     
@@ -100,6 +101,7 @@ class TestPlaywrightEngineLaunch:
         _run_async(_inner)
 
 
+@pytest.mark.ci_safe
 class TestPlaywrightEngineActions:
     """アクション実行テスト"""
     
@@ -176,6 +178,7 @@ class TestPlaywrightEngineActions:
         _run_async(_inner)
 
 
+@pytest.mark.ci_safe
 class TestPlaywrightEngineMetrics:
     """メトリクス収集テスト"""
     
@@ -201,6 +204,7 @@ class TestPlaywrightEngineMetrics:
         _run_async(_inner)
 
 
+@pytest.mark.ci_safe
 class TestPlaywrightEngineShutdown:
     """シャットダウンテスト"""
     

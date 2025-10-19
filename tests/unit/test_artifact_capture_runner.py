@@ -49,6 +49,7 @@ class _AsyncPlaywrightStub:
         pass
 
 
+@pytest.mark.ci_safe
 @pytest.mark.asyncio
 async def test_run_nogtips_variant_invokes_run_actions(monkeypatch, tmp_path):
     play_stub = _AsyncPlaywrightStub()

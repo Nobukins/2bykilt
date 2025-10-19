@@ -23,6 +23,7 @@ def mock_bykilt_module():
     pass
 
 
+@pytest.mark.ci_safe
 class TestDiscoveryE2E:
     """Test discovery workflow end-to-end."""
     
@@ -101,6 +102,7 @@ class TestDiscoveryE2E:
             assert 'error' in result
 
 
+@pytest.mark.ci_safe
 class TestPreviewE2E:
     """Test preview workflow end-to-end."""
     
@@ -206,6 +208,7 @@ class TestPreviewE2E:
         assert len(preview.conflicts) == 1
 
 
+@pytest.mark.ci_safe
 class TestImportE2E:
     """Test import workflow end-to-end."""
     
@@ -347,6 +350,7 @@ class TestImportE2E:
         assert 'existing_action_2' in final_content  # Renamed
 
 
+@pytest.mark.ci_safe
 class TestErrorHandlingE2E:
     """Test error handling across the workflow."""
     

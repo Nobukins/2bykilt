@@ -18,6 +18,7 @@ from src.modules.handlers.git_script_handler import handle_git_script
 from src.modules.handlers.script_handler import handle_script
 
 
+@pytest.mark.ci_safe
 class TestRecordingAllRunTypes:
     """Test recording generation across all run types"""
 

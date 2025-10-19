@@ -6,6 +6,7 @@ Test cases for the ConfigLoader class and CLI tools.
 """
 
 import unittest
+import pytest
 import tempfile
 import os
 import json
@@ -18,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.config.multi_env_loader import ConfigLoader, ConfigValidationError
 
 
+@pytest.mark.ci_safe
 class TestConfigLoader(unittest.TestCase):
     """Test cases for ConfigLoader class"""
     
@@ -224,6 +226,7 @@ class TestConfigLoader(unittest.TestCase):
                 del os.environ['BYKILT_LLM_TEMPERATURE']
 
 
+@pytest.mark.ci_safe
 class TestConfigCLI(unittest.TestCase):
     """Test cases for configuration CLI"""
     

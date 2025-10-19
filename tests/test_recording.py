@@ -2,10 +2,12 @@
 """録画機能のテストスクリプト"""
 
 import asyncio
+import pytest
 import sys
 from pathlib import Path
 from myscript.browser_base import BrowserAutomationBase
 
+@pytest.mark.ci_safe
 async def test_recording():
     """録画機能をテストする"""
     print("=== 録画機能テスト開始 ===")

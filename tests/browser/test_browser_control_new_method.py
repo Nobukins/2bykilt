@@ -3,6 +3,7 @@
 Test browser-control type with new method (GitScriptAutomator/BrowserLauncher)
 """
 import asyncio
+import pytest
 import sys
 import os
 import logging
@@ -16,6 +17,7 @@ from src.modules.direct_browser_control import execute_direct_browser_control
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+@pytest.mark.ci_safe
 async def test_browser_control():
     """Test browser-control action with new method"""
     print("🧪 Testing browser-control with NEW_METHOD")

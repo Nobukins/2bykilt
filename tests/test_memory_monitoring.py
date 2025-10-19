@@ -4,12 +4,14 @@ Memory monitoring test script for git-script Edge crash issue
 """
 
 import sys
+import pytest
 import os
 sys.path.append('/Users/nobuaki/Documents/Github/copilot-ports/magic-trainings/2bykilt')
 
 from src.utils.memory_monitor import memory_monitor
 from src.utils.app_logger import logger
 
+@pytest.mark.local_only
 def test_memory_monitoring():
     """Test memory monitoring functionality"""
     

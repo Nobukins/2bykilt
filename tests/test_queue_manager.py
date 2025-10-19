@@ -34,6 +34,7 @@ def _run_async(coro_fn):
     return result.get("value")
 
 
+@pytest.mark.ci_safe
 class TestQueueManager:
     """Test cases for QueueManager"""
 
@@ -258,6 +259,7 @@ class TestQueueManager:
         _run_async(_inner)
 
 
+@pytest.mark.ci_safe
 class TestQueueItem:
     """Test cases for QueueItem"""
 

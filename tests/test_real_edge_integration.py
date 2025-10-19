@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from src.utils.git_script_automator import EdgeAutomator
 
 
+@pytest.mark.local_only
 class TestRealEdgeIntegration:
     """実際のEdgeブラウザを使用した統合テスト"""
     

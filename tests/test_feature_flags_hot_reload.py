@@ -1,7 +1,9 @@
 from src.runtime.run_context import RunContext
+import pytest
 from src.config.feature_flags import FeatureFlags, _reset_feature_flags_for_tests
 
 
+@pytest.mark.ci_safe
 def test_feature_flags_mtime_reload(monkeypatch, caplog):
     """Trigger the mtime-based reload path by forcing _flags_mtime to an old value.
 
@@ -26,6 +28,7 @@ def test_feature_flags_mtime_reload(monkeypatch, caplog):
 # indirectly by existing integration patterns; this test focuses on the new ensure=False path.
 
 
+@pytest.mark.ci_safe
 def test_run_context_artifact_dir_ensure_false(monkeypatch):
     """Ensure ensure=False returns path without creating directory (Issue #91 helper)."""
     monkeypatch.setenv("BYKILT_RUN_ID", "ENSUREFALSE91")

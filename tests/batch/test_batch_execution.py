@@ -22,6 +22,7 @@ from tests.batch import (
 from src.batch.engine import start_batch
 
 
+@pytest.mark.ci_safe
 class TestStartBatch:
     """Test start_batch function."""
 
@@ -116,6 +117,7 @@ class TestStartBatch:
             mock_engine.create_batch_jobs.assert_called_once_with(str(csv_file))
 
 
+@pytest.mark.ci_safe
 class TestBatchEngineLogging:
     """Test BatchEngine logging functionality."""
 

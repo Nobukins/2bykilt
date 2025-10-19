@@ -1,0 +1,461 @@
+"""
+Tests for src/utils/default_config_settings.py
+
+This module tests configuration loading, validation, and saving functionality.
+Security Note: Pickle support has been removed. Only JSON format is supported.
+"""
+
+import os
+import json
+import tempfile
+import uuid
+from pathlib import Path
+from unittest.mock import patch, MagicMock, mock_open
+
+import pytest
+import jsonschema
+import gradio as gr
+
+from src.utils.default_config_settings import (
+    default_config,
+    load_config_from_file,
+    load_config_from_json,
+    save_config_to_file,
+    save_config_to_json,
+    save_current_config,
+    update_ui_from_config,
+    CONFIG_SCHEMA
+)
+
+
+@pytest.mark.ci_safe
+class TestDefaultConfig:
+    """Tests for default_config function."""
+    
+    def test_default_config_legacy(self):
+        """Test legacy default configuration."""
+        # Patch both MULTI_ENV_AVAILABLE and the function check to ensure
+        # we're testing the legacy path even when multi-env config files exist.
+        # Must patch both the module variable and reload the function behavior.
+        import src.utils.default_config_settings as config_module
+        
+        with patch.object(config_module, 'MULTI_ENV_AVAILABLE', False):
+            config = default_config()
+            
+            assert isinstance(config, dict)
+            assert config["agent_type"] == "custom"
+            assert config["max_steps"] == 100
+            assert config["max_actions_per_step"] == 10
+            assert config["use_vision"] is True
+            assert config["llm_provider"] == "openai"
+            assert config["llm_model_name"] == "gpt-4o"
+            assert config["headless"] is False
+            assert config["dev_mode"] is False
+    
+    def test_default_config_multi_env(self):
+        """Test multi-environment configuration when available."""
+        # Import the module to check actual MULTI_ENV_AVAILABLE status
+        import src.utils.default_config_settings as config_module
+        from src.utils.default_config_settings import MULTI_ENV_AVAILABLE
+        
+        if not MULTI_ENV_AVAILABLE:
+            pytest.skip("Multi-env config not available in this environment")
+        
+        # When MULTI_ENV_AVAILABLE is True, test that it calls get_config_for_environment
+        # Use patch.object to ensure the mock is applied to the module's namespace
+        with patch.object(config_module, 'get_config_for_environment') as mock_get_config:
+            mock_config = {
+                "agent_type": "multi-env",
+                "max_steps": 50,
+                "max_actions_per_step": 10,
+                "use_vision": True,
+                "tool_calling_method": "auto",
+                "llm_provider": "openai",
+                "llm_model_name": "gpt-4o",
+                "llm_num_ctx": 32000,
+                "llm_temperature": 1.0,
+                "llm_base_url": "",
+                "llm_api_key": "",
+                "use_own_browser": False,
+                "keep_browser_open": False,
+                "headless": False,
+                "disable_security": True,
+                "enable_recording": True,
+                "window_w": 1280,
+                "window_h": 1100,
+                "save_recording_path": "./tmp/videos",
+                "save_trace_path": "./tmp/traces",
+                "save_agent_history_path": "./tmp/agent_history",
+                "task": "test task",
+                "dev_mode": False,
+            }
+            mock_get_config.return_value = mock_config
+            
+            config = default_config()
+            
+            assert config == mock_config
+            assert config["agent_type"] == "multi-env"
+            assert config["max_steps"] == 50
+            mock_get_config.assert_called_once()
+    
+    def test_default_config_multi_env_fallback(self):
+        """Test fallback when multi-env config fails."""
+        from src.utils.default_config_settings import MULTI_ENV_AVAILABLE
+        
+        if not MULTI_ENV_AVAILABLE:
+            pytest.skip("Multi-env config not available in this environment")
+        
+        with patch('src.utils.default_config_settings.get_config_for_environment') as mock_get_config:
+            mock_get_config.side_effect = Exception("Config error")
+            
+            config = default_config()
+            
+            # Should fallback to legacy config
+            assert config["agent_type"] == "custom"
+            assert config["max_steps"] == 100
+    
+    def test_default_config_use_own_browser(self):
+        """Test use_own_browser from environment variable."""
+        import src.utils.default_config_settings as config_module
+        
+        with patch.dict(os.environ, {'CHROME_PERSISTENT_SESSION': 'true'}):
+            with patch.object(config_module, 'MULTI_ENV_AVAILABLE', False):
+                config = default_config()
+                
+                assert config["use_own_browser"] is True
+    
+    def test_default_config_recording_path(self):
+        """Test recording path configuration."""
+        import src.utils.default_config_settings as config_module
+        
+        with patch.object(config_module, 'create_or_get_recording_dir') as mock_recording_dir:
+            with patch.object(config_module, 'MULTI_ENV_AVAILABLE', False):
+                mock_recording_dir.return_value = Path("/custom/recording/path")
+                
+                config = default_config()
+                
+                assert config["save_recording_path"] == "/custom/recording/path"
+
+
+@pytest.mark.ci_safe
+class TestLoadConfigFromFile:
+    """Tests for load_config_from_file function."""
+    
+    def test_load_pickle_rejected(self, tmp_path):
+        """Test that pickle files are rejected for security."""
+        config_file = tmp_path / "test.pkl"
+        config_file.write_text("fake pickle data")
+        
+        result = load_config_from_file(str(config_file))
+        
+        assert isinstance(result, str)
+        assert "no longer supported" in result
+        assert "security" in result.lower()
+    
+    def test_load_valid_json(self, tmp_path):
+        """Test loading valid JSON configuration via load_config_from_file."""
+        config_data = default_config()
+        config_file = tmp_path / "test.json"
+        
+        with open(config_file, 'w', encoding='utf-8') as f:
+            json.dump(config_data, f)
+        
+        result = load_config_from_file(str(config_file))
+        
+        assert isinstance(result, dict)
+        assert result["agent_type"] == config_data["agent_type"]
+    
+    def test_load_missing_file(self):
+        """Test loading non-existent file."""
+        result = load_config_from_file("/nonexistent/file.json")
+        
+        assert isinstance(result, str)
+        assert "Error loading configuration" in result
+
+
+@pytest.mark.ci_safe
+class TestLoadConfigFromJson:
+    """Tests for load_config_from_json function."""
+    
+    def test_load_valid_json(self, tmp_path):
+        """Test loading valid JSON configuration."""
+        config_data = default_config()
+        config_file = tmp_path / "config.json"
+        
+        with open(config_file, 'w') as f:
+            json.dump(config_data, f)
+        
+        result = load_config_from_json(str(config_file))
+        
+        assert result == config_data
+    
+    def test_load_invalid_json_syntax(self, tmp_path):
+        """Test loading JSON with syntax error."""
+        config_file = tmp_path / "invalid.json"
+        config_file.write_text("{invalid json")
+        
+        result = load_config_from_json(str(config_file))
+        
+        assert isinstance(result, str)
+        assert "Error loading configuration" in result
+    
+    def test_load_invalid_schema(self, tmp_path):
+        """Test loading JSON with invalid schema."""
+        config_data = {"invalid_key": "value"}
+        config_file = tmp_path / "invalid_schema.json"
+        
+        with open(config_file, 'w') as f:
+            json.dump(config_data, f)
+        
+        result = load_config_from_json(str(config_file))
+        
+        assert isinstance(result, str)
+        assert "Error validating configuration" in result
+    
+    def test_load_json_missing_required_fields(self, tmp_path):
+        """Test loading JSON missing required fields."""
+        config_data = {"agent_type": "test"}  # Missing many required fields
+        config_file = tmp_path / "incomplete.json"
+        
+        with open(config_file, 'w') as f:
+            json.dump(config_data, f)
+        
+        result = load_config_from_json(str(config_file))
+        
+        assert isinstance(result, str)
+        assert "Error validating configuration" in result
+
+
+@pytest.mark.ci_safe
+class TestSaveConfigToFile:
+    """Tests for save_config_to_file function (now JSON-only)."""
+    
+    def test_save_config_json(self, tmp_path):
+        """Test saving configuration to JSON file (pickle removed)."""
+        config_data = default_config()
+        
+        result = save_config_to_file(config_data, save_dir=str(tmp_path))
+        
+        assert "Configuration saved to" in result
+        assert tmp_path.exists()
+        
+        # Verify JSON file was created
+        json_files = list(tmp_path.glob("*.json"))
+        assert len(json_files) == 1
+        
+        # Verify content
+        with open(json_files[0], 'r', encoding='utf-8') as f:
+            loaded = json.load(f)
+        assert loaded["agent_type"] == config_data["agent_type"]
+    
+    def test_save_config_creates_directory(self):
+        """Test that save creates directory if it doesn't exist."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            save_dir = os.path.join(tmpdir, "new_dir")
+            config_data = default_config()
+            
+            result = save_config_to_file(config_data, save_dir=save_dir)
+            
+            assert os.path.exists(save_dir)
+            assert "Configuration saved to" in result
+
+
+@pytest.mark.ci_safe
+class TestSaveConfigToJson:
+    """Tests for save_config_to_json function."""
+    
+    def test_save_valid_json(self, tmp_path):
+        """Test saving valid JSON configuration."""
+        config_data = default_config()
+        
+        result = save_config_to_json(config_data, save_dir=str(tmp_path))
+        
+        assert "Configuration saved to" in result
+        
+        # Verify file exists and content
+        config_file = tmp_path / "config.json"
+        assert config_file.exists()
+        
+        with open(config_file, 'r') as f:
+            loaded = json.load(f)
+        assert loaded == config_data
+    
+    def test_save_invalid_json_schema(self, tmp_path):
+        """Test saving JSON with invalid schema."""
+        config_data = {"invalid_key": "value"}
+        
+        result = save_config_to_json(config_data, save_dir=str(tmp_path))
+        
+        assert "Error validating configuration" in result
+    
+    def test_save_json_creates_directory(self):
+        """Test that JSON save creates directory."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            save_dir = os.path.join(tmpdir, "new_json_dir")
+            config_data = default_config()
+            
+            result = save_config_to_json(config_data, save_dir=save_dir)
+            
+            assert os.path.exists(save_dir)
+            assert "Configuration saved to" in result
+
+
+@pytest.mark.ci_safe
+class TestSaveCurrentConfig:
+    """Tests for save_current_config function."""
+    
+    def test_save_current_config_all_args(self, tmp_path, monkeypatch):
+        """Test saving current config with all arguments using real file save."""
+        # Change save directory to tmp_path to avoid pollution
+        import src.utils.default_config_settings
+        original_save_func = src.utils.default_config_settings.save_config_to_file
+        
+        def mock_save_to_tmp(settings, save_dir="./tmp/webui_settings"):
+            # Override save_dir to use tmp_path
+            return original_save_func(settings, save_dir=str(tmp_path))
+        
+        monkeypatch.setattr(src.utils.default_config_settings, 'save_config_to_file', mock_save_to_tmp)
+        
+        # Prepare 23 arguments matching default_config keys
+        args = [
+            "custom",      # agent_type
+            100,           # max_steps
+            10,            # max_actions_per_step
+            True,          # use_vision
+            "auto",        # tool_calling_method
+            "openai",      # llm_provider
+            "gpt-4o",      # llm_model_name
+            32000,         # llm_num_ctx
+            1.0,           # llm_temperature
+            "",            # llm_base_url
+            "",            # llm_api_key
+            False,         # use_own_browser
+            False,         # keep_browser_open
+            False,         # headless
+            True,          # disable_security
+            True,          # enable_recording
+            1280,          # window_w
+            1100,          # window_h
+            "./tmp/videos",  # save_recording_path
+            "./tmp/traces",  # save_trace_path
+            "./tmp/history", # save_agent_history_path
+            "test task",     # task
+            False,           # dev_mode
+        ]
+        
+        result = save_current_config(*args)
+        
+        # Verify success message and file creation
+        assert "Configuration saved to" in result
+        json_files = list(tmp_path.glob("*.json"))
+        assert len(json_files) == 1
+        
+        # Verify saved content
+        with open(json_files[0], 'r') as f:
+            saved_config = json.load(f)
+        assert saved_config["agent_type"] == "custom"
+        assert saved_config["max_steps"] == 100
+        assert saved_config["task"] == "test task"
+
+
+@pytest.mark.ci_safe
+class TestUpdateUIFromConfig:
+    """Tests for update_ui_from_config function."""
+    
+    def test_update_ui_no_file(self):
+        """Test update when no file is selected."""
+        result = update_ui_from_config(None)
+        
+        # Should return tuple of gr.update() and message
+        assert isinstance(result, tuple)
+        assert len(result) == 23
+        assert result[-1] == "No file selected."
+    
+    def test_update_ui_pickle_rejected(self, tmp_path):
+        """Test that pickle files are always rejected for security."""
+        config_file = tmp_path / "test.pkl"
+        config_file.write_bytes(b"data")
+        
+        mock_file = MagicMock()
+        mock_file.name = str(config_file)
+        
+        result = update_ui_from_config(mock_file)
+        
+        assert isinstance(result, tuple)
+        assert "no longer supported" in result[-1]
+        assert "security" in result[-1].lower()
+    
+    def test_update_ui_json_valid(self, tmp_path):
+        """Test loading valid JSON file."""
+        config_data = default_config()
+        config_file = tmp_path / "config.json"
+        
+        with open(config_file, 'w') as f:
+            json.dump(config_data, f)
+        
+        mock_file = MagicMock()
+        mock_file.name = str(config_file)
+        
+        result = update_ui_from_config(mock_file)
+        
+        assert isinstance(result, tuple)
+        assert len(result) == 24
+        assert result[-1] == "Configuration loaded successfully."
+    
+    def test_update_ui_json_invalid(self, tmp_path):
+        """Test loading invalid JSON file."""
+        config_file = tmp_path / "invalid.json"
+        config_file.write_text("{invalid json")
+        
+        mock_file = MagicMock()
+        mock_file.name = str(config_file)
+        
+        result = update_ui_from_config(mock_file)
+        
+        assert isinstance(result, tuple)
+        assert "Error: Invalid configuration file" in result[-1]
+    
+    def test_update_ui_unsupported_format(self):
+        """Test unsupported file format."""
+        mock_file = MagicMock()
+        mock_file.name = "config.txt"
+        
+        result = update_ui_from_config(mock_file)
+        
+        assert isinstance(result, tuple)
+        assert "Error: Only .json files are supported" in result[-1]
+
+
+@pytest.mark.ci_safe
+class TestConfigSchema:
+    """Tests for CONFIG_SCHEMA validation."""
+    
+    def test_schema_validates_default_config(self):
+        """Test that default config passes schema validation."""
+        config = default_config()
+        
+        # Should not raise
+        jsonschema.validate(instance=config, schema=CONFIG_SCHEMA)
+    
+    def test_schema_rejects_invalid_types(self):
+        """Test schema rejects invalid types."""
+        invalid_config = default_config()
+        invalid_config["max_steps"] = "not a number"
+        
+        with pytest.raises(jsonschema.ValidationError):
+            jsonschema.validate(instance=invalid_config, schema=CONFIG_SCHEMA)
+    
+    def test_schema_rejects_out_of_range(self):
+        """Test schema rejects out of range values."""
+        invalid_config = default_config()
+        invalid_config["llm_temperature"] = 5.0  # Max is 2
+        
+        with pytest.raises(jsonschema.ValidationError):
+            jsonschema.validate(instance=invalid_config, schema=CONFIG_SCHEMA)
+    
+    def test_schema_requires_all_fields(self):
+        """Test schema requires all fields."""
+        incomplete_config = {"agent_type": "test"}
+        
+        with pytest.raises(jsonschema.ValidationError):
+            jsonschema.validate(instance=incomplete_config, schema=CONFIG_SCHEMA)

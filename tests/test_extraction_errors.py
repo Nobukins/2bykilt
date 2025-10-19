@@ -16,6 +16,7 @@ from src.extraction.schema import ExtractionSchema, FieldDefinition
 from src.extraction.extractor import FieldExtractor
 
 
+@pytest.mark.local_only
 class TestFieldExtractorErrorCases:
     """Test FieldExtractor error handling."""
 
@@ -246,6 +247,7 @@ fields:
             assert output_file.name == "extraction_result_test_job.json"
 
 
+@pytest.mark.local_only
 class TestExtractionSchemaErrorCases:
     """Test ExtractionSchema error handling."""
 
@@ -365,6 +367,7 @@ fields:
             Path(temp_path).unlink()
 
 
+@pytest.mark.local_only
 class TestFieldDefinitionEdgeCases:
     """Test FieldDefinition edge cases."""
 
@@ -443,6 +446,7 @@ class TestFieldDefinitionEdgeCases:
             )
 
 
+@pytest.mark.local_only
 class TestExtractionResultEdgeCases:
     """Test ExtractionResult edge cases."""
 
@@ -500,6 +504,7 @@ class TestExtractionResultEdgeCases:
         assert len(result.warnings) == 2
 
 
+@pytest.mark.local_only
 class TestBrowserExtractionModes:
     """Test browser extraction mock modes."""
 
@@ -541,6 +546,7 @@ fields:
         assert "mock_html_for_html_field" in str(result.extracted_fields["html_field"])
 
 
+@pytest.mark.local_only
 class TestNormalizationEdgeCases:
     """Test normalization edge cases."""
 

@@ -629,7 +629,7 @@ gitGraph
 Progress Summary (Phase 1):
     Wave A1 100% / Wave A2 100% / Wave A3 100% / Wave A4 100% / Wave A5 100% / Wave A6 100% / Wave A7 100% ( #60 Security Base 完了) 残: Group B Phase 2 へ移行。Draft/試行 PR は進捗計測に含めず。
 Progress Summary (Phase2): 
-    Phase2-04 Done / Phase2-05 Done / Phase2-06 Done / Phase2-07 In Progress (4/5 issues completed) / Phase2-11 Done / Phase2-12 Done / Phase2-13 In Progress (8/11 issues completed) / Early focus shifts to Phase2-01 (Runner) & Phase2-07 (Metrics surfacing) / Upcoming gating: coverage (#109) & sandbox (#62)。
+    Phase2-04 Done / Phase2-05 Done / Phase2-06 Done / Phase2-07 In Progress (4/5 issues completed) / Phase2-11 Done / Phase2-12 Done / Phase2-13 In Progress (8/11 issues completed) / Phase2-18 Testing In Progress (Issue #340: test coverage 20%→65% achieved, PR #341) / Phase3-01 Release Management (Issue #342: open) / Phase3-02 UI Packaging (Issue #344: open, depends on #342) / Phase3-03 Artifact Backup (Issue #346: open, depends on #342) / Early focus shifts to Phase2-01 (Runner) & Phase2-07 (Metrics surfacing) / Upcoming gating: coverage (#109) & sandbox (#62)。
 
 Note: PR #286 was merged to stabilize the pytest suite and improve runner/script artifact behavior. As a result, several issues were partially addressed and marked in-progress in `ISSUE_DEPENDENCIES.yml` (notably #81, #224, #231, #276). Further follow-up work and UI verification remains for those items.
 

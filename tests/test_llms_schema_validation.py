@@ -8,6 +8,7 @@ Focus areas:
   * Strict vs non-strict behavior (strict raises)
 """
 from __future__ import annotations
+import pytest
 
 import os
 import unittest
@@ -22,6 +23,7 @@ from src.config.llms_schema_validator import (
 LLMS_PATH = Path("llms.txt").resolve()
 
 
+@pytest.mark.ci_safe
 class TestLLMSSchemaValidation(unittest.TestCase):
     def test_repo_llms_file_valid_non_strict(self):
         text = LLMS_PATH.read_text(encoding="utf-8")

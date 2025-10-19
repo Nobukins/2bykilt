@@ -23,6 +23,7 @@ from tests.batch import (
 from src.batch.engine import BATCH_MANIFEST_FILENAME
 
 
+@pytest.mark.ci_safe
 class TestBatchJobCreation:
     """Tests for batch job creation and manifest generation."""
 
@@ -73,6 +74,7 @@ class TestBatchJobCreation:
             engine.create_batch_jobs(str(csv_file))
 
 
+@pytest.mark.ci_safe
 class TestJobStatusUpdates:
     """Tests for job status updates and manifest synchronization."""
 
@@ -128,6 +130,7 @@ class TestJobStatusUpdates:
         # Should not raise exception, just log warning
 
 
+@pytest.mark.ci_safe
 class TestBatchSummary:
     """Tests for batch summary retrieval and reporting."""
 
@@ -151,6 +154,7 @@ class TestBatchSummary:
         assert result is None
 
 
+@pytest.mark.ci_safe
 class TestStopBatch:
     """Tests for stop_batch functionality."""
 

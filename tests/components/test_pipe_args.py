@@ -4,9 +4,11 @@ Test the pipe-delimited browser argument serialization
 """
 
 import os
+import pytest
 
 from src.utils.memory_monitor import memory_monitor
 
+@pytest.mark.local_only
 def test_pipe_serialization():
     """Test that browser arguments with commas are properly serialized/deserialized using pipe delimiter"""
     print("Testing pipe-delimited serialization of browser arguments...")
@@ -45,6 +47,7 @@ def test_pipe_serialization():
     
     # success
 
+@pytest.mark.local_only
 def test_env_variable_simulation():
     """Simulate setting and reading the environment variable with pipe delimiter"""
     print("\nTesting environment variable simulation with pipe delimiter...")

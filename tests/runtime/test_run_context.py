@@ -1,4 +1,5 @@
 import os
+import pytest
 from pathlib import Path
 from src.utils.fs_paths import get_artifacts_base_dir
 from src.runtime.run_context import RunContext
@@ -7,6 +8,7 @@ from src.config.feature_flags import FeatureFlags
 from tests.fixtures.feature_flags_fixtures import ensure_flags_artifact_helper
 
 
+@pytest.mark.ci_safe
 def test_run_context_unifies_artifact_prefix(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     # Ensure clean artifacts root

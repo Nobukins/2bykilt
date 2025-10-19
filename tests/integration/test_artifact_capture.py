@@ -96,6 +96,7 @@ def _assert_artifacts_created(artifact_base: Path) -> Path:
     return run_dir
 
 
+@pytest.mark.local_only
 def test_demo_artifact_capture_script_creates_artifacts(static_site, tmp_path, monkeypatch):
     artifact_base = tmp_path / "artifacts_script"
     _prepare_artifact_environment(monkeypatch, artifact_base)
@@ -133,6 +134,7 @@ def _create_fake_profile(base_dir: Path) -> Path:
     return base_dir
 
 
+@pytest.mark.local_only
 def test_browser_control_flow_captures_artifacts(static_site, tmp_path, monkeypatch):
     artifact_base = tmp_path / "artifacts_browser"
     _prepare_artifact_environment(monkeypatch, artifact_base)

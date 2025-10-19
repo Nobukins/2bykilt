@@ -4,12 +4,14 @@ Test the new JSON-based browser argument serialization
 """
 
 import json
+import pytest
 import os
 import sys
 sys.path.append('/Users/nobuaki/Documents/Github/copilot-ports/magic-trainings/2bykilt')
 
 from src.utils.memory_monitor import memory_monitor
 
+@pytest.mark.local_only
 def test_json_serialization():
     """Test that browser arguments with commas are properly serialized/deserialized"""
     print("Testing JSON serialization of browser arguments...")
@@ -52,6 +54,7 @@ def test_json_serialization():
     
     # No return (pytest function should return None)
 
+@pytest.mark.local_only
 def test_env_variable_simulation():
     """Simulate setting and reading the environment variable"""
     print("\nTesting environment variable simulation...")

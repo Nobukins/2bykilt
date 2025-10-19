@@ -1,9 +1,11 @@
 import json
+import pytest
 from pathlib import Path
 
 from src.logging.jsonl_logger import JsonlLogger
 from src.runtime.run_context import RunContext
 
+@pytest.mark.ci_safe
 def test_logger_get_creates_directory_using_run_context(tmp_path, monkeypatch):
     # Force artifacts root to temp via monkeypatch by adjusting RunContext artifact root indirectly
     # We cannot easily change RunContext internal root without modifying code, so just verify path pattern.
@@ -15,6 +17,7 @@ def test_logger_get_creates_directory_using_run_context(tmp_path, monkeypatch):
     assert logger.file_path.name == "app.log.jsonl"
 
 
+@pytest.mark.ci_safe
 def test_logger_methods_emit_jsonl(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("BYKILT_RUN_ID", "emitcase")

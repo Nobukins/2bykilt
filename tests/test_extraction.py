@@ -13,6 +13,7 @@ from src.extraction.schema import ExtractionSchema, FieldDefinition
 from src.extraction.extractor import FieldExtractor
 
 
+@pytest.mark.ci_safe
 class TestExtractionModels:
     """Test extraction data models."""
 
@@ -78,6 +79,7 @@ class TestExtractionModels:
         assert data["total_fields"] == 1
 
 
+@pytest.mark.ci_safe
 class TestFieldDefinition:
     """Test FieldDefinition class."""
 
@@ -177,6 +179,7 @@ class TestFieldDefinition:
             )
 
 
+@pytest.mark.ci_safe
 class TestExtractionSchema:
     """Test ExtractionSchema class."""
 
@@ -300,6 +303,7 @@ fields:
             Path(temp_path).unlink()
 
 
+@pytest.mark.ci_safe
 class TestFieldExtractor:
     """Test FieldExtractor class."""
 

@@ -11,6 +11,7 @@ import pytest
 from unittest.mock import Mock, MagicMock, patch
 
 
+@pytest.mark.ci_safe
 class TestRunAgentPanelInitialization:
     """Test RunAgentPanel class initialization."""
 
@@ -32,6 +33,7 @@ class TestRunAgentPanelInitialization:
             mock_cmd_helper.assert_called_once()
 
 
+@pytest.mark.ci_safe
 class TestRunAgentPanelRender:
     """Test RunAgentPanel rendering."""
 
@@ -99,6 +101,7 @@ class TestRunAgentPanelRender:
                 panel.render()
 
 
+@pytest.mark.ci_safe
 class TestRunAgentPanelCommandHandling:
     """Test command handling methods."""
 
@@ -151,6 +154,7 @@ class TestRunAgentPanelCommandHandling:
             assert "@" in result or result == "test_command"
 
 
+@pytest.mark.ci_safe
 class TestRunAgentPanelEngineHandling:
     """Test engine selection and status methods."""
 
@@ -234,6 +238,7 @@ class TestRunAgentPanelEngineHandling:
             assert len(result) == 2  # dropdown, status
 
 
+@pytest.mark.ci_safe
 class TestRunAgentPanelLLMHandling:
     """Test LLM configuration methods."""
 
@@ -265,6 +270,7 @@ class TestRunAgentPanelLLMHandling:
             # The actual return type depends on implementation
 
 
+@pytest.mark.ci_safe
 class TestRunAgentPanelDefaults:
     """Test _prepare_defaults method."""
 
@@ -307,6 +313,7 @@ class TestRunAgentPanelDefaults:
             assert isinstance(defaults.config, dict)
 
 
+@pytest.mark.ci_safe
 class TestCreateRunPanel:
     """Test create_run_panel factory function."""
 

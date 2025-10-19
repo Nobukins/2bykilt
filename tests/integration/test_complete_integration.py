@@ -12,6 +12,7 @@ This test confirms:
 """
 
 import os
+import pytest
 import sys
 import asyncio
 import tempfile
@@ -24,6 +25,7 @@ sys.path.insert(0, str(project_root))
 from src.script.script_manager import execute_script
 from src.utils.app_logger import logger
 
+@pytest.mark.local_only
 async def test_chrome_git_script():
     """Test git-script execution with Chrome using NEW METHOD"""
     logger.info("🎯 Testing Chrome git-script with NEW METHOD")
@@ -65,6 +67,7 @@ async def test_chrome_git_script():
         logger.error(f"❌ Chrome git-script failed with exception: {str(e)}")
         return False
 
+@pytest.mark.local_only
 async def test_edge_git_script():
     """Test git-script execution with Edge using NEW METHOD"""
     logger.info("🎯 Testing Edge git-script with NEW METHOD")

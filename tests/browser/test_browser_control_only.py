@@ -3,6 +3,7 @@
 Browser control only testing script
 """
 import asyncio
+import pytest
 import logging
 from pathlib import Path
 import sys
@@ -20,6 +21,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+@pytest.mark.ci_safe
 async def test_browser_control():
     """Test browser-control type"""
     logger.info("\n=== Testing browser-control ===")
@@ -65,12 +67,12 @@ async def test_browser_control():
     try:
         result = await execute_direct_browser_control(action, **params)
         logger.info(f"✅ browser-control result: {result}")
-        return result
+        assert result is not None
     except Exception as e:
         logger.error(f"❌ browser-control failed: {e}")
         import traceback
         logger.error(traceback.format_exc())
-        return False
+        assert False, f"Browser control test failed: {e}"
 
 if __name__ == "__main__":
     asyncio.run(test_browser_control())

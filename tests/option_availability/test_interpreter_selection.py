@@ -9,6 +9,7 @@ from _pytest.outcomes import OutcomeException
 pytestmark = pytest.mark.ci_safe
 
 
+@pytest.mark.local_only
 def test_replace_python_with_sys_executable(monkeypatch, tmp_path):
     """Ensure script_manager replaces leading 'python' with sys.executable in CI-safe path.
 

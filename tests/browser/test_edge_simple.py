@@ -4,12 +4,14 @@ Edge プロファイル読み込みテスト用のシンプルなスクリプト
 """
 
 import asyncio
+import pytest
 import os
 import sys
 import shutil
 from pathlib import Path
 from playwright.async_api import async_playwright
 
+@pytest.mark.local_only
 async def test_edge_with_profile():
     print("🧪 Edge プロファイルテストを開始...")
     

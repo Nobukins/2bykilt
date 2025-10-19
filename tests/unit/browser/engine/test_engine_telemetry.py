@@ -36,6 +36,7 @@ class DummyEngine(BrowserEngine):
         self._on_shutdown()
 
 
+@pytest.mark.ci_safe
 @pytest.mark.asyncio
 async def test_engine_telemetry_records_metrics(tmp_path):
     config = MetricsConfig(enabled=True, storage_path=str(tmp_path / "metrics"))

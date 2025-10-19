@@ -9,6 +9,7 @@ Tests cover:
 """
 
 import unittest
+import pytest
 from unittest.mock import Mock, patch, MagicMock
 import requests
 from pathlib import Path
@@ -23,6 +24,7 @@ from src.modules.llmstxt_discovery import (
 )
 
 
+@pytest.mark.local_only
 class TestLlmsTxtSource(unittest.TestCase):
     """Test suite for LlmsTxtSource class"""
     
@@ -150,6 +152,7 @@ class TestLlmsTxtSource(unittest.TestCase):
         self.assertIn("Connection timeout", result.error)
 
 
+@pytest.mark.local_only
 class TestBykiltSectionParser(unittest.TestCase):
     """Test suite for BykiltSectionParser class"""
     
@@ -304,6 +307,7 @@ actions:
         self.assertEqual(actions[0]['name'], 'test-action')
 
 
+@pytest.mark.local_only
 class TestExtractSections(unittest.TestCase):
     """Test suite for extract_2bykilt_sections method"""
     
@@ -359,6 +363,7 @@ actions:
         self.assertEqual(sections.section_count, 0)
 
 
+@pytest.mark.local_only
 class TestUtilityFunctions(unittest.TestCase):
     """Test suite for utility functions"""
     
@@ -443,6 +448,7 @@ class TestUtilityFunctions(unittest.TestCase):
         self.assertEqual(summary['valid_actions'], 0)
 
 
+@pytest.mark.local_only
 class TestRealWorldScenarios(unittest.TestCase):
     """Test real-world usage scenarios"""
     

@@ -8,6 +8,7 @@ from src.script.script_manager import run_script
 from src.utils.recording_dir_resolver import create_or_get_recording_dir
 
 
+@pytest.mark.ci_safe
 class TestScriptTypeRecording:
     """Test recording functionality for script type"""
 

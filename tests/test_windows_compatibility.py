@@ -5,11 +5,13 @@ Windows環境対応テストスクリプト
 """
 
 import sys
+import pytest
 import platform
 import os
 import asyncio
 from pathlib import Path
 
+@pytest.mark.local_only
 def test_platform_detection():
     """プラットフォーム検出テスト"""
     print("🔍 Platform Detection Test")
@@ -25,6 +27,7 @@ def test_platform_detection():
     
     return is_windows
 
+@pytest.mark.local_only
 def test_path_handling():
     """パス処理テスト"""
     print("\n📁 Path Handling Test")
@@ -44,6 +47,7 @@ def test_path_handling():
         except Exception as e:
             print(f"  ❌ Failed: {path} - {e}")
 
+@pytest.mark.local_only
 def test_subprocess_env():
     """環境変数・subprocessテスト"""
     print("\n🔧 Environment & Subprocess Test")
@@ -60,6 +64,7 @@ def test_subprocess_env():
         print(f"    Shell: True")
         print(f"    Executable: {sys.executable}")
 
+@pytest.mark.local_only
 def test_browser_path_detection():
     """ブラウザパス検出テスト"""
     print("\n🌐 Browser Path Detection Test")
@@ -89,6 +94,7 @@ def test_browser_path_detection():
     else:
         print("  Skipping browser detection (not Windows)")
 
+@pytest.mark.local_only
 async def test_browser_automation():
     """ブラウザ自動化テスト"""
     print("\n🤖 Browser Automation Test")
@@ -121,6 +127,7 @@ async def test_browser_automation():
     except ImportError as e:
         print(f"  ⚠️ Cannot test browser automation: {e}")
 
+@pytest.mark.local_only
 def test_requirements():
     """依存関係テスト"""
     print("\n📦 Requirements Test")

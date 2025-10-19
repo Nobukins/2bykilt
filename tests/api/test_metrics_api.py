@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+import pytest
 
 from src.api.app import create_fastapi_app
 from src.api.app import create_ui
@@ -15,6 +16,7 @@ def _make_app():
     return create_fastapi_app(demo, _Args())
 
 
+@pytest.mark.ci_safe
 def test_metrics_series_endpoints():
     # Arrange: seed some metrics
     collector = get_metrics_collector()

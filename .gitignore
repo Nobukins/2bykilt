@@ -211,6 +211,13 @@ assets/fonts/
 # tmp/myscript/pytest.ini
 # tmp/myscript/browser_control.py
 tmp/test_*
+tmp/webui_settings/
+tmp/test_edge_profile/
+tmp/test_edge_profile_playwrigh/
+tmp/test_record/
+tmp/test_recording/
+tmp/test_windows/
+tmp/git_scripts/
 
 # Dynamically generated browser control scripts
 myscript/browser_control.py
@@ -255,7 +262,10 @@ pip-audit-raw.json
 pip-audit-normalized.json
 
 # Metrics artifacts (local runs)
-artifacts/metrics/*.csv
+artifacts/metrics/
+artifacts/traces/
+artifacts/screenshots/
+artifacts/trace_viewer_sessions/
 
 # Temporary files for recording under src/artifacts
 src/artifacts/**
@@ -267,3 +277,6 @@ src/artifacts/**
 .github/issues/
 # Test artifacts
 test.png
+
+# Playwright trace viewer runtime files
+assets/playwright-trace-viewer/index.html

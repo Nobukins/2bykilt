@@ -50,18 +50,21 @@ def fresh_browser_config(env: dict):
         os.environ.update(backup)
 
 
+@pytest.mark.local_only
 def test_default_browser_fallback():
     cfg, _ = fresh_browser_config({})
     assert cfg.get_current_browser() == "chrome"
     assert cfg.get_browser_settings()["browser_type"] == "chrome"
 
 
+@pytest.mark.local_only
 def test_env_overrides_default_browser():
     cfg, _ = fresh_browser_config({"DEFAULT_BROWSER": "edge"})
     assert cfg.get_current_browser() == "edge"
     assert cfg.get_browser_settings()["browser_type"] == "edge"
 
 
+@pytest.mark.local_only
 def test_invalid_browser_type_graceful_fallback(caplog):
     cfg, _ = fresh_browser_config({"DEFAULT_BROWSER": "safari"})
     settings = cfg.get_browser_settings("safari")
@@ -69,6 +72,7 @@ def test_invalid_browser_type_graceful_fallback(caplog):
     assert any("Unknown browser type" in r.getMessage() for r in caplog.records)
 
 
+@pytest.mark.local_only
 def test_set_current_browser_idempotent():
     cfg, _ = fresh_browser_config({"DEFAULT_BROWSER": "chrome"})
     before = cfg.get_current_browser()
@@ -76,12 +80,14 @@ def test_set_current_browser_idempotent():
     assert cfg.get_current_browser() == before == "chrome"
 
 
+@pytest.mark.local_only
 def test_set_current_browser_switch():
     cfg, _ = fresh_browser_config({"DEFAULT_BROWSER": "chrome"})
     cfg.set_current_browser("edge")
     assert cfg.get_current_browser() == "edge"
 
 
+@pytest.mark.local_only
 def test_validate_current_browser_auto_fallback(monkeypatch):
     cfg, _ = fresh_browser_config({"DEFAULT_BROWSER": "chrome"})
     availability = {"chrome": False, "edge": True}
@@ -95,6 +101,7 @@ def test_validate_current_browser_auto_fallback(monkeypatch):
     assert cfg.get_current_browser() == "edge"
 
 
+@pytest.mark.local_only
 def test_debugging_port_env_override(monkeypatch):
     monkeypatch.setenv("CHROME_DEBUGGING_PORT", "9333")
     cfg, _ = fresh_browser_config({"CHROME_DEBUGGING_PORT": "9333"})

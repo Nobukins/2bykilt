@@ -12,6 +12,7 @@ from unittest.mock import MagicMock, Mock, patch, call
 import pytest
 
 
+@pytest.mark.local_only
 class TestModernUIInitialization:
     """Test ModernUI class initialization."""
 
@@ -57,6 +58,7 @@ class TestModernUIInitialization:
             mock_sync.assert_called_once_with(mock_gr)
 
 
+@pytest.mark.local_only
 class TestModernUIBuildInterface:
     """Test interface building."""
 
@@ -158,6 +160,7 @@ class TestModernUIBuildInterface:
             assert "🎬 トレース" in tab_calls
 
 
+@pytest.mark.local_only
 class TestModernUILaunch:
     """Test UI launch functionality."""
 
@@ -245,6 +248,7 @@ class TestModernUILaunch:
             mock_logger.error.assert_called_with("Cannot launch UI: interface build failed")
 
 
+@pytest.mark.local_only
 class TestFactoryFunction:
     """Test create_modern_ui factory function."""
 
@@ -266,6 +270,7 @@ class TestFactoryFunction:
             assert isinstance(ui, ModernUI)
 
 
+@pytest.mark.local_only
 class TestMainEntryPoint:
     """Test main() entry point."""
 
@@ -360,6 +365,7 @@ class TestMainEntryPoint:
             assert len(share_call) == 1
 
 
+@pytest.mark.local_only
 class TestSyncGradioModule:
     """Test _sync_gradio_module function."""
 

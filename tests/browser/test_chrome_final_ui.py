@@ -4,6 +4,7 @@ Final Chrome UI Integration Test
 Tests the complete NEW METHOD automation with Chrome browser through UI
 """
 import asyncio
+import pytest
 import os
 import sys
 import tempfile
@@ -12,6 +13,7 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
+@pytest.mark.local_only
 async def test_chrome_ui_automation():
     """Test Chrome automation through the complete UI pipeline"""
     

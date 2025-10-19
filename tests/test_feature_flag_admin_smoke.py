@@ -7,6 +7,7 @@ This script performs basic validation of the new admin panel:
 3. Verifies FeatureFlags API methods work correctly
 """
 import sys
+import pytest
 from pathlib import Path
 
 # Add project root to path
@@ -14,6 +15,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 
+@pytest.mark.ci_safe
 def test_imports():
     """Test that all required modules can be imported."""
     print("🔍 Testing imports...")
@@ -22,12 +24,12 @@ def test_imports():
         from src.ui.admin.feature_flag_panel import create_feature_flag_admin_panel
         import gradio as gr
         print("✅ All imports successful")
-        return True
     except Exception as e:
         print(f"❌ Import failed: {e}")
-        return False
+        assert False, f"Import failed: {e}"
 
 
+@pytest.mark.ci_safe
 def test_feature_flags_api():
     """Test FeatureFlags class API methods."""
     print("\n🔍 Testing FeatureFlags API...")
@@ -57,7 +59,7 @@ def test_feature_flags_api():
                 print(f"✅ get_flag_metadata('{test_flag_name}') returned valid data")
             else:
                 print(f"❌ get_flag_metadata('{test_flag_name}') returned None")
-                return False
+                assert False, f"get_flag_metadata('{test_flag_name}') returned None"
         
         # Test with non-existent flag
         nonexistent = FeatureFlags.get_flag_metadata("nonexistent_flag_xyz")
@@ -65,7 +67,7 @@ def test_feature_flags_api():
             print("✅ get_flag_metadata() correctly returns None for non-existent flag")
         else:
             print("❌ get_flag_metadata() should return None for non-existent flag")
-            return False
+            assert False, "get_flag_metadata() should return None for non-existent flag"
         
         return True
         
@@ -73,9 +75,10 @@ def test_feature_flags_api():
         print(f"❌ FeatureFlags API test failed: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        assert False, f"FeatureFlags API test failed: {e}"
 
 
+@pytest.mark.ci_safe
 def test_panel_creation():
     """Test admin panel creation without launching UI."""
     print("\n🔍 Testing admin panel creation...")
@@ -91,13 +94,13 @@ def test_panel_creation():
             return True
         else:
             print(f"❌ Panel creation returned unexpected type: {type(panel)}")
-            return False
+            assert False, f"Panel creation returned unexpected type: {type(panel)}"
             
     except Exception as e:
         print(f"❌ Panel creation failed: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        assert False, f"Panel creation failed: {e}"
 
 
 def main():

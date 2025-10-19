@@ -1,5 +1,6 @@
 """Tests for unified recording dir resolver (Issue #28 incremental refactor)."""
 from pathlib import Path
+import pytest
 from src.utils.recording_dir_resolver import create_or_get_recording_dir
 from src.config.feature_flags import FeatureFlags, _reset_feature_flags_for_tests
 from src.runtime.run_context import RunContext
@@ -16,6 +17,7 @@ def _reset(monkeypatch, run_id: str):
     FeatureFlags.clear_all_overrides()
 
 
+@pytest.mark.ci_safe
 def test_explicit_precedence(tmp_path, monkeypatch):
     _reset(monkeypatch, "R1")
     FeatureFlags.set_override("artifacts.unified_recording_path", True)
@@ -25,6 +27,7 @@ def test_explicit_precedence(tmp_path, monkeypatch):
     assert p.exists()
 
 
+@pytest.mark.ci_safe
 def test_env_precedence_over_flag(tmp_path, monkeypatch):
     _reset(monkeypatch, "R2")
     FeatureFlags.set_override("artifacts.unified_recording_path", True)
@@ -35,6 +38,7 @@ def test_env_precedence_over_flag(tmp_path, monkeypatch):
     assert p.exists()
 
 
+@pytest.mark.ci_safe
 def test_flag_path_when_no_env(monkeypatch):
     _reset(monkeypatch, "R3")
     FeatureFlags.set_override("artifacts.unified_recording_path", True)
@@ -44,6 +48,7 @@ def test_flag_path_when_no_env(monkeypatch):
     assert "artifacts" in str(p)
 
 
+@pytest.mark.ci_safe
 def test_legacy_when_flag_disabled(monkeypatch):
     _reset(monkeypatch, "R4")
     FeatureFlags.set_override("artifacts.unified_recording_path", False)
@@ -52,6 +57,7 @@ def test_legacy_when_flag_disabled(monkeypatch):
     assert "tmp" in str(p)
 
 
+@pytest.mark.ci_safe
 def test_empty_env_ignored(monkeypatch):
     _reset(monkeypatch, "R5")
     monkeypatch.setenv("RECORDING_PATH", " ")  # whitespace ignored
@@ -60,6 +66,7 @@ def test_empty_env_ignored(monkeypatch):
     assert p.name == "videos"
 
 
+@pytest.mark.ci_safe
 def test_force_migration_overrides_legacy(monkeypatch):
     _reset(monkeypatch, "R6")
     FeatureFlags.set_override("artifacts.unified_recording_path", False)

@@ -11,6 +11,7 @@ import pytest
 from unittest.mock import Mock, MagicMock, patch
 
 
+@pytest.mark.ci_safe
 class TestSettingsPanelInitialization:
     """Test SettingsPanel class initialization."""
 
@@ -32,6 +33,7 @@ class TestSettingsPanelInitialization:
             mock_llm_gateway.assert_called_once()
 
 
+@pytest.mark.ci_safe
 class TestSettingsPanelRender:
     """Test SettingsPanel rendering."""
 
@@ -129,6 +131,7 @@ class TestSettingsPanelRender:
             assert "UI オプション" in accordion_labels
 
 
+@pytest.mark.ci_safe
 class TestSettingsPanelFormatMethods:
     """Test internal formatting methods."""
 
@@ -206,6 +209,7 @@ class TestSettingsPanelFormatMethods:
             assert isinstance(result, str)
 
 
+@pytest.mark.ci_safe
 class TestSettingsPanelEventHandlers:
     """Test event handler methods."""
 
@@ -284,6 +288,7 @@ class TestSettingsPanelEventHandlers:
             assert isinstance(result, tuple)
 
 
+@pytest.mark.ci_safe
 class TestCreateSettingsPanel:
     """Test create_settings_panel factory function."""
 

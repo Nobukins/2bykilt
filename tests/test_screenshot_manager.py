@@ -1,4 +1,5 @@
 from src.core.screenshot_manager import capture_page_screenshot
+import pytest
 from src.config.feature_flags import FeatureFlags
 from src.core.artifact_manager import get_artifact_manager
 
@@ -6,6 +7,7 @@ class FakePage:
     def screenshot(self, type="png"):
         return b"fakepngdata123"  # pretend PNG bytes
 
+@pytest.mark.ci_safe
 def test_capture_page_screenshot_basic(tmp_path, monkeypatch):
     # enable manifest so artifact path is created
     FeatureFlags.set_override("artifacts.enable_manifest_v2", True)

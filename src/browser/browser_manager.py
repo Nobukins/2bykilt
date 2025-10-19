@@ -250,8 +250,9 @@ def prepare_recording_path(enable_recording: bool, save_recording_path: Optional
     except Exception as e:  # noqa: BLE001
         logger.error(f"Failed to resolve recording directory: {e}")
         try:
-            from src.utils.recording_dir_resolver import create_or_get_recording_dir
-            path = str(create_or_get_recording_dir())
+            # Re-import for fallback attempt
+            from src.utils.recording_dir_resolver import create_or_get_recording_dir as create_or_get_fallback
+            path = str(create_or_get_fallback())
             return str(path)
         except Exception:
             import tempfile

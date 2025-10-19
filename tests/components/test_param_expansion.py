@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import re
+import pytest
 
 # 修正されたパターンでテスト
 command_template = 'python ./myscript/unified_action_launcher.py --action nogtips_search --query "${params.query|LLMs.txt}" --slowmo 2500 --countdown 3'

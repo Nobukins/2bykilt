@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from src.utils.playwright_codegen import run_playwright_codegen
 
 
+@pytest.mark.local_only
 def test_playwright_codegen_automate_mode():
     """playwright codegen の自動化スタブモードのみをテスト（ブラウザ非起動）"""
     test_url = "https://example.com/"
@@ -27,6 +28,7 @@ def test_playwright_codegen_automate_mode():
     os.environ.pop("PLAYWRIGHT_CODEGEN_AUTOMATE", None)
 
 
+@pytest.mark.local_only
 @pytest.mark.skip(reason="通常モードは対話型UIが必要なため、自動テストではスキップ。手動確認用。")
 @pytest.mark.timeout(300)
 def test_playwright_codegen_normal_mode():

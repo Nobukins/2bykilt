@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from src.utils.profile_manager import ProfileManager
 
 
+@pytest.mark.ci_safe
 class TestProfileManager:
     """ProfileManager の完全なテストスイート"""
     

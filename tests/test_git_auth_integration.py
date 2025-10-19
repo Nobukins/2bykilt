@@ -16,6 +16,7 @@ from src.utils.git_auth_manager import GitAuthenticationManager
 from src.script.git_script_resolver import GitScriptResolver
 
 
+@pytest.mark.ci_safe
 class TestGitAuthIntegration:
     """Integration tests for git authentication and proxy features"""
 

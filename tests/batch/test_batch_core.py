@@ -28,6 +28,7 @@ from tests.batch import (
 )
 
 
+@pytest.mark.ci_safe
 class TestBatchEngineCSVParsing:
     """CSV parsing tests."""
 
@@ -237,6 +238,7 @@ class TestBatchEngineCSVParsing:
             engine.parse_csv(malicious_path)
 
 
+@pytest.mark.ci_safe
 class TestBatchEngineConfiguration:
     """Configuration validation tests."""
 
@@ -334,6 +336,7 @@ class TestBatchEngineConfiguration:
         assert engine.config['log_level'] == 'DEBUG'
 
 
+@pytest.mark.ci_safe
 class TestBatchEngineArtifacts:
     """Row-level artifact PoC tests (#175)."""
 
