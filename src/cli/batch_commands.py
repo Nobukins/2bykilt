@@ -50,7 +50,37 @@ def _resolve_csv_path(csv_path: str) -> Path:
     return resolved
 
 
-def _run_start_batch(csv_path: Path, run_context: RunContext, execute_immediately: bool) -> Any:
+def _cancel_all_tasks(loop):
+    """Cancel all pending tasks in the event loop."""
+    try:
+        to_cancel = asyncio.all_tasks(loop)
+        if not to_cancel:
+            return
+
+        for task in to_cancel:
+            task.cancel()
+
+        loop.run_until_complete(asyncio.gather(*to_cancel, return_exceptions=True))
+
+        for task in to_cancel:
+            if task.cancelled():
+                continue
+            if task.exception() is not None:
+                loop.call_exception_handler({
+                    'message': 'unhandled exception during asyncio.run() shutdown',
+                    'exception': task.exception(),
+                    'task': task,
+                })
+    except Exception:
+        # Ignore errors during cleanup
+        pass
+
+
+def _run_start_batch(
+    csv_path: Path,
+    run_context: RunContext,
+    execute_immediately: bool = True,
+) -> Any:
     """Execute the async start_batch helper from synchronous CLI code.
     
     Args:
@@ -79,10 +109,17 @@ def _run_start_batch(csv_path: Path, run_context: RunContext, execute_immediatel
         if "asyncio.run() cannot be called from a running event loop" in str(exc):
             logger.warning("Active event loop detected, creating new loop")
             loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
             try:
                 return loop.run_until_complete(_invoke())
             finally:
-                loop.close()
+                try:
+                    _cancel_all_tasks(loop)
+                    loop.run_until_complete(loop.shutdown_asyncgens())
+                    loop.run_until_complete(loop.shutdown_default_executor())
+                finally:
+                    asyncio.set_event_loop(None)
+                    loop.close()
         logger.error("Unexpected RuntimeError during batch start: %s", exc)
         raise
 
@@ -94,7 +131,7 @@ def _get_value(obj: Any, key: str, default: Any = None) -> Any:
 
 
 def _iter_jobs(manifest: Any) -> Sequence[Any]:
-    jobs = _get_value(manifest, "jobs", [])
+    jobs = getattr(manifest, "jobs", [])
     if jobs is None:
         return []
     if isinstance(jobs, (list, tuple)):
@@ -109,9 +146,15 @@ def _print_job_details(manifest: Any) -> None:
 
     print("\n📋 Job details:")
     for job in jobs:
-        status = _get_value(job, "status", "unknown")
-        job_id = _get_value(job, "job_id", "unknown")
-        error_message = _get_value(job, "error_message") or _get_value(job, "error")
+        # Handle both BatchJob objects and job summary dictionaries
+        if isinstance(job, dict):
+            status = job.get("status", "unknown")
+            job_id = job.get("job_id", "unknown")
+            error_message = job.get("error_message") or job.get("error")
+        else:
+            status = getattr(job, "status", "unknown")
+            job_id = getattr(job, "job_id", "unknown")
+            error_message = getattr(job, "error_message", None) or getattr(job, "error", None)
 
         if status == "completed":
             status_icon = "✅"
@@ -127,13 +170,14 @@ def _print_job_details(manifest: Any) -> None:
 
 def _print_manifest_overview(manifest: Any, header: str = "✅ Batch status:") -> None:
     print(header)
-    print(f"   Batch ID: {_get_value(manifest, 'batch_id', 'unknown')}")
-    print(f"   Run ID: {_get_value(manifest, 'run_id', 'unknown')}")
-    print(f"   CSV Path: {_get_value(manifest, 'csv_path', 'unknown')}")
-    print(f"   Total jobs: {_get_value(manifest, 'total_jobs', 0)}")
-    print(f"   Completed: {_get_value(manifest, 'completed_jobs', 0)}")
-    print(f"   Failed: {_get_value(manifest, 'failed_jobs', 0)}")
-    created_at = _get_value(manifest, 'created_at', '-')
+    print(f"   Batch ID: {getattr(manifest, 'batch_id', 'unknown')}")
+    print(f"   Run ID: {getattr(manifest, 'run_id', 'unknown')}")
+    print(f"   CSV Path: {getattr(manifest, 'csv_path', 'unknown')}")
+    print(f"   Total jobs: {getattr(manifest, 'total_jobs', 0)}")
+    print(f"   Completed: {getattr(manifest, 'completed_jobs', 0)}")
+    print(f"   Failed: {getattr(manifest, 'failed_jobs', 0)}")
+    print(f"   Pending: {getattr(manifest, 'pending_jobs', 0)}")
+    created_at = getattr(manifest, 'created_at', '-')
     if created_at:
         print(f"   Created: {created_at}")
 
@@ -168,29 +212,29 @@ def _handle_start_command(args) -> int:
         return 1
 
     print("✅ Batch created successfully!")
-    print(f"   Batch ID: {_get_value(manifest, 'batch_id', 'unknown')}")
-    print(f"   Run ID: {_get_value(manifest, 'run_id', 'unknown')}")
+    print(f"   Batch ID: {getattr(manifest, 'batch_id', 'unknown')}")
+    print(f"   Run ID: {getattr(manifest, 'run_id', 'unknown')}")
 
     summary = None
     try:
         engine = BatchEngine(run_context)
-        summary = engine.get_batch_summary(_get_value(manifest, 'batch_id'))
+        summary = engine.get_batch_summary(getattr(manifest, 'batch_id', ''))
     except Exception as error:
         logger.warning("Could not fetch batch summary: %s", error)
         summary = None
 
     if summary:
-        print(f"   Total jobs: {_get_value(summary, 'total_jobs', _get_value(manifest, 'total_jobs', 0))}")
-        print(f"   Completed: {_get_value(summary, 'completed_jobs', 0)}")
-        print(f"   Failed: {_get_value(summary, 'failed_jobs', 0)}")
+        print(f"   Total jobs: {getattr(summary, 'total_jobs', getattr(manifest, 'total_jobs', 0))}")
+        print(f"   Completed: {getattr(summary, 'completed_jobs', 0)}")
+        print(f"   Failed: {getattr(summary, 'failed_jobs', 0)}")
     else:
-        print(f"   Total jobs: {_get_value(manifest, 'total_jobs', 0)}")
+        print(f"   Total jobs: {getattr(manifest, 'total_jobs', 0)}")
 
     print(f"   Jobs directory: {run_context.artifact_dir('jobs')}")
     batch_manifest_dir = Path(run_context.artifact_dir('batch'))
     print(f"   Manifest: {batch_manifest_dir / 'batch_manifest.json'}")
 
-    logger.info("Batch %s created successfully", _get_value(manifest, 'batch_id'))
+    logger.info("Batch %s created successfully", getattr(manifest, 'batch_id', 'unknown'))
     return 0
 
 
