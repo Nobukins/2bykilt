@@ -1146,16 +1146,18 @@ python bykilt.py version bump --type patch
 
 ### Release and CI/CD
 
-The system includes automated CI/CD for releases:
+The system includes automated CI/CD for releases with auto-generated Release Notes:
 
 - [CI/CD Integration Guide](./docs/ci-cd-integration.md) - GitHub Actions workflow setup
-- [Changelog Management Guide](./docs/changelog-management.md) - Changelog and release notes
 - [Release Process Guide](./docs/release-process.md) - Complete release workflow
+- [Release Notes Generation Guide](./docs/release-notes-generation.md) - Auto-generated release notes from commits
+- [Changelog Management Guide](./docs/changelog-management.md) - Changelog and release notes
 
 Automatic features:
 
 - 🔄 Auto version tagging on VERSION changes
 - 📦 Automatic GitHub Release creation
-- 📝 Changelog generation from commits
+- 📝 Auto-categorized release notes (Features, Bug Fixes, Documentation, etc.)
+- 📄 Changelog generation from conventional commits
 - ✅ Version format validation
 - 🏷️ Git tag management

@@ -9,8 +9,9 @@ This guide explains the automated CI/CD workflows for version management, taggin
 The `.github/workflows/release-management.yml` workflow automates:
 
 - Automatic version tagging on VERSION file changes
-- GitHub Release creation with changelog
-- Changelog generation from commit messages
+- GitHub Release creation with auto-generated release notes
+- Changelog generation from conventional commits (feat, fix, docs, refactor, etc.)
+- Categorized release notes (Features, Bug Fixes, Documentation, etc.)
 - Version format validation
 - Prerelease detection
 
@@ -139,23 +140,71 @@ Types: `feat`, `fix`, `docs`, `refactor`, `perf`, `test`, `chore`, `ci`
 
 ## Changelog Generation
 
-### Automatic Changelog
+### Automatic Release Notes
 
-The workflow generates changelog from recent commits:
+The workflow generates categorized release notes from conventional commits:
 
 ```markdown
-### Recent Changes
+# Release Notes: v1.1.0
 
-- abc1234: feat(version): Add prerelease support (Developer Name)
-- def5678: fix(cli): Improve error messages (Developer Name)
-- ghi9012: docs(readme): Update guide (Developer Name)
+## Changes since v1.0.0
+
+### ✨ Features
+- abc1234 feat(version): Add prerelease support
+- def5678 feat(cli): Add batch operations
+
+### 🐛 Bug Fixes
+- ghi9012 fix(parser): Resolve edge case
+- jkl3456 fix(cli): Improve error messages
+
+### 📚 Documentation
+- mno7890 docs(readme): Update guide
+- pqr1234 docs(guide): Add examples
+
+### 🔧 Refactoring
+- stu5678 refactor(parser): Simplify logic
+
+### 📖 Documentation
+- [Version Management Guide](...)
+- [Release Process Guide](...)
+- [CI/CD Integration Guide](...)
+```
+
+### Release Configuration
+
+The `.github/release.yml` file configures automatic release notes:
+
+```yaml
+changelog:
+  categories:
+    - title: 🚀 Features
+      labels: [feature, enhancement, feat]
+    - title: 🐛 Bug Fixes
+      labels: [bug, bugfix, fix]
+    - title: 📚 Documentation
+      labels: [documentation, docs]
+    # ... more categories
 ```
 
 ### Best Practices
 
-- Use conventional commit format consistently
+- Use conventional commit format consistently: `feat(scope): description`
 - Write descriptive commit subjects
-- Include scope when relevant: `feat(cli): ...`
+- Add PR labels to categorize changes
+- Types: `feat`, `fix`, `docs`, `refactor`, `perf`, `test`, `chore`, `ci`
+
+### Commit to Release Notes Mapping
+
+| Commit Prefix | Release Category | Example |
+|---|---|---|
+| `feat` | ✨ Features | `feat(cli): Add new command` |
+| `fix` | 🐛 Bug Fixes | `fix(parser): Handle edge case` |
+| `docs` | 📚 Documentation | `docs(readme): Update guide` |
+| `refactor` | 🔧 Refactoring | `refactor(core): Improve structure` |
+| `perf` | ⚡ Performance | `perf(parser): Optimize speed` |
+| `test` | ✅ Testing | `test(version): Add coverage` |
+| `chore` | 📝 Other Changes | `chore(deps): Update packages` |
+| `ci` | 🤖 CI/CD | `ci(actions): Improve workflow` |
 
 ## Release Process
 
