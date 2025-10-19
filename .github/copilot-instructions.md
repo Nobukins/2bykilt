@@ -74,6 +74,51 @@ DEVELOPMENT RULES:
 - Once the project is created, it is already opened in Visual Studio Code—do not suggest commands to open this project in Visual Studio again.
 - If the project setup information has additional rules, follow them strictly.
 
+PRE-PUSH VALIDATION RULES (CRITICAL):
+Before pushing any changes, ALWAYS run local validation to catch issues early:
+
+1. **CI Environment Simulation** (For Python Projects with pytest):
+   ```bash
+   # Simulate CI environment conditions
+   unset BYKILT_ENV  # Or equivalent environment variables
+   export ENABLE_LLM="true"  # Or project-specific env vars
+   
+   # Run tests with same markers as CI
+   python -m pytest -m "ci_safe" --cov=src --cov-report=term -v
+   
+   # Or for targeted test validation:
+   python -m pytest path/to/modified/test_file.py -xvs
+   ```
+
+2. **Common Issues to Check Locally**:
+   - **Indentation/Scope Issues**: Ensure all assertions are within their context manager blocks
+   - **Mock Patching**: Verify patches are applied before code execution (use context managers, not decorators when order matters)
+   - **Environment Variables**: Test with and without key environment variables set
+   - **Import Timing**: Check for module-level variable evaluation issues
+   
+3. **Test-Specific Validations**:
+   - If modifying config-related code: Test with `BYKILT_ENV` unset
+   - If using context managers: Verify all dependent code is inside the `with` block
+   - If patching module-level variables: Use context managers instead of decorators
+   
+4. **Fast Local Checks** (Before full CI simulation):
+   ```bash
+   # Run only modified test files
+   python -m pytest tests/path/to/test_file.py -v
+   
+   # Check for obvious errors
+   python -m pytest tests/path/to/test_file.py --collect-only
+   ```
+
+5. **Processing Time Awareness**:
+   - Local single test file: ~5-10 seconds
+   - Local full ci_safe suite: ~2-5 minutes
+   - CI full suite: ~5-8 minutes
+   - Budget time accordingly before pushing
+
+**NEVER push without running at least the modified test files locally first.**
+**If tests take >30 seconds locally, they will likely take 2-3 minutes in CI.**
+
 FOLDER CREATION RULES:
 - Always use the current directory as the project root.
 - If you are running any terminal commands, use the '.' argument to ensure that the current working directory is used ALWAYS.
@@ -91,6 +136,38 @@ PROJECT CONTENT RULES:
 - Ensure all generated components serve a clear purpose within the user's requested workflow.
 - If a feature is assumed but not confirmed, prompt the user for clarification before including it.
 - If you are working on a VS Code extension, use the VS Code API tool with a query to find relevant VS Code API references and samples related to that query.
+
+COMMON PITFALLS TO AVOID (Learned from Issue #340):
+
+1. **Context Manager Scope Issues**:
+   ```python
+   # ❌ WRONG - Assertions outside context manager
+   def test_something(self):
+       with patch('module.VARIABLE', False):
+           result = function_call()
+       assert result == expected  # ← Patch already removed!
+   
+   # ✅ CORRECT - All dependent code inside context manager
+   def test_something(self):
+       with patch('module.VARIABLE', False):
+           result = function_call()
+           assert result == expected  # ← Patch still active
+   ```
+
+2. **Module-Level Variable Patching**:
+   - Decorator-based `@patch()` may not work for module-level variables used in conditionals
+   - Use context managers (`with patch()`) for better control over patch timing
+   - Module-level variables are evaluated at import time, not function call time
+
+3. **Environment-Specific Configuration**:
+   - Default environments (e.g., 'development') may have different settings than expected
+   - Always test with environment variables unset to simulate CI conditions
+   - Config files in repository may cause multi-env systems to activate unexpectedly
+
+4. **Indentation Matters**:
+   - Python's whitespace-sensitive syntax can cause subtle bugs
+   - One level of indentation difference = completely different scope
+   - Always verify assertions are at the correct indentation level
 
 TASK COMPLETION RULES:
 - Your task is complete when:
