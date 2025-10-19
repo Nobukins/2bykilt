@@ -1,51 +1,52 @@
 # TASK DASHBOARD
 
-Generated at (UTC): 2025-10-19T03:27:16+00:00
+Generated at (UTC): 2025-10-19T12:43:18+00:00
 
 ## 1. メタサマリー
 
-- Total Issues: 132
+- Total Issues: 137
 - High Risk (declared): 8 → 31, 46, 49, 54, 62, 176, 237, 285
 - Cycle Detected: false (none)
-- Strict Orphans: 29
-- Curated Orphan List Count: 31
+- Strict Orphans: 31
+- Curated Orphan List Count: 33
 
 ## 2. 分布 (Distribution)
 
 ### Priority
-- P0: 28 (21.2%)
-- P1: 39 (29.5%)
-- P2: 61 (46.2%)
-- P3: 4 (3.0%)
+- P0: 28 (20.4%)
+- P1: 42 (30.7%)
+- P2: 63 (46.0%)
+- P3: 4 (2.9%)
 
 ### Phase
-- 1: 23 (17.4%)
-- 1-late: 14 (10.6%)
-- 2: 92 (69.7%)
-- 3: 3 (2.3%)
+- 1: 23 (16.8%)
+- 1-late: 14 (10.2%)
+- 2: 94 (68.6%)
+- 3: 6 (4.4%)
 
 ### Area
-- artifacts: 30 (22.7%)
-- automation: 5 (3.8%)
-- batch: 10 (7.6%)
-- config: 12 (9.1%)
-- docs: 12 (9.1%)
-- flags: 1 (0.8%)
-- logging: 7 (5.3%)
-- observability: 5 (3.8%)
-- plugins: 1 (0.8%)
-- quality: 1 (0.8%)
-- runner: 25 (18.9%)
-- security: 5 (3.8%)
-- test: 1 (0.8%)
-- testing: 4 (3.0%)
-- uiux: 13 (9.8%)
+- artifacts: 32 (23.4%)
+- automation: 5 (3.6%)
+- batch: 10 (7.3%)
+- config: 12 (8.8%)
+- docs: 12 (8.8%)
+- flags: 1 (0.7%)
+- logging: 7 (5.1%)
+- observability: 5 (3.6%)
+- plugins: 1 (0.7%)
+- quality: 1 (0.7%)
+- release: 1 (0.7%)
+- runner: 25 (18.2%)
+- security: 5 (3.6%)
+- test: 1 (0.7%)
+- testing: 5 (3.6%)
+- uiux: 14 (10.2%)
 
 ### Risk
-- high: 8 (6.1%)
-- low: 12 (9.1%)
-- medium: 3 (2.3%)
-- none: 109 (82.6%)
+- high: 9 (6.6%)
+- low: 12 (8.8%)
+- medium: 3 (2.2%)
+- none: 113 (82.5%)
 
 ## 3. リスク詳細 (High / Medium / etc.)
 
@@ -91,6 +92,8 @@ Strict Orphans (自動抽出 = 依存なし & 参照されず):
 - 280: Browser Settings: Improve Browser Settings menu clarity & enforce behavior across run types
 - 285: Browser-Use/Web-UIをベースとしてUI周りのリファクタリング
 - 287: Template for new issue and new PR
+- 340: Test Coverage Improvement to 70% - Phase 2 (Quick Wins & Browser/Config Testing)
+- 345: [Feature] アーティファクト管理UI - 削除機能とリテンションポリシー
 
 Curated Orphan List (summary.data_quality_checks.orphan_issues_without_dependents_or_depends):
 - 55: browser_control pytest パス修正
@@ -124,6 +127,8 @@ Curated Orphan List (summary.data_quality_checks.orphan_issues_without_dependent
 - 285: Browser-Use/Web-UIをベースとしてUI周りのリファクタリング
 - 287: Template for new issue and new PR
 - 320: feat: Auto-discovery and import of browser automation commands from remote llms.txt files
+- 340: Test Coverage Improvement to 70% - Phase 2 (Quick Wins & Browser/Config Testing)
+- 345: [Feature] アーティファクト管理UI - 削除機能とリテンションポリシー
 
 Missing Strict Orphans in curated list: (none)
 Extra non-strict entries in curated list (WARNING only): 264, 320
@@ -169,6 +174,7 @@ Sorted By: critical_path_rank
 | 306 | [worker] 🎥 Recordings: GIF変換ワーカー/キャッシュ + Flag [Sub of #302] | P2 | 2 | artifacts |  | 2 | 1 | 1 | 1 |  |
 | 329 | Split script/script_manager.py into executor modules | P1 | 2 | runner |  | 2 | 1 | 1 | 0 | #334 |
 | 33 | スクリーンショット取得ユーティリティ | P0 | 1 | artifacts |  | 2 | 1 | 1 | 3 |  |
+| 340 | Test Coverage Improvement to 70% - Phase 2 (Quick Wins & Browser/Config Testing) | P1 | 2 | testing |  | 2 | 0 | 0 | 0 | #341 |
 | 36 | アーティファクト一覧 API | P1 | 1 | artifacts |  | 2 | 2 | 1 | 1 | #95 |
 | 37 | 動画アーティファクト保持期間 | P1 | 1 | artifacts |  | 2 | 3 | 1 | 1 | #99 |
 | 39 | CSV 駆動バッチエンジンコア | P1 | 2 | batch |  | 2 | 1 | 1 | 4 | #164 |
@@ -253,6 +259,10 @@ Sorted By: critical_path_rank
 | 315 | [bug] try-finally によるリソースクリーンアップ強化 | P2 | 3 | logging |  | 1 | 0 | 1 | 0 |  |
 | 320 | feat: Auto-discovery and import of browser automation commands from remote llms.txt files | P0 | 2 | config |  | 1 | 2 | 1 | 0 | #322 |
 | 34 | 要素値キャプチャ & エクスポート | P1 | 1 | artifacts |  | 1 | 2 | 2 | 0 | #93 |
+| 342 | [Feature] リリースバージョン管理システムの導入 | P1 | 3 | release |  | 1 | 0 | 0 | 2 |  |
+| 344 | [Feature] Client UIパッケージング - エンドユーザー向けインストーラーとアプリ化 | P1 | 3 | uiux | high | 1 | 1 | 1 | 0 |  |
+| 345 | [Feature] アーティファクト管理UI - 削除機能とリテンションポリシー | P2 | 2 | artifacts |  | 1 | 0 | 0 | 0 |  |
+| 346 | [Feature] アーティファクトの自動バックアップとバージョン間マージ機能 | P2 | 3 | artifacts |  | 1 | 1 | 1 | 0 |  |
 | 38 | 録画統一後回帰テストスイート | P2 | 1-late | artifacts |  | 1 | 4 | 5 | 0 | #103 |
 | 40 | CSV D&D UI 連携 | P2 | 2 | batch |  | 1 | 2 | 1 | 0 | #172 |
 | 41 | バッチ進捗・サマリー | P2 | 2 | batch |  | 1 | 3 | 2 | 0 | #162 |
@@ -498,6 +508,15 @@ Sorted By: critical_path_rank
 - LongestDistance: 1
 - Depends (1): 32
 - Dependents (3): 38, 34, 76
+
+### Issue 340: Test Coverage Improvement to 70% - Phase 2 (Quick Wins & Browser/Config Testing)
+- Priority: P1, Phase: 2, Area: testing
+- Risk: (none)
+- CriticalPathRank: 2
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+- Progress: {"state": "in-progress", "note": "PR #341: Test coverage improved from 20% → 65%; 12 tests fixed, 982 ci_safe tests passing, comprehensive test verification completed", "primary_pr": 341}
 
 ### Issue 36: アーティファクト一覧 API
 - Priority: P1, Phase: 1, Area: artifacts
@@ -1246,6 +1265,42 @@ Sorted By: critical_path_rank
 - Depends (2): 33, 35
 - Dependents (0): (none)
 - Progress: {"state": "done", "primary_pr": 93}
+
+### Issue 342: [Feature] リリースバージョン管理システムの導入
+- Priority: P1, Phase: 3, Area: release
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (2): 344, 346
+- Progress: {"state": "open"}
+
+### Issue 344: [Feature] Client UIパッケージング - エンドユーザー向けインストーラーとアプリ化
+- Priority: P1, Phase: 3, Area: uiux
+- Risk: high
+- CriticalPathRank: 1
+- LongestDistance: 1
+- Depends (1): 342
+- Dependents (0): (none)
+- Progress: {"state": "open"}
+
+### Issue 345: [Feature] アーティファクト管理UI - 削除機能とリテンションポリシー
+- Priority: P2, Phase: 2, Area: artifacts
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 0
+- Depends (0): (none)
+- Dependents (0): (none)
+- Progress: {"state": "open"}
+
+### Issue 346: [Feature] アーティファクトの自動バックアップとバージョン間マージ機能
+- Priority: P2, Phase: 3, Area: artifacts
+- Risk: (none)
+- CriticalPathRank: 1
+- LongestDistance: 1
+- Depends (1): 342
+- Dependents (0): (none)
+- Progress: {"state": "open"}
 
 ### Issue 38: 録画統一後回帰テストスイート
 - Priority: P2, Phase: 1-late, Area: artifacts
