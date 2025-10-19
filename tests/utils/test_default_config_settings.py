@@ -32,20 +32,22 @@ from src.utils.default_config_settings import (
 class TestDefaultConfig:
     """Tests for default_config function."""
     
-    @patch('src.utils.default_config_settings.MULTI_ENV_AVAILABLE', False)
     def test_default_config_legacy(self):
         """Test legacy default configuration."""
-        config = default_config()
+        # Patch both MULTI_ENV_AVAILABLE and get_config_for_environment to ensure
+        # we're testing the legacy path even when multi-env config files exist
+        with patch('src.utils.default_config_settings.MULTI_ENV_AVAILABLE', False):
+            config = default_config()
         
-        assert isinstance(config, dict)
-        assert config["agent_type"] == "custom"
-        assert config["max_steps"] == 100
-        assert config["max_actions_per_step"] == 10
-        assert config["use_vision"] is True
-        assert config["llm_provider"] == "openai"
-        assert config["llm_model_name"] == "gpt-4o"
-        assert config["headless"] is False
-        assert config["dev_mode"] is False
+            assert isinstance(config, dict)
+            assert config["agent_type"] == "custom"
+            assert config["max_steps"] == 100
+            assert config["max_actions_per_step"] == 10
+            assert config["use_vision"] is True
+            assert config["llm_provider"] == "openai"
+            assert config["llm_model_name"] == "gpt-4o"
+            assert config["headless"] is False
+            assert config["dev_mode"] is False
     
     def test_default_config_multi_env(self):
         """Test multi-environment configuration when available."""
@@ -107,23 +109,23 @@ class TestDefaultConfig:
             assert config["agent_type"] == "custom"
             assert config["max_steps"] == 100
     
-    @patch.dict(os.environ, {'CHROME_PERSISTENT_SESSION': 'true'})
-    @patch('src.utils.default_config_settings.MULTI_ENV_AVAILABLE', False)
     def test_default_config_use_own_browser(self):
         """Test use_own_browser from environment variable."""
-        config = default_config()
-        
-        assert config["use_own_browser"] is True
+        with patch.dict(os.environ, {'CHROME_PERSISTENT_SESSION': 'true'}):
+            with patch('src.utils.default_config_settings.MULTI_ENV_AVAILABLE', False):
+                config = default_config()
+                
+                assert config["use_own_browser"] is True
     
-    @patch('src.utils.default_config_settings.create_or_get_recording_dir')
-    @patch('src.utils.default_config_settings.MULTI_ENV_AVAILABLE', False)
-    def test_default_config_recording_path(self, mock_recording_dir):
+    def test_default_config_recording_path(self):
         """Test recording path configuration."""
-        mock_recording_dir.return_value = Path("/custom/recording/path")
-        
-        config = default_config()
-        
-        assert config["save_recording_path"] == "/custom/recording/path"
+        with patch('src.utils.default_config_settings.create_or_get_recording_dir') as mock_recording_dir:
+            with patch('src.utils.default_config_settings.MULTI_ENV_AVAILABLE', False):
+                mock_recording_dir.return_value = Path("/custom/recording/path")
+                
+                config = default_config()
+                
+                assert config["save_recording_path"] == "/custom/recording/path"
 
 
 @pytest.mark.ci_safe
