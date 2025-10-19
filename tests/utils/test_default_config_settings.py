@@ -34,9 +34,12 @@ class TestDefaultConfig:
     
     def test_default_config_legacy(self):
         """Test legacy default configuration."""
-        # Patch MULTI_ENV_AVAILABLE to ensure we're testing the legacy path
-        # even when multi-env config files exist
-        with patch('src.utils.default_config_settings.MULTI_ENV_AVAILABLE', False):
+        # Patch both MULTI_ENV_AVAILABLE and the function check to ensure
+        # we're testing the legacy path even when multi-env config files exist.
+        # Must patch both the module variable and reload the function behavior.
+        import src.utils.default_config_settings as config_module
+        
+        with patch.object(config_module, 'MULTI_ENV_AVAILABLE', False):
             config = default_config()
             
             assert isinstance(config, dict)
@@ -52,13 +55,15 @@ class TestDefaultConfig:
     def test_default_config_multi_env(self):
         """Test multi-environment configuration when available."""
         # Import the module to check actual MULTI_ENV_AVAILABLE status
+        import src.utils.default_config_settings as config_module
         from src.utils.default_config_settings import MULTI_ENV_AVAILABLE
         
         if not MULTI_ENV_AVAILABLE:
             pytest.skip("Multi-env config not available in this environment")
         
         # When MULTI_ENV_AVAILABLE is True, test that it calls get_config_for_environment
-        with patch('src.utils.default_config_settings.get_config_for_environment') as mock_get_config:
+        # Use patch.object to ensure the mock is applied to the module's namespace
+        with patch.object(config_module, 'get_config_for_environment') as mock_get_config:
             mock_config = {
                 "agent_type": "multi-env",
                 "max_steps": 50,
