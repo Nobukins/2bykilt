@@ -16,6 +16,62 @@ from src.ui.helpers import (
 )
 from src.api.app import create_fastapi_app, run_app
 from src.utils.path_helpers import get_assets_dir
+from src.version.cli import create_version_parser, version_command
+
+
+def _handle_llms_cli(args) -> None:
+    """Handle llms.txt import CLI commands."""
+    if args.preview_llms:
+        print(f"🔍 Previewing llms.txt import from: {args.preview_llms}")
+        print(f"   Strategy: {args.strategy}")
+        print(f"   HTTPS Only: {args.https_only}")
+        print()
+        
+        _, status, actions_json = discover_and_preview_llmstxt(args.preview_llms, args.https_only)
+        print(status)
+        
+        if actions_json:
+            print("\n" + "="*60)
+            print("Merge Preview:")
+            print("="*60)
+            preview_result = preview_merge_llmstxt(actions_json, args.strategy)
+            print(preview_result)
+        
+        sys.exit(0)
+    
+    if args.import_llms:
+        print(f"📥 Importing llms.txt from: {args.import_llms}")
+        print(f"   Strategy: {args.strategy}")
+        print(f"   HTTPS Only: {args.https_only}")
+        print()
+        
+        _, status, actions_json = discover_and_preview_llmstxt(args.import_llms, args.https_only)
+        print(status)
+        
+        if not actions_json:
+            print("❌ Discovery failed or no actions found. Import aborted.")
+            sys.exit(1)
+        
+        if "Security validation failed" in status:
+            print("❌ Security validation failed. Import aborted.")
+            sys.exit(1)
+        
+        print("\n" + "="*60)
+        print("Merge Preview:")
+        print("="*60)
+        preview_result = preview_merge_llmstxt(actions_json, args.strategy)
+        print(preview_result)
+        
+        print("\n" + "="*60)
+        print("Confirming Import...")
+        print("="*60)
+        import_result = import_llmstxt_actions(actions_json, args.strategy)
+        print(import_result)
+        
+        if "✅ Import completed!" in import_result:
+            sys.exit(0)
+        else:
+            sys.exit(1)
 
 
 def _ensure_asset_directories() -> None:
@@ -82,6 +138,12 @@ def main():
     
     # For UI or default case, proceed with Gradio
     parser = argparse.ArgumentParser(description="Gradio UI for 2Bykilt Agent")
+    
+    # Create subparsers for version command (Issue #342)
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+    create_version_parser(subparsers)
+    
+    # Global arguments (UI + version)
     parser.add_argument(
         "--ui",
         action="store_true",
@@ -130,61 +192,12 @@ def main():
     
     args = parser.parse_args()
     
-    # Handle llms.txt import CLI commands before launching UI
-    if args.preview_llms:
-        print(f"🔍 Previewing llms.txt import from: {args.preview_llms}")
-        print(f"   Strategy: {args.strategy}")
-        print(f"   HTTPS Only: {args.https_only}")
-        print()
-        
-        _, status, actions_json = discover_and_preview_llmstxt(args.preview_llms, args.https_only)
-        print(status)
-        
-        if actions_json:
-            print("\n" + "="*60)
-            print("Merge Preview:")
-            print("="*60)
-            preview_result = preview_merge_llmstxt(actions_json, args.strategy)
-            print(preview_result)
-        
-        sys.exit(0)
+    # Handle version command (Issue #342)
+    if args.command == "version":
+        return version_command(args)
     
-    if args.import_llms:
-        print(f"📥 Importing llms.txt from: {args.import_llms}")
-        print(f"   Strategy: {args.strategy}")
-        print(f"   HTTPS Only: {args.https_only}")
-        print()
-        
-        # Discover and validate
-        _, status, actions_json = discover_and_preview_llmstxt(args.import_llms, args.https_only)
-        print(status)
-        
-        if not actions_json:
-            print("❌ Discovery failed or no actions found. Import aborted.")
-            sys.exit(1)
-        
-        if "Security validation failed" in status:
-            print("❌ Security validation failed. Import aborted.")
-            sys.exit(1)
-        
-        # Preview merge
-        print("\n" + "="*60)
-        print("Merge Preview:")
-        print("="*60)
-        preview_result = preview_merge_llmstxt(actions_json, args.strategy)
-        print(preview_result)
-        
-        # Confirm import
-        print("\n" + "="*60)
-        print("Confirming Import...")
-        print("="*60)
-        import_result = import_llmstxt_actions(actions_json, args.strategy)
-        print(import_result)
-        
-        if "✅ Import completed!" in import_result:
-            sys.exit(0)
-        else:
-            sys.exit(1)
+    # Handle llms.txt import CLI commands before launching UI
+    _handle_llms_cli(args)
 
 
     # Normalize legacy UI flags/commands so downstream code has a single source of truth
