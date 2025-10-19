@@ -57,9 +57,10 @@ class TestBrowserDiagnosticsCollectBrowserInfo:
     
     @patch('src.browser.browser_config.BrowserConfig')
     @patch('psutil.process_iter')
+    @patch('src.utils.diagnostics.json.dump')
     @patch('builtins.open', create=True)
     @patch('os.makedirs')
-    def test_collect_chrome_and_edge_processes(self, mock_makedirs, mock_file_open, mock_process_iter, mock_browser_config):
+    def test_collect_chrome_and_edge_processes(self, mock_makedirs, mock_file_open, mock_json_dump, mock_process_iter, mock_browser_config):
         """Test collection of Chrome and Edge processes."""
         mock_config_instance = MagicMock()
         mock_config_instance.config = {
@@ -91,7 +92,7 @@ class TestBrowserDiagnosticsCollectBrowserInfo:
         BrowserDiagnostics.collect_browser_info()
         
         # Verify json.dump was called with diagnostics data
-        mock_file.write.assert_called()
+        mock_json_dump.assert_called_once()
     
     @patch('src.browser.browser_config.BrowserConfig')
     @patch('psutil.process_iter')
@@ -126,9 +127,10 @@ class TestBrowserDiagnosticsCollectBrowserInfo:
         'EDGE_USER_DATA': '/custom/edge_data',
         'EDGE_DEBUGGING_PORT': '9223'
     })
+    @patch('src.utils.diagnostics.json.dump')
     @patch('builtins.open', create=True)
     @patch('os.makedirs')
-    def test_collect_environment_variables(self, mock_makedirs, mock_file_open, mock_process_iter, mock_browser_config):
+    def test_collect_environment_variables(self, mock_makedirs, mock_file_open, mock_json_dump, mock_process_iter, mock_browser_config):
         """Test collection of environment variables."""
         mock_config_instance = MagicMock()
         mock_config_instance.config = {
@@ -143,8 +145,8 @@ class TestBrowserDiagnosticsCollectBrowserInfo:
         
         BrowserDiagnostics.collect_browser_info()
         
-        # Verify json.dump was called
-        assert mock_file.write.called
+        # Verify json.dump was called with diagnostics data
+        mock_json_dump.assert_called_once()
     
     @patch('src.browser.browser_config.BrowserConfig')
     @patch('psutil.process_iter')

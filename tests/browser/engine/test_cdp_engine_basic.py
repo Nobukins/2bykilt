@@ -62,7 +62,7 @@ class TestCDPEngineLaunch:
         mock_client.create_page = AsyncMock(return_value="page-123")
         mock_client.send_command = AsyncMock()
         
-        # Create a fake cdp_use module with CDPClient
+        # Create mock module and patch at import site in cdp_engine module
         mock_cdp_module = MagicMock()
         mock_cdp_module.CDPClient = MagicMock(return_value=mock_client)
         
@@ -86,6 +86,7 @@ class TestCDPEngineLaunch:
         mock_client.create_page = AsyncMock(return_value="page-456")
         mock_client.send_command = AsyncMock()
         
+        # Create mock module and patch at import site
         mock_cdp_module = MagicMock()
         mock_cdp_module.CDPClient = MagicMock(return_value=mock_client)
         
@@ -103,10 +104,21 @@ class TestCDPEngineLaunch:
         engine = CDPEngine()
         context = LaunchContext(headless=True, timeout_ms=30000)
         
-        # Patch the import itself to raise ImportError
-        with patch.dict('sys.modules', {'cdp_use': None}):
-            with pytest.raises(EngineLaunchError, match="cdp-use library not installed"):
-                await engine.launch(context)
+        # Simulate ImportError by blocking cdp_use import
+        # When cdp_use.CDPClient is accessed, it should raise ImportError
+        import sys
+        
+        # Remove cdp_use from sys.modules to force re-import
+        original_cdp_use = sys.modules.pop('cdp_use', None)
+        try:
+            # Block the import by making it unavailable
+            with patch.dict('sys.modules', {'cdp_use': None}):
+                with pytest.raises(EngineLaunchError, match="cdp-use library not installed"):
+                    await engine.launch(context)
+        finally:
+            # Restore cdp_use if it was present
+            if original_cdp_use is not None:
+                sys.modules['cdp_use'] = original_cdp_use
     
     @pytest.mark.asyncio
     async def test_launch_connection_failure(self):
@@ -118,6 +130,7 @@ class TestCDPEngineLaunch:
         mock_client.connect = AsyncMock(side_effect=RuntimeError("Connection refused"))
         mock_client.disconnect = AsyncMock()
         
+        # Create mock module and patch at import site
         mock_cdp_module = MagicMock()
         mock_cdp_module.CDPClient = MagicMock(return_value=mock_client)
         

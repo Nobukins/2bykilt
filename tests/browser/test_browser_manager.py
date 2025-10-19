@@ -335,7 +335,7 @@ class TestPrepareRecordingPath:
         """Test recording with explicit path."""
         test_path = "/tmp/recordings"
         
-        with patch('src.utils.recording_dir_resolver.create_or_get_recording_dir') as mock_create:
+        with patch('src.browser.browser_manager.create_or_get_recording_dir') as mock_create:
             mock_create.return_value = Path(test_path)
             
             path = prepare_recording_path(
@@ -350,7 +350,7 @@ class TestPrepareRecordingPath:
         """Test recording with default path."""
         default_path = "/tmp/default_recordings"
         
-        with patch('src.utils.recording_dir_resolver.create_or_get_recording_dir') as mock_create:
+        with patch('src.browser.browser_manager.create_or_get_recording_dir') as mock_create:
             mock_create.return_value = Path(default_path)
             
             path = prepare_recording_path(
@@ -359,8 +359,8 @@ class TestPrepareRecordingPath:
             )
             
             assert path == default_path
-            # Called without arguments (None becomes no argument)
-            assert mock_create.called
+            # Called with None (no save_recording_path)
+            mock_create.assert_called_with(None)
     
     def test_recording_fallback_on_error(self):
         """Test fallback when recording path creation fails."""
@@ -381,16 +381,19 @@ class TestPrepareRecordingPath:
     
     def test_recording_final_tempdir_fallback(self):
         """Test final tempdir fallback when all else fails."""
-        with patch('src.utils.recording_dir_resolver.create_or_get_recording_dir') as mock_create:
-            mock_create.side_effect = Exception("All failed")
-            
-            with patch('tempfile.gettempdir', return_value="/tmp"):
-                path = prepare_recording_path(
-                    enable_recording=True,
-                    save_recording_path="/tmp/fail"
-                )
-                
-                assert path == "/tmp"
+        # Patch to ensure both the main function and all fallback attempts fail
+        import sys
+        
+        with patch.dict(sys.modules, {'src.utils.recording_dir_resolver': None}):
+            with patch('src.browser.browser_manager.create_or_get_recording_dir', side_effect=Exception("All failed")):
+                with patch('tempfile.gettempdir', return_value="/tmp"):
+                    path = prepare_recording_path(
+                        enable_recording=True,
+                        save_recording_path="/tmp/fail"
+                    )
+                    
+                    # Should get tempdir as final fallback
+                    assert path == "/tmp"
 
 
 @pytest.mark.ci_safe

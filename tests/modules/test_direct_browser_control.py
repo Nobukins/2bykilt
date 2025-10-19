@@ -284,7 +284,8 @@ class TestMaybeSlowMoIntegration:
         timeout_manager = MagicMock(spec=TimeoutManager)
         timeout_manager.is_cancelled.return_value = False
         
-        with patch('asyncio.sleep', new_callable=AsyncMock) as mock_sleep:
+        # Patch asyncio.sleep at the source where it's used (direct_browser_control module)
+        with patch('src.modules.direct_browser_control.asyncio.sleep', new_callable=AsyncMock) as mock_sleep:
             from src.modules.direct_browser_control import _maybe_sleep_with_cancel
             result = await _maybe_sleep_with_cancel(timeout_manager, 100)
         
