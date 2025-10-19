@@ -51,12 +51,39 @@ class TestDefaultConfig:
     @patch('src.utils.default_config_settings.get_config_for_environment')
     def test_default_config_multi_env(self, mock_get_config):
         """Test multi-environment configuration."""
-        mock_config = {"agent_type": "multi-env", "max_steps": 50}
+        # Mock should return a complete config matching default_config structure
+        mock_config = {
+            "agent_type": "multi-env",
+            "max_steps": 50,
+            "max_actions_per_step": 10,
+            "use_vision": True,
+            "tool_calling_method": "auto",
+            "llm_provider": "openai",
+            "llm_model_name": "gpt-4o",
+            "llm_num_ctx": 32000,
+            "llm_temperature": 1.0,
+            "llm_base_url": "",
+            "llm_api_key": "",
+            "use_own_browser": False,
+            "keep_browser_open": False,
+            "headless": False,
+            "disable_security": True,
+            "enable_recording": True,
+            "window_w": 1280,
+            "window_h": 1100,
+            "save_recording_path": "./tmp/videos",
+            "save_trace_path": "./tmp/traces",
+            "save_agent_history_path": "./tmp/agent_history",
+            "task": "test task",
+            "dev_mode": False,
+        }
         mock_get_config.return_value = mock_config
         
         config = default_config()
         
         assert config == mock_config
+        assert config["agent_type"] == "multi-env"
+        assert config["max_steps"] == 50
         mock_get_config.assert_called_once()
     
     @patch('src.utils.default_config_settings.MULTI_ENV_AVAILABLE', True)
