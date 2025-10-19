@@ -42,10 +42,11 @@ def create_fastapi_app(demo, args):
     Returns:
         FastAPI: The configured FastAPI application
     """
-    app = FastAPI()
+    from contextlib import asynccontextmanager
 
-    @app.on_event("startup")
-    async def _ensure_trace_assets() -> None:
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        # Startup
         try:
             ensure_playwright_trace_assets()
         except RuntimeError as exc:  # pragma: no cover - optional dependency scenario
@@ -56,6 +57,10 @@ def create_fastapi_app(demo, args):
                     "error": repr(exc),
                 },
             )
+        yield
+        # Shutdown (if needed)
+
+    app = FastAPI(lifespan=lifespan)
     
     # CORS設定（環境変数 ALLOWED_ORIGINS を利用、デフォルトは http://localhost:7788 ）
     allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://127.0.0.1:7788").split(",")

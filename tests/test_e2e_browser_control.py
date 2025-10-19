@@ -35,12 +35,12 @@ def test_e2e_browser_control():
         
         if not res.success:
             print(f"❌ Failed to load actions: {res.error}")
-            return False
+            assert False, f"Failed to load actions: {res.error}"
         
         print(f"   ✅ Loaded {len(res.instructions)} actions")
     except Exception as e:
         print(f"❌ Error loading actions: {e}")
-        return False
+        assert False, f"Error loading actions: {e}"
     
     # Step 2: Find browser-control action
     print("\n🔍 Step 2: Finding browser-control action...")
@@ -52,7 +52,7 @@ def test_e2e_browser_control():
     
     if not browser_control_action:
         print("❌ browser-control action not found")
-        return False
+        assert False, "browser-control action not found"
     
     print(f"   ✅ Found: {browser_control_action.get('name')}")
     
@@ -69,7 +69,7 @@ def test_e2e_browser_control():
         print(f"❌ Error generating script: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        assert False, f"Error generating script: {e}"
     
     # Step 4: Validate syntax
     print("\n✅ Step 4: Validating generated script syntax...")
@@ -90,7 +90,7 @@ def test_e2e_browser_control():
         print("❌ Syntax errors found:")
         for err in errors:
             print(f"   - {err}")
-        return False
+        assert False, f"Syntax errors found: {errors}"
     
     # Try to compile
     try:
@@ -99,10 +99,10 @@ def test_e2e_browser_control():
     except SyntaxError as e:
         print(f"❌ Syntax error: {e}")
         print(f"   Line {e.lineno}: {e.text}")
-        return False
+        assert False, f"Syntax error: {e}"
     except Exception as e:
         print(f"❌ Compilation error: {e}")
-        return False
+        assert False, f"Compilation error: {e}"
     
     # Step 5: Write and validate with py_compile
     print("\n📝 Step 5: Writing script and validating with py_compile...")
@@ -122,7 +122,7 @@ def test_e2e_browser_control():
         if result.returncode != 0:
             print(f"❌ py_compile failed:")
             print(result.stderr)
-            return False
+            assert False, f"py_compile failed: {result.stderr}"
         
         print("   ✅ py_compile validation passed")
         
@@ -135,7 +135,7 @@ def test_e2e_browser_control():
         
     except Exception as e:
         print(f"❌ Error during file validation: {e}")
-        return False
+        assert False, f"Error during file validation: {e}"
     
     # Step 6: Pytest collection test
     print("\n🧪 Step 6: Testing pytest collection...")
@@ -159,12 +159,12 @@ def test_e2e_browser_control():
             print(f"❌ Pytest collection failed:")
             print(result.stdout)
             print(result.stderr)
-            return False
+            assert False, f"Pytest collection failed: {result.stdout}\n{result.stderr}"
         
         if "1 test collected" not in result.stdout:
             print(f"❌ Expected 1 test collected, got:")
             print(result.stdout)
-            return False
+            assert False, f"Expected 1 test collected, got: {result.stdout}"
         
         print("   ✅ Pytest collection successful (1 test collected)")
         
@@ -173,12 +173,10 @@ def test_e2e_browser_control():
         
     except subprocess.TimeoutExpired:
         print("❌ Pytest collection timed out")
-        return False
+        assert False, "Pytest collection timed out"
     except Exception as e:
         print(f"❌ Error during pytest test: {e}")
-        return False
-    
-    return True
+        assert False, f"Error during pytest test: {e}"
 
 def main():
     try:

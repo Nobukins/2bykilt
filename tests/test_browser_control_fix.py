@@ -33,7 +33,6 @@ def test_script_generation():
     assert 'record = {' in content, "Dict syntax should be correct"
     
     print("  ✅ Script generation produces correct syntax")
-    return True
 
 @pytest.mark.ci_safe
 def test_syntax_validation():
@@ -59,10 +58,9 @@ def test_syntax_validation():
     
     if result.returncode != 0:
         print(f"  ❌ Syntax error:\n{result.stderr}")
-        return False
+        assert False, f"Syntax validation failed: {result.stderr}"
     
     print("  ✅ Syntax validation passed")
-    return True
 
 @pytest.mark.ci_safe
 def test_pytest_collection():
@@ -80,14 +78,13 @@ def test_pytest_collection():
     
     if result.returncode != 0:
         print(f"  ❌ Pytest collection failed:\n{result.stdout}\n{result.stderr}")
-        return False
+        assert False, f"Pytest collection failed: {result.stdout}\n{result.stderr}"
     
     if "1 test collected" not in result.stdout:
         print(f"  ❌ Expected 1 test collected, got:\n{result.stdout}")
-        return False
+        assert False, f"Expected 1 test collected, got: {result.stdout}"
     
     print("  ✅ Pytest collection successful")
-    return True
 
 def main():
     print("=" * 60)
