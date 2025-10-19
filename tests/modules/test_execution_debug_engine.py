@@ -250,9 +250,10 @@ class TestExecuteJsonCommands:
         
         await engine.execute_json_commands(commands_data, headless=True)
         
-        # Should use new_tab as default (tab_selection in JSON might not be used directly)
-        # The implementation uses "new_tab" as default
+        # Should call get_or_create_tab with the expected tab_selection value
         mock_browser_manager.get_or_create_tab.assert_called_once()
+        args, kwargs = mock_browser_manager.get_or_create_tab.call_args
+        assert kwargs.get("tab_selection") == "active_tab"
     
     @pytest.mark.asyncio
     async def test_execute_json_commands_keep_tab_open(self, engine, mock_browser_manager, mock_page):
