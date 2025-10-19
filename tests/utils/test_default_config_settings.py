@@ -116,16 +116,20 @@ class TestDefaultConfig:
     
     def test_default_config_use_own_browser(self):
         """Test use_own_browser from environment variable."""
+        import src.utils.default_config_settings as config_module
+        
         with patch.dict(os.environ, {'CHROME_PERSISTENT_SESSION': 'true'}):
-            with patch('src.utils.default_config_settings.MULTI_ENV_AVAILABLE', False):
+            with patch.object(config_module, 'MULTI_ENV_AVAILABLE', False):
                 config = default_config()
                 
                 assert config["use_own_browser"] is True
     
     def test_default_config_recording_path(self):
         """Test recording path configuration."""
-        with patch('src.utils.default_config_settings.create_or_get_recording_dir') as mock_recording_dir:
-            with patch('src.utils.default_config_settings.MULTI_ENV_AVAILABLE', False):
+        import src.utils.default_config_settings as config_module
+        
+        with patch.object(config_module, 'create_or_get_recording_dir') as mock_recording_dir:
+            with patch.object(config_module, 'MULTI_ENV_AVAILABLE', False):
                 mock_recording_dir.return_value = Path("/custom/recording/path")
                 
                 config = default_config()
