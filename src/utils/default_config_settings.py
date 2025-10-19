@@ -1,5 +1,4 @@
 import os
-import pickle
 import uuid
 import json
 import jsonschema
@@ -20,13 +19,6 @@ except ImportError:
     from pathlib import Path
     def create_or_get_recording_dir():
         return Path("./tmp/record_videos").resolve()
-
-# Import Feature Flags for security controls
-try:
-    from ..config.feature_flags import FeatureFlags
-    FEATURE_FLAGS_AVAILABLE = True
-except ImportError:
-    FEATURE_FLAGS_AVAILABLE = False
 
 
 def default_config():
@@ -101,13 +93,16 @@ CONFIG_SCHEMA = {
 
 
 def load_config_from_file(config_file):
-    """Load settings from a UUID.pkl file."""
-    try:
-        with open(config_file, 'rb') as f:
-            settings = pickle.load(f)
-        return settings
-    except Exception as e:
-        return f"Error loading configuration: {str(e)}"
+    """
+    Load settings from a JSON file with schema validation.
+    
+    Note: Pickle support has been removed for security reasons.
+    Legacy .pkl files are no longer supported. Please convert to JSON format.
+    """
+    if isinstance(config_file, str) and config_file.endswith('.pkl'):
+        return "Error: .pkl files are no longer supported for security reasons. Please use JSON format."
+    
+    return load_config_from_json(config_file)
 
 
 def load_config_from_json(config_file):
@@ -124,12 +119,24 @@ def load_config_from_json(config_file):
 
 
 def save_config_to_file(settings, save_dir="./tmp/webui_settings"):
-    """Save the current settings to a UUID.pkl file with a UUID name."""
+    """
+    Save the current settings to a JSON file with a timestamped name.
+    
+    Note: Pickle support has been removed for security reasons.
+    All configurations are now saved as JSON for safe deserialization.
+    """
     os.makedirs(save_dir, exist_ok=True)
-    config_file = os.path.join(save_dir, f"{uuid.uuid4()}.pkl")
-    with open(config_file, 'wb') as f:
-        pickle.dump(settings, f)
-    return f"Configuration saved to {config_file}"
+    timestamp = uuid.uuid4()
+    config_file = os.path.join(save_dir, f"config_{timestamp}.json")
+    try:
+        jsonschema.validate(instance=settings, schema=CONFIG_SCHEMA)
+        with open(config_file, 'w', encoding='utf-8') as f:
+            json.dump(settings, f, indent=2, ensure_ascii=False)
+        return f"Configuration saved to {config_file}"
+    except jsonschema.ValidationError as e:
+        return f"Error validating configuration: {str(e)}"
+    except Exception as e:
+        return f"Error saving configuration: {str(e)}"
 
 
 def save_config_to_json(settings, save_dir="./tmp/webui_settings"):
@@ -148,6 +155,11 @@ def save_config_to_json(settings, save_dir="./tmp/webui_settings"):
 
 
 def save_current_config(*args):
+    """
+    Save current configuration to JSON format only.
+    
+    Security: Pickle format is no longer supported to prevent deserialization attacks.
+    """
     current_config = {
         "agent_type": args[0],
         "max_steps": args[1],
@@ -177,24 +189,21 @@ def save_current_config(*args):
 
 
 def update_ui_from_config(config_file):
+    """
+    Update UI from configuration file (JSON only).
+    
+    Security: Pickle support removed. Only JSON files are accepted.
+    """
     if config_file is not None:
-        # Security check: Reject .pkl files to prevent deserialization of untrusted data
+        # Security: Only JSON files are supported
         if config_file.name.endswith('.pkl'):
-            # Use Feature Flag for security control (fallback to env var if flags unavailable)
-            if FEATURE_FLAGS_AVAILABLE:
-                allow_pickle = FeatureFlags.is_enabled("security.allow_pickle_config")
-            else:
-                allow_pickle = os.getenv('ALLOW_PICKLE_CONFIG', 'false').lower() == 'true'
-            
-            if not allow_pickle:
-                return (
-                    gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
-                    gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
-                    gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
-                    gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
-                    gr.update(), gr.update(), "Error: .pkl files are not allowed for security reasons. Please use JSON format."
-                )
-            loaded_config = load_config_from_file(config_file.name)
+            return (
+                gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+                gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+                gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+                gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+                gr.update(), gr.update(), "Error: .pkl files are no longer supported for security reasons. Please use JSON format."
+            )
         elif config_file.name.endswith('.json'):
             loaded_config = load_config_from_json(config_file.name)
         else:
@@ -203,7 +212,7 @@ def update_ui_from_config(config_file):
                 gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
                 gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
                 gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
-                gr.update(), gr.update(), "Error: Only .json files are supported. .pkl files are disabled for security."
+                gr.update(), gr.update(), "Error: Only .json files are supported."
             )
         if isinstance(loaded_config, dict):
             return (

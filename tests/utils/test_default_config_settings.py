@@ -2,11 +2,11 @@
 Tests for src/utils/default_config_settings.py
 
 This module tests configuration loading, validation, and saving functionality.
+Security Note: Pickle support has been removed. Only JSON format is supported.
 """
 
 import os
 import json
-import pickle
 import tempfile
 import uuid
 from pathlib import Path
@@ -141,31 +141,33 @@ class TestDefaultConfig:
 class TestLoadConfigFromFile:
     """Tests for load_config_from_file function."""
     
-    def test_load_valid_pickle(self, tmp_path):
-        """Test loading valid pickle configuration."""
-        config_data = {"agent_type": "test", "max_steps": 50}
+    def test_load_pickle_rejected(self, tmp_path):
+        """Test that pickle files are rejected for security."""
         config_file = tmp_path / "test.pkl"
-        
-        with open(config_file, 'wb') as f:
-            pickle.dump(config_data, f)
-        
-        result = load_config_from_file(str(config_file))
-        
-        assert result == config_data
-    
-    def test_load_invalid_pickle(self, tmp_path):
-        """Test loading invalid pickle file."""
-        config_file = tmp_path / "invalid.pkl"
-        config_file.write_text("invalid pickle data")
+        config_file.write_text("fake pickle data")
         
         result = load_config_from_file(str(config_file))
         
         assert isinstance(result, str)
-        assert "Error loading configuration" in result
+        assert "no longer supported" in result
+        assert "security" in result.lower()
+    
+    def test_load_valid_json(self, tmp_path):
+        """Test loading valid JSON configuration via load_config_from_file."""
+        config_data = default_config()
+        config_file = tmp_path / "test.json"
+        
+        with open(config_file, 'w', encoding='utf-8') as f:
+            json.dump(config_data, f)
+        
+        result = load_config_from_file(str(config_file))
+        
+        assert isinstance(result, dict)
+        assert result["agent_type"] == config_data["agent_type"]
     
     def test_load_missing_file(self):
         """Test loading non-existent file."""
-        result = load_config_from_file("/nonexistent/file.pkl")
+        result = load_config_from_file("/nonexistent/file.json")
         
         assert isinstance(result, str)
         assert "Error loading configuration" in result
@@ -226,31 +228,31 @@ class TestLoadConfigFromJson:
 
 @pytest.mark.ci_safe
 class TestSaveConfigToFile:
-    """Tests for save_config_to_file function."""
+    """Tests for save_config_to_file function (now JSON-only)."""
     
-    def test_save_config_pickle(self, tmp_path):
-        """Test saving configuration to pickle file."""
-        config_data = {"agent_type": "test", "max_steps": 50}
+    def test_save_config_json(self, tmp_path):
+        """Test saving configuration to JSON file (pickle removed)."""
+        config_data = default_config()
         
         result = save_config_to_file(config_data, save_dir=str(tmp_path))
         
         assert "Configuration saved to" in result
         assert tmp_path.exists()
         
-        # Verify file was created
-        pkl_files = list(tmp_path.glob("*.pkl"))
-        assert len(pkl_files) == 1
+        # Verify JSON file was created
+        json_files = list(tmp_path.glob("*.json"))
+        assert len(json_files) == 1
         
         # Verify content
-        with open(pkl_files[0], 'rb') as f:
-            loaded = pickle.load(f)
-        assert loaded == config_data
+        with open(json_files[0], 'r', encoding='utf-8') as f:
+            loaded = json.load(f)
+        assert loaded["agent_type"] == config_data["agent_type"]
     
     def test_save_config_creates_directory(self):
         """Test that save creates directory if it doesn't exist."""
         with tempfile.TemporaryDirectory() as tmpdir:
             save_dir = os.path.join(tmpdir, "new_dir")
-            config_data = {"test": "data"}
+            config_data = default_config()
             
             result = save_config_to_file(config_data, save_dir=save_dir)
             
@@ -302,10 +304,17 @@ class TestSaveConfigToJson:
 class TestSaveCurrentConfig:
     """Tests for save_current_config function."""
     
-    @patch('src.utils.default_config_settings.save_config_to_file')
-    def test_save_current_config_all_args(self, mock_save):
-        """Test saving current config with all arguments."""
-        mock_save.return_value = "Success"
+    def test_save_current_config_all_args(self, tmp_path, monkeypatch):
+        """Test saving current config with all arguments using real file save."""
+        # Change save directory to tmp_path to avoid pollution
+        import src.utils.default_config_settings
+        original_save_func = src.utils.default_config_settings.save_config_to_file
+        
+        def mock_save_to_tmp(settings, save_dir="./tmp/webui_settings"):
+            # Override save_dir to use tmp_path
+            return original_save_func(settings, save_dir=str(tmp_path))
+        
+        monkeypatch.setattr(src.utils.default_config_settings, 'save_config_to_file', mock_save_to_tmp)
         
         # Prepare 23 arguments matching default_config keys
         args = [
@@ -336,11 +345,14 @@ class TestSaveCurrentConfig:
         
         result = save_current_config(*args)
         
-        assert result == "Success"
-        mock_save.assert_called_once()
+        # Verify success message and file creation
+        assert "Configuration saved to" in result
+        json_files = list(tmp_path.glob("*.json"))
+        assert len(json_files) == 1
         
-        # Verify the config dict structure
-        saved_config = mock_save.call_args[0][0]
+        # Verify saved content
+        with open(json_files[0], 'r') as f:
+            saved_config = json.load(f)
         assert saved_config["agent_type"] == "custom"
         assert saved_config["max_steps"] == 100
         assert saved_config["task"] == "test task"
@@ -359,10 +371,8 @@ class TestUpdateUIFromConfig:
         assert len(result) == 23
         assert result[-1] == "No file selected."
     
-    @patch('src.utils.default_config_settings.FEATURE_FLAGS_AVAILABLE', False)
-    @patch.dict(os.environ, {'ALLOW_PICKLE_CONFIG': 'false'})
-    def test_update_ui_pickle_not_allowed(self, tmp_path):
-        """Test that pickle files are rejected by default."""
+    def test_update_ui_pickle_rejected(self, tmp_path):
+        """Test that pickle files are always rejected for security."""
         config_file = tmp_path / "test.pkl"
         config_file.write_bytes(b"data")
         
@@ -372,26 +382,8 @@ class TestUpdateUIFromConfig:
         result = update_ui_from_config(mock_file)
         
         assert isinstance(result, tuple)
-        assert "Error: .pkl files are not allowed" in result[-1]
-    
-    @patch('src.utils.default_config_settings.FEATURE_FLAGS_AVAILABLE', True)
-    @patch('src.utils.default_config_settings.FeatureFlags')
-    def test_update_ui_pickle_allowed_via_feature_flag(self, mock_flags, tmp_path):
-        """Test pickle files allowed via feature flag."""
-        mock_flags.is_enabled.return_value = True
-        
-        config_data = default_config()
-        config_file = tmp_path / "test.pkl"
-        with open(config_file, 'wb') as f:
-            pickle.dump(config_data, f)
-        
-        mock_file = MagicMock()
-        mock_file.name = str(config_file)
-        
-        result = update_ui_from_config(mock_file)
-        
-        assert isinstance(result, tuple)
-        assert result[-1] == "Configuration loaded successfully."
+        assert "no longer supported" in result[-1]
+        assert "security" in result[-1].lower()
     
     def test_update_ui_json_valid(self, tmp_path):
         """Test loading valid JSON file."""
