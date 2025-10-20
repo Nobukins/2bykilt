@@ -17,7 +17,7 @@ load_dotenv(override=True)
 from src.browser.browser_debug_manager import BrowserDebugManager
 from src.browser.browser_config import BrowserConfig
 
-@pytest.mark.ci_safe
+@pytest.mark.local_only
 async def test_browser_startup():
     print("=== ブラウザ起動テスト開始 ===")
     
