@@ -23,15 +23,19 @@ def test_unified_recording_path_default_enabled(monkeypatch):
 
 
 @pytest.mark.ci_safe
-def test_unified_recording_path_legacy_warning(monkeypatch, caplog):
+def test_unified_recording_path_always_enabled(monkeypatch, caplog):
+    """Test unified recording path is always used (Issue #353 - no legacy fallback)."""
     monkeypatch.setenv("BYKILT_RUN_ID", "ROLL91B")
     RunContext.reset()
     reset_artifact_manager_singleton()
     _reset_feature_flags_for_tests()
+    # Issue #353: Legacy fallback removed - always use unified path
     FeatureFlags.set_override("artifacts.unified_recording_path", False)
     caplog.set_level("WARNING")
     d = ArtifactManager.resolve_recording_dir()
-    assert d.name == "record_videos"
-    assert len(_legacy_msgs(caplog)) == 1
-    ArtifactManager.resolve_recording_dir()
-    assert len(_legacy_msgs(caplog)) == 1  # still one (single emission)
+    # Even with flag False, should use unified path (not legacy ./tmp/record_videos)
+    assert d.name == "videos"
+    assert "art" in d.parent.name or d.parent.name.endswith("-art")
+    # Multiple calls should work consistently
+    d2 = ArtifactManager.resolve_recording_dir()
+    assert d2 == d

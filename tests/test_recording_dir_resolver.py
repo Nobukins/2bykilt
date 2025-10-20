@@ -49,12 +49,14 @@ def test_flag_path_when_no_env(monkeypatch):
 
 
 @pytest.mark.ci_safe
-def test_legacy_when_flag_disabled(monkeypatch):
+def test_unified_path_always(monkeypatch):
+    """Test unified path is always used (Issue #353 - no legacy fallback)."""
     _reset(monkeypatch, "R4")
     FeatureFlags.set_override("artifacts.unified_recording_path", False)
     p = create_or_get_recording_dir()
-    assert p.name == "record_videos"  # resolved absolute path
-    assert "tmp" in str(p)
+    # Issue #353: Always use unified path, never legacy ./tmp/record_videos
+    assert p.name == "videos"
+    assert "artifacts" in str(p)
 
 
 @pytest.mark.ci_safe
@@ -67,9 +69,10 @@ def test_empty_env_ignored(monkeypatch):
 
 
 @pytest.mark.ci_safe
-def test_force_migration_overrides_legacy(monkeypatch):
+def test_env_overrides_all(monkeypatch, tmp_path):
+    """Test RECORDING_PATH env var takes precedence (Issue #353)."""
     _reset(monkeypatch, "R6")
-    FeatureFlags.set_override("artifacts.unified_recording_path", False)
-    FeatureFlags.set_override("artifacts.force_recording_migration", True)
+    env_dir = tmp_path / "my_recordings"
+    monkeypatch.setenv("RECORDING_PATH", str(env_dir))
     p = create_or_get_recording_dir()
-    assert p.name == "videos"
+    assert p == env_dir
