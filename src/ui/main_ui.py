@@ -90,10 +90,9 @@ class ModernUI:
             gr.Blocks: 構築済み Gradio インターフェース
 
         Phase3 レイアウト:
-        - Tab 1: メイン実行画面 (unlock-future UI - 既存)
-        - Tab 2: 設定パネル (SettingsPanel)
-        - Tab 3: 実行履歴 (RunHistory)
-        - Tab 4: トレースビューア (TraceViewer)
+        - Feature Flag に基づいた動的メニュー構成
+        - 必須メニュー: Run Agent, LLMS Config, Browser Settings, Artifacts
+        - オプショナルメニュー: 設定フラグで表示/非表示を制御
 
         Phase4 拡張予定:
         - Tab 5: 録画一覧
@@ -104,6 +103,9 @@ class ModernUI:
             logger.error("Gradio not installed, cannot build UI")
             return None
 
+        # Feature Flag からメニュー設定を取得
+        menus = self._flag_service.get_enabled_menus()
+        
         with gr.Blocks(
             title="2bykilt - Modern Browser Automation UI",
             theme=gr.themes.Soft(),
@@ -112,46 +114,90 @@ class ModernUI:
                 """
                 # 2bykilt - ブラウザ自動化プラットフォーム
 
-                Phase3 モダン UI - CDP/WebUI 統合版
+                Phase3 モダン UI - Feature Flag ベースメニュー
                 """
             )
 
             with gr.Tabs():
-                # Tab 1: メイン実行画面 (既存 UI - ここでは省略)
-                with gr.Tab("🚀 実行画面"):
-                    self._run_panel.render()
+                # Run Agent タブ
+                if menus.get('run_agent', False):
+                    with gr.Tab("🤖 Run Agent"):
+                        self._run_panel.render()
 
-                # Tab 2: 設定パネル
-                with gr.Tab("⚙️ 設定"):
-                    self._settings_panel.render()
+                # LLMS Config タブ
+                if menus.get('llms_config', False):
+                    with gr.Tab("📄 LLMS Config"):
+                        # 現在の settings_panel を使用
+                        # 今後専用パネルに置き換え可能
+                        self._settings_panel.render()
 
-                # Tab 3: 実行履歴
+                # Browser Settings タブ
+                if menus.get('browser_settings', False):
+                    with gr.Tab("🌐 Browser Settings"):
+                        self._settings_panel.render()
+
+                # Artifacts タブ
+                if menus.get('artifacts', False):
+                    with gr.Tab("📦 Artifacts"):
+                        # admin/artifacts_panel.py を使用
+                        # 未実装の場合は簡易パネルを表示
+                        try:
+                            from src.ui.admin.artifacts_panel import create_artifacts_panel
+                            artifacts_panel = create_artifacts_panel()
+                            artifacts_panel.render()
+                        except (ImportError, AttributeError):
+                            gr.Markdown("📦 Artifacts Panel (coming soon)")
+
+                # 実行履歴タブ（常に表示）
                 with gr.Tab("📜 履歴"):
                     self._run_history.render()
 
-                # Tab 4: トレースビューア
+                # トレースビューアタブ（常に表示）
                 with gr.Tab("🎬 トレース"):
                     self._trace_viewer.render()
 
+                # Feature Flags 管理パネル
+                if menus.get('feature_flags_admin', False):
+                    with gr.Tab("⚙️ Feature Flags"):
+                        try:
+                            from src.ui.admin.feature_flags_panel import create_feature_flags_panel
+                            flags_panel = create_feature_flags_panel()
+                            flags_panel.render()
+                        except (ImportError, AttributeError):
+                            gr.Markdown("⚙️ Feature Flags Panel (coming soon)")
+
+                # オプショナルメニュー: Results
+                if menus.get('results', False):
+                    with gr.Tab("📊 Results"):
+                        gr.Markdown("📊 Results Panel (coming soon)")
+
+                # オプショナルメニュー: Recordings
+                if menus.get('recordings', False):
+                    with gr.Tab("🎥 Recordings"):
+                        gr.Markdown("🎥 Recordings Panel (coming soon)")
+
+                # オプショナルメニュー: Deep Research
+                if menus.get('deep_research', False):
+                    with gr.Tab("🧐 Deep Research"):
+                        gr.Markdown("🧐 Deep Research Panel (coming soon)")
+
             # フッター
             gr.Markdown(
-                """
+                f"""
                 ---
                 **Phase3 実装範囲:**
-                - ✅ FeatureFlagService: バックエンド/UI フラグ同期
-                - ✅ SettingsPanel: エンジン状態、LLM 分離状態表示
-                - ✅ RunHistory: 実行履歴タイムライン (フィルタ、統計)
-                - ✅ TraceViewer: トレース ZIP 読み込み (Phase4 で再生機能追加)
+                - ✅ FeatureFlagService: メニュー動的管理
+                - ✅ Feature Flag 統合: 10+ メニュー項目の表示制御
+                - ✅ RunPanel: エージェント実行
+                - ✅ SettingsPanel: ブラウザ設定
+                - ✅ RunHistory: 実行履歴
+                - ✅ TraceViewer: トレース表示
 
-                **Phase4 実装予定:**
-                - Playwright Trace Viewer 埋め込み
-                - リアルタイム実行監視
-                - CDP サンドボックス統合
-                - セキュリティレビュー
+                **アクティブメニュー:** {sum(1 for v in menus.values() if v)}/{len(menus)}
                 """
             )
 
-        logger.info("Modern UI interface built successfully")
+        logger.info("Modern UI interface built successfully with Feature Flag based menus")
         return interface
 
     def launch(

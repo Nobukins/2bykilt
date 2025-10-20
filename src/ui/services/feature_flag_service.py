@@ -178,6 +178,49 @@ class FeatureFlagService:
             "settings_panel": state.ui_modern_layout,
             "realtime_updates": state.ui_realtime_updates,
         }
+    
+    def is_menu_enabled(self, menu_name: str) -> bool:
+        """
+        メニュー項目の表示可否を判定
+        
+        Args:
+            menu_name: メニュー名（例: 'run_agent', 'artifacts'）
+            
+        Returns:
+            bool: 表示可否
+        """
+        return FeatureFlags.is_enabled(f"ui.menus.{menu_name}", default=False)
+    
+    def get_enabled_menus(self) -> Dict[str, bool]:
+        """
+        全メニュー項目の表示状態を取得
+        
+        Returns:
+            Dict[str, bool]: {menu_name: enabled}
+        """
+        menus = {
+            'run_agent': self.is_menu_enabled('run_agent'),
+            'llms_config': self.is_menu_enabled('llms_config'),
+            'browser_settings': self.is_menu_enabled('browser_settings'),
+            'playwright_codegen': self.is_menu_enabled('playwright_codegen'),
+            'artifacts': self.is_menu_enabled('artifacts'),
+            'batch_processing': self.is_menu_enabled('batch_processing'),
+            'feature_flags_admin': self.is_menu_enabled('feature_flags_admin'),
+            'results': self.is_menu_enabled('results'),
+            'recordings': self.is_menu_enabled('recordings'),
+            'deep_research': self.is_menu_enabled('deep_research'),
+        }
+        
+        logger.debug(
+            "Menu visibility config loaded",
+            extra={
+                "event": "menus.visibility_config",
+                "enabled_count": sum(1 for v in menus.values() if v),
+                "menus": menus,
+            },
+        )
+        
+        return menus
 
 
 # シングルトンインスタンス
