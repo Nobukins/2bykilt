@@ -79,3 +79,44 @@ flags:
     description: "git-script カスタムドメイン許可機能を有効化 (#255)"
     type: bool
     default: true
+  ui.menus.run_agent:
+    description: "Run Agent タブ表示 (#352)"
+    type: bool
+    default: true
+  ui.menus.llms_config:
+    description: "LLMS Config タブ表示 (#352)"
+    type: bool
+    default: true
+  ui.menus.browser_settings:
+    description: "Browser Settings タブ表示 (#352)"
+    type: bool
+    default: true
+  ui.menus.playwright_codegen:
+    description: "Playwright Codegen タブ表示 (#352)"
+    type: bool
+    default: true
+  ui.menus.artifacts:
+    description: "Artifacts タブ表示 (#352)"
+    type: bool
+    default: true
+  ui.menus.batch_processing:
+    description: "Batch Processing タブ表示 (#352)"
+    type: bool
+    default: true
+  ui.menus.feature_flags_admin:
+    description: "Feature Flags 管理パネル表示 (#352)"
+    type: bool
+    default: false
+  ui.menus.results:
+    description: "Results タブ表示 (#352)"
+    type: bool
+    default: false
+  ui.menus.recordings:
+    description: "Recordings タブ表示 (#352)"
+    type: bool
+    default: false
+  ui.menus.deep_research:
+    description: "Deep Research タブ表示 (#352)"
+    type: bool
+    default: false
+
