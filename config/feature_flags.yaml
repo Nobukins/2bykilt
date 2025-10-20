@@ -98,19 +98,19 @@ flags:
   ui.menus.playwright_codegen:
     description: "Playwright Codegen タブ表示 (#352)"
     type: bool
-    default: true
+    default: false
   ui.menus.artifacts:
     description: "Artifacts タブ表示 (#352)"
     type: bool
-    default: true
+    default: false
   ui.menus.batch_processing:
     description: "Batch Processing タブ表示 (#352)"
     type: bool
-    default: true
+    default: false
   ui.menus.feature_flags_admin:
     description: "Feature Flags 管理パネル表示 (#352)"
     type: bool
-    default: false
+    default: true
   ui.menus.results:
     description: "Results タブ表示 (#352)"
     type: bool
