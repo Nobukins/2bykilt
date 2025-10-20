@@ -292,7 +292,7 @@ class RunAgentPanel:
                 )
                 save_recording_path = gr.Textbox(
                     label="Recording path",
-                    value=cfg.get("save_recording_path", "./tmp/record_videos"),
+                    value=cfg.get("save_recording_path", "artifacts/runs/<run>-art/videos"),
                 )
                 save_trace_path = gr.Textbox(
                     label="Trace path",

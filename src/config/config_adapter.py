@@ -11,13 +11,8 @@ from pathlib import Path
 
 from .multi_env_loader import ConfigLoader, ConfigValidationError
 
-# Import unified recording directory resolver
-try:
-    from ..utils.recording_dir_resolver import create_or_get_recording_dir
-except ImportError:
-    # Fallback if resolver is not available
-    def create_or_get_recording_dir():
-        return Path("./tmp/record_videos").resolve()
+# Import unified recording directory resolver (Issue #353 - no legacy fallback)
+from ..utils.recording_dir_resolver import create_or_get_recording_dir
 
 # Check LLM availability (Issue #43)
 try:
