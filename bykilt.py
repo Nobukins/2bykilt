@@ -968,18 +968,13 @@ def create_ui(config: Dict[str, Any], theme_name: str = "Ocean") -> gr.Blocks:
             value=config.get("tab_selection_strategy", "new_tab"),
             visible=False,
         )
-        # Windows対応: 録画保存パスを環境変数と設定から取得
-        # Resolve initial recording path via unified resolver (Issue #28 step 2)
+        # Resolve recording path via unified resolver (Issue #353 - unified artifacts only)
         try:
             default_recording_path = str(create_or_get_recording_dir())
-        except Exception:
-            # Fallback to legacy logic if resolver fails very early
-            default_recording_path = os.getenv("RECORDING_PATH")
-            if not default_recording_path:
-                if platform.system() == "Windows":
-                    default_recording_path = str(Path.home() / "Documents" / "2bykilt" / "recordings")
-                else:
-                    default_recording_path = "./tmp/record_videos"
+        except Exception as e:
+            logger.warning(f"Failed to resolve recording directory: {e}. Using fallback.", exc_info=e)
+            # Fallback: Use environment variable or raise (Issue #353 - no ./tmp fallback)
+            default_recording_path = os.getenv("RECORDING_PATH", "artifacts/runs/<run>-art/videos")
 
         save_recording_path = gr.Textbox(
             label="録画保存パス", value=config.get("save_recording_path", default_recording_path), visible=False

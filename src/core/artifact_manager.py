@@ -1,7 +1,7 @@
 """Artifact Manager (Wave A3 Issues #28 #30 #33 #35 #36 #34 #37 #38)
 
 Responsibilities (initial increment):
-  * Unified recording path resolution (flag gated) (#28)
+  * Unified recording path resolution (default only) (#28 #353)
   * Screenshot capture utility wrapper (#33)
   * Manifest v2 generation (JSON) (#35)
   * Element value capture helper (#34 - foundational hook only)
@@ -10,8 +10,9 @@ Responsibilities (initial increment):
   * Hooks for regression test suite (#38) - placeholder
 
 Design Notes:
-    - Rollout (#91): unified path now default (artifacts.unified_recording_path=true).
-        Legacy ./tmp/record_videos still available when flag explicitly disabled (one-time warn).
+    - Unified path: All recordings now in artifacts/runs/<run>-art/videos (Issue #353)
+    - Legacy ./tmp/record_videos completely removed (no fallback)
+    - RECORDING_PATH env var still supported for deployment flexibility
   - Manifest v2 schema (subject to doc update when #35 closes):
         {
           "schema": "artifact-manifest-v2",
@@ -269,40 +270,23 @@ class ArtifactManager:
     # ---------------- Path Logic -----------------
     @staticmethod
     def resolve_recording_dir(explicit: Optional[str] = None) -> Path:
-        """Resolve recording directory considering feature flag (#28).
+        """Resolve recording directory (Issue #353 - unified path only).
 
         Precedence:
           1. explicit path (if provided)
-          2. flag artifacts.unified_recording_path -> use run artifact dir/videos
-          3. legacy default ./tmp/record_videos
+          2. artifacts/runs/<run>-art/videos (unified path, always)
+
+        Note: Legacy ./tmp/record_videos removed (Issue #353).
+              RECORDING_PATH env var still supported via recording_dir_resolver.
         """
         if explicit:
             p = Path(explicit).expanduser().resolve()
             p.mkdir(parents=True, exist_ok=True)
             return p
-        if FeatureFlags.is_enabled("artifacts.unified_recording_path"):
-            p = RunContext.get().artifact_dir(_ARTIFACT_COMPONENT) / "videos"
-            p.mkdir(parents=True, exist_ok=True)
-            return p
-        # legacy
+        # Unified path only (Issue #353 - no legacy fallback)
         from ..utils.recording_dir_resolver import create_or_get_recording_dir
         p = create_or_get_recording_dir()
         p.mkdir(parents=True, exist_ok=True)
-        # Emit a one-time per-process warning only if explicitly overridden to false (Issue #106)
-        override_source = FeatureFlags.get_override_source("artifacts.unified_recording_path")
-        if override_source in ('runtime', 'environment'):
-            flag = "_bykilt_legacy_recording_warned"
-            if not getattr(ArtifactManager, flag, False):  # type: ignore[attr-defined]
-                setattr(ArtifactManager, flag, True)
-                logger.warning(
-                    "Legacy recording path explicitly forced; consider enabling artifacts.unified_recording_path",
-                    extra={
-                        "event": "artifact.recording.legacy_path.forced",
-                        "path": str(p),
-                        "override_source": override_source,
-                        "recommendation": "Remove explicit override to use unified artifacts run videos directory",
-                    },
-                )
         return p
 
     # ---------------- Manifest -------------------
