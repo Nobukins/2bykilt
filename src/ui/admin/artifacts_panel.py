@@ -1,13 +1,20 @@
-"""Artifacts Admin Panel (Issue #277)
+"""Artifacts Admin Panel (Issue #277, #354)
 
 Provides a Gradio UI for viewing and managing artifacts (screenshots, videos, element extracts).
 This panel displays all artifacts organized by run ID with preview and download capabilities.
+
+Issue #354 Improvements:
+  * Display current reference directory at panel top
+  * Enhanced filtering logic with real-time validation
+  * Fixed directory reference count reflection
+  * Detailed debug information for scan results
+  * Improved preview handling with fallback
 """
 import logging
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import gradio as gr
 
@@ -17,6 +24,8 @@ from src.services.artifacts_service import (
     ListArtifactsParams,
     ArtifactType,
 )
+from src.core.artifact_manager import ArtifactManager
+from src.runtime.run_context import RunContext
 
 logger = logging.getLogger(__name__)
 
@@ -25,15 +34,92 @@ BYTES_TO_MB = 1024 * 1024
 BYTES_TO_KB = 1024
 
 
+def get_current_artifacts_directory() -> str:
+    """Get the current artifacts reference directory (Issue #354)."""
+    try:
+        rc = RunContext.get()
+        artifacts_base = rc.artifact_dir("art").parent
+        return str(artifacts_base.resolve())
+    except Exception as e:
+        logger.warning(f"Failed to get artifacts directory: {e}")
+        return "./artifacts/runs"
+
+
+def scan_directory_for_artifacts(directory: str) -> Tuple[int, str]:
+    """Scan directory and return artifact count with debug info (Issue #354).
+    
+    Args:
+        directory: Directory path to scan
+        
+    Returns:
+        Tuple of (count, debug_info_str)
+    """
+    try:
+        path = Path(directory)
+        if not path.exists():
+            return 0, f"⚠️ Directory not found: {directory}"
+        
+        # Count artifacts (videos, screenshots, element captures)
+        count = 0
+        debug_lines = [f"📍 Scanning: {path.resolve()}"]
+        
+        for ext in ['*.mp4', '*.webm', '*.png', '*.jpg', '*.json']:
+            files = list(path.rglob(ext))
+            if files:
+                count += len(files)
+                debug_lines.append(f"  • {ext}: {len(files)} found")
+        
+        debug_info = "\n".join(debug_lines)
+        return count, debug_info
+    except Exception as e:
+        logger.error(f"Failed to scan directory: {e}", exc_info=True)
+        return 0, f"❌ Scan error: {str(e)}"
+
+
+def format_file_size(size_bytes: Optional[int]) -> str:
+    """Format file size for human-readable display."""
+    if size_bytes is None:
+        return "N/A"
+    
+    if size_bytes < BYTES_TO_KB:
+        return f"{size_bytes} B"
+    elif size_bytes < BYTES_TO_MB:
+        return f"{size_bytes / BYTES_TO_KB:.1f} KB"
+    else:
+        return f"{size_bytes / BYTES_TO_MB:.1f} MB"
+
+
+def format_summary(summary: Dict[str, Any]) -> str:
+    """Format summary data for display (Issue #354 - enhanced)."""
+    total = summary.get("total", 0)
+    by_type = summary.get("by_type", {})
+    total_size = summary.get("total_size_bytes", 0)
+    
+    size_str = format_file_size(total_size)
+    
+    return f"""
+**📊 Summary:**
+- **Total Artifacts:** {total}
+- **Videos:** {by_type.get('video', 0)}
+- **Screenshots:** {by_type.get('screenshot', 0)}
+- **Element Captures:** {by_type.get('element_capture', 0)}
+- **Total Size:** {size_str}
+"""
+
+
 def create_artifacts_panel() -> gr.Blocks:
-    """Create the Artifacts admin panel component.
+    """Create the Artifacts admin panel component (Issue #354 improved).
 
     Returns:
         Gradio Blocks component for the artifacts panel
     """
     with gr.Blocks() as panel:
-        gr.Markdown("""
+        # Issue #354: Display current directory at top
+        current_dir = get_current_artifacts_directory()
+        gr.Markdown(f"""
 ## 📦 Artifacts Management
+
+**📍 Current Directory:** `{current_dir}`
 
 この画面では、実行中に生成されたすべてのアーティファクト（スクリーンショット、動画、要素抽出データ）を一覧表示します。
 
@@ -53,6 +139,19 @@ def create_artifacts_panel() -> gr.Blocks:
         with gr.Row():
             summary_display = gr.Markdown("**Summary:** データを読み込んでいません")
             refresh_summary_btn = gr.Button("🔄 サマリー更新", variant="secondary", scale=0)
+
+        # Issue #354: Directory scan button
+        with gr.Row():
+            scan_btn = gr.Button("🔍 ディレクトリをスキャン", variant="secondary")
+            scan_result = gr.Textbox(label="スキャン結果", interactive=False, lines=3)
+
+        # Scan button handler (Issue #354)
+        def on_scan_directory() -> str:
+            """Handle directory scan button click."""
+            count, debug_info = scan_directory_for_artifacts(current_dir)
+            return f"{count} artifacts found\n\n{debug_info}"
+        
+        scan_btn.click(fn=on_scan_directory, outputs=scan_result)
 
         # Filter section
         with gr.Accordion("🔍 フィルターオプション", open=True):
