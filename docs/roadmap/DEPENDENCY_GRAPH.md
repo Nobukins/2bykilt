@@ -1,6 +1,6 @@
 ```mermaid
 %% Auto-generated dependency graph
-%% Generated at: 2026-06-15T04:35:54.705612+00:00
+%% Generated at: 2026-06-16T04:37:10.356383+00:00
 %% Edge方向: dependency --> dependent
 graph LR
 
