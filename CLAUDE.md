@@ -90,6 +90,10 @@ Parameter syntax: `${params.name}` with optional default `${params.name|default}
 - `myscript/` — standalone runnable automation scripts (own CI: `ci-local-selector.yml`)
 - `tests/` mirrors `src/`; root-level `tests/test_*.py` are mostly feature/integration tests
 
+### Security CI (see `docs/security/continuous-security.md`)
+
+PRs run `security-ci.yml`: ci_safe tests + SonarCloud, pip-audit gated by `security/security_policy.yaml` (critical/high = 0), gitleaks, dependency-review, and zizmor. CodeQL, OpenSSF Scorecard, Trivy, and SBOM generation (`supply-chain.yml`) run on push/schedule. Vulnerability suppressions in `security/suppressions.yaml` are **time-boxed** — `expires_at` is enforced, so an expired entry resurfaces the vulnerability and can turn CI red.
+
 ## Critical invariants
 
 1. **LLM import isolation**: never import `langchain*`, `openai`, `anthropic`, `browser_use`, etc. at module top level in any code reachable in minimal mode. Guard with `is_llm_enabled()` and import lazily inside functions. After touching imports, run `ENABLE_LLM=false python scripts/verify_llm_isolation.py` — CI enforces this.

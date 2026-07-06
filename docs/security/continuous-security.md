@@ -198,3 +198,46 @@ sonar-scanner -Dsonar.token=$SONAR_TOKEN
 ---
 
 本計画に基づき、次ステップとして GitHub Actions ワークフローと関連設定ファイルをリポジトリに追加してください。追加後、本書の「13. チェックリスト」に沿って動作検証を行ってください。
+
+---
+
+## 16. 2026-07 モダナイズ (実装済み)
+
+「15. 今後の高度化」の項目を含む全面見直しを 2026-07 に実施。現行アーキテクチャは以下の通り。
+
+### 現行コンポーネント一覧
+
+| レイヤ | ツール | ワークフロー | 実行タイミング | ゲート |
+|--------|--------|--------------|----------------|--------|
+| SAST (品質+セキュリティ) | SonarCloud (`sonarqube-scan-action@v6`) | security-ci.yml | PR / push | Quality Gate (advisory) |
+| SAST (セキュリティ特化) | CodeQL `python` + `actions` (security-extended) | codeql.yml | PR / push / 週次 | Code Scanning アラート |
+| SCA (フル依存解決) | pip-audit + 正規化 + ポリシー閾値 | security-ci.yml | PR / push | `security/security_policy.yaml` (critical/high = 0) |
+| SCA (PR 差分) | `dependency-review-action` | security-ci.yml | PR | HIGH 以上でブロック |
+| SCA (自動更新) | Dependabot (pip + github-actions, 週次グループ化) | .github/dependabot.yml | 週次 + 随時 (security update) | — |
+| Deep Scan | Trivy fs (vuln + misconfig) → SARIF | supply-chain.yml | push / 週次 | report-only |
+| SBOM | Syft (SPDX + CycloneDX) + GitHub dependency snapshot | supply-chain.yml | push / release / 週次 | — (リリース時アセット添付) |
+| Secret | gitleaks | security-ci.yml | PR / push | 検出 0 必須 |
+| Workflow 監査 | zizmor → SARIF | security-ci.yml | PR / push | report-only (段階的に強化) |
+| サプライチェーン姿勢 | OpenSSF Scorecard → SARIF + 公開バッジ | scorecard.yml | push / 週次 | report-only |
+
+### 抑止 (Suppression) 運用の変更
+
+- `security/suppressions.yaml` の `expires_at` を **normalizer が強制** するようになった (期限切れ = 抑止無効化 → 脆弱性が再浮上しゲート判定対象に戻る)。
+- 抑止は「期限付きリスク受容」であり恒久免除ではない。期限前に依存アップグレード可否を再評価し、不可の場合のみ理由を更新して延長する。
+
+### 能動的検知の集約先
+
+pip-audit 以外 (CodeQL / Trivy / zizmor / Scorecard) の検出は SARIF として **GitHub Security タブ → Code scanning** に集約される。週次でトリアージし、真陽性は Issue 化して `docs/roadmap/ISSUE_DEPENDENCIES.yml` の管理サイクルに載せること。
+
+### リポジトリ設定側で有効化すべき項目 (ファイルでは管理不可)
+
+- Settings → Code security: **Secret scanning + Push protection** を有効化
+- Settings → Code security: **Private vulnerability reporting** を有効化 (`.github/SECURITY.md` が受付先を案内)
+- Branch protection: `2bykilt` に対し security-ci の必須チェック (`test` は現状 `continue-on-error: true` のため通過扱いになる点に注意 — 厳格化する場合は当該行を削除)
+
+### 次の高度化候補 (未実装)
+
+- 全 Actions の **commit SHA ピン留め** (Dependabot github-actions 更新と併用。zizmor の `unpinned-uses` 検出を fail 化する前提条件)
+- `step-security/harden-runner` による runner egress 監視
+- Dockerfile 追加時: supply-chain.yml にイメージビルド + Trivy image scan + `actions/attest-build-provenance` による SLSA provenance / SBOM attestation
+- zizmor / Trivy の report-only → ブロッキング昇格 (誤検知トリアージ完了後)
