@@ -8,12 +8,13 @@ on:
   # schedule:
   #   - cron: '0 2 * * *'
 
+# Least-privilege default; jobs that need more elevate individually.
 permissions:
   contents: read
-  pull-requests: write
-  security-events: write
-  actions: read
-  checks: write
+
+concurrency:
+  group: security-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   PYTHON_VERSION: '3.12'
@@ -124,8 +125,10 @@ jobs:
           if [ -f coverage-xml/coverage.xml ]; then
             cp coverage-xml/coverage.xml coverage.xml
           fi
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v5.0.0
+      # sonarcloud-github-action was deprecated in favor of the unified
+      # sonarqube-scan-action (works for both SonarQube Cloud and Server).
+      - name: SonarQube Cloud Scan
+        uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
@@ -223,6 +226,10 @@ jobs:
           # Run pip-audit
           $PIP_AUDIT_CMD > pip-audit-raw.json || true
 
+          # Also audit the minimal (LLM-free) dependency set so the
+          # enterprise edition surface is covered (report-only)
+          pip-audit -r requirements-minimal.txt -f json > pip-audit-minimal-raw.json || true
+
           # Normalize output (only if raw output exists)
           if [ -s pip-audit-raw.json ]; then
             python tools/security/normalize_pip_audit.py pip-audit-raw.json artifacts/security/vuln_report.json
@@ -273,10 +280,63 @@ jobs:
             artifacts/security/vuln_report.json
             artifacts/security/scan_perf_before_after.json
             pip-audit-raw.json
+            pip-audit-minimal-raw.json
+
+  dependency-review:
+    name: Dependency Review (PR diff)
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      # Blocks a PR that newly introduces a dependency with known
+      # HIGH/CRITICAL vulnerabilities (complements pip-audit, which
+      # audits the full resolved set rather than the PR delta).
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure
+
+  actions-lint:
+    name: Workflow Security Lint (zizmor)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      # Static analysis of GitHub Actions workflows themselves
+      # (template injection, unpinned third-party actions, excessive
+      # permissions, cache poisoning vectors). Report-only for now:
+      # findings land in the Security tab for triage.
+      - name: Run zizmor
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pip install zizmor
+          zizmor --format sarif .github/workflows > zizmor.sarif || true
+      - name: Upload zizmor SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: zizmor.sarif
+          category: zizmor
 
   secret:
     name: Secret Scan (gitleaks)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write  # gitleaks-action comments on PRs when leaks are found
     steps:
       - uses: actions/checkout@v4
         with:
@@ -289,38 +349,18 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # container-scan:
-  #   name: Container Build & Trivy Scan
-  #   runs-on: ubuntu-latest
-  #   needs: prepare
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Build image
-  #       run: |
-  #         docker build -t local/2bykilt:pr-${{ github.run_number }} .
-  #     - name: Trivy (Vuln + Config + License)
-  #       uses: aquasecurity/trivy-action@master
-  #       with:
-  #         image-ref: local/2bykilt:pr-${{ github.run_number }}
-  #         format: 'table'
-  #         exit-code: '1'
-  #         vuln-type: 'os,library'
-  #         severity: 'HIGH,CRITICAL'
-  #     - name: SBOM (CycloneDX)
-  #       run: |
-  #         trivy image --format cyclonedx -o sbom.cdx.json local/2bykilt:pr-${{ github.run_number }}
-  #     - name: Upload SBOM
-  #        uses: actions/upload-artifact@v4
-  #        with:
-  #          name: sbom-cyclonedx
-  #          path: sbom.cdx.json
+  # SBOM generation and Trivy deep scanning moved to
+  # .github/workflows/supply-chain.yml (2026-07 security modernization).
+  # Container image scanning can be re-added there once a Dockerfile ships.
 
   summarize:
     name: Summarize & Comment
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'pull_request' }}
-    # needs: [ test, sca, secret, container-scan ]
     needs: [ test, sca, secret ]
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
       - name: Download artifacts
@@ -381,8 +421,31 @@ jobs:
             COVERAGE=$(grep -Po 'line-rate="\K[0-9.]+' "${COV_XML:-/dev/null}" 2>/dev/null || echo 'N/A') || true
           fi
 
-          if [ -f artifacts/pip-audit/pip-audit.max ]; then
-            MAX_AUDIT=$(cat artifacts/pip-audit/pip-audit.max)
+          # Derive max severity (and expired-suppression count) from the
+          # normalized vulnerability report produced by the sca job
+          VULN_JSON=""
+          if [ -f artifacts/security-scan-results/artifacts/security/vuln_report.json ]; then
+            VULN_JSON="artifacts/security-scan-results/artifacts/security/vuln_report.json"
+          elif [ -f artifacts/security/vuln_report.json ]; then
+            VULN_JSON="artifacts/security/vuln_report.json"
+          fi
+          if [ -n "$VULN_JSON" ]; then
+            MAX_AUDIT=$(python3 - "$VULN_JSON" <<'PY'
+          import json, sys
+          try:
+              with open(sys.argv[1]) as f:
+                  report = json.load(f)
+              by_sev = (report.get('summary') or {}).get('by_severity') or {}
+              for sev in ('critical', 'high', 'medium', 'low', 'info', 'unknown'):
+                  if by_sev.get(sev, 0) > 0:
+                      print(f"{sev} ({by_sev[sev]})")
+                      break
+              else:
+                  print('none')
+          except Exception:
+              print('N/A')
+          PY
+            )
           else
             MAX_AUDIT='N/A'
           fi
@@ -397,10 +460,16 @@ jobs:
           body: |
             ## セキュリティ/品質集約レポート
 
-            - テスト & カバレッジ: ${{ steps.metrics.outputs.coverage }}
-            - 依存脆弱性最大重大度: ${{ steps.metrics.outputs.pip_audit_max }}
-            - Sonar 状態: (SONAR_TOKEN 未設定ならスキップ / 設定時は Checks 参照)
-            - Trivy: HIGH/CRITICAL 0 を条件 (失敗していれば本PRは赤)
-            - Secret Scan: 問題なしであれば成功
+            | 項目 | 結果 |
+            |------|------|
+            | テストカバレッジ (line-rate) | ${{ steps.metrics.outputs.coverage }} |
+            | 依存脆弱性 最大重大度 (pip-audit, 抑止適用後) | ${{ steps.metrics.outputs.pip_audit_max }} |
+            | Dependency Review (PR差分の新規脆弱依存) | Checks 参照 (HIGH 以上でブロック) |
+            | Sonar Quality Gate | SONAR_TOKEN 設定時のみ / Checks 参照 |
+            | Secret Scan (gitleaks) | このジョブが緑なら検出 0 |
+            | Workflow Lint (zizmor) / CodeQL / Trivy / Scorecard | Security タブ → Code scanning 参照 |
+
+            - SBOM (SPDX / CycloneDX) は Supply Chain Security ワークフローの artifacts およびリリースアセットに添付されます。
+            - 抑止済み脆弱性は `security/suppressions.yaml` 参照 (期限切れ抑止は自動的に無効化されます)。
 
             詳細は各ジョブログと artifacts を参照してください。
