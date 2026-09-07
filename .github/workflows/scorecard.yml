@@ -1,0 +1,47 @@
+name: OpenSSF Scorecard
+
+# Supply-chain security posture self-assessment.
+# Results are published to the OpenSSF REST API (public badge) and
+# uploaded to GitHub code scanning for triage in the Security tab.
+on:
+  branch_protection_rule:
+  schedule:
+    - cron: '20 2 * * 1'  # Weekly, Monday 02:20 UTC
+  push:
+    branches: ["2bykilt"]
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  analysis:
+    name: Scorecard analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      security-events: write  # upload SARIF to code scanning
+      id-token: write         # publish results (OIDC)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Run analysis
+        uses: ossf/scorecard-action@v2.4.0
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: scorecard-sarif
+          path: results.sarif
+          retention-days: 30
+
+      - name: Upload to code scanning
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif

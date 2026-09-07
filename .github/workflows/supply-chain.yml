@@ -1,0 +1,89 @@
+name: Supply Chain Security (SBOM & Deep Scan)
+
+# Replaces the SBOM plan that lived as a commented-out job in security-ci.yml.
+# - SBOM: SPDX + CycloneDX via Syft; submitted to the GitHub dependency graph
+#   (dependency snapshot) so Dependabot alerts also cover transitive deps.
+#   On releases, SBOMs are attached to the release assets automatically.
+# - Deep scan: Trivy filesystem scan (vulnerabilities + IaC misconfig),
+#   report-only via SARIF -> Security tab. The blocking gate remains the
+#   pip-audit policy in security-ci.yml (security/security_policy.yaml).
+on:
+  push:
+    branches: ["2bykilt"]
+    paths:
+      - 'requirements*.txt'
+      - 'pyproject.toml'
+      - '.github/workflows/supply-chain.yml'
+  release:
+    types: [published]
+  schedule:
+    - cron: '0 4 * * 1'  # Weekly, Monday 04:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sbom:
+    name: Generate SBOM (SPDX + CycloneDX)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write  # dependency snapshot submission + release asset upload
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate SPDX SBOM + submit dependency snapshot
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: spdx-json
+          artifact-name: 2bykilt-sbom.spdx.json
+          output-file: 2bykilt-sbom.spdx.json
+          dependency-snapshot: true
+
+      - name: Generate CycloneDX SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: cyclonedx-json
+          artifact-name: 2bykilt-sbom.cdx.json
+          output-file: 2bykilt-sbom.cdx.json
+
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: |
+            2bykilt-sbom.spdx.json
+            2bykilt-sbom.cdx.json
+          retention-days: 90
+
+  trivy-scan:
+    name: Trivy Deep Scan (report-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          scanners: 'vuln,misconfig'
+          format: 'sarif'
+          output: 'trivy-fs.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          exit-code: '0'  # report-only; gating happens in security-ci.yml
+
+      - name: Upload Trivy results to code scanning
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-fs.sarif
+          category: trivy-fs

@@ -1,0 +1,50 @@
+name: CodeQL
+
+# SAST complement to SonarCloud:
+# - python: security-extended query pack
+# - actions: scans .github/workflows for workflow-level vulnerabilities
+#   (untrusted input injection, excessive permissions, etc.)
+on:
+  push:
+    branches: ["2bykilt"]
+  pull_request:
+    branches: ["2bykilt"]
+  schedule:
+    - cron: '30 1 * * 1'  # Weekly, Monday 01:30 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: python
+            build-mode: none
+          - language: actions
+            build-mode: none
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          queries: security-extended
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
