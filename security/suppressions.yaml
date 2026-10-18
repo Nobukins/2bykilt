@@ -2,22 +2,31 @@
 # This file contains suppressions for known false positives or accepted risks
 # Format: {id|package@version|cve: {reason, added_at, expires_at?}}
 
-# Example suppressions (to be populated based on actual scan results)
+# NOTE (2026-07 security modernization): expires_at is now ENFORCED by
+# tools/security/normalize_pip_audit.py — an expired entry stops suppressing
+# and the vulnerability resurfaces in vuln_report.json (failing the policy
+# gate if severity thresholds are exceeded). Suppressions are a time-boxed
+# risk acceptance, not a permanent waiver.
+#
+# The three entries below originally expired 2026-03-31 and were renewed ONCE
+# pending re-evaluation. Before the new expiry: check whether current
+# botocore/boto3 allows urllib3>=2.5.0 and whether httpcore relaxed its
+# h11<0.15 pin — if so, UPGRADE the dependency instead of renewing again.
 suppressions:
   "GHSA-pq67-6m6q-mj2v":
-    reason: "urllib3 redirect suppression at PoolManager level; fix requires urllib3>=2.5.0 which conflicts with botocore/boto3 (requires <2.4). Mitigation: we do not use PoolManager-level retries to disable redirects; requests-level redirect control applies."
+    reason: "urllib3 redirect suppression at PoolManager level; fix requires urllib3>=2.5.0 which conflicts with botocore/boto3 (requires <2.4). Mitigation: we do not use PoolManager-level retries to disable redirects; requests-level redirect control applies. RENEWED 2026-07: re-check boto3 urllib3 constraint before next expiry."
     added_at: "2025-09-10"
-    expires_at: "2026-03-31"
+    expires_at: "2026-09-30"
 
   "GHSA-48p4-8xcf-vxj5":
-    reason: "urllib3 Pyodide/browser redirect control; not applicable to our server/runtime. Fix requires urllib3>=2.5.0 which conflicts with AWS SDK constraint (<2.4)."
+    reason: "urllib3 Pyodide/browser redirect control; not applicable to our server/runtime. Fix requires urllib3>=2.5.0 which conflicts with AWS SDK constraint (<2.4). RENEWED 2026-07: re-check boto3 urllib3 constraint before next expiry."
     added_at: "2025-09-10"
-    expires_at: "2026-03-31"
+    expires_at: "2026-09-30"
 
   "GHSA-vqfr-h8mv-ghfj":
-    reason: "h11 chunked-coding leniency; fix requires h11>=0.15 but httpcore==1.0.7 requires h11<0.15. Our stack uses httpcore/httpx client, not a reverse proxy; combined exploit scenario not applicable. Will upgrade when httpcore relaxes pin."
+    reason: "h11 chunked-coding leniency; fix requires h11>=0.15 but httpcore==1.0.7 requires h11<0.15. Our stack uses httpcore/httpx client, not a reverse proxy; combined exploit scenario not applicable. RENEWED 2026-07: verify whether httpcore now allows h11>=0.15 and upgrade instead of renewing again."
     added_at: "2025-09-10"
-    expires_at: "2026-03-31"
+    expires_at: "2026-09-30"
   # Example: Suppress a known false positive
   # "CVE-2023-12345":
   #   reason: "False positive - vulnerability does not affect our usage"

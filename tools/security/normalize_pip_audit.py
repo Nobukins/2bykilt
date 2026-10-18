@@ -13,7 +13,7 @@ Usage:
 import json
 import sys
 import argparse
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 import yaml
@@ -121,6 +121,36 @@ def parse_pip_audit_json(data: Dict[str, Any]) -> Dict[str, Any]:
     return report
 
 
+def _suppression_active(suppression: Dict[str, Any]) -> bool:
+    """Return True if a suppression entry is still within its validity window.
+
+    Entries without ``expires_at`` never expire. An expired entry is treated
+    as inactive so the underlying vulnerability resurfaces in the report —
+    suppressions are a time-boxed risk acceptance, not a permanent waiver.
+    """
+    expires_at = suppression.get('expires_at')
+    if not expires_at:
+        return True
+    try:
+        expiry = date.fromisoformat(str(expires_at))
+    except ValueError:
+        print(
+            f"Warning: suppression '{suppression.get('id')}' has invalid "
+            f"expires_at '{expires_at}'; treating as active",
+            file=sys.stderr,
+        )
+        return True
+    if expiry < datetime.now(timezone.utc).date():
+        print(
+            f"Warning: suppression '{suppression.get('id')}' expired on "
+            f"{expiry.isoformat()} and is no longer applied. Re-evaluate the "
+            f"vulnerability or renew the entry in security/suppressions.yaml.",
+            file=sys.stderr,
+        )
+        return False
+    return True
+
+
 def is_suppressed(vulnerability: Dict[str, Any], project_root: Optional[Path] = None) -> bool:
     """Check if a vulnerability should be suppressed based on suppressions.yaml."""
     try:
@@ -157,6 +187,8 @@ def is_suppressed(vulnerability: Dict[str, Any], project_root: Optional[Path] = 
         vuln_version = vulnerability.get('version', '')
 
         for suppression in suppressions:
+            if not _suppression_active(suppression):
+                continue
             sup_id = suppression.get('id')
             # Check by CVE ID
             if sup_id and vuln_cve and sup_id == vuln_cve:
